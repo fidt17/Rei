@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Autofac;
+using Avalonia.Platform.Storage;
 using Editor.Models.Services.Logging;
-using Editor.Utils.Extensions;
+using Editor.Utils.Factory;
 using Editor.ViewModels;
 using MainWindow = Editor.Views.MainWindow;
 
@@ -29,6 +30,9 @@ public class EditorScope : IAsyncDisposable
 	private static void ConfigureContainer(ContainerBuilder b)
 	{
 		b.RegisterGeneric(typeof(Logger<>)).As(typeof(ILogger<>));
+		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
+
+		b.Register<IStorageProvider>(c => c.Resolve<MainWindow>().StorageProvider);
 		
 		b.RegisterType<EditorEntryPoint>().AsSelf().SingleInstance();
 		
@@ -39,7 +43,9 @@ public class EditorScope : IAsyncDisposable
 	{
 		b.RegisterType<MainWindowViewModel>().SingleInstance();
 		b.RegisterType<MainWindow>();
-		
-		b.RegisterFactory<ProjectManagementTabViewModel>();
+
+		b.RegisterType<ProjectManagementWindowViewModel>();
+		b.RegisterType<ProjectsListTabViewModel>();
+		b.RegisterType<ProjectCreationTabViewModel>();
 	}
 }

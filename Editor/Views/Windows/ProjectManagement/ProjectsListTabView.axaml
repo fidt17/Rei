@@ -3,13 +3,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:Editor.ViewModels"
-             mc:Ignorable="d"
-             x:Class="Editor.Views.ProjectManagementTabView"
-             x:DataType="viewModels:ProjectManagementTabViewModel"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Editor.Views.ProjectsListTabView"
+             x:DataType="viewModels:ProjectsListTabViewModel"
              Width="500" Height="450">
 
     <Design.DataContext>
-        <viewModels:ProjectManagementTabViewModel />
+        <viewModels:ProjectsListTabViewModel />
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto, *">

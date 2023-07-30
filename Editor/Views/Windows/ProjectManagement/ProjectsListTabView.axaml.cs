@@ -3,9 +3,9 @@ using Avalonia.Markup.Xaml;
 
 namespace Editor.Views;
 
-public partial class ProjectManagementTabView : UserControl
+public partial class ProjectsListTabView : UserControl
 {
-	public ProjectManagementTabView()
+	public ProjectsListTabView()
 	{
 		InitializeComponent();
 	}

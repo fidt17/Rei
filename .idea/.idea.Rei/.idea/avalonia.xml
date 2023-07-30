@@ -9,7 +9,12 @@
         <entry key="Editor/Views/MainWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Resources/Styles.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/MainWindow.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/ProjectManagement/ProjectCreationTabView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ProjectManagement/ProjectManagementTabView.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/ProjectManagement/ProjectManagementWindow.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/ProjectManagement/ProjectManagementWindowView.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/ProjectManagement/ProjectManagmentWindowView.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/ProjectManagement/ProjectsListTabView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ProjectSelectionWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ProjectSelectionWindowView.axaml" value="Editor/Editor.csproj" />
       </map>

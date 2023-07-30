@@ -1,0 +1,74 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Editor.ViewModels"
+             mc:Ignorable="d"
+             x:Class="Editor.Views.ProjectCreationTabView"
+             x:DataType="viewModels:ProjectCreationTabViewModel"
+             Width="500" Height="450">
+
+    <Design.DataContext>
+        <viewModels:ProjectCreationTabViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="20">
+            <TextBlock Text="New Project" Classes="h1" />
+        </Grid>
+
+        <!-- Configuration -->
+        <Border Grid.Row="1"
+                Margin="0, 10, 0, 0"
+                BorderThickness="0, 1, 0, 0"
+                BorderBrush="black">
+
+            <Grid RowDefinitions="Auto, *, Auto"
+                  Margin="20">
+
+                <StackPanel Grid.Row="1"
+                            Spacing="10">
+
+                    <!-- Project Name -->
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Project name" Classes="h4"></TextBlock>
+                        <TextBox BorderBrush="gray" Text="{Binding ProjectName}" />
+                    </StackPanel>
+
+                    <!-- Location -->
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Location" Classes="h4"></TextBlock>
+                        <Button Command="{Binding SelectProjectLocationCommand}"
+                                HorizontalAlignment="Stretch">
+                            <Button.Styles>
+                                <Style Selector="Button">
+                                    <Setter Property="Background" Value="white" />
+                                    <Setter Property="Foreground" Value="gray" />
+                                    <Setter Property="BorderBrush" Value="gray" />
+                                </Style>
+
+                                <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                    <Setter Property="Background" Value="white" />
+                                    <Setter Property="BorderBrush" Value="black" />
+                                </Style>
+                            </Button.Styles>
+
+                            <TextBlock Text="{Binding ProjectPath}" />
+                        </Button>
+                    </StackPanel>
+
+                </StackPanel>
+
+                <!-- Controls -->
+                <StackPanel Orientation="Horizontal" Spacing="10" Grid.Row="2"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                    <Button Command="{Binding CancelProjectCreationCommand}">Cancel</Button>
+                    <Button>Create project</Button>
+                </StackPanel>
+            </Grid>
+
+        </Border>
+    </Grid>
+</UserControl>
