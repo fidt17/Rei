@@ -1,0 +1,32 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Design.PreviewWith>
+        <Border Padding="20">
+            <TextBlock Text="AAA" Classes="h1"></TextBlock>
+        </Border>
+    </Design.PreviewWith>
+
+    <Style Selector="Button">
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="32" />
+    </Style>
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="24" />
+    </Style>
+    <Style Selector="TextBlock.h3">
+        <Setter Property="FontSize" Value="18.72" />
+    </Style>
+    <Style Selector="TextBlock.h4">
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+    <Style Selector="TextBlock.h5">
+        <Setter Property="FontSize" Value="13.28" />
+    </Style>
+    <Style Selector="TextBlock.h6">
+        <Setter Property="FontSize" Value="10.72" />
+    </Style>
+
+</Styles>

@@ -6,14 +6,16 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Editor.Views.MainWindow"
         x:DataType="viewModels:MainWindowViewModel"
-        Title="Rei Engine">
+        Title="Rei Engine"
+        SizeToContent="WidthAndHeight"
+        CanResize="False">
 
     <Design.DataContext>
         <viewModels:MainWindowViewModel />
     </Design.DataContext>
 
     <Grid>
-        <ContentControl Content="{Binding ActiveTab}" />
+        <ContentControl Content="{Binding TabContainer.ActiveTab}" />
     </Grid>
 
 </Window>

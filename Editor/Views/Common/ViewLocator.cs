@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Editor.ViewModels;
 
-namespace Editor.Utils;
+namespace Editor.Views;
 
 public class ViewLocator : IDataTemplate
 {

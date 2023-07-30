@@ -40,6 +40,6 @@ public class EditorScope : IAsyncDisposable
 		b.RegisterType<MainWindowViewModel>().SingleInstance();
 		b.RegisterType<MainWindow>();
 		
-		b.RegisterFactory<ProjectSelectionWindowViewModel>();
+		b.RegisterFactory<ProjectManagementTabViewModel>();
 	}
 }

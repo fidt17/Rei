@@ -8,12 +8,12 @@ public class EditorEntryPoint
 {
 	private readonly ILogger<EditorEntryPoint> _logger;
 	private readonly MainWindowViewModel _mainWindow;
-	private readonly IFactory<ProjectSelectionWindowViewModel> _projectSelectionWindowViewModelFactory;
+	private readonly IFactory<ProjectManagementTabViewModel> _projectSelectionWindowViewModelFactory;
 
 	public EditorEntryPoint(
 		ILogger<EditorEntryPoint> logger,
 		MainWindowViewModel mainWindow,
-		IFactory<ProjectSelectionWindowViewModel> projectSelectionWindowViewModelFactory)
+		IFactory<ProjectManagementTabViewModel> projectSelectionWindowViewModelFactory)
 	{
 		_logger = logger;
 		_mainWindow = mainWindow;
@@ -24,6 +24,6 @@ public class EditorEntryPoint
 	{
 		_logger.LogWarn("Editor started");
 		
-		_mainWindow.OpenProjectSelectionWindow(_projectSelectionWindowViewModelFactory);
+		_mainWindow.TabContainer.OpenTab(_projectSelectionWindowViewModelFactory.CreateInstance());
 	}
 }
