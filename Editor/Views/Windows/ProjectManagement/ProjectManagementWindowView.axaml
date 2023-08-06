@@ -12,6 +12,6 @@
         <viewModels:ProjectManagementWindowViewModel />
     </Design.DataContext>
     
-    <ContentControl Content="{Binding TabContainer.ActiveTab}" />
+    <ContentControl Content="{Binding ActiveTab.ViewModel}" />
 
 </UserControl>

@@ -34,13 +34,22 @@
                     <!-- Project Name -->
                     <StackPanel Spacing="5">
                         <TextBlock Text="Project name" Classes="h4"></TextBlock>
-                        <TextBox BorderBrush="gray" Text="{Binding ProjectName}" />
+                        <TextBox Name="ProjectNameTextBox"
+                                 Classes.valid="{Binding Notifications.ProjectNameValid}"
+                                 Text="{Binding ProjectName}">
+                            <TextBox.Styles>
+                                <Style Selector="TextBox:not(.valid) /template/ Border#PART_BorderElement">
+                                    <Setter Property="BorderBrush" Value="red" />
+                                </Style>
+                            </TextBox.Styles>
+                        </TextBox>
                     </StackPanel>
 
                     <!-- Location -->
                     <StackPanel Spacing="5">
                         <TextBlock Text="Location" Classes="h4"></TextBlock>
                         <Button Command="{Binding SelectProjectLocationCommand}"
+                                Classes.valid="{Binding Notifications.ProjectPathValid}"
                                 HorizontalAlignment="Stretch">
                             <Button.Styles>
                                 <Style Selector="Button">
@@ -53,19 +62,32 @@
                                     <Setter Property="Background" Value="white" />
                                     <Setter Property="BorderBrush" Value="black" />
                                 </Style>
+
+                                <Style Selector="Button:not(.valid) /template/ ContentPresenter">
+                                    <Setter Property="BorderBrush" Value="red" />
+                                </Style>
                             </Button.Styles>
 
-                            <TextBlock Text="{Binding ProjectPath}" />
+                            <TextBlock
+                                Text="{Binding ProjectPath}" />
                         </Button>
                     </StackPanel>
 
                 </StackPanel>
 
                 <!-- Controls -->
-                <StackPanel Orientation="Horizontal" Spacing="10" Grid.Row="2"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                    <Button Command="{Binding CancelProjectCreationCommand}">Cancel</Button>
-                    <Button>Create project</Button>
+                <StackPanel Grid.Row="2">
+
+                    <TextBlock Text="Project creation failed" Classes="h4" Foreground="red" 
+                               IsVisible="{Binding Notifications.ProjectCreationFailed}"
+                               HorizontalAlignment="Center"
+                               Margin="40"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10"
+                                HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                        <Button Command="{Binding CancelProjectCreationCommand}">Cancel</Button>
+                        <Button Command="{Binding CreateProjectCommand}">Create project</Button>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
 

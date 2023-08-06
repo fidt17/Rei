@@ -23,7 +23,7 @@ public partial class MainWindow : Window
 		
 		if (_vm != null)
 		{
-			_vm.TabContainer.TabChangedEvent -= HandleWindowTabChangedEvent;
+			_vm.ActiveTab.ChangedEvent -= HandleWindowTabChangedEvent;
 		}
 	}
 
@@ -32,7 +32,7 @@ public partial class MainWindow : Window
 		if (DataContext is MainWindowViewModel vm)
 		{
 			_vm = vm;
-			_vm.TabContainer.TabChangedEvent += HandleWindowTabChangedEvent;
+			_vm.ActiveTab.ChangedEvent += HandleWindowTabChangedEvent;
 		}
 	}
 

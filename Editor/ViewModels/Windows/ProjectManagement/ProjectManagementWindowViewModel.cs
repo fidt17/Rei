@@ -5,7 +5,7 @@ namespace Editor.ViewModels;
 
 public class ProjectManagementWindowViewModel : BaseViewModel
 {
-	public TabContainer TabContainer { get; } = new();
+	public NavigationStore ActiveTab { get; } = new();
 
 	private readonly ILogger<ProjectManagementWindowViewModel> _logger;
 	private readonly IFactory<ProjectsListTabViewModel> _projectsListViewModelFactory;
@@ -24,22 +24,25 @@ public class ProjectManagementWindowViewModel : BaseViewModel
 		_projectsListViewModelFactory = projectsListViewModelFactory;
 		_projectCreationViewModelFactory = projectCreationViewModelFactory;
 
-		TabContainer.LogOnTabChange(_logger);
+		ActiveTab.LogOnNavigate(_logger);
 	}
 
 	public void OpenProjectsListTab()
 	{
-		var projectsListViewModel = _projectsListViewModelFactory.CreateInstance();
-		TabContainer.OpenTab(projectsListViewModel);
-
+		var projectsListViewModel = ActiveTab.Navigate(_projectsListViewModelFactory);
 		projectsListViewModel.CreateProjectCommand.ExecutedEvent += OpenCreateProjectTab;
 	}
 
 	public void OpenCreateProjectTab()
 	{
-		var projectCreationViewModel = _projectCreationViewModelFactory.CreateInstance();
-		TabContainer.OpenTab(projectCreationViewModel);
-
+		var projectCreationViewModel = ActiveTab.Navigate(_projectCreationViewModelFactory);
 		projectCreationViewModel.CancelProjectCreationCommand.ExecutedEvent += OpenProjectsListTab;
+		projectCreationViewModel.CreateProjectCommand.ExecutedCommandEvent += HandleExecutedCreateProjectCommand;
+	}
+
+	private void HandleExecutedCreateProjectCommand(bool didCreate)
+	{
+		if (!didCreate) return;
+		OpenProjectsListTab();
 	}
 }

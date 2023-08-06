@@ -28,5 +28,5 @@
     <Style Selector="TextBlock.h6">
         <Setter Property="FontSize" Value="10.72" />
     </Style>
-
+    
 </Styles>

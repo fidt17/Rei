@@ -2,7 +2,10 @@
 using System.Threading.Tasks;
 using Autofac;
 using Avalonia.Platform.Storage;
+using Editor.Models.ProjectManagement.Creation;
+using Editor.Models.Serialization;
 using Editor.Models.Services.Logging;
+using Editor.Utils.Extensions;
 using Editor.Utils.Factory;
 using Editor.ViewModels;
 using MainWindow = Editor.Views.MainWindow;
@@ -31,18 +34,22 @@ public class EditorScope : IAsyncDisposable
 	{
 		b.RegisterGeneric(typeof(Logger<>)).As(typeof(ILogger<>));
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
+		b.RegisterGeneric(typeof(JsonSerializer<>)).As(typeof(ISerializer<>));
 
 		b.Register<IStorageProvider>(c => c.Resolve<MainWindow>().StorageProvider);
-		
-		b.RegisterType<EditorEntryPoint>().AsSelf().SingleInstance();
+
+		b.RegisterType<ProjectCreationService>().As<IProjectCreationService>();
+		b.RegisterSingleton<ProjectSetup>();
+
+		b.RegisterSingleton<EditorEntryPoint>();
 		
 		ConfigureViews(b);
 	}
 
 	private static void ConfigureViews(ContainerBuilder b)
 	{
-		b.RegisterType<MainWindowViewModel>().SingleInstance();
-		b.RegisterType<MainWindow>();
+		b.RegisterSingleton<MainWindowViewModel>();
+		b.RegisterSingleton<MainWindow>();
 
 		b.RegisterType<ProjectManagementWindowViewModel>();
 		b.RegisterType<ProjectsListTabViewModel>();

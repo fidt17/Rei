@@ -4,6 +4,7 @@
 public interface ILogger<T>
 {
 	void Log(string message);
-	void LogWarn(string message);
-	void LogErr(string message);
+	void LogAttention(string message);
+	void LogWarning(string message);
+	void LogError(string message);
 }

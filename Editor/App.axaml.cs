@@ -40,7 +40,7 @@ public class App : Application
 		
 		window.Closed += (_, _) =>
 		{
-			_logger.LogWarn("Main window closed");
+			_logger.LogWarning("Main window closed");
 			Task.Run(() => ShutdownAsync(1));
 		};
 		

@@ -22,10 +22,9 @@ public class EditorEntryPoint
 
 	public void Start()
 	{
-		_logger.LogWarn("Editor started");
+		_logger.LogWarning("Editor started");
 
-		var projectManagementWindowViewModel = _projectManagementWindowViewModelFactory.CreateInstance();
-		_mainWindow.TabContainer.OpenTab(projectManagementWindowViewModel);
-		projectManagementWindowViewModel.OpenProjectsListTab();
+		var projectManagementWindowViewModel = _mainWindow.ActiveTab.Navigate(_projectManagementWindowViewModelFactory);
+		projectManagementWindowViewModel.OpenCreateProjectTab();
 	}
 }

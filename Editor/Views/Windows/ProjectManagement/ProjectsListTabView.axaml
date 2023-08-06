@@ -62,8 +62,8 @@
 
                                     <StackPanel Grid.Column="0"
                                                 MinWidth="300">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Black" />
-                                        <TextBlock Text="{Binding Path}" FontWeight="Light" FontSize="12" />
+                                        <TextBlock Text="{Binding ProjectName}" FontWeight="Black" />
+                                        <TextBlock Text="{Binding ProjectFilePath}" FontWeight="Light" FontSize="12" />
                                     </StackPanel>
 
                                     <TextBlock Grid.Column="1"

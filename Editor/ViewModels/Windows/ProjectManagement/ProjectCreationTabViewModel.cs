@@ -2,6 +2,7 @@
 using System.Windows.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Editor.Models.ProjectManagement.Creation;
 using Editor.Utils;
 using ReactiveUI;
 
@@ -11,19 +12,18 @@ public class ProjectCreationTabViewModel : BaseViewModel
 {
 	public RelayCommand CancelProjectCreationCommand { get; } = new();
 	public ICommand SelectProjectLocationCommand { get; }
+	public CreateProjectCommand CreateProjectCommand { get; }
 	
 	#region ProjectName
 
-	private string _projectName = "New Project";
+	private string _projectName = "";
 	public string ProjectName
 	{
 		get => _projectName;
 		set
 		{
-			if (SetField(ref _projectName, value))
-			{
-				UpdateProjectPath(ProjectName);
-			}
+			if (!SetField(ref _projectName, value)) return;
+			_projectCreationService.Configuration.ProjectName = ProjectName;
 		}
 	}
 
@@ -40,22 +40,40 @@ public class ProjectCreationTabViewModel : BaseViewModel
 
 	#endregion
 
-	private string? _selectedParentDir;
+	public ProjectCreationTabNotifications Notifications { get; }
 	
 	private readonly IStorageProvider _storageProvider;
+	private readonly IProjectCreationService _projectCreationService;
 
-	public ProjectCreationTabViewModel()
-	{
-	}
+#pragma warning disable CS8618
+	public ProjectCreationTabViewModel() { }
+#pragma warning restore CS8618
 
-	public ProjectCreationTabViewModel(IStorageProvider storageProvider)
+	public ProjectCreationTabViewModel(IStorageProvider storageProvider, IProjectCreationService projectCreationService)
 	{
 		_storageProvider = storageProvider;
-		SelectProjectLocationCommand = ReactiveCommand.Create(ExecuteSelectProjectLocationCommand);
+		_projectCreationService = projectCreationService;
 
-		ProjectName = GetDefaultProjectName();
-		_selectedParentDir = GetDefaultPath();
-		UpdateProjectPath(ProjectName);
+		Notifications = new ProjectCreationTabNotifications(_projectCreationService);
+		
+		SelectProjectLocationCommand = ReactiveCommand.Create(ExecuteSelectProjectLocationCommand);
+		CreateProjectCommand = new CreateProjectCommand(projectCreationService);
+
+		_projectCreationService.Configuration.ConfigurationChangedEvent += UpdateConfigurationValues;
+		UpdateConfigurationValues();
+	}
+
+	public override void Dispose()
+	{
+		base.Dispose();
+		Notifications.Dispose();
+		CreateProjectCommand.Dispose();
+	}
+
+	private void UpdateConfigurationValues()
+	{
+		ProjectName = _projectCreationService.Configuration.ProjectName;
+		ProjectPath = _projectCreationService.Configuration.FullPath;
 	}
 
 	private void ExecuteSelectProjectLocationCommand()
@@ -70,26 +88,8 @@ public class ProjectCreationTabViewModel : BaseViewModel
 			
 			if (selectedFolder.Count == 0) return;
 			
-			var path = selectedFolder[0].Path.AbsolutePath;
-			if (string.IsNullOrEmpty(path)) return;
-			if (string.IsNullOrEmpty(ProjectName)) return;
-
-			_selectedParentDir = path;
-			UpdateProjectPath(ProjectName);
+			var path = HttpUtility.UrlDecode(selectedFolder[0].Path.AbsolutePath);
+			_projectCreationService.Configuration.ParentDirectoryPath = path;
 		});
-	}
-
-	private void UpdateProjectPath(string projectName)
-	{
-		if (string.IsNullOrEmpty(projectName)) return;
-		ProjectPath = _selectedParentDir + $"/{projectName}";
-	}
-
-	private string GetDefaultProjectName() => "New Project";
-
-	private string GetDefaultPath()
-	{
-		var documentsDir = _storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents).Result?.Path.AbsolutePath;
-		return string.IsNullOrEmpty(documentsDir) ? "" : HttpUtility.UrlDecode(documentsDir + "/ReiProjects");
 	}
 }

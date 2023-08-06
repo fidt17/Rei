@@ -4,7 +4,7 @@ namespace Editor.ViewModels;
 
 public class MainWindowViewModel : BaseViewModel
 {
-	public TabContainer TabContainer { get; } = new();
+	public NavigationStore ActiveTab { get; } = new();
 	
 #pragma warning disable CS8618
 	public MainWindowViewModel() { }
@@ -12,6 +12,6 @@ public class MainWindowViewModel : BaseViewModel
 
 	public MainWindowViewModel(ILogger<MainWindowViewModel> logger)
 	{
-		TabContainer.LogOnTabChange(logger);
+		ActiveTab.LogOnNavigate(logger);
 	}
 }

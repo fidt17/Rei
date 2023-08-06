@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using ReactiveUI;
 
 namespace Editor.ViewModels;
 
-public abstract class BaseViewModel : ReactiveObject
+public abstract class BaseViewModel : ReactiveObject, IDisposable
 {
     protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
@@ -14,4 +15,6 @@ public abstract class BaseViewModel : ReactiveObject
         this.RaisePropertyChanged(propertyName);
         return true;
     }
+
+    public virtual void Dispose() { }
 }

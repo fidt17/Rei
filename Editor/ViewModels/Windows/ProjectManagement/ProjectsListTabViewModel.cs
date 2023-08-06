@@ -26,7 +26,7 @@ public class ProjectsListTabViewModel : BaseViewModel
 	{
 		var project = new Project();
 		project.SetProjectName("Project name");
-		project.SetProjectPath("Project Path");
+		project.SetProjectFilePath("Project Path");
 		project.SetProjectLastEditTime(DateTime.Now);
 		
 		AvailableProjects.Add(project);
