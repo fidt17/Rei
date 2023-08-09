@@ -1,19 +1,19 @@
 ﻿using System;
 using System.IO;
-using Editor.Models.Serialization;
 using Editor.Models.Services.Logging;
+using Editor.Models.Services.Serialization;
 
 namespace Editor.Models.ProjectManagement.Creation;
 
-public class ProjectSetup
+public class ProjectSetupUtility
 {
-	private readonly ILogger<ProjectSetup> _logger;
-	private readonly ISerializer<Project> _projectSerializer;
+	private readonly ILogger<ProjectSetupUtility> _logger;
+	private readonly ISerializer _serializer;
 
-	public ProjectSetup(ILogger<ProjectSetup> logger, ISerializer<Project> projectSerializer)
+	public ProjectSetupUtility(ILogger<ProjectSetupUtility> logger, ISerializer serializer)
 	{
 		_logger = logger;
-		_projectSerializer = projectSerializer;
+		_serializer = serializer;
 	}
 
 	public Project CreateNewProject(ProjectCreationConfiguration configuration)
@@ -45,6 +45,6 @@ public class ProjectSetup
 		project.SetProjectFilePath(projectFilePath);
 		
 		_logger.Log($"Create project file at {projectFilePath}");
-		File.WriteAllText(projectFilePath, _projectSerializer.Serialize(project));
+		File.WriteAllText(projectFilePath, _serializer.Serialize(project));
 	}
 }

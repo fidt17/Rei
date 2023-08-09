@@ -41,7 +41,7 @@ public class ProjectCreationConfiguration
 
 	private void UpdateFullPath()
 	{
-		FullPath = Path.Combine(_parentDirectoryPath, ProjectName);
+		FullPath = Path.GetFullPath(Path.Combine(_parentDirectoryPath, ProjectName));
 		ConfigurationChangedEvent?.Invoke();
 	}
 }

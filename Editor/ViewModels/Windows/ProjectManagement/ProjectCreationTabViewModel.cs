@@ -2,6 +2,8 @@
 using System.Windows.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Editor.Models.ProjectManagement;
+using Editor.Models.ProjectManagement.BookmarkedProjects;
 using Editor.Models.ProjectManagement.Creation;
 using Editor.Utils;
 using ReactiveUI;
@@ -44,30 +46,45 @@ public class ProjectCreationTabViewModel : BaseViewModel
 	
 	private readonly IStorageProvider _storageProvider;
 	private readonly IProjectCreationService _projectCreationService;
+	private readonly IBookmarkedProjectsService _bookmarkedProjectsService;
 
 #pragma warning disable CS8618
 	public ProjectCreationTabViewModel() { }
 #pragma warning restore CS8618
 
-	public ProjectCreationTabViewModel(IStorageProvider storageProvider, IProjectCreationService projectCreationService)
+	public ProjectCreationTabViewModel(
+		IStorageProvider storageProvider, 
+		IProjectCreationService projectCreationService, 
+		IBookmarkedProjectsService bookmarkedProjectsService)
 	{
 		_storageProvider = storageProvider;
 		_projectCreationService = projectCreationService;
+		_bookmarkedProjectsService = bookmarkedProjectsService;
 
-		Notifications = new ProjectCreationTabNotifications(_projectCreationService);
-		
 		SelectProjectLocationCommand = ReactiveCommand.Create(ExecuteSelectProjectLocationCommand);
 		CreateProjectCommand = new CreateProjectCommand(projectCreationService);
+		
+		Notifications = new ProjectCreationTabNotifications(_projectCreationService, CreateProjectCommand);
 
 		_projectCreationService.Configuration.ConfigurationChangedEvent += UpdateConfigurationValues;
+		_projectCreationService.ProjectCreatedEvent += HandleProjectCreatedEvent;
 		UpdateConfigurationValues();
 	}
 
 	public override void Dispose()
 	{
 		base.Dispose();
+		
+		_projectCreationService.Configuration.ConfigurationChangedEvent -= UpdateConfigurationValues;
+		_projectCreationService.ProjectCreatedEvent -= HandleProjectCreatedEvent;
+		
 		Notifications.Dispose();
 		CreateProjectCommand.Dispose();
+	}
+
+	private void HandleProjectCreatedEvent(Project project)
+	{
+		_bookmarkedProjectsService.AddProject(project);
 	}
 
 	private void UpdateConfigurationValues()

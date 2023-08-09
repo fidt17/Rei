@@ -7,40 +7,42 @@ namespace Editor.Models.ProjectManagement.Creation;
 
 public class ProjectCreationService : IProjectCreationService
 {
-	public event Action? ProjectCreationSucceededEvent;
+	public event Action<Project>? ProjectCreatedEvent;
 	public event Action? ProjectCreationFailedEvent;
 	
 	public ProjectCreationValidator Validator { get; }
 	public ProjectCreationConfiguration Configuration { get; }
 
 	private readonly ILogger<ProjectCreationService> _logger;
-	private readonly ProjectSetup _projectSetup;
+	private readonly ProjectSetupUtility _projectSetupUtility;
 
-	public ProjectCreationService(IStorageProvider storageProvider, ILogger<ProjectCreationService> logger, ProjectSetup projectSetup)
+	public ProjectCreationService(IStorageProvider storageProvider, ILogger<ProjectCreationService> logger, ProjectSetupUtility projectSetupUtility)
 	{
 		_logger = logger;
-		_projectSetup = projectSetup;
+		
+		_projectSetupUtility = projectSetupUtility;
 		Configuration = ProjectCreationUtils.GetDefaultProjectCreationConfiguration(storageProvider);
 		Validator = new ProjectCreationValidator(Configuration);
 	}
 
-	public Task<bool> CreateProject()
+	public Task<Project?> CreateProject()
 	{
 		try
 		{
-			_projectSetup.CreateNewProject(Configuration);
+			var project = _projectSetupUtility.CreateNewProject(Configuration);
 			
 			_logger.LogAttention("Project creation succeeded");
-			ProjectCreationSucceededEvent?.Invoke();
-			return Task.FromResult(true);
+			ProjectCreatedEvent?.Invoke(project);
+
+			return Task.FromResult<Project?>(project);
 		}
 		catch (Exception e)
 		{
-			_logger.LogError(e.Message);
+			_logger.LogException(e);
 		}
 		
 		_logger.LogError("Project creation failed");
 		ProjectCreationFailedEvent?.Invoke();
-		return Task.FromResult(false);
+		return Task.FromResult<Project?>(null);
 	}
 }

@@ -12,6 +12,8 @@ public class Logger<T> : ILogger<T>
 
 	public void LogError(string message) => WriteToConsole(message, ConsoleColor.Red);
 
+	public void LogException(Exception exception) => LogError(exception.Message);
+
 	private static void WriteToConsole(string message, ConsoleColor color = ConsoleColor.White)
 	{
 		Console.ForegroundColor = color;

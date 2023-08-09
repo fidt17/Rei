@@ -13,7 +13,7 @@ public class NavigationStore : BaseViewModel
 	private BaseViewModel? _viewModel;
 	public BaseViewModel ViewModel
 	{
-		get => _viewModel ?? throw new NullReferenceException(nameof(ViewModel));
+		get => _viewModel ?? new EmptyViewModel();
 		private set
 		{
 			_viewModel?.Dispose();

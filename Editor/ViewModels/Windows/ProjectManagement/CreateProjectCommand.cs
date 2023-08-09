@@ -46,7 +46,8 @@ public class CreateProjectCommand : BaseViewModel, ICommand, IDisposable
 			_isProjectCreationInProgress = true;
 			CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 			
-			var didCreate = await _projectCreationService.CreateProject();
+			var project = await _projectCreationService.CreateProject();
+			var didCreate = project != null;
 			
 			_isProjectCreationInProgress = false;
 			CanExecuteChanged?.Invoke(this, EventArgs.Empty);

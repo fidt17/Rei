@@ -6,8 +6,12 @@
         <entry key="AvaloniaApplication1/App.axaml" value="AvaloniaApplication1/AvaloniaApplication1.csproj" />
         <entry key="Editor/App.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/App.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Controls/Effects/RingSpinner.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Controls/Effects/Spinner.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Controls/EmptyView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/MainWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Resources/Styles.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/EmptyView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/MainWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ProjectManagement/ProjectCreationTabView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ProjectManagement/ProjectManagementTabView.axaml" value="Editor/Editor.csproj" />

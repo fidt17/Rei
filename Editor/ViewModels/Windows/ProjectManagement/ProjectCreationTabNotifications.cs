@@ -1,5 +1,4 @@
-﻿using Avalonia.Threading;
-using Editor.Models.ProjectManagement.Creation;
+﻿using Editor.Models.ProjectManagement.Creation;
 
 namespace Editor.ViewModels;
 
@@ -39,13 +38,14 @@ public class ProjectCreationTabNotifications : BaseViewModel
 	#endregion
 
 	private readonly IProjectCreationService _projectCreationService;
+	private readonly CreateProjectCommand _createProjectCommand;
 
-	public ProjectCreationTabNotifications(IProjectCreationService projectCreationService)
+	public ProjectCreationTabNotifications(IProjectCreationService projectCreationService, CreateProjectCommand createProjectCommand)
 	{
 		_projectCreationService = projectCreationService;
-		_projectCreationService.ProjectCreationFailedEvent += HandleProjectCreationFailedEvent;
-		_projectCreationService.ProjectCreationSucceededEvent += HandleProjectCreationSucceededEvent;
+		_createProjectCommand = createProjectCommand;
 		
+		_createProjectCommand.ExecutedCommandEvent += HandleCreateProjectCommandExecutedEvent;
 		_projectCreationService.Configuration.ConfigurationChangedEvent += HandleConfigurationChangedEvent;
 	}
 
@@ -53,9 +53,7 @@ public class ProjectCreationTabNotifications : BaseViewModel
 	{
 		base.Dispose();
 		
-		_projectCreationService.ProjectCreationFailedEvent -= HandleProjectCreationFailedEvent;
-		_projectCreationService.ProjectCreationSucceededEvent -= HandleProjectCreationSucceededEvent;
-		
+		_createProjectCommand.ExecutedCommandEvent -= HandleCreateProjectCommandExecutedEvent;
 		_projectCreationService.Configuration.ConfigurationChangedEvent -= HandleConfigurationChangedEvent;
 	}
 
@@ -65,19 +63,8 @@ public class ProjectCreationTabNotifications : BaseViewModel
 		ProjectPathValid = _projectCreationService.Validator.IsProjectPathValid();
 	}
 
-	private void HandleProjectCreationFailedEvent()
+	private void HandleCreateProjectCommandExecutedEvent(bool isSuccessful)
 	{
-		Dispatcher.UIThread.Invoke(() =>
-		{
-			ProjectCreationFailed = true;
-		});
-	}
-
-	private void HandleProjectCreationSucceededEvent()
-	{
-		Dispatcher.UIThread.Invoke(() =>
-		{
-			ProjectCreationFailed = false;
-		});
+		ProjectCreationFailed = !isSuccessful;
 	}
 }

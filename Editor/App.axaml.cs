@@ -6,7 +6,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Editor.Models.Services.Logging;
 using Editor.Startup;
-using Editor.ViewModels;
 using Editor.Views;
 
 namespace Editor;
@@ -30,14 +29,12 @@ public class App : Application
 
 		_logger = container.Resolve<ILogger<App>>();
 
-		SetupMainWindow(container.Resolve<MainWindow>(), container.Resolve<MainWindowViewModel>());
+		SetupMainWindow(container.Resolve<MainWindow>());
 		container.Resolve<EditorEntryPoint>().Start();
 	}
 	
-	private void SetupMainWindow(Window window, MainWindowViewModel vm)
+	private void SetupMainWindow(Window window)
 	{
-		window.DataContext = vm;
-		
 		window.Closed += (_, _) =>
 		{
 			_logger.LogWarning("Main window closed");

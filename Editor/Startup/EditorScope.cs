@@ -1,10 +1,11 @@
-﻿using System;
-using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using Avalonia.Platform.Storage;
+using Editor.Models.ProjectManagement.BookmarkedProjects;
 using Editor.Models.ProjectManagement.Creation;
-using Editor.Models.Serialization;
 using Editor.Models.Services.Logging;
+using Editor.Models.Services.Preferences;
+using Editor.Models.Services.Serialization;
+using Editor.Models.Services.Storage;
 using Editor.Utils.Extensions;
 using Editor.Utils.Factory;
 using Editor.ViewModels;
@@ -12,34 +13,21 @@ using MainWindow = Editor.Views.MainWindow;
 
 namespace Editor.Startup;
 
-public class EditorScope : IAsyncDisposable
+public class EditorScope : BaseLifetimeScope
 {
-	private IContainer _container = null!;
-	
-	public IContainer Configure()
-	{
-		var containerBuilder = new ContainerBuilder();
-		ConfigureContainer(containerBuilder);
-		_container = containerBuilder.Build();
-		
-		return _container;
-	}
-
-	public async ValueTask DisposeAsync()
-	{
-		await _container.DisposeAsync();
-	}
-
-	private static void ConfigureContainer(ContainerBuilder b)
+	protected override void ConfigureContainer(ContainerBuilder b)
 	{
 		b.RegisterGeneric(typeof(Logger<>)).As(typeof(ILogger<>));
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
-		b.RegisterGeneric(typeof(JsonSerializer<>)).As(typeof(ISerializer<>));
+		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
 
 		b.Register<IStorageProvider>(c => c.Resolve<MainWindow>().StorageProvider);
+		b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();
+		b.RegisterSingleton<EditorPreferencesService>().As<IEditorPreferencesService>();
 
 		b.RegisterType<ProjectCreationService>().As<IProjectCreationService>();
-		b.RegisterSingleton<ProjectSetup>();
+		b.RegisterSingleton<ProjectSetupUtility>();
+		b.RegisterSingleton<BookmarkedProjectsService>().As<IBookmarkedProjectsService>();
 
 		b.RegisterSingleton<EditorEntryPoint>();
 		

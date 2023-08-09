@@ -1,0 +1,11 @@
+﻿using System.Collections.Generic;
+using Editor.Models.ProjectManagement;
+using Editor.Startup;
+
+namespace Editor.Models.Services.Preferences;
+
+public interface IEditorPreferencesService : IAsyncInitializable
+{
+	IEnumerable<Project> GetBookmarkedProjects();
+	void SetBookmarkedProjects(IEnumerable<Project> paths);
+}
