@@ -6,7 +6,7 @@
              mc:Ignorable="d"
              x:Class="Editor.Views.ProjectManagementWindowView"
              x:DataType="viewModels:ProjectManagementWindowViewModel"
-             Width="500" Height="450">
+             Width="550" Height="450">
 
     <Design.DataContext>
         <viewModels:ProjectManagementWindowViewModel />

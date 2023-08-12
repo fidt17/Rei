@@ -3,9 +3,9 @@ using System.Windows.Input;
 using Avalonia.Threading;
 using Editor.Models.ProjectManagement.Creation;
 
-namespace Editor.ViewModels;
+namespace Editor.ViewModels.Commands;
 
-public class CreateProjectCommand : BaseViewModel, ICommand, IDisposable
+public class CreateProjectCommand : BaseViewModel, ICommand
 {
 	public event Action<bool>? ExecutedCommandEvent;
 	public event EventHandler? CanExecuteChanged;

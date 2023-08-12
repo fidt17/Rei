@@ -1,0 +1,23 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Editor.ViewModels.Controls"
+             mc:Ignorable="d"
+             x:Class="Editor.Views.Controls.ContextMenuView"
+             x:DataType="vm:ContextMenuViewModel">
+    <Design.DataContext>
+        <vm:ContextMenuViewModel />
+    </Design.DataContext>
+
+    <ItemsControl ItemsSource="{Binding Options}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <Button HorizontalAlignment="Stretch"
+                        Command="{Binding Command}">
+                    <TextBlock Text="{Binding Text}" />
+                </Button>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

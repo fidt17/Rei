@@ -27,7 +27,7 @@ public class BookmarkedProjectsService : IBookmarkedProjectsService
 
 	public void AddProject(Project project)
 	{
-		if (_projects.Contains(project))
+		if (_projects.Exists(x => x.Equals(project)))
 		{
 			_logger.LogWarning($"Cannot add project [{project.ProjectName}] because it does already exist in bookmarked projects collection.");
 			return;

@@ -47,6 +47,7 @@ public class EditorPreferencesService : IEditorPreferencesService
 			{
 				var data = File.ReadAllText(path);
 				project = _serializer.Deserialize<Project>(data);
+				project.SetProjectFilePath(path);
 			}
 			catch (Exception e)
 			{

@@ -1,9 +1,17 @@
 ﻿using System;
+using System.Linq;
 
 namespace Editor.Models.Services.Logging;
 
 public class Logger<T> : ILogger<T>
 {
+	private readonly string _name;
+
+	public Logger(string? name = null)
+	{
+		_name = name ?? ExpandTypeName(typeof(T));
+	}
+
 	public void Log(string message) => WriteToConsole(message);
 
 	public void LogAttention(string message) => WriteToConsole(message, ConsoleColor.Cyan);
@@ -14,10 +22,17 @@ public class Logger<T> : ILogger<T>
 
 	public void LogException(Exception exception) => LogError(exception.Message);
 
-	private static void WriteToConsole(string message, ConsoleColor color = ConsoleColor.White)
+	private void WriteToConsole(string message, ConsoleColor color = ConsoleColor.White)
 	{
 		Console.ForegroundColor = color;
-		Console.WriteLine($"[{DateTime.Now.ToLongTimeString()}][{typeof(T).Name}]: {message}");
+		Console.WriteLine($"[{DateTime.Now.ToLongTimeString()}][{_name}]: {message}");
 		Console.ForegroundColor = ConsoleColor.White;
+	}
+	
+	private static string ExpandTypeName(Type t)
+	{
+		return !t.IsGenericType || t.IsGenericTypeDefinition
+			? !t.IsGenericTypeDefinition ? t.Name : t.Name.Remove(t.Name.IndexOf('`'))
+			: $"{ExpandTypeName(t.GetGenericTypeDefinition())}<{string.Join(',', t.GetGenericArguments().Select(ExpandTypeName))}>";
 	}
 }
