@@ -1,0 +1,55 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:projectManagement="clr-namespace:ReiEditor.ViewModels.Windows.ProjectManagement"
+             mc:Ignorable="d" 
+             d:DesignWidth="500" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.ProjectManagement.ProjectsListTabView"
+             x:DataType="projectManagement:ProjectsListTabViewModel">
+
+    <Design.DataContext>
+        <projectManagement:ProjectsListTabViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <!-- Header -->
+        <Grid Row="0" Margin="20"
+              ColumnDefinitions="*, *">
+            <TextBlock Text="Projects" Classes="h1" />
+
+            <!-- Control Buttons -->
+            <StackPanel Grid.Column="1"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal"
+                        Spacing="10">
+
+                <Button Command="{Binding OpenProjectCommand}">
+                    Open
+                </Button>
+
+                <Button Command="{Binding CreateProjectCommand}">
+                    Create project
+                </Button>
+
+            </StackPanel>
+        </Grid>
+
+        <Grid Row="1" RowDefinitions="Auto, *">
+
+            <!-- Column Names -->
+            <Grid ColumnDefinitions="*, 160"
+                  Margin="20, 10, 10, 5">
+                <TextBlock Grid.Column="0" Text="Name" Classes="h4" />
+                <TextBlock Grid.Column="1" Text="Last edit time" Classes="h4" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Projects Listing -->
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding AvailableProjects}"
+                              Background="#ccc" />
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

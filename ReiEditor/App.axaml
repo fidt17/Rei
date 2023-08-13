@@ -1,0 +1,15 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:common="clr-namespace:ReiEditor.Views.Common"
+             x:Class="ReiEditor.App"
+             RequestedThemeVariant="Light">
+  
+    <Application.DataTemplates>
+        <common:ViewLocator/>
+    </Application.DataTemplates>
+    
+    <Application.Styles>
+        <FluentTheme/>
+        <StyleInclude Source="Views/Resources/Styles.axaml"></StyleInclude>
+    </Application.Styles>
+</Application>

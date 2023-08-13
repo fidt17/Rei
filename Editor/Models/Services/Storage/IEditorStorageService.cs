@@ -1,9 +1,0 @@
-﻿using System.Threading.Tasks;
-
-namespace Editor.Models.Services.Storage;
-
-public interface IEditorStorageService
-{
-	Task<bool> WriteToFile(string fileName, string value);
-	Task<string?> ReadFromFile(string fileName);
-}
