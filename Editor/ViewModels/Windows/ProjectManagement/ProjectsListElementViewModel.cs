@@ -1,16 +1,21 @@
-﻿using Avalonia.Threading;
+﻿using System.Windows.Input;
+using Avalonia.Threading;
 using Editor.Models.ProjectManagement;
+using Editor.Models.ProjectManagement.Active;
 using Editor.Models.ProjectManagement.BookmarkedProjects;
 using Editor.Models.ProjectManagement.Deletion;
 using Editor.Models.Services.FileSystem;
+using Editor.Utils;
 using Editor.ViewModels.Controls;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 
-namespace Editor.ViewModels;
+namespace Editor.ViewModels.ProjectManagement;
 
 public class ProjectsListElementViewModel : BaseViewModel
 {
+	public ICommand OpenProjectCommand { get; }
+	
 	public Project Project { get; }
 	public ContextMenuViewModel ContextMenu { get; } = new();
 
@@ -25,14 +30,18 @@ public class ProjectsListElementViewModel : BaseViewModel
 	public ProjectsListElementViewModel(Project project, 
 		IFileExplorerProvider fileExplorerProvider, 
 		IProjectDeletionService projectDeletionService,
-		IBookmarkedProjectsService bookmarkedProjectsService)
+		IBookmarkedProjectsService bookmarkedProjectsService,
+		IActiveProjectService activeProjectService)
 	{
 		_fileExplorerProvider = fileExplorerProvider;
 		_projectDeletionService = projectDeletionService;
 		_bookmarkedProjectsService = bookmarkedProjectsService;
+		
 		Project = project;
 		ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Reveal in File Explorer", RevealInFileExplorer));
 		ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete Project", DeleteProject));
+
+		OpenProjectCommand = new RelayCommand(() => activeProjectService.OpenProject(Project));
 	}
 
 	private void RevealInFileExplorer() => _fileExplorerProvider.OpenDirectory(Project.GetDirectoryPath());

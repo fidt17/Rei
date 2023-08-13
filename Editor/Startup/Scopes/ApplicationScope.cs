@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
-using Avalonia;
 using Avalonia.Platform.Storage;
-using Editor.Models.Services.App.MainWindow;
-using Editor.Models.Services.App.Shutdown;
+using Editor.Models.App.MainWindow;
+using Editor.Models.App.Shutdown;
+using Editor.Models.ProjectManagement.Active;
 using Editor.Models.Services.FileSystem;
 using Editor.Models.Services.Logging;
 using Editor.Models.Services.Preferences;
@@ -14,7 +14,6 @@ using Editor.Startup.EntryPoints;
 using Editor.Utils.Extensions;
 using Editor.Utils.Factory;
 using Editor.ViewModels;
-using Editor.Views;
 
 namespace Editor.Startup.Scopes;
 
@@ -47,6 +46,7 @@ public class ApplicationScope : BaseLifetimeScope
 		
 		b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();
 		b.RegisterSingleton<EditorPreferencesService>().As<IEditorPreferencesService>();
+		b.RegisterSingleton<ActiveProjectService>().As<IActiveProjectService>();
 
 		b.RegisterSingleton<ApplicationEntryPoint>();
 		b.RegisterSingleton<MainWindowService>().As<IMainWindowService>();

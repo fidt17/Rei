@@ -2,14 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:viewModels="clr-namespace:Editor.ViewModels"
+             xmlns:projectManagement="clr-namespace:Editor.ViewModels.ProjectManagement"
              mc:Ignorable="d" 
              d:DesignWidth="500" d:DesignHeight="450"
-             x:Class="Editor.Views.ProjectsListTabView"
-             x:DataType="viewModels:ProjectsListTabViewModel">
+             x:Class="Editor.Views.ProjectManagement.ProjectsListTabView"
+             x:DataType="projectManagement:ProjectsListTabViewModel">
 
     <Design.DataContext>
-        <viewModels:ProjectsListTabViewModel />
+        <projectManagement:ProjectsListTabViewModel />
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto, *">

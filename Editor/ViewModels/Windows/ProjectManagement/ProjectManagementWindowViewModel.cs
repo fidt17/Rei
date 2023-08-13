@@ -1,7 +1,7 @@
 ﻿using Editor.Models.Services.Logging;
 using Editor.Utils.Factory;
 
-namespace Editor.ViewModels;
+namespace Editor.ViewModels.ProjectManagement;
 
 public class ProjectManagementWindowViewModel : BaseViewModel
 {

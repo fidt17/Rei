@@ -11,7 +11,7 @@ using Editor.Models.Services.FileSystem;
 using Editor.Models.Services.Logging;
 using Editor.Models.Services.Serialization;
 
-namespace Editor.ViewModels.Commands;
+namespace Editor.ViewModels.ProjectManagement.Commands;
 
 public class OpenProjectCommand : BaseViewModel, ICommand
 {

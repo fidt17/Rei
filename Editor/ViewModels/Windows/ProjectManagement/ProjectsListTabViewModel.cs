@@ -5,9 +5,9 @@ using Editor.Models.ProjectManagement;
 using Editor.Models.ProjectManagement.BookmarkedProjects;
 using Editor.Utils;
 using Editor.Utils.Factory;
-using Editor.ViewModels.Commands;
+using Editor.ViewModels.ProjectManagement.Commands;
 
-namespace Editor.ViewModels;
+namespace Editor.ViewModels.ProjectManagement;
 
 public class ProjectsListTabViewModel : BaseViewModel
 {

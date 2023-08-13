@@ -1,7 +1,7 @@
 ﻿using Editor.Models.ProjectManagement.Creation;
-using Editor.ViewModels.Commands;
+using Editor.ViewModels.ProjectManagement.Commands;
 
-namespace Editor.ViewModels;
+namespace Editor.ViewModels.ProjectManagement;
 
 public class ProjectCreationTabNotifications : BaseViewModel
 {

@@ -2,10 +2,10 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Editor.Models.Services.App.Shutdown;
+using Editor.Models.App.Shutdown;
 using Editor.Models.Services.Logging;
 
-namespace Editor.Models.Services.App.MainWindow;
+namespace Editor.Models.App.MainWindow;
 
 public class MainWindowService : IMainWindowService
 {
@@ -24,6 +24,12 @@ public class MainWindowService : IMainWindowService
 
 	public void ShowMainWindow(Window window)
 	{
+		if (_mainWindow != null)
+		{
+			_mainWindow.Closed -= HandleWindowClosedEvent;
+			_mainWindow.Close();
+		}
+		
 		_mainWindow = window;
 		
 		if (Application.Current!.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -37,8 +43,6 @@ public class MainWindowService : IMainWindowService
 
 	private void HandleWindowClosedEvent(object? sender, EventArgs e)
 	{
-		if (!Equals(_mainWindow, sender)) return;
-		
 		_logger.LogWarning("Main window closed");
 		_shutdownService.Shutdown(1);
 	}

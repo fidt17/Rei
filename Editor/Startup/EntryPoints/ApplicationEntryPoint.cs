@@ -1,25 +1,42 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Avalonia.Threading;
-using Editor.Models.Services.App.Shutdown;
+using Editor.Models.App.Shutdown;
+using Editor.Models.ProjectManagement;
+using Editor.Models.ProjectManagement.Active;
 using Editor.Models.Services.Logging;
 using Editor.Startup.Scopes;
 
 namespace Editor.Startup.EntryPoints;
 
-public class ApplicationEntryPoint
+public class ApplicationEntryPoint : IDisposable
 {
+	private ProjectManagementScope? _projectManagementScope;
+	
 	private readonly ApplicationScope _scope;
 	private readonly ILogger<ApplicationEntryPoint> _logger;
 	private readonly IApplicationShutdownService _shutdownService;
+	private readonly IActiveProjectService _activeProjectService;
 
-	public ApplicationEntryPoint(ApplicationScope scope, ILogger<ApplicationEntryPoint> logger, IApplicationShutdownService shutdownService)
+	public ApplicationEntryPoint(
+		ApplicationScope scope, 
+		ILogger<ApplicationEntryPoint> logger, 
+		IApplicationShutdownService shutdownService,
+		IActiveProjectService activeProjectService)
 	{
 		_scope = scope;
 		_logger = logger;
 		_shutdownService = shutdownService;
-		
+		_activeProjectService = activeProjectService;
+
 		_shutdownService.AddShutdownTask(_scope.StopAsync);
+		
+		_activeProjectService.ProjectChangedEvent += HandleProjectChangedEvent;
+	}
+
+	public void Dispose()
+	{
+		_activeProjectService.ProjectChangedEvent -= HandleProjectChangedEvent;
 	}
 
 	public void Start()
@@ -29,7 +46,7 @@ public class ApplicationEntryPoint
 		{
 			try
 			{
-				await OpenProjectManagementWindow();
+				await EnterProjectManagementScope();
 			}
 			catch (Exception e)
 			{
@@ -39,18 +56,56 @@ public class ApplicationEntryPoint
 		});
 	}
 
-	private async Task OpenProjectManagementWindow()
+	private async Task EnterProjectManagementScope()
 	{
-		_logger.Log("Start project management scope");
+		_logger.Log("Enter project management scope");
+		
 		try
 		{
-			var projectManagementScope = new ProjectManagementScope(_scope);
-			await projectManagementScope.StartAsync();
+			_projectManagementScope = new ProjectManagementScope(_scope);
+			await _projectManagementScope.StartAsync();
 		}
 		catch (Exception e)
 		{
 			_logger.LogException(e);
 			throw;
 		}
+	}
+
+	private async Task EnterProjectEditorScope()
+	{
+		_logger.Log("Enter project editor scope");
+
+		try
+		{
+			var editorScope = new EditorScope(_scope);
+			await editorScope.StartAsync();
+		}
+		catch (Exception e)
+		{
+			_logger.LogException(e);
+			throw;
+		}
+	}
+
+	private void HandleProjectChangedEvent(Project project)
+	{
+		Dispatcher.UIThread.InvokeAsync(async () =>
+		{
+			try
+			{
+				if (_projectManagementScope != null)
+				{
+					await _projectManagementScope.StopAsync();
+				}
+
+				await EnterProjectEditorScope();
+			}
+			catch (Exception e)
+			{
+				_logger.LogException(e);
+				_shutdownService.Shutdown(-1);
+			}
+		});
 	}
 }

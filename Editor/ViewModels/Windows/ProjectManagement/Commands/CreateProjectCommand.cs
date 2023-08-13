@@ -3,7 +3,7 @@ using System.Windows.Input;
 using Avalonia.Threading;
 using Editor.Models.ProjectManagement.Creation;
 
-namespace Editor.ViewModels.Commands;
+namespace Editor.ViewModels.ProjectManagement.Commands;
 
 public class CreateProjectCommand : BaseViewModel, ICommand
 {

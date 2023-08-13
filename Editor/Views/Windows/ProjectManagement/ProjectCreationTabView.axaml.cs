@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace Editor.Views;
+namespace Editor.Views.ProjectManagement;
 
 public partial class ProjectCreationTabView : UserControl
 {

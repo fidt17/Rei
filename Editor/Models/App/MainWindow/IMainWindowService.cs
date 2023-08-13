@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 
-namespace Editor.Models.Services.App.MainWindow;
+namespace Editor.Models.App.MainWindow;
 
 public interface IMainWindowService
 {

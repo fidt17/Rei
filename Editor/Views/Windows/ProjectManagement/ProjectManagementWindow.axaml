@@ -1,0 +1,17 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:projectManagement="clr-namespace:Editor.ViewModels.ProjectManagement"
+        mc:Ignorable="d"
+        x:Class="Editor.Views.ProjectManagement.ProjectManagementWindow"
+        x:DataType="projectManagement:ProjectManagementWindowViewModel"
+        WindowStartupLocation="CenterScreen"
+        Width="550" Height="450">
+
+    <Design.DataContext>
+        <projectManagement:ProjectManagementWindowViewModel />
+    </Design.DataContext>
+
+    <ContentControl Content="{Binding ActiveTab.ViewModel}" />
+</Window>

@@ -6,7 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Editor.Models.Services.Logging;
 
-namespace Editor.Models.Services.App.Shutdown;
+namespace Editor.Models.App.Shutdown;
 
 public class ApplicationShutdownService : IApplicationShutdownService
 {

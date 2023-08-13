@@ -6,8 +6,8 @@ using Editor.Models.ProjectManagement.Deletion;
 using Editor.Startup.Common;
 using Editor.Startup.EntryPoints;
 using Editor.Utils.Extensions;
-using Editor.ViewModels;
-using Editor.ViewModels.Commands;
+using Editor.ViewModels.ProjectManagement;
+using Editor.ViewModels.ProjectManagement.Commands;
 
 namespace Editor.Startup.Scopes;
 

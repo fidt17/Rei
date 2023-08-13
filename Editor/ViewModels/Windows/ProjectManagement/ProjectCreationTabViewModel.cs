@@ -6,10 +6,10 @@ using Editor.Models.ProjectManagement;
 using Editor.Models.ProjectManagement.BookmarkedProjects;
 using Editor.Models.ProjectManagement.Creation;
 using Editor.Utils;
-using Editor.ViewModels.Commands;
+using Editor.ViewModels.ProjectManagement.Commands;
 using ReactiveUI;
 
-namespace Editor.ViewModels;
+namespace Editor.ViewModels.ProjectManagement;
 
 public class ProjectCreationTabViewModel : BaseViewModel
 {

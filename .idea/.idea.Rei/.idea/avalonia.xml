@@ -13,6 +13,9 @@
         <entry key="Editor/Views/Controls/EmptyView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/MainWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Resources/Styles.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/Editor/EditorWindow.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="Editor/Editor.csproj" />
+        <entry key="Editor/Views/Windows/Editor/ProjectEditorWindowView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/EmptyView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/MainWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ProjectManagement/ProjectCreationTabView.axaml" value="Editor/Editor.csproj" />
