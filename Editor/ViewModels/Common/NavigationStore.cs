@@ -37,7 +37,7 @@ public class NavigationStore : BaseViewModel
 		{
 			if (ViewModel != null)
 			{
-				logger.LogAttention($"Navigate to {ViewModel.GetType().Name.Replace("ViewModel", "")}");
+				logger.Log($"Navigate to {ViewModel.GetType().Name.Replace("ViewModel", "")}");
 			}
 		};
 	}

@@ -29,7 +29,7 @@
 
 
     <ItemGroup>
-      <Compile Update="Views\Windows\MainWindow.axaml.cs">
+      <Compile Update="Views\Windows\ShellWindow.axaml.cs">
         <DependentUpon>MainWindow.axaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>

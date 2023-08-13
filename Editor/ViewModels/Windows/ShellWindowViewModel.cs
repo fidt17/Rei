@@ -2,15 +2,15 @@
 
 namespace Editor.ViewModels;
 
-public class MainWindowViewModel : BaseViewModel
+public class ShellWindowViewModel : BaseViewModel
 {
 	public NavigationStore ActiveTab { get; } = new();
 	
 #pragma warning disable CS8618
-	public MainWindowViewModel() { }
+	public ShellWindowViewModel() { }
 #pragma warning restore CS8618
 
-	public MainWindowViewModel(ILogger<MainWindowViewModel> logger)
+	public ShellWindowViewModel(ILogger<ShellWindowViewModel> logger)
 	{
 		ActiveTab.LogOnNavigate(logger);
 	}

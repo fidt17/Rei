@@ -4,15 +4,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:Editor.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="Editor.Views.MainWindow"
-        x:DataType="viewModels:MainWindowViewModel"
+        x:Class="Editor.Views.ShellWindow"
+        x:DataType="viewModels:ShellWindowViewModel"
         Title="Rei Engine"
         SizeToContent="WidthAndHeight"
         CanResize="False"
         Focusable="True">
 
     <Design.DataContext>
-        <viewModels:MainWindowViewModel />
+        <viewModels:ShellWindowViewModel />
     </Design.DataContext>
 
     <ContentControl Content="{Binding ActiveTab.ViewModel}" />

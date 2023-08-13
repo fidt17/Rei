@@ -6,11 +6,11 @@ using Editor.Views.Utils;
 
 namespace Editor.Views;
 
-public partial class MainWindow : Window
+public partial class ShellWindow : Window
 {
-	private MainWindowViewModel? _vm;
+	private ShellWindowViewModel? _vm;
 	
-	public MainWindow()
+	public ShellWindow()
 	{
 		DataContextChanged += HandleDataContextChange;
 		
@@ -29,7 +29,7 @@ public partial class MainWindow : Window
 
 	private void HandleDataContextChange(object? sender, EventArgs e)
 	{
-		if (DataContext is MainWindowViewModel vm)
+		if (DataContext is ShellWindowViewModel vm)
 		{
 			_vm = vm;
 			_vm.ActiveTab.ChangedEvent += HandleWindowTabChangedEvent;

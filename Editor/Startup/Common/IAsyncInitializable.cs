@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Editor.Startup;
+namespace Editor.Startup.Common;
 
 public interface IAsyncInitializable
 {
