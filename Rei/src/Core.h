@@ -1,2 +1,2 @@
 ﻿#pragma once
-#define REI_EXPORT __declspec(dllexport)
+#define REI_API __declspec(dllexport)

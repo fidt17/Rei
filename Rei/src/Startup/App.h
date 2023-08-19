@@ -1,9 +1,8 @@
 ﻿#pragma once
-#include "../Core.h"
 
 namespace rei
 {
-    class REI_EXPORT App
+    class REI_API App
     {
     public:
         void Start();
