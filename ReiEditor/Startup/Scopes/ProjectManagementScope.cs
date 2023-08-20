@@ -2,6 +2,7 @@
 using Autofac;
 using ReiEditor.Models.ProjectManagement.BookmarkedProjects;
 using ReiEditor.Models.ProjectManagement.Creation;
+using ReiEditor.Models.ProjectManagement.Creation.Template;
 using ReiEditor.Models.ProjectManagement.Deletion;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
@@ -25,7 +26,9 @@ public class ProjectManagementScope : BaseLifetimeScope
 	protected override void ConfigureContainer(ContainerBuilder b)
 	{
 		b.RegisterInstance(this);
-		
+
+		b.RegisterSingleton<ProjectTemplateProvider>().As<IProjectTemplateProvider>();
+		b.RegisterSingleton<SolutionGenerator>().As<ISolutionGenerator>();
 		b.RegisterType<ProjectCreationService>().As<IProjectCreationService>();
 		b.RegisterSingleton<ProjectDeletionService>().As<IProjectDeletionService>();
 		b.RegisterSingleton<BookmarkedProjectsService>().As<IBookmarkedProjectsService>();
@@ -38,8 +41,11 @@ public class ProjectManagementScope : BaseLifetimeScope
 	private void ConfigureViews(ContainerBuilder b)
 	{
 		b.RegisterType<ProjectManagementWindowViewModel>();
+		b.RegisterType<EditorSetupTabViewModel>();
 		b.RegisterType<ProjectsListTabViewModel>();
 		b.RegisterType<ProjectCreationTabViewModel>();
+
+		b.RegisterType<SetEngineLocationCommand>();
 		b.RegisterType<OpenProjectCommand>();
 
 		b.RegisterType<ProjectsListElementViewModel>();

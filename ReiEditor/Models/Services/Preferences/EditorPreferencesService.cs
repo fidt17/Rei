@@ -35,6 +35,18 @@ public class EditorPreferencesService : IEditorPreferencesService
 		_preferences = await LoadPreferences();
 	}
 
+	public string? GetEnginePath()
+	{
+		if (string.IsNullOrEmpty(_preferences.EnginePath)) return null;
+		return _preferences.EnginePath;
+	}
+
+	public void SetEnginePath(string path)
+	{
+		_preferences.EnginePath = path;
+		SavePreferences(_preferences);
+	}
+
 	public IEnumerable<Project> GetBookmarkedProjects()
 	{
 		var validProjects = new List<Project>();

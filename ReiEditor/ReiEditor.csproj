@@ -62,36 +62,12 @@
       <DependentUpon>ProjectEditorWindow.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Windows\ProjectManagement\ProjectCreationTabView.axaml.cs">
-      <DependentUpon>ProjectCreationTabView.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Update="Views\Windows\ProjectManagement\ProjectManagementWindow.axaml.cs">
       <DependentUpon>ProjectManagementWindow.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Windows\ProjectManagement\ProjectsListElementView.axaml.cs">
-      <DependentUpon>ProjectsListElementView.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Windows\ProjectManagement\ProjectsListTabView.axaml.cs">
-      <DependentUpon>ProjectsListTabView.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Windows\ProjectManagement\ProjectCreationTabView.axaml.cs">
-      <DependentUpon>ProjectCreationTabView.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Update="Views\Windows\ProjectManagement\ProjectManagementWindow.axaml.cs">
       <DependentUpon>ProjectManagementWindow.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Windows\ProjectManagement\ProjectsListElementView.axaml.cs">
-      <DependentUpon>ProjectsListElementView.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Windows\ProjectManagement\ProjectsListTabView.axaml.cs">
-      <DependentUpon>ProjectsListTabView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Windows\EmptyView.axaml.cs">
@@ -114,6 +90,34 @@
       <DependentUpon>App.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\ProjectCreationTabView.axaml.cs">
+      <DependentUpon>ProjectCreationTabView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\ProjectsListElementView.axaml.cs">
+      <DependentUpon>ProjectsListElementView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\ProjectsListTabView.axaml.cs">
+      <DependentUpon>ProjectsListTabView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\ProjectCreationTabView.axaml.cs">
+      <DependentUpon>ProjectCreationTabView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\ProjectsListElementView.axaml.cs">
+      <DependentUpon>ProjectsListElementView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\ProjectsListTabView.axaml.cs">
+      <DependentUpon>ProjectsListTabView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Windows\ProjectManagement\EditorSetupTabView.axaml.cs">
+      <DependentUpon>EditorSetupTabView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
 
 
@@ -123,9 +127,7 @@
     <AdditionalFiles Include="Views\Resources\Styles.axaml" />
     <AdditionalFiles Include="Views\Windows\Editor\ProjectEditorWindow.axaml" />
     <AdditionalFiles Include="Views\Windows\EmptyView.axaml" />
-    <AdditionalFiles Include="Views\Windows\ProjectManagement\ProjectCreationTabView.axaml" />
     <AdditionalFiles Include="Views\Windows\ProjectManagement\ProjectManagementWindow.axaml" />
-    <AdditionalFiles Include="Views\Windows\ProjectManagement\ProjectsListElementView.axaml" />
     <AdditionalFiles Include="Views\Windows\ProjectManagement\ProjectsListTabView.axaml" />
     <AdditionalFiles Include="Views\Windows\ShellWindow.axaml" />
   </ItemGroup>
@@ -133,5 +135,17 @@
 
   <ItemGroup>
     <Folder Include="Utils\Factory\Custom" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Remove="Resources\ProjectTemplates\SolutionTemplate\proj_template.txt" />
+    <AdditionalFiles Include="Resources\ProjectTemplates\SolutionTemplate\proj_template.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AdditionalFiles>
+    <None Remove="Resources\ProjectTemplates\SolutionTemplate\sln_template.txt" />
+    <AdditionalFiles Include="Resources\ProjectTemplates\SolutionTemplate\sln_template.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AdditionalFiles>
   </ItemGroup>
 </Project>

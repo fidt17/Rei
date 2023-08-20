@@ -4,9 +4,12 @@ using Avalonia.Platform.Storage;
 using ReiEditor.Models.App.MainWindow;
 using ReiEditor.Models.App.Shutdown;
 using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.ProjectManagement.EditorSetup;
+using ReiEditor.Models.Services.Engine;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Preferences;
+using ReiEditor.Models.Services.Resources;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Models.Services.Storage;
 using ReiEditor.Startup.Common;
@@ -24,6 +27,8 @@ public class ApplicationScope : BaseLifetimeScope
 	protected override async Task OnScopeStart()
 	{
 		await Scope.Resolve<IEditorPreferencesService>().InitializeAsync();
+		await Scope.Resolve<IEditorConfigurationService>().InitializeAsync();
+		await Scope.Resolve<IEngineSettingsProvider>().InitializeAsync();
 		
 		Scope.Resolve<ApplicationEntryPoint>().Start();
 	}
@@ -36,6 +41,9 @@ public class ApplicationScope : BaseLifetimeScope
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
 		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
 
+		b.RegisterSingleton<ResourceLoader>().As<IResourceLoader>();
+		b.RegisterSingleton<EngineSettingsProvider>().As<IEngineSettingsProvider>();
+		
 		b.Register<IStorageProvider>(c =>
 		{
 			var window = c.Resolve<IMainWindowService>().GetMainWindow();
@@ -43,7 +51,8 @@ public class ApplicationScope : BaseLifetimeScope
 		});
 		
 		b.RegisterSingleton<WindowsFileExplorerProvider>().As<IFileExplorerProvider>();
-		
+
+		b.RegisterSingleton<EditorConfigurationService>().As<IEditorConfigurationService>();
 		b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();
 		b.RegisterSingleton<EditorPreferencesService>().As<IEditorPreferencesService>();
 		b.RegisterSingleton<ActiveProjectService>().As<IActiveProjectService>();

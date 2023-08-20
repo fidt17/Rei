@@ -11,6 +11,7 @@ public class ProjectManagementWindowViewModel : BaseViewModel
 	private readonly ILogger<ProjectManagementWindowViewModel> _logger;
 	private readonly IFactory<ProjectsListTabViewModel> _projectsListViewModelFactory;
 	private readonly IFactory<ProjectCreationTabViewModel> _projectCreationViewModelFactory;
+	private readonly IFactory<EditorSetupTabViewModel> _editorSetupTabViewModel;
 
 #pragma warning disable CS8618
 	public ProjectManagementWindowViewModel() { }
@@ -19,13 +20,21 @@ public class ProjectManagementWindowViewModel : BaseViewModel
 	public ProjectManagementWindowViewModel(
 		ILogger<ProjectManagementWindowViewModel> logger, 
 		IFactory<ProjectsListTabViewModel> projectsListViewModelFactory,
-		IFactory<ProjectCreationTabViewModel> projectCreationViewModelFactory)
+		IFactory<ProjectCreationTabViewModel> projectCreationViewModelFactory,
+		IFactory<EditorSetupTabViewModel> editorSetupTabViewModel)
 	{
 		_logger = logger;
 		_projectsListViewModelFactory = projectsListViewModelFactory;
 		_projectCreationViewModelFactory = projectCreationViewModelFactory;
+		_editorSetupTabViewModel = editorSetupTabViewModel;
 
 		ActiveTab.LogOnNavigate(_logger);
+	}
+
+	public void OpenEditorSetupTab()
+	{
+		var vm = ActiveTab.Navigate(_editorSetupTabViewModel);
+		vm.EditorSetupEvent += OpenProjectsListTab;
 	}
 
 	public void OpenProjectsListTab()

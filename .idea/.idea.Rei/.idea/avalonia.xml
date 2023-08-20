@@ -32,6 +32,11 @@
         <entry key="ReiEditor/App.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/MainWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/ProjectManagement/EditorSetupTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectCreation/ProjectCreationTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectCreationTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectsListElementView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectsListTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ShellWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
       </map>
     </option>
