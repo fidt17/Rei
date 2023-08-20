@@ -18,30 +18,28 @@
         <converters:LogLevelEnumToBoolConverter Level="Error" x:Key="IsError" />
     </UserControl.Resources>
 
-    <Border BorderBrush="black" BorderThickness="1" Margin="2" Background="#aaa"
+    <Border Classes="InnerContent" Margin="0, 2, 0, 2"
             HorizontalAlignment="Stretch">
         <TextBlock
             Margin="2"
             Text="{Binding Message}"
-            Classes="h4"
+            Classes="h5"
             Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
             Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
             Classes.attention="{Binding LogLevel, Converter={StaticResource IsAttention}}"
             Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
             <TextBlock.Styles>
                 <Style Selector="TextBlock.info">
-                    <Setter Property="Foreground" Value="black" />
+                    <Setter Property="Foreground" Value="{StaticResource Info}" />
                 </Style>
                 <Style Selector="TextBlock.warning">
-                    <Setter Property="Foreground" Value="yellow" />
+                    <Setter Property="Foreground" Value="{StaticResource Warning}" />
                 </Style>
                 <Style Selector="TextBlock.attention">
-                    <Setter Property="Foreground" Value="#6bdfe2" />
-                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="Foreground" Value="{StaticResource Attention}" />
                 </Style>
                 <Style Selector="TextBlock.error">
-                    <Setter Property="Foreground" Value="red" />
-                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="Foreground" Value="{StaticResource Error}" />
                 </Style>
             </TextBlock.Styles>
         </TextBlock>

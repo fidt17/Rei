@@ -11,22 +11,22 @@
         <console:ConsoleEditorWindowViewModel />
     </Design.DataContext>
 
-    <Border BorderBrush="black" BorderThickness="1">
+    <Border Classes="Window">
         <Grid RowDefinitions="Auto, *">
 
             <!-- Header -->
-            <Grid Background="gray">
+            <Grid>
                 <TextBlock Text="Console"
-                           Margin="5, 0, 0, 0"
-                           Classes="h4" Foreground="white" />
+                           Classes="h5" Foreground="white" />
             </Grid>
 
-            <!-- Logs -->
-            <ScrollViewer x:Name="ConsoleScrollViewer"
-                Grid.Row="1">
-                <ItemsControl 
-                    ItemsSource="{Binding Logs}" />
-            </ScrollViewer>
+            <!-- Content -->
+            <Border Grid.Row="1" Classes="WindowContent">
+                <ScrollViewer x:Name="ConsoleScrollViewer">
+                    <ItemsControl
+                        ItemsSource="{Binding Logs}" />
+                </ScrollViewer>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

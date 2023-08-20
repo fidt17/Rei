@@ -10,14 +10,17 @@
         <controls:ContextMenuViewModel />
     </Design.DataContext>
 
-    <ItemsControl ItemsSource="{Binding Options}">
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Button HorizontalAlignment="Stretch"
-                        Command="{Binding Command}">
-                    <TextBlock Text="{Binding Text}" />
-                </Button>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+    <Border Classes="Window" Margin="0">
+        <ItemsControl ItemsSource="{Binding Options}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button HorizontalAlignment="Stretch"
+                            Margin="1"
+                            Command="{Binding Command}">
+                        <TextBlock Text="{Binding Text}" />
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Border>
 </UserControl>

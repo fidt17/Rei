@@ -14,8 +14,7 @@
 
     <Grid ColumnDefinitions="*, Auto">
         <Button
-            Background="white"
-            HorizontalAlignment="Stretch" 
+            HorizontalAlignment="Stretch"
             Margin="10, 5, 0, 5"
             Command="{Binding OpenProjectCommand}">
             <Button.Effect>
@@ -33,10 +32,10 @@
                 <TextBlock Grid.Column="1"
                            HorizontalAlignment="Right"
                            Text="{Binding Project.LastEditTime}"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Bottom" />
             </Grid>
         </Button>
-        <Button Grid.Column="1" Background="white"
+        <Button Grid.Column="1"
                 Margin="5, 5, 10, 5"
                 Width="30" Height="30"
                 VerticalAlignment="Center"
@@ -46,7 +45,7 @@
             </Button.Effect>
 
             <Button.Flyout>
-                <Flyout>
+                <Flyout FlyoutPresenterClasses="Clear">
                     <controls1:ContextMenuView DataContext="{Binding ContextMenu}" />
                 </Flyout>
             </Button.Flyout>

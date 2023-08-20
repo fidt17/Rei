@@ -7,6 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
+        Background="{StaticResource Dark_0}"
         Title="Rei Engine"
         WindowStartupLocation="CenterScreen">
 

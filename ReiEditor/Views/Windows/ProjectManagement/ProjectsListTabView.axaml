@@ -4,9 +4,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:projectManagement="clr-namespace:ReiEditor.ViewModels.Windows.ProjectManagement"
              mc:Ignorable="d"
-             d:DesignWidth="500" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.ProjectManagement.ProjectsListTabView"
-             x:DataType="projectManagement:ProjectsListTabViewModel">
+             x:DataType="projectManagement:ProjectsListTabViewModel"
+             d:DesignWidth="550" d:DesignHeight="450"
+             Background="{StaticResource Dark_0}">
 
     <Design.DataContext>
         <projectManagement:ProjectsListTabViewModel />
@@ -36,20 +37,13 @@
             </StackPanel>
         </Grid>
 
-        <Grid Row="1" RowDefinitions="Auto, *">
-
-            <!-- Column Names -->
-            <Grid ColumnDefinitions="*, 160"
-                  Margin="20, 10, 10, 5">
-                <TextBlock Grid.Column="0" Text="Name" Classes="h4" />
-                <TextBlock Grid.Column="1" Text="Last edit time" Classes="h4" VerticalAlignment="Center" />
-            </Grid>
-
+        <Border Grid.Row="1" Classes="Window" Margin="0" CornerRadius="2, 2, 0, 0">
             <!-- Projects Listing -->
-            <ScrollViewer Grid.Row="1">
-                <ItemsControl ItemsSource="{Binding AvailableProjects}"
-                              Background="#ccc" />
-            </ScrollViewer>
-        </Grid>
+            <Border Classes="WindowContent">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding AvailableProjects}" />
+                </ScrollViewer>
+            </Border>
+        </Border>
     </Grid>
 </UserControl>

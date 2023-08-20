@@ -50,7 +50,7 @@ public class ProjectsListElementViewModel : BaseViewModel
 	private void DeleteProject()
 	{
 		var title = "Project Deletion";
-		var text = $"Are you sure you want to delete {Project.ProjectName}";
+		var text = $"Are you sure you want to delete {Project.ProjectName}?";
 		var confirmDialog = MessageBoxManager.GetMessageBoxStandard(title, text, ButtonEnum.YesNo);
 
 		Dispatcher.UIThread.InvokeAsync(async () =>

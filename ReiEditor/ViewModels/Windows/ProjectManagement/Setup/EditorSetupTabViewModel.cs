@@ -17,7 +17,7 @@ public class EditorSetupTabViewModel : BaseViewModel
 	
 	#region EnginePath
 
-	private string _enginePath = "";
+	private string _enginePath = "...";
 	public string EnginePath
 	{
 		get => _enginePath;

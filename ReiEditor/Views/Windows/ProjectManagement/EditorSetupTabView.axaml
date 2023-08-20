@@ -6,7 +6,8 @@
              mc:Ignorable="d"
              d:DesignWidth="500" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.ProjectManagement.EditorSetupTabView"
-             x:DataType="projectManagement:EditorSetupTabViewModel">
+             x:DataType="projectManagement:EditorSetupTabViewModel"
+             Background="{StaticResource Dark_0}">
     <Design.DataContext>
         <projectManagement:EditorSetupTabViewModel />
     </Design.DataContext>
@@ -29,19 +30,8 @@
                         Classes.valid="{Binding Validation.IsEnginePathValid}"
                         HorizontalAlignment="Stretch">
                         <Button.Styles>
-                            <Style Selector="Button">
-                                <Setter Property="Background" Value="white" />
-                                <Setter Property="Foreground" Value="gray" />
-                                <Setter Property="BorderBrush" Value="gray" />
-                            </Style>
-
-                            <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                                <Setter Property="Background" Value="white" />
-                                <Setter Property="BorderBrush" Value="black" />
-                            </Style>
-
                             <Style Selector="Button:not(.valid) /template/ ContentPresenter">
-                                <Setter Property="BorderBrush" Value="red" />
+                                <Setter Property="BorderBrush" Value="{StaticResource Error}" />
                             </Style>
                         </Button.Styles>
 

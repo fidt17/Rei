@@ -1,13 +1,60 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
     <Design.PreviewWith>
-        <Border Padding="20">
-            <TextBlock Text="AAA" Classes="h1"></TextBlock>
-        </Border>
+        <Button>
+            Press Me
+        </Button>
     </Design.PreviewWith>
 
+    <Styles.Resources>
+        <SolidColorBrush x:Key="Dark_-1" Color="#010409" />
+        <SolidColorBrush x:Key="Dark_0" Color="#0d1117" />
+        <SolidColorBrush x:Key="Dark_1" Color="#13171e" />
+        <SolidColorBrush x:Key="Dark_2" Color="#161b22" />
+        <SolidColorBrush x:Key="Dark_3" Color="#191f28" />
+        <SolidColorBrush x:Key="Dark_4" Color="#20262F" />
+
+        <SolidColorBrush x:Key="Gray_0" Color="#30363d" />
+
+        <SolidColorBrush x:Key="White" Color="#e6edf3" />
+
+
+        <SolidColorBrush x:Key="Info" Color="#e6edf3" />
+        <SolidColorBrush x:Key="Warning" Color="#fcc943" />
+        <SolidColorBrush x:Key="Attention" Color="#2ea043" />
+        <SolidColorBrush x:Key="Error" Color="#F76F58" />
+    </Styles.Resources>
+
+
+    <!-- Button Styles -->
     <Style Selector="Button">
         <Setter Property="Cursor" Value="Hand" />
+
+        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+        <Setter Property="Foreground" Value="{StaticResource White}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+        <Setter Property="Foreground" Value="{StaticResource White}" />
+        <Setter Property="BorderBrush" Value="{StaticResource White}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+        <Setter Property="Foreground" Value="{StaticResource Gray_0}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <!-- END Button Styles -->
+
+    <!-- Text Block Styles -->
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource White}" />
     </Style>
 
     <Style Selector="TextBlock.h1">
@@ -28,5 +75,44 @@
     <Style Selector="TextBlock.h6">
         <Setter Property="FontSize" Value="10.72" />
     </Style>
-    
+    <!-- END Text Block Styles -->
+
+    <!-- Border Styles -->
+    <Style Selector="Border.Window">
+        <Setter Property="Background" Value="{StaticResource Dark_2}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="5" />
+        <Setter Property="Margin" Value="2" />
+        <Setter Property="CornerRadius" Value="2" />
+    </Style>
+
+    <Style Selector="Border.WindowContent">
+        <Setter Property="Background" Value="{StaticResource Dark_1}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Dark_0}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Margin" Value="0, 5, 0, 2" />
+        <Setter Property="CornerRadius" Value="2" />
+    </Style>
+
+    <Style Selector="Border.InnerContent">
+        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+        <Setter Property="CornerRadius" Value="2" />
+    </Style>
+    <!-- END Border Styles -->
+
+    <!-- Flyout Styles -->
+    <Style Selector="FlyoutPresenter.Clear">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="BorderThickness" Value="0"></Setter>
+    </Style>
+    <!-- END Flyout Styles -->
+
+    <Style Selector="Grid.MsBoxStandardContainer">
+        <Setter Property="Margin" Value="-15"/>
+        <Setter Property="Background" Value="{StaticResource Dark_0}" />
+    </Style>
+    <Style Selector="TextBox.contentMessage">
+        <Setter Property="Foreground" Value="{StaticResource White}" />
+    </Style>
 </Styles>
