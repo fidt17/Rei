@@ -1,0 +1,32 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:console="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Console"
+             mc:Ignorable="d"
+             d:DesignWidth="550" d:DesignHeight="200"
+             x:Class="ReiEditor.Views.Windows.Editor.Console.ConsoleEditorWindow"
+             x:DataType="console:ConsoleEditorWindowViewModel">
+    <Design.DataContext>
+        <console:ConsoleEditorWindowViewModel />
+    </Design.DataContext>
+
+    <Border BorderBrush="black" BorderThickness="1">
+        <Grid RowDefinitions="Auto, *">
+
+            <!-- Header -->
+            <Grid Background="gray">
+                <TextBlock Text="Console"
+                           Margin="5, 0, 0, 0"
+                           Classes="h4" Foreground="white" />
+            </Grid>
+
+            <!-- Logs -->
+            <ScrollViewer x:Name="ConsoleScrollViewer"
+                Grid.Row="1">
+                <ItemsControl 
+                    ItemsSource="{Binding Logs}" />
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

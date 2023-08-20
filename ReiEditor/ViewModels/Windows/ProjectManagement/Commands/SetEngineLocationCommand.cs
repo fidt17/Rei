@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.ViewModels.Windows.ProjectManagement.Commands;
 

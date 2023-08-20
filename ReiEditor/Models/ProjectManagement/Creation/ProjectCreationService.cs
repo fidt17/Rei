@@ -5,6 +5,7 @@ using Avalonia.Platform.Storage;
 using ReiEditor.Models.ProjectManagement.Creation.Template;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.ProjectManagement.Creation;

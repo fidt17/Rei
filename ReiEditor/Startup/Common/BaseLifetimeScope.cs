@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Autofac;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Startup.Common;
 
@@ -16,14 +17,14 @@ public abstract class BaseLifetimeScope
 
 	protected BaseLifetimeScope(string scopeTitle)
 	{
-		_logger = new Logger<BaseLifetimeScope>(scopeTitle);
+		_logger = new SystemConsoleLogger<BaseLifetimeScope>(scopeTitle);
 		
 		Scope = BuildScope();
 	}
 
 	protected BaseLifetimeScope(string scopeTitle, BaseLifetimeScope parentScope)
 	{
-		_logger = new Logger<BaseLifetimeScope>(scopeTitle);
+		_logger = new SystemConsoleLogger<BaseLifetimeScope>(scopeTitle);
 		
 		_parentScope = parentScope;
 		Scope = _parentScope.Scope.BeginLifetimeScope(Configure);

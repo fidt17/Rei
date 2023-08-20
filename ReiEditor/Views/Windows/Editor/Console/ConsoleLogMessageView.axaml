@@ -1,0 +1,49 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:console="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Console"
+             xmlns:converters="clr-namespace:ReiEditor.Views.Converters"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Console.ConsoleLogMessageView"
+             x:DataType="console:ConsoleLogMessageViewModel">
+    <Design.DataContext>
+        <console:ConsoleLogMessageViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <converters:LogLevelEnumToBoolConverter Level="Info" x:Key="IsInfo" />
+        <converters:LogLevelEnumToBoolConverter Level="Warning" x:Key="IsWarning" />
+        <converters:LogLevelEnumToBoolConverter Level="Attention" x:Key="IsAttention" />
+        <converters:LogLevelEnumToBoolConverter Level="Error" x:Key="IsError" />
+    </UserControl.Resources>
+
+    <Border BorderBrush="black" BorderThickness="1" Margin="2" Background="#aaa"
+            HorizontalAlignment="Stretch">
+        <TextBlock
+            Margin="2"
+            Text="{Binding Message}"
+            Classes="h4"
+            Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
+            Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
+            Classes.attention="{Binding LogLevel, Converter={StaticResource IsAttention}}"
+            Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
+            <TextBlock.Styles>
+                <Style Selector="TextBlock.info">
+                    <Setter Property="Foreground" Value="black" />
+                </Style>
+                <Style Selector="TextBlock.warning">
+                    <Setter Property="Foreground" Value="yellow" />
+                </Style>
+                <Style Selector="TextBlock.attention">
+                    <Setter Property="Foreground" Value="#6bdfe2" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </Style>
+                <Style Selector="TextBlock.error">
+                    <Setter Property="Foreground" Value="red" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                </Style>
+            </TextBlock.Styles>
+        </TextBlock>
+    </Border>
+</UserControl>

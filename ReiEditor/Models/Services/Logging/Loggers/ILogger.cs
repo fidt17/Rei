@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ReiEditor.Models.Services.Logging;
+namespace ReiEditor.Models.Services.Logging.Loggers;
 
 // ReSharper disable once UnusedTypeParameter
 public interface ILogger<T>

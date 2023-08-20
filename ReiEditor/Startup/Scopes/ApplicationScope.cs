@@ -7,7 +7,7 @@ using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
 using ReiEditor.Models.Services.Engine;
 using ReiEditor.Models.Services.FileSystem;
-using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
 using ReiEditor.Models.Services.Resources;
 using ReiEditor.Models.Services.Serialization;
@@ -37,7 +37,10 @@ public class ApplicationScope : BaseLifetimeScope
 	{
 		b.RegisterInstance(this);
 		b.RegisterSingleton<ApplicationShutdownService>().As<IApplicationShutdownService>();
-		b.RegisterGeneric(typeof(Logger<>)).As(typeof(ILogger<>));
+		
+		b.RegisterGeneric(typeof(SystemConsoleLogger<>)).As(typeof(ILogger<>));
+		b.RegisterGeneric(typeof(SystemConsoleLogger<>));
+		
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
 		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
 

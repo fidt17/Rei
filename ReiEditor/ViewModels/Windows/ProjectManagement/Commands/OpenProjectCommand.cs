@@ -9,6 +9,7 @@ using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.BookmarkedProjects;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.ViewModels.Common;
 

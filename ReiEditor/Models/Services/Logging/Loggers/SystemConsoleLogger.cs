@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Linq;
 
-namespace ReiEditor.Models.Services.Logging;
+namespace ReiEditor.Models.Services.Logging.Loggers;
 
-public class Logger<T> : ILogger<T>
+public class SystemConsoleLogger<T> : ILogger<T>
 {
 	private readonly string _name;
 
-	public Logger(string? name = null)
+	public SystemConsoleLogger(string? name = null)
 	{
 		_name = name ?? ExpandTypeName(typeof(T));
 	}

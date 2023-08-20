@@ -1,5 +1,6 @@
 ﻿using ReiEditor.Models.App.MainWindow;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor;
 using ProjectEditorWindow = ReiEditor.Views.Windows.Editor.ProjectEditorWindow;

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
 using ReiEditor.Models.Services.Serialization;
 
