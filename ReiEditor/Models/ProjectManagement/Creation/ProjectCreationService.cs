@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using ReiEditor.Models.ProjectManagement.Creation.Template;
 using ReiEditor.Models.Services.FileSystem;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
@@ -36,11 +35,11 @@ public class ProjectCreationService : IProjectCreationService
 	{
 		try
 		{
-			_logger.LogAttention("Creating project");
+			_logger.LogWarning("Creating project");
 			
 			var project = await CreateFromConfiguration(Configuration);
 			
-			_logger.LogAttention("Project creation succeeded");
+			_logger.LogWarning("Project creation succeeded");
 			ProjectCreatedEvent?.Invoke(project);
 
 			return project;

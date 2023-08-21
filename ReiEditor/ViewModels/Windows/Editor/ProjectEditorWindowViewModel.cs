@@ -32,8 +32,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 				else if (i % 4 == 1)
 					logger.LogWarning($"Hello: {i}");
 				else if (i % 4 == 2)
-					logger.LogAttention($"Hello: {i}");
-				else if (i % 4 == 3) logger.LogError($"Hello: {i}");
+					logger.LogError($"Hello: {i}");
 
 				await Task.Delay(250);
 			}

@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.App.Shutdown;
@@ -26,7 +25,7 @@ public class ApplicationShutdownService : IApplicationShutdownService
 		if (_shutdownInProcess) return;
 		_shutdownInProcess = true;
 		
-		_logger.LogAttention($"Application shutdown... Exit code {exitCode}");
+		_logger.LogWarning($"Application shutdown... Exit code {exitCode}");
 		Dispatcher.UIThread.InvokeAsync(async () =>
 		{
 			await ShutdownAsync(exitCode);

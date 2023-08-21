@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.ProjectManagement.Deletion;

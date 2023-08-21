@@ -22,7 +22,6 @@
 
         <SolidColorBrush x:Key="Info" Color="#e6edf3" />
         <SolidColorBrush x:Key="Warning" Color="#fcc943" />
-        <SolidColorBrush x:Key="Attention" Color="#2ea043" />
         <SolidColorBrush x:Key="Error" Color="#F76F58" />
     </Styles.Resources>
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils;
 using ReiEditor.ViewModels.Common;

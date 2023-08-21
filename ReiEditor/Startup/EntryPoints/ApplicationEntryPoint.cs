@@ -4,7 +4,6 @@ using Avalonia.Threading;
 using ReiEditor.Models.App.Shutdown;
 using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.Active;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Startup.Scopes;
 

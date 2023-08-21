@@ -19,12 +19,6 @@ public class EditorConsoleLogger<T> : ILogger<T>
 		_editorConsoleService.Log(new LogMessage(LogLevelEnum.Info, DateTime.Now, message));
 	}
 
-	public void LogAttention(string message)
-	{
-		_systemConsoleLogger.LogAttention(message);
-		_editorConsoleService.Log(new LogMessage(LogLevelEnum.Attention, DateTime.Now, message));
-	}
-
 	public void LogWarning(string message)
 	{
 		_systemConsoleLogger.LogWarning(message);

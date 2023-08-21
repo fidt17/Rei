@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Autofac;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Startup.Common;
@@ -81,7 +80,7 @@ public abstract class BaseLifetimeScope
 
 	private void Configure(ContainerBuilder containerBuilder)
 	{
-		_logger.LogAttention("Configure");
+		_logger.LogWarning("Configure");
 		ConfigureContainer(containerBuilder);
 	}
 

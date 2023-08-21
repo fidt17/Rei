@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.FileSystem;

@@ -14,7 +14,6 @@
     <UserControl.Resources>
         <converters:LogLevelEnumToBoolConverter Level="Info" x:Key="IsInfo" />
         <converters:LogLevelEnumToBoolConverter Level="Warning" x:Key="IsWarning" />
-        <converters:LogLevelEnumToBoolConverter Level="Attention" x:Key="IsAttention" />
         <converters:LogLevelEnumToBoolConverter Level="Error" x:Key="IsError" />
     </UserControl.Resources>
 
@@ -26,7 +25,6 @@
             Classes="h5"
             Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
             Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
-            Classes.attention="{Binding LogLevel, Converter={StaticResource IsAttention}}"
             Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
             <TextBlock.Styles>
                 <Style Selector="TextBlock.info">
@@ -34,9 +32,6 @@
                 </Style>
                 <Style Selector="TextBlock.warning">
                     <Setter Property="Foreground" Value="{StaticResource Warning}" />
-                </Style>
-                <Style Selector="TextBlock.attention">
-                    <Setter Property="Foreground" Value="{StaticResource Attention}" />
                 </Style>
                 <Style Selector="TextBlock.error">
                     <Setter Property="Foreground" Value="{StaticResource Error}" />

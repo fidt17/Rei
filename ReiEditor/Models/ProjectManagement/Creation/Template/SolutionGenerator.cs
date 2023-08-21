@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Engine;
 using ReiEditor.Models.Services.FileSystem;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.ProjectManagement.Creation.Template;

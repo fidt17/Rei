@@ -1,5 +1,4 @@
-﻿using ReiEditor.Models.Services.Logging;
-using ReiEditor.Models.Services.Logging.Loggers;
+﻿using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows;

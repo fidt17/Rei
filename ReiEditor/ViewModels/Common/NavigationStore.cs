@@ -1,5 +1,4 @@
 ﻿using System;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;
 
