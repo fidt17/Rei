@@ -18,25 +18,44 @@
     </UserControl.Resources>
 
     <Border Classes="InnerContent" Margin="0, 2, 0, 2"
-            HorizontalAlignment="Stretch">
-        <TextBlock
-            Margin="2"
-            Text="{Binding Message}"
-            Classes="h5"
-            Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
-            Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
-            Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
-            <TextBlock.Styles>
-                <Style Selector="TextBlock.info">
-                    <Setter Property="Foreground" Value="{StaticResource Info}" />
-                </Style>
-                <Style Selector="TextBlock.warning">
-                    <Setter Property="Foreground" Value="{StaticResource Warning}" />
-                </Style>
-                <Style Selector="TextBlock.error">
-                    <Setter Property="Foreground" Value="{StaticResource Error}" />
-                </Style>
-            </TextBlock.Styles>
-        </TextBlock>
+            HorizontalAlignment="Stretch"
+            Classes.Highlighted="{Binding Expand}">
+        <Border.Styles>
+            <Style Selector="Border.Highlighted">
+                <Setter Property="Margin" Value="0, 5, 0, 5"/>
+                <Setter Property="BorderBrush" Value="{StaticResource White}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+        </Border.Styles>
+        <Grid ColumnDefinitions="*, Auto" Margin="2">
+            <SelectableTextBlock
+                Grid.Column="0"
+                Text="{Binding DisplayMessage}"
+                Classes="h5"
+                VerticalAlignment="Center"
+                Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
+                Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
+                Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
+                <SelectableTextBlock.Styles>
+                    <Style Selector="SelectableTextBlock.info">
+                        <Setter Property="Foreground" Value="{StaticResource Info}" />
+                    </Style>
+                    <Style Selector="SelectableTextBlock.warning">
+                        <Setter Property="Foreground" Value="{StaticResource Warning}" />
+                    </Style>
+                    <Style Selector="SelectableTextBlock.error">
+                        <Setter Property="Foreground" Value="{StaticResource Error}" />
+                    </Style>
+                </SelectableTextBlock.Styles>
+            </SelectableTextBlock>
+            <ToggleButton Grid.Column="1"
+                          Margin="0,0,10,0"
+                          IsChecked ="{Binding Expand}"
+                          VerticalAlignment="Top" HorizontalAlignment="Right"
+                          FontSize="12"
+                          Foreground="{StaticResource White}">
+                ...
+            </ToggleButton>
+        </Grid>
     </Border>
 </UserControl>

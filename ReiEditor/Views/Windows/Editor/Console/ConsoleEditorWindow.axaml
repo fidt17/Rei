@@ -10,6 +10,15 @@
     <Design.DataContext>
         <console:ConsoleEditorWindowViewModel />
     </Design.DataContext>
+    
+    <UserControl.Styles>
+        <Style Selector="ToggleButton:checked Ellipse">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="ToggleButton:not(:checked) Ellipse">
+            <Setter Property="Opacity" Value="0.25"/>
+        </Style>
+    </UserControl.Styles>
 
     <Border Classes="Window">
         <Grid RowDefinitions="Auto, *">
@@ -20,16 +29,36 @@
                            VerticalAlignment="Center"
                            Classes="h5" Foreground="white" />
 
-                <Button Grid.Column="2" Command="{Binding ClearConsoleCommand}">
-                    Clear
-                </Button>
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            Spacing="5">
+                    
+                    <ToggleButton IsChecked="{Binding ConsoleFilter.InfoEnabled}" Height="25">
+                        <Ellipse Fill="{StaticResource Info}" Width="10" Height="10"></Ellipse>
+                    </ToggleButton>
+                    
+                    <ToggleButton IsChecked="{Binding ConsoleFilter.WarningEnabled}" Height="25">
+                        <Ellipse Fill="{StaticResource Warning}" Width="10" Height="10"></Ellipse>
+                    </ToggleButton>
+                    
+                    <ToggleButton IsChecked="{Binding ConsoleFilter.ErrorEnabled}" Height="25">
+                        <Ellipse Fill="{StaticResource Error}" Width="10" Height="10"></Ellipse>
+                    </ToggleButton>
+                    
+                    <!-- Clear Button -->
+                    <Button
+                        Height="25"
+                        FontSize="12"
+                        Command="{Binding ClearConsoleCommand}">
+                        Clear
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <!-- Content -->
             <Border Grid.Row="1" Classes="WindowContent">
                 <ScrollViewer x:Name="ConsoleScrollViewer">
                     <ItemsControl
-                        ItemsSource="{Binding Logs}" />
+                        ItemsSource="{Binding FilteredLogs}" />
                 </ScrollViewer>
             </Border>
         </Grid>

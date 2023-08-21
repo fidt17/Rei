@@ -18,7 +18,7 @@ public class SystemConsoleLogger<T> : ILogger<T>
 
 	public void LogError(string message) => WriteToConsole(message, ConsoleColor.Red, 1, 1);
 
-	public void LogException(Exception exception) => LogError(exception.Message);
+	public void LogException(Exception exception) => LogError("Exception: " + exception.Message);
 
 	private void WriteToConsole(string message, ConsoleColor color = ConsoleColor.White, int emptyLinesBefore = 0, int emptyLinesAfter = 0)
 	{

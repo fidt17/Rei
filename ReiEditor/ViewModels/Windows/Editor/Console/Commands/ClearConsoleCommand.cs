@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
+using ReiEditor.Models.Services.Logging;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Console.Commands;
 
@@ -9,11 +10,14 @@ public class ClearConsoleCommand : ICommand, IDisposable
 {
 	public event EventHandler? CanExecuteChanged;
 
-	private readonly ObservableCollection<ConsoleLogMessageViewModel> _logs;
+	private readonly ObservableCollection<LogMessage> _logs;
+	private readonly ObservableCollection<ConsoleLogMessageViewModel> _filteredLogs;
 
-	public ClearConsoleCommand(ObservableCollection<ConsoleLogMessageViewModel> logs)
+	public ClearConsoleCommand(ObservableCollection<LogMessage> logs, ObservableCollection<ConsoleLogMessageViewModel> filteredLogs)
 	{
 		_logs = logs;
+		_filteredLogs = filteredLogs;
+		
 		_logs.CollectionChanged += HandleCollectionChanged;
 	}
 
@@ -28,5 +32,9 @@ public class ClearConsoleCommand : ICommand, IDisposable
 	}
 
 	public bool CanExecute(object? parameter) => _logs.Count > 0;
-	public void Execute(object? parameter) => _logs.Clear();
+	public void Execute(object? parameter)
+	{
+		_logs.Clear();
+		_filteredLogs.Clear();
+	}
 }
