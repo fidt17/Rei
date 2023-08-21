@@ -15,9 +15,14 @@
         <Grid RowDefinitions="Auto, *">
 
             <!-- Header -->
-            <Grid>
+            <Grid ColumnDefinitions="Auto, *, Auto">
                 <TextBlock Text="Console"
+                           VerticalAlignment="Center"
                            Classes="h5" Foreground="white" />
+
+                <Button Grid.Column="2" Command="{Binding ClearConsoleCommand}">
+                    Clear
+                </Button>
             </Grid>
 
             <!-- Content -->

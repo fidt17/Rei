@@ -3,12 +3,15 @@ using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Logging;
 using ReiEditor.ViewModels.Common;
+using ReiEditor.ViewModels.Windows.Editor.Console.Commands;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Console;
 
 public class ConsoleEditorWindowViewModel : BaseViewModel
 {
 	public event Action<LogMessage>? NewLogAddedEvent;
+	
+	public ClearConsoleCommand ClearConsoleCommand { get; }
 	
 	public ObservableCollection<ConsoleLogMessageViewModel> Logs { get; } = new();
 
@@ -22,12 +25,15 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 	{
 		_consoleService = consoleService;
 		_consoleService.NewLogEvent += HandleNewLogEvent;
+
+		ClearConsoleCommand = new ClearConsoleCommand(Logs);
 	}
 
 	public override void Dispose()
 	{
 		base.Dispose();
 		_consoleService.NewLogEvent -= HandleNewLogEvent;
+		ClearConsoleCommand.Dispose();
 	}
 
 	private void HandleNewLogEvent(LogMessage message)
