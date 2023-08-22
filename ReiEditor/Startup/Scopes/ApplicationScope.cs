@@ -38,8 +38,7 @@ public class ApplicationScope : BaseLifetimeScope
 		b.RegisterInstance(this);
 		b.RegisterSingleton<ApplicationShutdownService>().As<IApplicationShutdownService>();
 		
-		b.RegisterGeneric(typeof(SystemConsoleLogger<>)).As(typeof(ILogger<>));
-		b.RegisterGeneric(typeof(SystemConsoleLogger<>));
+		b.RegisterGeneric(typeof(SystemConsoleLogger<>)).As(typeof(ILogger<>)).AsSelf();
 		
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
 		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();

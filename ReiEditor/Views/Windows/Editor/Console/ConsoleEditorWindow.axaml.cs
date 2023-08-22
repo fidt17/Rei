@@ -22,7 +22,8 @@ public partial class ConsoleEditorWindow : UserControl
 
 	private void HandleLogCollectionUpdated()
 	{
-		if (Math.Abs(ConsoleScrollViewer.ScrollBarMaximum.Y - ConsoleScrollViewer.Offset.Y) > 10) return;
+		const int THRESHOLD = 10;
+		if (Math.Abs(ConsoleScrollViewer.ScrollBarMaximum.Y - ConsoleScrollViewer.Offset.Y) > THRESHOLD) return;
 		ConsoleScrollViewer.ScrollToEnd();
 	}
 }
