@@ -25,7 +25,6 @@
         <SolidColorBrush x:Key="Error" Color="#F76F58" />
     </Styles.Resources>
 
-
     <!-- Button Styles -->
     <Style Selector="Button">
         <Setter Property="Cursor" Value="Hand" />
@@ -107,11 +106,19 @@
     </Style>
     <!-- END Flyout Styles -->
 
+    <!-- Toggle Button Styles -->
+    <Style Selector="ToggleButton">
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <!-- END Toggle Button Styles -->
+
+    <!-- Message Box Styles -->
     <Style Selector="Grid.MsBoxStandardContainer">
-        <Setter Property="Margin" Value="-15"/>
+        <Setter Property="Margin" Value="-15" />
         <Setter Property="Background" Value="{StaticResource Dark_0}" />
     </Style>
     <Style Selector="TextBox.contentMessage">
         <Setter Property="Foreground" Value="{StaticResource White}" />
     </Style>
+    <!-- END Message Box Styles -->
 </Styles>

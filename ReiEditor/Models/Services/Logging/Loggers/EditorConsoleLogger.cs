@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Logging.Loggers;
 
@@ -8,10 +9,13 @@ public class EditorConsoleLogger<T> : ILogger<T>
 	private readonly IEditorConsoleService _editorConsoleService;
 	private readonly SystemConsoleLogger<T> _systemConsoleLogger;
 
+	private readonly string _name;
+
 	public EditorConsoleLogger(IEditorConsoleService editorConsoleService, SystemConsoleLogger<T> systemConsoleLogger)
 	{
 		_editorConsoleService = editorConsoleService;
 		_systemConsoleLogger = systemConsoleLogger;
+		_name = typeof(T).ExpandTypeName();
 	}
 
 	public void Log(string message)
@@ -40,6 +44,8 @@ public class EditorConsoleLogger<T> : ILogger<T>
 
 	private string FormStackTrace()
 	{
-		return $"Stack Trace: \n{new StackTrace()}\n";
+		return $"{_name}" +
+		       $"\nStack Trace" +
+		       $"\n{new StackTrace()}\n";
 	}
 }

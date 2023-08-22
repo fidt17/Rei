@@ -43,7 +43,7 @@ public class ConsoleLogMessageViewModel : BaseViewModel
 
 	public ConsoleLogMessageViewModel(LogMessage message)
 	{
-		Message = $"[{message.Time.ToShortTimeString()}] {message.Message}";
+		Message = $"[{message.Time.Hour}:{message.Time.Minute}:{message.Time.Second}] {message.Message}";
 		Details = message.Details;
 		LogLevel = message.LogLevel;
 		

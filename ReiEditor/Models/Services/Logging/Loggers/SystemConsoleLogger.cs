@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Logging.Loggers;
 
@@ -9,7 +10,7 @@ public class SystemConsoleLogger<T> : ILogger<T>
 
 	public SystemConsoleLogger(string? name = null)
 	{
-		_name = name ?? ExpandTypeName(typeof(T));
+		_name = name ?? typeof(T).ExpandTypeName();
 	}
 
 	public void Log(string message) => WriteToConsole(message);
@@ -37,12 +38,5 @@ public class SystemConsoleLogger<T> : ILogger<T>
 		{
 			Console.WriteLine();
 		}
-	}
-	
-	private static string ExpandTypeName(Type t)
-	{
-		return !t.IsGenericType || t.IsGenericTypeDefinition
-			? !t.IsGenericTypeDefinition ? t.Name : t.Name.Remove(t.Name.IndexOf('`'))
-			: $"{ExpandTypeName(t.GetGenericTypeDefinition())}<{string.Join(',', t.GetGenericArguments().Select(ExpandTypeName))}>";
 	}
 }
