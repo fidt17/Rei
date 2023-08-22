@@ -21,25 +21,25 @@ public class EditorConsoleLogger<T> : ILogger<T>
 	public void Log(string message)
 	{
 		_systemConsoleLogger.Log(message);
-		_editorConsoleService.Log(new LogMessage(LogLevelEnum.Info, DateTime.Now, message, FormStackTrace()));
+		_editorConsoleService.Log(new LogMessage(LogScopeEnum.Editor, LogLevelEnum.Info, DateTime.Now, message, FormStackTrace()));
 	}
 
 	public void LogWarning(string message)
 	{
 		_systemConsoleLogger.LogWarning(message);
-		_editorConsoleService.Log(new LogMessage(LogLevelEnum.Warning, DateTime.Now, message, FormStackTrace()));
+		_editorConsoleService.Log(new LogMessage(LogScopeEnum.Editor, LogLevelEnum.Warning, DateTime.Now, message, FormStackTrace()));
 	}
 
 	public void LogError(string message)
 	{
 		_systemConsoleLogger.LogError(message);
-		_editorConsoleService.Log(new LogMessage(LogLevelEnum.Error, DateTime.Now, message, FormStackTrace()));
+		_editorConsoleService.Log(new LogMessage(LogScopeEnum.Editor, LogLevelEnum.Error, DateTime.Now, message, FormStackTrace()));
 	}
 
 	public void LogException(Exception exception)
 	{
 		_systemConsoleLogger.LogException(exception);
-		_editorConsoleService.Log(new LogMessage(LogLevelEnum.Error, DateTime.Now, exception.Message, FormStackTrace()));
+		_editorConsoleService.Log(new LogMessage(LogScopeEnum.Editor, LogLevelEnum.Error, DateTime.Now, exception.Message, FormStackTrace()));
 	}
 
 	private string FormStackTrace()

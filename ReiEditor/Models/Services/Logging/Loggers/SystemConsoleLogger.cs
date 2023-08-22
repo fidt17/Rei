@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Logging.Loggers;

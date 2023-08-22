@@ -62,9 +62,9 @@ public class ConsoleFilterViewModel : BaseViewModel
 
 	public bool IsValidLog(LogMessage logMessage)
 	{
-		if (logMessage.LogLevel == LogLevelEnum.Info && InfoEnabled) return true;
-		if (logMessage.LogLevel == LogLevelEnum.Warning && WarningEnabled) return true;
-		if (logMessage.LogLevel == LogLevelEnum.Error && ErrorEnabled) return true;
+		if (logMessage.Level == LogLevelEnum.Info && InfoEnabled) return true;
+		if (logMessage.Level == LogLevelEnum.Warning && WarningEnabled) return true;
+		if (logMessage.Level == LogLevelEnum.Error && ErrorEnabled) return true;
 		
 		return false;
 	}
