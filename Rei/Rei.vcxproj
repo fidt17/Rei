@@ -11,12 +11,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Common\Event.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\Rei.h" />
     <ClInclude Include="src\Startup\App.h" />
+    <ClInclude Include="src\Startup\EntryPoint.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Startup\App.cpp" />
+    <ClCompile Include="src\Startup\EntryPoint.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

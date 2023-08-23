@@ -1,0 +1,42 @@
+﻿#pragma once
+
+#include <memory>
+#include <vector>
+
+namespace rei
+{
+    template <typename T>
+    class REI_API Event
+    {
+    public:
+        Event& operator +=(std::shared_ptr<T> mFunc)
+        {
+            _subscribers.push_back(mFunc);
+            return *this;
+        }
+
+        Event& operator -=(std::shared_ptr<T> mFunc)
+        {
+            remove(_subscribers.begin(), _subscribers.end(), mFunc);
+            return *this;
+        }
+
+        template <typename... Ts>
+        void Invoke(Ts ... args)
+        {
+            for (auto f : _subscribers)
+            {
+                try
+                {
+                    (*f)(args...);
+                }
+                catch (...)
+                {
+                }
+            }
+        }
+
+    private:
+        std::vector<std::shared_ptr<T>> _subscribers;
+    };
+}

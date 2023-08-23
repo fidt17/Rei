@@ -1,4 +1,4 @@
-﻿namespace ReiEditor.Models.Services.Engine;
+﻿namespace ReiEditor.Models.Services.Engine.Settings;
 
 public class EngineSettings
 {

@@ -1,4 +1,4 @@
-﻿using ReiEditor.Models.App.MainWindow;
+﻿using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;

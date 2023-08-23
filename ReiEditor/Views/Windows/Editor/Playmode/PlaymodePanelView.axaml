@@ -1,0 +1,26 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Playmode.PlaymodePanelView"
+             x:DataType="playmode:PlaymodePanelViewModel">
+    <Design.DataContext>
+        <playmode:PlaymodePanelViewModel />
+    </Design.DataContext>
+    
+    <Border Classes="InnerContent">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Command="{Binding StartPlaymodeCommand}"
+                IsVisible="{Binding !PlayModeActive}">
+                Start
+            </Button>
+            <Button Command="{Binding StopPlaymodeCommand}"
+                IsVisible="{Binding PlayModeActive}">
+                Stop
+            </Button>
+        </StackPanel>
+    </Border>
+    
+</UserControl>

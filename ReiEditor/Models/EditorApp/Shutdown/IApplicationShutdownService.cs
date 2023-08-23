@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace ReiEditor.Models.App.Shutdown;
+namespace ReiEditor.Models.EditorApp.Shutdown;
 
 public interface IApplicationShutdownService
 {

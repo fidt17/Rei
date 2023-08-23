@@ -2,6 +2,7 @@
 using ReiEditor.Models.ProjectManagement.EditorSetup;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils;
+using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.ProjectManagement.Commands;
 
@@ -34,13 +35,13 @@ public class EditorSetupTabViewModel : BaseViewModel
 	public EditorSetupTabViewModel() { }
 #pragma warning restore CS8618
 
-	public EditorSetupTabViewModel(IEditorConfigurationService editorConfigurationService, SetEngineLocationCommand setEngineLocationCommand, ILogger<EditorSetupTabViewModel> logger)
+	public EditorSetupTabViewModel(IEditorConfigurationService editorConfigurationService, IFactory<SetEngineLocationCommand> setEngineLocationCommand, ILogger<EditorSetupTabViewModel> logger)
 	{
 		_editorConfigurationService = editorConfigurationService;
 		_logger = logger;
 		Validation = new EditorSetupTabValidation(editorConfigurationService);
 		
-		SetEngineLocationCommand = setEngineLocationCommand;
+		SetEngineLocationCommand = setEngineLocationCommand.CreateInstance();
 		SetEngineLocationCommand.EnginePathSetEvent += HandleEnginePathSetEvent;
 		ConfirmCommand = new RelayCommand(ExecuteConfirmCommand, CanExecuteConfirmCommand);
 		

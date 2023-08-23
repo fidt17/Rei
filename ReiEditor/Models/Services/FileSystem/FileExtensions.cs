@@ -4,24 +4,25 @@ namespace ReiEditor.Models.Services.FileSystem;
 
 public static class FileExtensions
 {
-	public const string VS_SOLUTION_FILE_EXTENSION = ".sln";
-	public const string VS_PROJECT_FILE_EXTENSION = ".vcxproj";
-	public const string PROJECT_FILE_EXTENSION = ".rei";
-	public const string ENGINE_FILE_EXTENSION = ".rei_engine";
+	public const string VS_SOLUTION = ".sln";
+	public const string VS_PROJECT = ".vcxproj";
+	public const string REI_PROJECT = ".rei";
+	public const string REI_ENGINE = ".rei_engine";
+	public const string DLL = ".dll";
 
 	public static FilePickerFileType GetReiProjectFilePickerFileType()
 	{
-		return new FilePickerFileType(PROJECT_FILE_EXTENSION)
+		return new FilePickerFileType(REI_PROJECT)
 		{
-			Patterns = new[] { $"*{PROJECT_FILE_EXTENSION}" }
+			Patterns = new[] { $"*{REI_PROJECT}" }
 		};
 	}
 
 	public static FilePickerFileType GetReiEngineFilePickerFileType()
 	{
-		return new FilePickerFileType(ENGINE_FILE_EXTENSION)
+		return new FilePickerFileType(REI_ENGINE)
 		{
-			Patterns = new[] { $"*{ENGINE_FILE_EXTENSION}" }
+			Patterns = new[] { $"*{REI_ENGINE}" }
 		};
 	}
 }

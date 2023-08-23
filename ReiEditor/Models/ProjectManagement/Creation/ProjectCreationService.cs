@@ -82,7 +82,7 @@ public class ProjectCreationService : IProjectCreationService
 
 	private void CreateProjectFile(string root, Project project)
 	{
-		var projectFilePath = Path.Combine(root, $"{project.ProjectName}{FileExtensions.PROJECT_FILE_EXTENSION}");
+		var projectFilePath = Path.Combine(root, $"{project.ProjectName}{FileExtensions.REI_PROJECT}");
 		project.SetProjectFilePath(projectFilePath);
 		
 		_logger.Log($"Creating project file at {projectFilePath}");

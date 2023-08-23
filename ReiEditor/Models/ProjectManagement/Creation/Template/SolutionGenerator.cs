@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using ReiEditor.Models.Services.Engine;
+using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -47,7 +47,7 @@ public class SolutionGenerator : ISolutionGenerator
 		var solutionTemplate = await _templateProvider.GetVSSolutionTemplate();
 		var filledTemplate = string.Format(solutionTemplate, projectName, FormatGuid(projectGuid), FormatGuid(solutionGuid));
 		
-		var filePath = Path.Combine(solutionFolderPath, $"{projectName}{FileExtensions.VS_SOLUTION_FILE_EXTENSION}");
+		var filePath = Path.Combine(solutionFolderPath, $"{projectName}{FileExtensions.VS_SOLUTION}");
 		
 		await File.WriteAllTextAsync(filePath, filledTemplate);
 
@@ -62,7 +62,7 @@ public class SolutionGenerator : ISolutionGenerator
 		var filledTemplate = string.Format(projectTemplate, FormatGuid(projectGuid), projectName, 
 			_engineSettingsProvider.GetEngineDebugIncludeDir(), _engineSettingsProvider.GetEngineReleaseIncludeDir(), _engineSettingsProvider.GetEngineSourceIncludeDir());
 		
-		var filePath = Path.Combine(projectFolderPath, $"{projectName}{FileExtensions.VS_PROJECT_FILE_EXTENSION}");
+		var filePath = Path.Combine(projectFolderPath, $"{projectName}{FileExtensions.VS_PROJECT}");
 		
 		await File.WriteAllTextAsync(filePath, filledTemplate);
 	}

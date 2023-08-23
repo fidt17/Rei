@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 
-namespace ReiEditor.Models.App.MainWindow;
+namespace ReiEditor.Models.EditorApp.MainWindow;
 
 public interface IMainWindowService
 {

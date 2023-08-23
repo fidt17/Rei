@@ -6,7 +6,7 @@ using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
 using ReiEditor.Models.Services.Serialization;
 
-namespace ReiEditor.Models.Services.Engine;
+namespace ReiEditor.Models.Services.Engine.Settings;
 
 public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
 {

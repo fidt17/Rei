@@ -1,6 +1,6 @@
 ﻿using ReiEditor.Startup.Common;
 
-namespace ReiEditor.Models.Services.Engine;
+namespace ReiEditor.Models.Services.Engine.Settings;
 
 public interface IEngineSettingsProvider : IAsyncInitializable
 {

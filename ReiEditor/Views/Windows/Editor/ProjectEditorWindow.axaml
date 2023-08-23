@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:editor="clr-namespace:ReiEditor.ViewModels.Windows.Editor"
         xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
+        xmlns:playmode="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
@@ -15,11 +16,23 @@
         <editor:ProjectEditorWindowViewModel />
     </Design.DataContext>
 
-    <Grid ColumnDefinitions="*, *" RowDefinitions="*, *">
-        <console:ConsoleEditorWindow 
-            Grid.Column="0" Grid.Row="1"
-            Grid.ColumnSpan="2"
-            DataContext="{Binding Console}" />
+    <Grid RowDefinitions="Auto, *">
+        <!-- Toolbar -->
+        <Border Grid.Row="0"
+                Classes="Window">
+            <Grid>
+                <playmode:PlaymodePanelView DataContext="{Binding PlaymodePanel}" />
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*, *" RowDefinitions="*, *">
+            <console:ConsoleEditorWindow
+                Grid.Column="0" Grid.Row="1"
+                Grid.ColumnSpan="2"
+                DataContext="{Binding Console}" />
+        </Grid>
     </Grid>
 
 </Window>

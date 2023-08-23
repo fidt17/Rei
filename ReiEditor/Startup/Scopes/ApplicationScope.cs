@@ -1,15 +1,15 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using Avalonia.Platform.Storage;
-using ReiEditor.Models.App.MainWindow;
-using ReiEditor.Models.App.Shutdown;
+using ReiEditor.Models.EditorApp.MainWindow;
+using ReiEditor.Models.EditorApp.Shutdown;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
-using ReiEditor.Models.Services.Engine;
+using ReiEditor.Models.Resources.Editor;
+using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
-using ReiEditor.Models.Services.Resources;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Models.Services.Storage;
 using ReiEditor.Startup.Common;
@@ -43,7 +43,7 @@ public class ApplicationScope : BaseLifetimeScope
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
 		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
 
-		b.RegisterSingleton<ResourceLoader>().As<IResourceLoader>();
+		b.RegisterSingleton<EditorResourceService>().As<IEditorResourceService>();
 		b.RegisterSingleton<EngineSettingsProvider>().As<IEngineSettingsProvider>();
 		
 		b.Register<IStorageProvider>(c =>

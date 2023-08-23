@@ -6,7 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Logging.Loggers;
 
-namespace ReiEditor.Models.App.Shutdown;
+namespace ReiEditor.Models.EditorApp.Shutdown;
 
 public class ApplicationShutdownService : IApplicationShutdownService
 {
