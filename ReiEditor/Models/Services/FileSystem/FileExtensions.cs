@@ -8,7 +8,6 @@ public static class FileExtensions
 	public const string VS_PROJECT = ".vcxproj";
 	public const string REI_PROJECT = ".rei";
 	public const string REI_ENGINE = ".rei_engine";
-	public const string DLL = ".dll";
 
 	public static FilePickerFileType GetReiProjectFilePickerFileType()
 	{

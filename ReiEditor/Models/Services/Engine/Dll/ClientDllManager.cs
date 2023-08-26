@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Engine.Api;
-using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using Exception = System.Exception;
 
@@ -18,7 +17,7 @@ public class ClientDllManager : IClientDllManager
 	[DllImport("kernel32.dll")]
 	private static extern IntPtr LoadLibrary(string dllToLoad);
 	
-	[DllImport("kernel32", SetLastError=true)]
+	[DllImport("kernel32.dll", SetLastError=true)]
 	private static extern bool FreeLibrary(IntPtr hModule);
 	
 	private IntPtr _loadedDllPtr;
@@ -69,7 +68,14 @@ public class ClientDllManager : IClientDllManager
 	private string GetDllPath()
 	{
 		var project = _activeProjectService.GetActiveProject();
-		var buildDllPath = _resourceService.GetFullPath("bin", "x64EditorDebug", project.ProjectName, $"{project.ProjectName}{FileExtensions.DLL}");
+		var buildDllPath = _resourceService.GetFullPath("bin", "x64EditorDebug", project.ProjectName, $"{project.ProjectName}.dll");
+		
+		if (!File.Exists(buildDllPath))
+		{ 
+			// in case of empty project -> use engine dll directly
+			buildDllPath = _resourceService.GetFullPath("bin", "x64EditorDebug", project.ProjectName, $"Rei.dll");
+		}
+		
 		var copyDllPath = _resourceService.GetFullPath("bin", "x64EditorDebug", project.ProjectName, $"{ClientApi.CLIENT_DLL}");
 		if (!_resourceService.Copy(buildDllPath, copyDllPath, overrideContents: true)) throw new Exception("Could not copy client dll");
 

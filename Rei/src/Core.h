@@ -4,4 +4,8 @@
 
 #define REI_EXTERN_API extern "C" REI_API
 
+#include "Common/Logging/Log.h"
+#include "Common/IFactory.h"
 #include "Common/Event.h"
+
+#include <iostream>

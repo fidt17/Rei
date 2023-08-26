@@ -22,7 +22,7 @@ namespace rei
         }
 
         template <typename... Ts>
-        void Invoke(Ts ... args)
+        void Invoke(Ts ... args) const
         {
             for (auto f : _subscribers)
             {

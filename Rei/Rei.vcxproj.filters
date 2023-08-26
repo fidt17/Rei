@@ -1,11 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="src\Startup\App.cpp" />
+    <ClCompile Include="src\Application\App.cpp" />
+    <ClCompile Include="src\Application\AppFactory.cpp" />
+    <ClCompile Include="src\Startup\EngineLifetimeScope.cpp" />
+    <ClCompile Include="src\Startup\EngineEntryPoint.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core.h" />
-    <ClInclude Include="src\Startup\App.h" />
     <ClInclude Include="src\Rei.h" />
+    <ClInclude Include="src\Application\App.h" />
+    <ClInclude Include="src\Application\AppFactory.h" />
+    <ClInclude Include="src\Common\Event.h" />
+    <ClInclude Include="src\Common\IFactory.h" />
+    <ClInclude Include="src\Common\Logging\Log.h" />
+    <ClInclude Include="src\Startup\EngineLifetimeScope.h" />
+    <ClInclude Include="src\Startup\EngineEntryPoint.h" />
   </ItemGroup>
 </Project>

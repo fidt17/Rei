@@ -5,10 +5,11 @@ namespace ReiEditor.Models.Services.Engine.Api;
 public interface IClientApi
 {
 	void SetDllPtr(IntPtr ptr);
+
+	void CreateApplication();
 	void StartApplication();
+	int StopApplication(int code);
 	
 	delegate void CallbackDelegate(string str);
-	void AddLog(IntPtr ptr);
-	
-	int ShutdownApplication(int code);
+	void AddLogCallback(IntPtr ptr);
 }

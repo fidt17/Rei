@@ -26,9 +26,14 @@ public class PlaymodeService : IPlaymodeService, IAsyncDisposable
 		_clientApi = clientApi;
 	}
 	
-	public async ValueTask DisposeAsync()
+	public ValueTask DisposeAsync()
 	{
+		if (PlaymodeActive)
+		{
+			StopPlaymode();
+		}
 		_clientDllManager.UnloadDll();
+		return ValueTask.CompletedTask;
 	}
 
 	public bool CanStartPlaymode() => !PlaymodeActive;
@@ -48,22 +53,7 @@ public class PlaymodeService : IPlaymodeService, IAsyncDisposable
 		{
 			_logger.Log("Start play mode");
 			_clientDllManager.LoadDll();
-			Task.Run(() =>
-			{
-				try
-				{
-					_clientApi.StartApplication();
-					void callback(string str) => _logger.Log(str);
-					_logDelegate = new IClientApi.CallbackDelegate(callback);
-					_clientApi.AddLog(Marshal.GetFunctionPointerForDelegate(_logDelegate));
-				}
-				catch (Exception e)
-				{
-					_logger.LogException(e);
-				}
-
-				return Task.CompletedTask;
-			});
+			Task.Run(StartApplicationTask);
 		}
 		catch (Exception e)
 		{
@@ -84,7 +74,7 @@ public class PlaymodeService : IPlaymodeService, IAsyncDisposable
 		{
 			_isStoppingPlaymode = true;
 			_logger.Log("Stop play mode");
-			var exitCode = _clientApi.ShutdownApplication(777);
+			var exitCode = _clientApi.StopApplication(666);
 			_logger.Log($"Exit code: {exitCode}");
 			_clientDllManager.UnloadDll();
 			
@@ -97,6 +87,26 @@ public class PlaymodeService : IPlaymodeService, IAsyncDisposable
 		}
 
 		_isStoppingPlaymode = false;
+		return Task.CompletedTask;
+	}
+
+	private Task StartApplicationTask()
+	{
+		try
+		{
+			_clientApi.CreateApplication();
+					
+			void callback(string str) => _logger.Log(str);
+			_logDelegate = new IClientApi.CallbackDelegate(callback);
+			_clientApi.AddLogCallback(Marshal.GetFunctionPointerForDelegate(_logDelegate));
+					
+			_clientApi.StartApplication();
+		}
+		catch (Exception e)
+		{
+			_logger.LogException(e);
+		}
+
 		return Task.CompletedTask;
 	}
 
