@@ -20,6 +20,8 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 
 	public ConsoleFilterViewModel ConsoleFilter { get; } = new();
 
+	private ConsoleLogMessageViewModel? _currentlyExpandedLog;
+	
 	private readonly IEditorConsoleService _consoleService;
 
 #pragma warning disable CS8618
@@ -51,20 +53,46 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 		{
 			if (ConsoleFilter.IsValidLog(message))
 			{
-				FilteredLogs.Add(new ConsoleLogMessageViewModel(message));
+				FilteredLogs.Add(CreateLogVm(message));
 			}
 			Logs.Add(message);
 			LogCollectionUpdated?.Invoke();
 		});
 	}
 
+	private void ClearLogs()
+	{
+		foreach (var vm in FilteredLogs)
+		{
+			vm.Dispose();
+		}
+		FilteredLogs.Clear();
+	}
+
 	private void RebuildLogCollection()
 	{
-		FilteredLogs.Clear();
-		var logs = ConsoleFilter.FilterMessages(Logs).Select(x => new ConsoleLogMessageViewModel(x));
+		ClearLogs();
+		
+		var logs = ConsoleFilter.FilterMessages(Logs).Select(CreateLogVm);
 		FilteredLogs.AddRange(logs);
 		
 		LogCollectionUpdated?.Invoke();
+	}
+
+	private ConsoleLogMessageViewModel CreateLogVm(LogMessage log)
+	{
+		var vm = new ConsoleLogMessageViewModel(log);
+		vm.DetailsExpandedEvent += logVm =>
+		{
+			if (_currentlyExpandedLog != null)
+			{
+				_currentlyExpandedLog.Expand = false;
+			}
+
+			_currentlyExpandedLog = logVm;
+		};
+
+		return vm;
 	}
 
 	private void HandleFilterChangedEvent() => RebuildLogCollection();

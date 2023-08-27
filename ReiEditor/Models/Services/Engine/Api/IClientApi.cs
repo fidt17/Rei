@@ -10,6 +10,6 @@ public interface IClientApi
 	void StartApplication();
 	int StopApplication(int code);
 	
-	delegate void CallbackDelegate(string str);
+	delegate void CallbackDelegate(IntPtr ptr);
 	void AddLogCallback(IntPtr ptr);
 }

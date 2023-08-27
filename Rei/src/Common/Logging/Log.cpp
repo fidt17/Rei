@@ -1,10 +1,10 @@
 ﻿#include "Log.h"
 
-namespace rei
+namespace rei::logging
 {
     void Log::Initialize()
     {
-        _logger = std::make_shared<Logger>();
+        _logger = std::make_shared<Logger>("Core");
     }
 
     std::shared_ptr<Logger> Log::GetLogger()
@@ -12,7 +12,7 @@ namespace rei
         return _logger;
     }
 
-    void Log::AddLogCallback(const std::shared_ptr<std::function<void(const std::string&)>>& logCallback)
+    void Log::AddLogCallback(REI_EVENT_ACTION(const LogMessage&) logCallback)
     {
         _logger->AddLogCallback(logCallback);
     }

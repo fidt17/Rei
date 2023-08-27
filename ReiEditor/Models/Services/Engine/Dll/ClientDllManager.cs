@@ -36,6 +36,8 @@ public class ClientDllManager : IClientDllManager
 		_clientApi = clientApi;
 	}
 
+	public bool DllLoaded() => _isLoaded;
+
 	public void LoadDll()
 	{
 		if (_isLoaded) throw new Exception("Dll is already loaded");

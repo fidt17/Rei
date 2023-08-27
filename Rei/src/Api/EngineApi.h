@@ -24,9 +24,9 @@ REI_EXTERN_API inline int StopApplication(const int exitCode)
     return 0;
 }
 
-typedef void (* LogCallbackDelegate) (const char* msg);
+typedef void (* LogCallbackDelegate) (const rei::logging::LogMessage& msg);
 REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
 {
-    const auto callbackPtr = std::make_shared<std::function<void(const std::string&)>>([=](const std::string& str) { callback(str.c_str()); });
-    rei::Log::AddLogCallback(callbackPtr);
+    const auto callbackPtr = std::make_shared<std::function<void(const rei::logging::LogMessage&)>>([=](const rei::logging::LogMessage& message) { callback(message); });
+    rei::logging::Log::AddLogCallback(callbackPtr);
 }

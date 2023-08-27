@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -26,10 +25,7 @@ public class StopPlaymodeCommand : ICommand, IDisposable
 
 	public bool CanExecute(object? parameter) => _playmodeService.CanStopPlaymode();
 
-	public void Execute(object? parameter)
-	{
-		Task.Run(_playmodeService.StopPlaymode);
-	}
+	public void Execute(object? parameter) => _playmodeService.StopPlaymode();
 
 	private void HandlePlaymodeActiveValueChangedEvent(bool isActive)
 	{

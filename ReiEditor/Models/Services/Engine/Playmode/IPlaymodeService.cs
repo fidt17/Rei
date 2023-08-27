@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
@@ -13,5 +12,5 @@ public interface IPlaymodeService
 	bool CanStopPlaymode();
 
 	void StartPlaymode();
-	Task StopPlaymode();
+	void StopPlaymode();
 }

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:console="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Console"
              xmlns:converters="clr-namespace:ReiEditor.Views.Converters"
+             xmlns:b="clr-namespace:ReiEditor.Views.Behaviours"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Console.ConsoleLogMessageView"
              x:DataType="console:ConsoleLogMessageViewModel">
@@ -18,44 +19,52 @@
     </UserControl.Resources>
 
     <Border Classes="InnerContent" Margin="0, 2, 0, 2"
+            x:Name="RootBorder"
             HorizontalAlignment="Stretch"
             Classes.Highlighted="{Binding Expand}">
         <Border.Styles>
             <Style Selector="Border.Highlighted">
-                <Setter Property="Margin" Value="0, 5, 0, 5"/>
-                <Setter Property="BorderBrush" Value="{StaticResource White}"/>
-                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderBrush" Value="{StaticResource White}" />
+                <Setter Property="BorderThickness" Value="1" />
             </Style>
         </Border.Styles>
         <Grid ColumnDefinitions="*, Auto" Margin="2">
-            <SelectableTextBlock
-                Grid.Column="0"
-                Text="{Binding DisplayMessage}"
-                Classes="h5"
-                VerticalAlignment="Center"
-                Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
-                Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
-                Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
-                <SelectableTextBlock.Styles>
-                    <Style Selector="SelectableTextBlock.info">
-                        <Setter Property="Foreground" Value="{StaticResource Info}" />
-                    </Style>
-                    <Style Selector="SelectableTextBlock.warning">
-                        <Setter Property="Foreground" Value="{StaticResource Warning}" />
-                    </Style>
-                    <Style Selector="SelectableTextBlock.error">
-                        <Setter Property="Foreground" Value="{StaticResource Error}" />
-                    </Style>
-                </SelectableTextBlock.Styles>
-            </SelectableTextBlock>
-            <ToggleButton Grid.Column="1"
-                          Margin="0,0,10,0"
-                          IsChecked ="{Binding Expand}"
-                          VerticalAlignment="Top" HorizontalAlignment="Right"
-                          FontSize="12"
-                          Foreground="{StaticResource White}">
-                ...
-            </ToggleButton>
+
+            <Border Grid.Column="0"
+                    b:TappedBehaviour.Command="{Binding ExpandContentsCommand}"
+                    Background="{Binding Background, ElementName=RootBorder}">
+                <SelectableTextBlock
+                    Text="{Binding DisplayMessage}"
+                    Classes="h5"
+                    VerticalAlignment="Center"
+                    Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
+                    Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
+                    Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
+
+                    <SelectableTextBlock.Styles>
+                        <Style Selector="SelectableTextBlock.info">
+                            <Setter Property="Foreground" Value="{StaticResource Info}" />
+                        </Style>
+                        <Style Selector="SelectableTextBlock.warning">
+                            <Setter Property="Foreground" Value="{StaticResource Warning}" />
+                        </Style>
+                        <Style Selector="SelectableTextBlock.error">
+                            <Setter Property="Foreground" Value="{StaticResource Error}" />
+                        </Style>
+                    </SelectableTextBlock.Styles>
+                </SelectableTextBlock>
+            </Border>
+            
+            <Border Grid.Column="1" Margin="0,0,10,0" Height="28"
+                    VerticalAlignment="Top" HorizontalAlignment="Right">
+                <ToggleButton
+                    IsChecked="{Binding Expand}"
+                    IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    FontSize="12"
+                    Foreground="{StaticResource White}">
+                    ...
+                </ToggleButton>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

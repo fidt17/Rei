@@ -1,10 +1,16 @@
-﻿using ReiEditor.Models.Services.Logging;
+﻿using System;
+using ReiEditor.Models.Services.Logging;
+using ReiEditor.Utils;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Console;
 
 public class ConsoleLogMessageViewModel : BaseViewModel
 {
+	public event Action<ConsoleLogMessageViewModel>? DetailsExpandedEvent;
+	
+	public RelayCommand ExpandContentsCommand { get; }
+	
 	public string Message { get; }
 	public LogLevelEnum LogLevel { get; }
 	public string Details { get; }
@@ -31,6 +37,12 @@ public class ConsoleLogMessageViewModel : BaseViewModel
 			if (SetField(ref _expand, value))
 			{
 				UpdateDisplayMessage();
+				ExpandContentsCommand.InvokeCanExecuteChanged();
+
+				if (value)
+				{
+					DetailsExpandedEvent?.Invoke(this);
+				}
 			}
 		}
 	}
@@ -43,11 +55,16 @@ public class ConsoleLogMessageViewModel : BaseViewModel
 
 	public ConsoleLogMessageViewModel(LogMessage message)
 	{
-		Message = $"[{message.Time.Hour}:{message.Time.Minute}:{message.Time.Second}] [{message.Scope}] {message.Message}";
-		Details = message.Details;
+		Message = $"[{message.Time.Hour:00}:{message.Time.Minute:00}:{message.Time.Second:00}] {message.Message}";
+		Details = $"{message.Scope}\n{message.Details}";
 		LogLevel = message.Level;
 		
 		UpdateDisplayMessage();
+
+		ExpandContentsCommand = new RelayCommand(() =>
+		{
+			Expand = true;
+		}, () => !Expand);
 	}
 
 	private void UpdateDisplayMessage()

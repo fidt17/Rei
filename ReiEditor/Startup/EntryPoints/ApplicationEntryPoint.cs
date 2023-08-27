@@ -6,6 +6,7 @@ using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Startup.Scopes;
+using ReiEditor.Startup.Scopes.Editor;
 
 namespace ReiEditor.Startup.EntryPoints;
 

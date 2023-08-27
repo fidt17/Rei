@@ -40,3 +40,6 @@ namespace rei
         std::vector<std::shared_ptr<T>> _subscribers;
     };
 }
+
+#define REI_EVENT(...) Event<std::function<void(__VA_ARGS__)>>
+#define REI_EVENT_ACTION(...) const std::shared_ptr<std::function<void(__VA_ARGS__)>>&

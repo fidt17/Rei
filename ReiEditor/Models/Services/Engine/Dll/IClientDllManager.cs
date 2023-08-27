@@ -2,6 +2,7 @@
 
 public interface IClientDllManager
 {
+	bool DllLoaded();
 	void LoadDll();
 	void UnloadDll();
 }

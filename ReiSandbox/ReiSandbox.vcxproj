@@ -60,6 +60,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Rei\src</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -78,6 +79,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)Rei\src</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

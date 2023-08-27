@@ -35,6 +35,11 @@ public class ClearConsoleCommand : ICommand, IDisposable
 	public void Execute(object? parameter)
 	{
 		_logs.Clear();
+		
+		foreach (var vm in _filteredLogs)
+		{
+			vm.Dispose();
+		}
 		_filteredLogs.Clear();
 	}
 }
