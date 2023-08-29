@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Build;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
 using ReiEditor.Startup.Scopes.Editor.Modules;
@@ -16,6 +17,7 @@ public class EditorScope : BaseLifetimeScope
 	protected override Task OnScopeStart()
 	{
 		Scope.Resolve<EditorEntryPoint>().Start();
+		Scope.Resolve<IBuildService>().BuildProject(BuildConfigurationEnum.EditorDebug);
 		
 		return Task.CompletedTask;
 	}
@@ -29,6 +31,7 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterModule<EditorConsoleModule>();
 		b.RegisterModule<PlaymodeModule>();
 		b.RegisterModule<SettingsModule>();
+		b.RegisterModule<BuildModule>();
 		
 		ConfigureViews(b);
 	}

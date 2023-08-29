@@ -23,8 +23,17 @@
                 Classes="Window">
             <Grid ColumnDefinitions="Auto, *, Auto">
 
-                <playmode:PlaymodePanelView Grid.Column="0"
-                                            DataContext="{Binding PlaymodePanel}" />
+                <StackPanel Orientation="Horizontal" Spacing="5">
+
+                    <playmode:PlaymodePanelView
+                        DataContext="{Binding PlaymodePanel}" />
+
+                    <Button
+                        HotKey="Ctrl+B"
+                        Command="{Binding BuildProjectCommand}">
+                        Build
+                    </Button>
+                </StackPanel>
 
                 <Button Grid.Column="2"
                         Command="{Binding OpenSettingsCommand}">

@@ -30,13 +30,12 @@
         </Border.Styles>
         <Grid ColumnDefinitions="*, Auto" Margin="2">
 
-            <Border Grid.Column="0"
-                    b:TappedBehaviour.Command="{Binding ExpandContentsCommand}"
-                    Background="{Binding Background, ElementName=RootBorder}">
+            <Border Grid.Column="0">
                 <SelectableTextBlock
                     Text="{Binding DisplayMessage}"
                     Classes="h5"
                     VerticalAlignment="Center"
+                    TextWrapping="Wrap"
                     Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
                     Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
                     Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
