@@ -94,6 +94,14 @@ public class EditorPreferencesService : IEditorPreferencesService
 		SavePreferences(_preferences);
 	}
 
+	public ConsolePreferences GetConsolePreferences() => _preferences.ConsolePreferences;
+
+	public void SetConsolePreferences(ConsolePreferences consolePreferences)
+	{
+		_preferences.ConsolePreferences = consolePreferences;
+		SavePreferences(_preferences);
+	}
+
 	private async Task<EditorPreferences> LoadPreferences()
 	{
 		var preferencesFile = await _storageService.ReadFromFile(PREFERENCES_FILE_NAME);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.EditorConsole;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Console;
@@ -19,6 +20,7 @@ public class ConsoleFilterViewModel : BaseViewModel
 		{
 			if (SetField(ref _infoEnabled, value))
 			{
+				_editorConsolePreferencesService.SetInfo(InfoEnabled);
 				FilterChangedEvent?.Invoke();
 			}
 		}
@@ -36,6 +38,7 @@ public class ConsoleFilterViewModel : BaseViewModel
 		{
 			if (SetField(ref _warningEnabled, value))
 			{
+				_editorConsolePreferencesService.SetWarning(WarningEnabled);
 				FilterChangedEvent?.Invoke();
 			}
 		}
@@ -53,12 +56,23 @@ public class ConsoleFilterViewModel : BaseViewModel
 		{
 			if (SetField(ref _errorEnabled, value))
 			{
+				_editorConsolePreferencesService.SetError(ErrorEnabled);
 				FilterChangedEvent?.Invoke();
 			}
 		}
 	}
 
 	#endregion
+	
+	private readonly IEditorConsolePreferencesService _editorConsolePreferencesService;
+
+	public ConsoleFilterViewModel(IEditorConsolePreferencesService editorConsolePreferencesService)
+	{
+		_editorConsolePreferencesService = editorConsolePreferencesService;
+		InfoEnabled = _editorConsolePreferencesService.InfoEnabled();
+		WarningEnabled = _editorConsolePreferencesService.WarningEnabled();
+		ErrorEnabled = _editorConsolePreferencesService.ErrorEnabled();
+	}
 
 	public bool IsValidLog(LogMessage logMessage)
 	{

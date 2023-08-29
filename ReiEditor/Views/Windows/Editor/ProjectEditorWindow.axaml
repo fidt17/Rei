@@ -5,9 +5,10 @@
         xmlns:editor="clr-namespace:ReiEditor.ViewModels.Windows.Editor"
         xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
         xmlns:playmode="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
+        Width="1300" Height="800"
         Background="{StaticResource Dark_0}"
         Title="Rei Engine"
         WindowStartupLocation="CenterScreen">

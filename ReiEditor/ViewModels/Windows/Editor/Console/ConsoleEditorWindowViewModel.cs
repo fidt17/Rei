@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Threading;
 using DynamicData;
 using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.EditorConsole;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Console.Commands;
 
@@ -13,12 +14,22 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 {
 	public event Action? LogCollectionUpdated;
 	
-	public ClearConsoleCommand ClearConsoleCommand { get; }
+	public ClearEditorConsoleCommand ClearEditorConsoleCommand { get; }
 	
-	public ObservableCollection<LogMessage> Logs { get; } = new();
 	public ObservableCollection<ConsoleLogMessageViewModel> FilteredLogs { get; } = new();
 
-	public ConsoleFilterViewModel ConsoleFilter { get; } = new();
+	public ConsoleFilterViewModel ConsoleFilter { get; }
+	
+	#region Details
+
+	private string _details = "";
+	public string Details
+	{
+		get => _details;
+		private set => SetField(ref _details, value);
+	}
+
+	#endregion
 
 	private ConsoleLogMessageViewModel? _currentlyExpandedLog;
 	
@@ -28,12 +39,15 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 	public ConsoleEditorWindowViewModel() { }
 #pragma warning restore CS8618
 
-	public ConsoleEditorWindowViewModel(IEditorConsoleService consoleService)
+	public ConsoleEditorWindowViewModel(IEditorConsoleService consoleService, IEditorConsolePreferencesService editorConsolePreferencesService)
 	{
 		_consoleService = consoleService;
 		_consoleService.NewLogEvent += HandleNewLogEvent;
+		_consoleService.LogsClearedEvent += HandleLogsClearedEvent;
 
-		ClearConsoleCommand = new ClearConsoleCommand(Logs, FilteredLogs);
+		ClearEditorConsoleCommand = new ClearEditorConsoleCommand(consoleService);
+		
+		ConsoleFilter = new ConsoleFilterViewModel(editorConsolePreferencesService);
 		ConsoleFilter.FilterChangedEvent += HandleFilterChangedEvent;
 	}
 
@@ -41,7 +55,7 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 	{
 		base.Dispose();
 		_consoleService.NewLogEvent -= HandleNewLogEvent;
-		ClearConsoleCommand.Dispose();
+		ClearEditorConsoleCommand.Dispose();
 
 		ConsoleFilter.FilterChangedEvent -= HandleFilterChangedEvent;
 		ConsoleFilter.Dispose();
@@ -55,10 +69,11 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 			{
 				FilteredLogs.Add(CreateLogVm(message));
 			}
-			Logs.Add(message);
 			LogCollectionUpdated?.Invoke();
 		});
 	}
+
+	private void HandleLogsClearedEvent() => ClearLogs();
 
 	private void ClearLogs()
 	{
@@ -67,13 +82,15 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 			vm.Dispose();
 		}
 		FilteredLogs.Clear();
+		_currentlyExpandedLog = null;
+		Details = "";
 	}
 
 	private void RebuildLogCollection()
 	{
 		ClearLogs();
 		
-		var logs = ConsoleFilter.FilterMessages(Logs).Select(CreateLogVm);
+		var logs = ConsoleFilter.FilterMessages(_consoleService.Logs).Select(CreateLogVm);
 		FilteredLogs.AddRange(logs);
 		
 		LogCollectionUpdated?.Invoke();
@@ -90,6 +107,7 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 			}
 
 			_currentlyExpandedLog = logVm;
+			Details = _currentlyExpandedLog.Message + " \nDetails:\n" + _currentlyExpandedLog.Details;
 		};
 
 		return vm;

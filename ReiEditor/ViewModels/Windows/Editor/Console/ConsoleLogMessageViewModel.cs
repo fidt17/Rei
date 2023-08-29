@@ -15,17 +15,6 @@ public class ConsoleLogMessageViewModel : BaseViewModel
 	public LogLevelEnum LogLevel { get; }
 	public string Details { get; }
 	
-	#region DisplayMessage
-
-	private string _displayMessage = "";
-	public string DisplayMessage
-	{
-		get => _displayMessage;
-		private set => SetField(ref _displayMessage, value);
-	}
-
-	#endregion
-	
 	#region Expand
 
 	private bool _expand;
@@ -36,7 +25,6 @@ public class ConsoleLogMessageViewModel : BaseViewModel
 		{
 			if (SetField(ref _expand, value))
 			{
-				UpdateDisplayMessage();
 				ExpandContentsCommand.InvokeCanExecuteChanged();
 
 				if (value)
@@ -58,24 +46,10 @@ public class ConsoleLogMessageViewModel : BaseViewModel
 		Message = $"[{message.Time.Hour:00}:{message.Time.Minute:00}:{message.Time.Second:00}] {message.Message}";
 		Details = $"{message.Scope}\n{message.Details}";
 		LogLevel = message.Level;
-		
-		UpdateDisplayMessage();
 
 		ExpandContentsCommand = new RelayCommand(() =>
 		{
 			Expand = true;
 		}, () => !Expand);
-	}
-
-	private void UpdateDisplayMessage()
-	{
-		if (Expand)
-		{
-			DisplayMessage = Message + "\n" + Details;
-		}
-		else
-		{
-			DisplayMessage = Message;
-		}
 	}
 }

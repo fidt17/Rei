@@ -10,18 +10,18 @@
     <Design.DataContext>
         <console:ConsoleEditorWindowViewModel />
     </Design.DataContext>
-    
+
     <UserControl.Styles>
         <Style Selector="ToggleButton:checked Ellipse">
-            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Opacity" Value="1" />
         </Style>
         <Style Selector="ToggleButton:not(:checked) Ellipse">
-            <Setter Property="Opacity" Value="0.25"/>
+            <Setter Property="Opacity" Value="0.25" />
         </Style>
     </UserControl.Styles>
 
     <Border Classes="Window">
-        <Grid RowDefinitions="Auto, *">
+        <Grid RowDefinitions="Auto, 2*, *">
 
             <!-- Header -->
             <Grid ColumnDefinitions="Auto, *, Auto">
@@ -31,24 +31,24 @@
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal"
                             Spacing="5">
-                    
+
                     <ToggleButton IsChecked="{Binding ConsoleFilter.InfoEnabled}" Height="25">
                         <Ellipse Fill="{StaticResource Info}" Width="10" Height="10"></Ellipse>
                     </ToggleButton>
-                    
+
                     <ToggleButton IsChecked="{Binding ConsoleFilter.WarningEnabled}" Height="25">
                         <Ellipse Fill="{StaticResource Warning}" Width="10" Height="10"></Ellipse>
                     </ToggleButton>
-                    
+
                     <ToggleButton IsChecked="{Binding ConsoleFilter.ErrorEnabled}" Height="25">
                         <Ellipse Fill="{StaticResource Error}" Width="10" Height="10"></Ellipse>
                     </ToggleButton>
-                    
+
                     <!-- Clear Button -->
                     <Button
                         Height="25"
                         FontSize="12"
-                        Command="{Binding ClearConsoleCommand}">
+                        Command="{Binding ClearEditorConsoleCommand}">
                         Clear
                     </Button>
                 </StackPanel>
@@ -59,6 +59,17 @@
                 <ScrollViewer x:Name="ConsoleScrollViewer">
                     <ItemsControl
                         ItemsSource="{Binding FilteredLogs}" />
+                </ScrollViewer>
+            </Border>
+
+            <!-- Details -->
+            <Border Grid.Row="2" Classes="WindowContent">
+                <ScrollViewer>
+                    <SelectableTextBlock
+                        Text="{Binding Details}"
+                        Classes="h5"
+                        VerticalAlignment="Center"
+                        TextWrapping="Wrap" />
                 </ScrollViewer>
             </Border>
         </Grid>

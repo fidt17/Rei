@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using ReiEditor.Models.Services.Logging;
+using ReiEditor.Models.Services.Logging.EditorConsole;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Console;
@@ -13,6 +13,9 @@ public class EditorConsoleModule : Module
 	{
 		builder.RegisterGeneric(typeof(EditorConsoleLogger<>)).As(typeof(ILogger<>));
 		builder.RegisterSingleton<EditorConsoleService>().As<IEditorConsoleService>();
+		builder.RegisterSingleton<EditorConsolePreferencesService>().As<IEditorConsolePreferencesService>();
+
+		builder.RegisterNonLazy<ClearConsoleOnEventsSystem>();
 		
 		ConfigureViews(builder);
 	}

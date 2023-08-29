@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Logging.EditorConsole;
 
 namespace ReiEditor.Models.Services.Logging.Engine;
 

@@ -14,4 +14,7 @@ public interface IEditorPreferencesService : IAsyncInitializable
 	
 	IEnumerable<Project> GetBookmarkedProjects();
 	void SetBookmarkedProjects(IEnumerable<Project> paths);
+
+	ConsolePreferences GetConsolePreferences();
+	void SetConsolePreferences(ConsolePreferences consolePreferences);
 }

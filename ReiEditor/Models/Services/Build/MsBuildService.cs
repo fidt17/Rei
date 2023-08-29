@@ -14,7 +14,9 @@ namespace ReiEditor.Models.Services.Build;
 public class MsBuildService : IBuildService, IDisposable
 {
 	public event Action<bool>? CanStartBuildChangedEvent;
-	
+	public event Action? BuildStartedEvent;
+	public event Action? BuildFinishedEvent;
+
 	private bool _canStartBuild;
 	public bool CanStartBuild
 	{
@@ -27,7 +29,7 @@ public class MsBuildService : IBuildService, IDisposable
 		}
 	}
 
-	private bool _buildInProcess;
+	public bool BuildInProgress { get; private set; }
 
 	private readonly IEditorPreferencesService _editorPreferencesService;
 	private readonly IActiveProjectService _activeProjectService;
@@ -63,7 +65,7 @@ public class MsBuildService : IBuildService, IDisposable
 			return;
 		}
 
-		if (_buildInProcess)
+		if (BuildInProgress)
 		{
 			CanStartBuild = false;
 			return;
@@ -74,11 +76,12 @@ public class MsBuildService : IBuildService, IDisposable
 
 	public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
 	{
-		_buildInProcess = true;
 		try
 		{
 			if (!CanStartBuild) throw new Exception("Cannot start build process at the moment");
+			BuildInProgress = true;
 			CanStartBuild = false;
+			BuildStartedEvent?.Invoke();
 			
 			var msBuildPath = _editorPreferencesService.GetMsBuildPath();
 			if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
@@ -102,8 +105,9 @@ public class MsBuildService : IBuildService, IDisposable
 
 			ParseMsBuildOutput(output);
 			
-			_buildInProcess = false;
+			BuildInProgress = false;
 			UpdateCanStartBuild();
+			BuildFinishedEvent?.Invoke();
 			
 			return true;
 		}
@@ -112,8 +116,9 @@ public class MsBuildService : IBuildService, IDisposable
 			_logger.LogException(e);
 		}
 
-		_buildInProcess = false;
+		BuildInProgress = false;
 		UpdateCanStartBuild();
+		BuildFinishedEvent?.Invoke();
 		
 		return false;
 	}
@@ -121,7 +126,7 @@ public class MsBuildService : IBuildService, IDisposable
 	private void ParseMsBuildOutput(string output)
 	{
 		var project = _activeProjectService.GetActiveProject();
-		var projectDirPath = Path.GetDirectoryName(project.ProjectSolutionPath) + "\\Scripts\\" ?? "";
+		var projectDirPath = Path.GetDirectoryName(project.ProjectSolutionPath) + "\\Scripts\\";
 
 		var warnings = new List<string>();
 		var errors = new List<string>();

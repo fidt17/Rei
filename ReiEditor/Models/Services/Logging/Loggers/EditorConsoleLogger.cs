@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using ReiEditor.Models.Services.Logging.EditorConsole;
 using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Logging.Loggers;
@@ -39,7 +40,7 @@ public class EditorConsoleLogger<T> : ILogger<T>
 	public void LogException(Exception exception)
 	{
 		_systemConsoleLogger.LogException(exception);
-		_editorConsoleService.Log(new LogMessage(LogScopeEnum.Editor, LogLevelEnum.Error, DateTime.Now, exception.Message, FormStackTrace()));
+		_editorConsoleService.Log(new LogMessage(LogScopeEnum.Editor, LogLevelEnum.Error, DateTime.Now, exception.ToString(), FormStackTrace()));
 	}
 
 	private string FormStackTrace()

@@ -19,51 +19,41 @@
     </UserControl.Resources>
 
     <Border Classes="InnerContent" Margin="0, 2, 0, 2"
-            x:Name="RootBorder"
             HorizontalAlignment="Stretch"
-            Classes.Highlighted="{Binding Expand}">
+            b:TappedBehaviour.Command="{Binding ExpandContentsCommand}"
+            Cursor="Hand"
+            Classes.Highlighted="{Binding Expand}"
+            Height="28">
         <Border.Styles>
+            <Style Selector="Border:pointerover">
+                <Setter Property="Background" Value="{StaticResource Dark_4}"/>
+            </Style>
+            
             <Style Selector="Border.Highlighted">
                 <Setter Property="BorderBrush" Value="{StaticResource White}" />
                 <Setter Property="BorderThickness" Value="1" />
             </Style>
         </Border.Styles>
-        <Grid ColumnDefinitions="*, Auto" Margin="2">
+        <TextBlock
+            Margin="2"
+            Text="{Binding Message}"
+            VerticalAlignment="Center"
+            Classes="h5"
+            Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
+            Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
+            Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
 
-            <Border Grid.Column="0">
-                <SelectableTextBlock
-                    Text="{Binding DisplayMessage}"
-                    Classes="h5"
-                    VerticalAlignment="Center"
-                    TextWrapping="Wrap"
-                    Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
-                    Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
-                    Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
-
-                    <SelectableTextBlock.Styles>
-                        <Style Selector="SelectableTextBlock.info">
-                            <Setter Property="Foreground" Value="{StaticResource Info}" />
-                        </Style>
-                        <Style Selector="SelectableTextBlock.warning">
-                            <Setter Property="Foreground" Value="{StaticResource Warning}" />
-                        </Style>
-                        <Style Selector="SelectableTextBlock.error">
-                            <Setter Property="Foreground" Value="{StaticResource Error}" />
-                        </Style>
-                    </SelectableTextBlock.Styles>
-                </SelectableTextBlock>
-            </Border>
-            
-            <Border Grid.Column="1" Margin="0,0,10,0" Height="28"
-                    VerticalAlignment="Top" HorizontalAlignment="Right">
-                <ToggleButton
-                    IsChecked="{Binding Expand}"
-                    IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                    FontSize="12"
-                    Foreground="{StaticResource White}">
-                    ...
-                </ToggleButton>
-            </Border>
-        </Grid>
+            <TextBlock.Styles>
+                <Style Selector="TextBlock.info">
+                    <Setter Property="Foreground" Value="{StaticResource Info}" />
+                </Style>
+                <Style Selector="TextBlock.warning">
+                    <Setter Property="Foreground" Value="{StaticResource Warning}" />
+                </Style>
+                <Style Selector="TextBlock.error">
+                    <Setter Property="Foreground" Value="{StaticResource Error}" />
+                </Style>
+            </TextBlock.Styles>
+        </TextBlock>
     </Border>
 </UserControl>
