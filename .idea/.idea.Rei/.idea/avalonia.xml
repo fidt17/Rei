@@ -38,6 +38,8 @@
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleLogMessageView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/PlaymodePanelView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/EditorSetupTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectCreation/ProjectCreationTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectCreationTabView.axaml" value="ReiEditor/ReiEditor.csproj" />

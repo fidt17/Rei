@@ -19,9 +19,17 @@
     <Grid RowDefinitions="Auto, *">
         <!-- Toolbar -->
         <Border Grid.Row="0"
+                HorizontalAlignment="Stretch"
                 Classes="Window">
-            <Grid>
-                <playmode:PlaymodePanelView DataContext="{Binding PlaymodePanel}" />
+            <Grid ColumnDefinitions="Auto, *, Auto">
+
+                <playmode:PlaymodePanelView Grid.Column="0"
+                                            DataContext="{Binding PlaymodePanel}" />
+
+                <Button Grid.Column="2"
+                        Command="{Binding OpenSettingsCommand}">
+                    Settings
+                </Button>
             </Grid>
         </Border>
 

@@ -7,6 +7,7 @@ using ReiEditor.Models.ProjectManagement.Deletion;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
 using ReiEditor.Utils.Extensions;
+using ReiEditor.ViewModels.Windows.Editor.Settings.Commands;
 using ReiEditor.ViewModels.Windows.ProjectManagement;
 using ReiEditor.ViewModels.Windows.ProjectManagement.Commands;
 
@@ -46,6 +47,7 @@ public class ProjectManagementScope : BaseLifetimeScope
 		b.RegisterType<ProjectCreationTabViewModel>();
 
 		b.RegisterType<SetEngineLocationCommand>();
+		b.RegisterType<SetMsBuildLocationCommand>();
 		b.RegisterType<OpenProjectCommand>();
 
 		b.RegisterType<ProjectsListElementViewModel>();

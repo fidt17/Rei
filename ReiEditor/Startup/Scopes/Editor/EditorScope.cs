@@ -28,6 +28,7 @@ public class EditorScope : BaseLifetimeScope
 
 		b.RegisterModule<EditorConsoleModule>();
 		b.RegisterModule<PlaymodeModule>();
+		b.RegisterModule<SettingsModule>();
 		
 		ConfigureViews(b);
 	}

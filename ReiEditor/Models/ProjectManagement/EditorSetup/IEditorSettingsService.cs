@@ -3,7 +3,7 @@ using ReiEditor.Startup.Common;
 
 namespace ReiEditor.Models.ProjectManagement.EditorSetup;
 
-public interface IEditorConfigurationService : IAsyncInitializable
+public interface IEditorSettingsService : IAsyncInitializable
 {
 	event Action<bool> EditorConfigurationChangedEvent;
 	event Action ConfigurationSetEvent;
@@ -13,4 +13,9 @@ public interface IEditorConfigurationService : IAsyncInitializable
 
 	bool IsEngineLocationValid();
 	bool SetEngineLocation(string path);
+	string GetEngineLocation();
+
+	bool IsMsBuildLocationValid();
+	bool SetMsBuildLocation(string path);
+	string GetMsBuildLocation();
 }

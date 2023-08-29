@@ -4,6 +4,7 @@ using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
+using ReiEditor.ViewModels.Windows.Editor.Settings.Commands;
 using ReiEditor.ViewModels.Windows.ProjectManagement.Commands;
 
 namespace ReiEditor.ViewModels.Windows.ProjectManagement;
@@ -13,6 +14,8 @@ public class EditorSetupTabViewModel : BaseViewModel
 	public event Action? EditorSetupEvent;
 	
 	public SetEngineLocationCommand SetEngineLocationCommand { get; }
+	public SetMsBuildLocationCommand SetMsBuildLocationCommand { get; }
+	
 	public RelayCommand ConfirmCommand { get; }
 	
 	#region EnginePath
@@ -25,43 +28,65 @@ public class EditorSetupTabViewModel : BaseViewModel
 	}
 
 	#endregion
+	
+	#region MsBuildPath
+
+	private string _msBuildPath = "...";
+	public string MsBuildPath
+	{
+		get => _msBuildPath;
+		private set => SetField(ref _msBuildPath, value);
+	}
+
+	#endregion
 
 	public EditorSetupTabValidation Validation { get; }
 	
-	private readonly IEditorConfigurationService _editorConfigurationService;
+	private readonly IEditorSettingsService _editorSettingsService;
 	private readonly ILogger<EditorSetupTabViewModel> _logger;
 
 #pragma warning disable CS8618
 	public EditorSetupTabViewModel() { }
 #pragma warning restore CS8618
 
-	public EditorSetupTabViewModel(IEditorConfigurationService editorConfigurationService, IFactory<SetEngineLocationCommand> setEngineLocationCommand, ILogger<EditorSetupTabViewModel> logger)
+	public EditorSetupTabViewModel(
+		IEditorSettingsService editorSettingsService, 
+		IFactory<SetEngineLocationCommand> setEngineLocationCommand, 
+		IFactory<SetMsBuildLocationCommand> setMsBuildLocationCommand, 
+		ILogger<EditorSetupTabViewModel> logger)
 	{
-		_editorConfigurationService = editorConfigurationService;
+		_editorSettingsService = editorSettingsService;
 		_logger = logger;
-		Validation = new EditorSetupTabValidation(editorConfigurationService);
+		Validation = new EditorSetupTabValidation(editorSettingsService);
 		
 		SetEngineLocationCommand = setEngineLocationCommand.CreateInstance();
 		SetEngineLocationCommand.EnginePathSetEvent += HandleEnginePathSetEvent;
+
+		SetMsBuildLocationCommand = setMsBuildLocationCommand.CreateInstance();
+		SetMsBuildLocationCommand.MsBuildPathSetEvent += HandleMsBuildPathSetEvent;
+		
 		ConfirmCommand = new RelayCommand(ExecuteConfirmCommand, CanExecuteConfirmCommand);
 		
-		_editorConfigurationService.EditorConfigurationChangedEvent += HandleEditorConfigurationChangedEvent;
+		_editorSettingsService.EditorConfigurationChangedEvent += HandleEditorSettingsChangedEvent;
+
+		EnginePath = _editorSettingsService.GetEngineLocation();
 	}
 
 	private void HandleEnginePathSetEvent(string path) => EnginePath = path;
+	private void HandleMsBuildPathSetEvent(string path) => MsBuildPath = path;
 
 	public override void Dispose()
 	{
 		base.Dispose();
 		Validation.Dispose();
-		_editorConfigurationService.EditorConfigurationChangedEvent -= HandleEditorConfigurationChangedEvent;
+		_editorSettingsService.EditorConfigurationChangedEvent -= HandleEditorSettingsChangedEvent;
 	}
 
 	private void ExecuteConfirmCommand()
 	{
 		try
 		{
-			_editorConfigurationService.SaveConfiguration();
+			_editorSettingsService.SaveConfiguration();
 			EditorSetupEvent?.Invoke();
 		}
 		catch (Exception e)
@@ -71,5 +96,5 @@ public class EditorSetupTabViewModel : BaseViewModel
 	}
 
 	private bool CanExecuteConfirmCommand() => Validation.IsEditorConfigurationValid;
-	private void HandleEditorConfigurationChangedEvent(bool isValid) => ConfirmCommand.InvokeCanExecuteChanged();
+	private void HandleEditorSettingsChangedEvent(bool isValid) => ConfirmCommand.InvokeCanExecuteChanged();
 }

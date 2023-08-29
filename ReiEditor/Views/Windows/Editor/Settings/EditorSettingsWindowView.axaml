@@ -1,0 +1,57 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:settings="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Settings"
+        mc:Ignorable="d"
+        Width="750"
+        Height="500"
+        x:Class="ReiEditor.Views.Windows.Editor.Settings.EditorSettingsWindowView"
+        x:DataType="settings:EditorSettingsWindowViewModel"
+        Title="Settings"
+        Background="{StaticResource Dark_0}"
+        WindowStartupLocation="CenterScreen">
+
+    <Design.DataContext>
+        <settings:EditorSettingsWindowViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <!-- Header -->
+        <Grid Row="0" Margin="20">
+            <TextBlock Text="Editor Settings" Classes="h1" />
+        </Grid>
+
+        <Grid Row="1" Margin="20" RowDefinitions="Auto, *">
+            <StackPanel>
+                
+                <!-- MsBuild Location -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="MsBuild Location" Classes="h4"></TextBlock>
+                    <Button
+                        Command="{Binding SetMsBuildLocationCommand}"
+                        Classes.valid="{Binding Validation.IsMsBuildPathValid}"
+                        HorizontalAlignment="Stretch">
+                        <Button.Styles>
+                            <Style Selector="Button:not(.valid) /template/ ContentPresenter">
+                                <Setter Property="BorderBrush" Value="{StaticResource Error}" />
+                            </Style>
+                        </Button.Styles>
+
+                        <TextBlock
+                            Text="{Binding MsBuildPath}" />
+                    </Button>
+                </StackPanel>
+                
+            </StackPanel>
+            
+            <!-- Controls -->
+            <StackPanel Grid.Row="1"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom">
+                <Button Command="{Binding ConfirmCommand}">Confirm</Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

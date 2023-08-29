@@ -12,18 +12,18 @@ public class ProjectManagementEntryPoint
 	private readonly ILogger<ProjectManagementEntryPoint> _logger;
 	private readonly IMainWindowService _mainWindowService;
 	private readonly IFactory<ProjectManagementWindowViewModel> _projectManagementWindowViewModelFactory;
-	private readonly IEditorConfigurationService _editorConfigurationService;
+	private readonly IEditorSettingsService _editorSettingsService;
 
 	public ProjectManagementEntryPoint(
 		ILogger<ProjectManagementEntryPoint> logger,
 		IMainWindowService _mainWindowService,
 		IFactory<ProjectManagementWindowViewModel> projectManagementWindowViewModelFactory,
-		IEditorConfigurationService editorConfigurationService)
+		IEditorSettingsService editorSettingsService)
 	{
 		_logger = logger;
 		this._mainWindowService = _mainWindowService;
 		_projectManagementWindowViewModelFactory = projectManagementWindowViewModelFactory;
-		_editorConfigurationService = editorConfigurationService;
+		_editorSettingsService = editorSettingsService;
 	}
 
 	public void Start()
@@ -35,7 +35,7 @@ public class ProjectManagementEntryPoint
 		window.DataContext = vm;
 		_mainWindowService.ShowMainWindow(window);
 
-		if (_editorConfigurationService.IsEditorConfigurationValid())
+		if (_editorSettingsService.IsEditorConfigurationValid())
 		{
 			vm.OpenProjectsListTab();
 		}

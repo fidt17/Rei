@@ -41,6 +41,17 @@ public class MainWindowService : IMainWindowService
 		_mainWindow.Closed += HandleWindowClosedEvent;
 	}
 
+	public void ShowDialog(Window window)
+	{
+		if (_mainWindow == null)
+		{
+			_logger.LogError("Cannot open dialog window because main window is missing");
+			return;
+		}
+		
+		window.ShowDialog(_mainWindow);
+	}
+
 	private void HandleWindowClosedEvent(object? sender, EventArgs e)
 	{
 		_logger.LogWarning("Main window closed");

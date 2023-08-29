@@ -6,4 +6,6 @@ public interface IMainWindowService
 {
 	Window GetMainWindow();
 	void ShowMainWindow(Window window);
+
+	void ShowDialog(Window window);
 }

@@ -27,7 +27,7 @@ public class ApplicationScope : BaseLifetimeScope
 	protected override async Task OnScopeStart()
 	{
 		await Scope.Resolve<IEditorPreferencesService>().InitializeAsync();
-		await Scope.Resolve<IEditorConfigurationService>().InitializeAsync();
+		await Scope.Resolve<IEditorSettingsService>().InitializeAsync();
 		await Scope.Resolve<IEngineSettingsProvider>().InitializeAsync();
 		
 		Scope.Resolve<ApplicationEntryPoint>().Start();
@@ -54,7 +54,7 @@ public class ApplicationScope : BaseLifetimeScope
 		
 		b.RegisterSingleton<WindowsFileExplorerProvider>().As<IFileExplorerProvider>();
 
-		b.RegisterSingleton<EditorConfigurationService>().As<IEditorConfigurationService>();
+		b.RegisterSingleton<EditorSettingsService>().As<IEditorSettingsService>();
 		b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();
 		b.RegisterSingleton<EditorPreferencesService>().As<IEditorPreferencesService>();
 		b.RegisterSingleton<ActiveProjectService>().As<IActiveProjectService>();

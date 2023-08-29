@@ -26,28 +26,41 @@ public class EditorSetupTabValidation : BaseViewModel
 	}
 
 	#endregion
+	
+	#region IsMsBuildPathValid
 
-	private readonly IEditorConfigurationService _editorConfigurationService;
-
-	public EditorSetupTabValidation(IEditorConfigurationService editorConfigurationService)
+	private bool _isMsBuildPathValid;
+	public bool IsMsBuildPathValid
 	{
-		_editorConfigurationService = editorConfigurationService;
+		get => _isMsBuildPathValid;
+		private set => SetField(ref _isMsBuildPathValid, value);
+	}
 
-		IsEditorConfigurationValid = _editorConfigurationService.IsEditorConfigurationValid();
-		IsEnginePathValid = _editorConfigurationService.IsEngineLocationValid();
+	#endregion
+
+	private readonly IEditorSettingsService _editorSettingsService;
+
+	public EditorSetupTabValidation(IEditorSettingsService editorSettingsService)
+	{
+		_editorSettingsService = editorSettingsService;
+
+		IsEditorConfigurationValid = _editorSettingsService.IsEditorConfigurationValid();
+		IsEnginePathValid = _editorSettingsService.IsEngineLocationValid();
+		IsMsBuildPathValid = _editorSettingsService.IsMsBuildLocationValid();
 		
-		_editorConfigurationService.EditorConfigurationChangedEvent += HandleEditorConfigurationChangedEvent;
+		_editorSettingsService.EditorConfigurationChangedEvent += HandleEditorSettingsChangedEvent;
 	}
 
 	public override void Dispose()
 	{
 		base.Dispose();
-		_editorConfigurationService.EditorConfigurationChangedEvent -= HandleEditorConfigurationChangedEvent;
+		_editorSettingsService.EditorConfigurationChangedEvent -= HandleEditorSettingsChangedEvent;
 	}
 
-	private void HandleEditorConfigurationChangedEvent(bool isValid)
+	private void HandleEditorSettingsChangedEvent(bool isValid)
 	{
 		IsEditorConfigurationValid = isValid;
-		IsEnginePathValid = _editorConfigurationService.IsEngineLocationValid();
+		IsEnginePathValid = _editorSettingsService.IsEngineLocationValid();
+		IsMsBuildPathValid = _editorSettingsService.IsMsBuildLocationValid();
 	}
 }

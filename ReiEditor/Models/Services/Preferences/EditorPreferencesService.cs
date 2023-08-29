@@ -47,6 +47,14 @@ public class EditorPreferencesService : IEditorPreferencesService
 		SavePreferences(_preferences);
 	}
 
+	public string GetMsBuildPath() => _preferences.MsBuildPath;
+
+	public void SetMsBuildPath(string path)
+	{
+		_preferences.MsBuildPath = path;
+		SavePreferences(_preferences);
+	}
+
 	public IEnumerable<Project> GetBookmarkedProjects()
 	{
 		var validProjects = new List<Project>();

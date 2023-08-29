@@ -16,22 +16,22 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
 	private readonly IEditorPreferencesService _preferences;
 	private readonly ISerializer _serializer;
 	private readonly ILogger<EngineSettingsProvider> _logger;
-	private readonly IEditorConfigurationService _editorConfigurationService;
+	private readonly IEditorSettingsService _editorSettingsService;
 
 	public EngineSettingsProvider(IEditorPreferencesService preferences, ISerializer serializer, ILogger<EngineSettingsProvider> logger, 
-		IEditorConfigurationService editorConfigurationService)
+		IEditorSettingsService editorSettingsService)
 	{
 		_preferences = preferences;
 		_serializer = serializer;
 		_logger = logger;
-		_editorConfigurationService = editorConfigurationService;
-		_editorConfigurationService.ConfigurationSetEvent += HandleEditorConfigurationSetEvent;
+		_editorSettingsService = editorSettingsService;
+		_editorSettingsService.ConfigurationSetEvent += HandleEditorSettingsSetEvent;
 	}
 
 	public Task InitializeAsync()
 	{
 		_logger.Log("Initialize");
-		if (!_editorConfigurationService.IsEditorConfigurationValid()) return Task.CompletedTask;
+		if (!_editorSettingsService.IsEditorConfigurationValid()) return Task.CompletedTask;
 		
 		LoadEngineSettings();
 		
@@ -40,14 +40,14 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
 	
 	public void Dispose()
 	{
-		_editorConfigurationService.ConfigurationSetEvent -= HandleEditorConfigurationSetEvent;
+		_editorSettingsService.ConfigurationSetEvent -= HandleEditorSettingsSetEvent;
 	}
 
 	public string GetEngineDebugIncludeDir() => _enginePath + _engineSettings.RelativeDebugIncludeDir;
 	public string GetEngineReleaseIncludeDir() => _enginePath + _engineSettings.RelativeReleaseIncludeDir;
 	public string GetEngineSourceIncludeDir() => _enginePath + _engineSettings.RelativeSourceIncludeDir;
 
-	private void HandleEditorConfigurationSetEvent() => LoadEngineSettings();
+	private void HandleEditorSettingsSetEvent() => LoadEngineSettings();
 
 	private void LoadEngineSettings()
 	{

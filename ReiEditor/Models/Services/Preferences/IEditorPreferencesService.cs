@@ -8,6 +8,9 @@ public interface IEditorPreferencesService : IAsyncInitializable
 {
 	string? GetEnginePath();
 	void SetEnginePath(string path);
+
+	string? GetMsBuildPath();
+	void SetMsBuildPath(string path);
 	
 	IEnumerable<Project> GetBookmarkedProjects();
 	void SetBookmarkedProjects(IEnumerable<Project> paths);

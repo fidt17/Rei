@@ -12,7 +12,6 @@
         <projectManagement:EditorSetupTabViewModel />
     </Design.DataContext>
 
-
     <Grid RowDefinitions="Auto, *">
 
         <!-- Header -->
@@ -22,7 +21,9 @@
         </Grid>
 
         <Grid Row="1" Margin="20" RowDefinitions="Auto, *">
-            <StackPanel>
+            <StackPanel Spacing="10">
+                
+                <!-- Engine Path -->
                 <StackPanel Spacing="5">
                     <TextBlock Text="Engine Location" Classes="h4"></TextBlock>
                     <Button
@@ -37,6 +38,24 @@
 
                         <TextBlock
                             Text="{Binding EnginePath}" />
+                    </Button>
+                </StackPanel>
+                
+                <!-- MsBuild Path -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="MsBuild Location" Classes="h4"></TextBlock>
+                    <Button
+                        Command="{Binding SetMsBuildLocationCommand}"
+                        Classes.valid="{Binding Validation.IsMsBuildPathValid}"
+                        HorizontalAlignment="Stretch">
+                        <Button.Styles>
+                            <Style Selector="Button:not(.valid) /template/ ContentPresenter">
+                                <Setter Property="BorderBrush" Value="{StaticResource Error}" />
+                            </Style>
+                        </Button.Styles>
+
+                        <TextBlock
+                            Text="{Binding MsBuildPath}" />
                     </Button>
                 </StackPanel>
             </StackPanel>

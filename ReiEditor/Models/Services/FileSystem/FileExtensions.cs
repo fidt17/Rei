@@ -8,6 +8,7 @@ public static class FileExtensions
 	public const string VS_PROJECT = ".vcxproj";
 	public const string REI_PROJECT = ".rei";
 	public const string REI_ENGINE = ".rei_engine";
+	public const string EXE = ".exe";
 
 	public static FilePickerFileType GetReiProjectFilePickerFileType()
 	{
@@ -22,6 +23,14 @@ public static class FileExtensions
 		return new FilePickerFileType(REI_ENGINE)
 		{
 			Patterns = new[] { $"*{REI_ENGINE}" }
+		};
+	}
+	
+	public static FilePickerFileType GetExecutableFilePickerFileType()
+	{
+		return new FilePickerFileType(EXE)
+		{
+			Patterns = new[] { $"*{EXE}" }
 		};
 	}
 }
