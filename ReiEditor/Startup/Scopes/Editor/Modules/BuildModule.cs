@@ -10,6 +10,8 @@ public class BuildModule : Module
 	protected override void Load(ContainerBuilder builder)
 	{
 		builder.RegisterSingleton<MsBuildService>().As<IBuildService>();
+		builder.RegisterSingleton<BuildStarter>().As<IBuildStarter>();
+		builder.RegisterNonLazy<BuildProcedureTracker>();
 		
 		builder.RegisterType<BuildProjectCommand>();
 	}

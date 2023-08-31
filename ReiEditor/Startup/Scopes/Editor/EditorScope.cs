@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
+using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Startup.Common;
@@ -27,11 +28,13 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<EditorEntryPoint>();
 		
 		b.RegisterSingleton<ResourceService>().As<IResourceService>();
+		b.RegisterSingleton<EditorProceduresService>().As<IEditorProceduresService>();
 
 		b.RegisterModule<EditorConsoleModule>();
 		b.RegisterModule<PlaymodeModule>();
 		b.RegisterModule<SettingsModule>();
 		b.RegisterModule<BuildModule>();
+		b.RegisterModule<StatusBarModule>();
 		
 		ConfigureViews(b);
 	}

@@ -5,29 +5,22 @@ using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Utils.Common;
 using Exception = System.Exception;
 
 namespace ReiEditor.Models.Services.Engine.Dll;
 
-public class ClientDllManager : IClientDllManager
+public class ClientDllManager : IClientDllManager, IDisposable
 {
-	[DllImport("kernel32.dll")]
-	private static extern bool SetDllDirectory(string lpPathName);
-	
-	[DllImport("kernel32.dll")]
-	private static extern IntPtr LoadLibrary(string dllToLoad);
-	
-	[DllImport("kernel32.dll", SetLastError=true)]
-	private static extern bool FreeLibrary(IntPtr hModule);
+	public Observable<bool> DllLoaded { get; } = new Observable<bool>(false);
 	
 	private IntPtr _loadedDllPtr;
-	private bool _isLoaded;
 	
 	private readonly ILogger<ClientDllManager> _logger;
 	private readonly IResourceService _resourceService;
 	private readonly IActiveProjectService _activeProjectService;
 	private readonly IClientApi _clientApi;
-	
+
 	public ClientDllManager(ILogger<ClientDllManager> logger, IResourceService resourceService, IActiveProjectService activeProjectService, IClientApi clientApi)
 	{
 		_logger = logger;
@@ -36,15 +29,20 @@ public class ClientDllManager : IClientDllManager
 		_clientApi = clientApi;
 	}
 
-	public bool DllLoaded() => _isLoaded;
+	public void Dispose()
+	{
+		if (DllLoaded)
+		{
+			UnloadDll();
+		}
+	}
 
 	public void LoadDll()
 	{
-		if (_isLoaded) throw new Exception("Dll is already loaded");
-		
-		if (_isLoaded)
+		if (DllLoaded)
 		{
-			UnloadDll();
+			_logger.LogError("Dll is already loaded");
+			return;
 		}
 			
 		var dllPath = GetDllPath();
@@ -52,17 +50,17 @@ public class ClientDllManager : IClientDllManager
 		SetDllDirectory(Path.GetDirectoryName(dllPath)!);
 		_loadedDllPtr = LoadLibrary(ClientApi.CLIENT_DLL);
 		_clientApi.SetDllPtr(_loadedDllPtr);
-		_isLoaded = true;
+		DllLoaded.Value = true;
 		_logger.Log($"Loaded client dll");
 	}
 
 	public void UnloadDll()
 	{
-		if (!_isLoaded) return;
+		if (!DllLoaded) return;
 
 		FreeLibrary(_loadedDllPtr);
-		
-		_isLoaded = false;
+
+		DllLoaded.Value = false;
 		_loadedDllPtr = IntPtr.Zero;
 		_logger.Log($"Unloaded client dll");
 	}
@@ -83,4 +81,13 @@ public class ClientDllManager : IClientDllManager
 
 		return copyDllPath;
 	}
+	
+	[DllImport("kernel32.dll")]
+	private static extern bool SetDllDirectory(string lpPathName);
+	
+	[DllImport("kernel32.dll")]
+	private static extern IntPtr LoadLibrary(string dllToLoad);
+	
+	[DllImport("kernel32.dll", SetLastError=true)]
+	private static extern bool FreeLibrary(IntPtr hModule);
 }

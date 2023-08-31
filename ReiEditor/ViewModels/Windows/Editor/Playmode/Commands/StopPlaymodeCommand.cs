@@ -14,16 +14,16 @@ public class StopPlaymodeCommand : ICommand, IDisposable
 	public StopPlaymodeCommand(IPlaymodeService playmodeService)
 	{
 		_playmodeService = playmodeService;
-		
-		_playmodeService.PlaymodeActiveValueChangedEvent += HandlePlaymodeActiveValueChangedEvent;
+
+		_playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_playmodeService.PlaymodeActiveValueChangedEvent -= HandlePlaymodeActiveValueChangedEvent;
+		_playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _playmodeService.CanStopPlaymode();
+	public bool CanExecute(object? parameter) => _playmodeService.IsPlaymodeActive;
 
 	public void Execute(object? parameter) => _playmodeService.StopPlaymode();
 

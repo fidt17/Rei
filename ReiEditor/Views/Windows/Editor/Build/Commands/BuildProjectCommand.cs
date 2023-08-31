@@ -8,26 +8,25 @@ namespace ReiEditor.Views.Windows.Editor.Build.Commands;
 
 public class BuildProjectCommand : ICommand, IDisposable
 {
+	private readonly IBuildStarter _buildStarter;
 	public event EventHandler? CanExecuteChanged;
 
-	private readonly IBuildService _buildService;
-
-	public BuildProjectCommand(IBuildService buildService)
+	public BuildProjectCommand(IBuildStarter buildStarter)
 	{
-		_buildService = buildService;
-		_buildService.CanStartBuildChangedEvent += HandleCanStartBuildChangedEvent;
+		_buildStarter = buildStarter;
+		_buildStarter.CanStartBuild.IsTrue.Subscribe(HandleCanStartBuildChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_buildService.CanStartBuildChangedEvent -= HandleCanStartBuildChangedEvent;
+		_buildStarter.CanStartBuild.IsTrue.Unsubscribe(HandleCanStartBuildChangedEvent);
 	}
-	
-	public bool CanExecute(object? parameter) => _buildService.CanStartBuild;
+
+	public bool CanExecute(object? parameter) => _buildStarter.CanStartBuild.IsTrue;
 
 	public void Execute(object? parameter)
 	{
-		Task.Run(() => _buildService.BuildProject(BuildConfigurationEnum.EditorDebug));
+		Task.Run(() => _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug));
 	}
 	
 	private void HandleCanStartBuildChangedEvent(bool value)

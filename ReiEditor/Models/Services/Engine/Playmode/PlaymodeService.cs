@@ -1,25 +1,14 @@
 ﻿using System;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Factory;
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public class PlaymodeService : IPlaymodeService, IDisposable
 {
-	public event Action<bool>? PlaymodeActiveValueChangedEvent;
-
-	private bool _playmodeActive;
-	public bool PlaymodeActive
-	{
-		get => _playmodeActive;
-		private set
-		{
-			if (value == PlaymodeActive) return;
-			_playmodeActive = value;
-			PlaymodeActiveValueChangedEvent?.Invoke(value);
-		}
-	}
+	public Observable<bool> IsPlaymodeActive { get; } = new Observable<bool>(false);
 
 	private IPlaymodeRunner? _activePlaymodeRunner;
 
@@ -36,25 +25,17 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 	
 	public void Dispose()
 	{
-		if (PlaymodeActive)
+		if (IsPlaymodeActive)
 		{
 			StopPlaymode();
 		}
-
-		if (_clientDllManager.DllLoaded())
-		{
-			_clientDllManager.UnloadDll();
-		}
 	}
-
-	public bool CanStartPlaymode() => !PlaymodeActive;
-	public bool CanStopPlaymode() => PlaymodeActive;
 
 	public void StartPlaymode()
 	{
-		if (!CanStartPlaymode())
+		if (IsPlaymodeActive)
 		{
-			_logger.LogError("Cannot start playmode");
+			_logger.LogError("Playmode is already active");
 			return;
 		}
 
@@ -64,7 +45,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 			
 		try
 		{
-			if (_clientDllManager.DllLoaded())
+			if (_clientDllManager.DllLoaded)
 			{
 				_clientDllManager.UnloadDll();
 			}
@@ -88,17 +69,13 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 			_logger.LogException(e);
 			return;
 		}
-		
-		PlaymodeActive = true;
+
+		IsPlaymodeActive.Value = true;
 	}
 
 	public void StopPlaymode()
 	{
-		if (!CanStopPlaymode())
-		{
-			_logger.LogError("Cannot stop playmode");
-			return;
-		}
+		if (!IsPlaymodeActive) return;
 
 		_logger.Log("Stop Playmode");
 
@@ -121,7 +98,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 			_logger.LogError("Could not unload client dll");
 			_logger.LogException(e);
 		}
-		
-		PlaymodeActive = false;
+
+		IsPlaymodeActive.Value = false;
 	}
 }

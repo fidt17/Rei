@@ -15,8 +15,11 @@ public class PlaymodeModule : Module
 	{
 		builder.RegisterSingleton<ClientDllManager>().As<IClientDllManager>();
 		builder.RegisterSingleton<ClientApi>().As<IClientApi>();
+
+		builder.RegisterSingleton<PlaymodeStarter>().As<IPlaymodeStarter>();
 		builder.RegisterSingleton<PlaymodeService>().As<IPlaymodeService>();
 		builder.RegisterType<PlaymodeRunner>().As<IPlaymodeRunner>().InstancePerDependency();
+		
 		builder.RegisterType<ClientLogger>().As<IClientLogger>().InstancePerDependency();
 		
 		ConfigureViews(builder);

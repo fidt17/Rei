@@ -10,29 +10,29 @@ public class StartPlaymodeCommand : ICommand, IDisposable
 {
 	public event EventHandler? CanExecuteChanged;
 
-	private readonly IPlaymodeService _playmodeService;
+	private readonly IPlaymodeStarter _playmodeStarter;
 	private readonly ILogger<StartPlaymodeCommand> _logger;
 
-	public StartPlaymodeCommand(IPlaymodeService playmodeService, ILogger<StartPlaymodeCommand> logger)
+	public StartPlaymodeCommand(IPlaymodeStarter playmodeStarter, ILogger<StartPlaymodeCommand> logger)
 	{
-		_playmodeService = playmodeService;
+		_playmodeStarter = playmodeStarter;
 		_logger = logger;
 		
-		_playmodeService.PlaymodeActiveValueChangedEvent += HandlePlaymodeActiveValueChangedEvent;
+		_playmodeStarter.CanStartPlaymode.IsTrue.Subscribe(HandleCanStartPlaymodeValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_playmodeService.PlaymodeActiveValueChangedEvent -= HandlePlaymodeActiveValueChangedEvent;
+		_playmodeStarter.CanStartPlaymode.IsTrue.Unsubscribe(HandleCanStartPlaymodeValueChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _playmodeService.CanStartPlaymode();
+	public bool CanExecute(object? parameter) => _playmodeStarter.CanStartPlaymode.IsTrue;
 
 	public void Execute(object? parameter)
 	{
 		try
 		{
-			_playmodeService.StartPlaymode();
+			_playmodeStarter.StartPlaymode();
 		}
 		catch (Exception e)
 		{
@@ -40,7 +40,7 @@ public class StartPlaymodeCommand : ICommand, IDisposable
 		}
 	}
 
-	private void HandlePlaymodeActiveValueChangedEvent(bool isActive)
+	private void HandleCanStartPlaymodeValueChangedEvent(bool isActive)
 	{
 		Dispatcher.UIThread.Invoke(() =>
 		{

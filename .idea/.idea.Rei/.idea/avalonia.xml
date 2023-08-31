@@ -31,6 +31,7 @@
         <entry key="Editor/Views/Windows/ShellWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="ReiEditor/App.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/Effects/RingSpinner.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/MainWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/Colors.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/Styles.axaml" value="ReiEditor/ReiEditor.csproj" />
@@ -40,6 +41,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/StatusBar/StatusBarView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/EmptyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/EditorSetupTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectCreation/ProjectCreationTabView.axaml" value="ReiEditor/ReiEditor.csproj" />

@@ -16,19 +16,22 @@ public class ClearConsoleOnEventsSystem : IDisposable
 		_editorConsoleService = editorConsoleService;
 		_playmodeService = playmodeService;
 
-		_buildService.BuildStartedEvent += HandleBuildStartedEvent;
-		_playmodeService.PlaymodeActiveValueChangedEvent += HandlePlaymodeActiveValueChangedEvent;
+		_buildService.BuildInProgress.Subscribe(HandleBuildInProgressValueChangedEvent);
+		_playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_buildService.BuildStartedEvent -= HandleBuildStartedEvent;
-		_playmodeService.PlaymodeActiveValueChangedEvent -= HandlePlaymodeActiveValueChangedEvent;
+		_buildService.BuildInProgress.Unsubscribe(HandleBuildInProgressValueChangedEvent);
+		_playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
-	private void HandleBuildStartedEvent()
+	private void HandleBuildInProgressValueChangedEvent(bool isBuildInProgress)
 	{
-		_editorConsoleService.ClearConsole();
+		if (isBuildInProgress)
+		{
+			_editorConsoleService.ClearConsole();
+		}
 	}
 
 	private void HandlePlaymodeActiveValueChangedEvent(bool isActive)

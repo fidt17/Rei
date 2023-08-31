@@ -36,14 +36,14 @@ public class PlaymodePanelViewModel : BaseViewModel
 		StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
 		StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 		
-		_playmodeService.PlaymodeActiveValueChangedEvent += HandlePlaymodeActiveValueChangedEvent;
-		HandlePlaymodeActiveValueChangedEvent(_playmodeService.PlaymodeActive);
+		_playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
+		HandlePlaymodeActiveValueChangedEvent(_playmodeService.IsPlaymodeActive);
 	}
 
 	public override void Dispose()
 	{
 		base.Dispose();
-		_playmodeService.PlaymodeActiveValueChangedEvent -= HandlePlaymodeActiveValueChangedEvent;
+		_playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
 		
 		StartPlaymodeCommand.Dispose();
 		StopPlaymodeCommand.Dispose();

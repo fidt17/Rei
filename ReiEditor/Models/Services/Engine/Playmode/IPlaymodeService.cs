@@ -1,15 +1,10 @@
-﻿using System;
+﻿using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public interface IPlaymodeService
 {
-	event Action<bool> PlaymodeActiveValueChangedEvent;
-	
-	bool PlaymodeActive { get; }
-
-	bool CanStartPlaymode();
-	bool CanStopPlaymode();
+	Observable<bool> IsPlaymodeActive { get; }
 
 	void StartPlaymode();
 	void StopPlaymode();

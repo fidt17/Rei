@@ -4,92 +4,43 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
-using ReiEditor.Models.Services.Engine.Dll;
-using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
+using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Build;
 
-public class MsBuildService : IBuildService, IDisposable
+public class MsBuildService : IBuildService
 {
-	public event Action<bool>? CanStartBuildChangedEvent;
-	public event Action? BuildStartedEvent;
-	public event Action? BuildFinishedEvent;
-
-	private bool _canStartBuild;
-	public bool CanStartBuild
-	{
-		get => _canStartBuild;
-		private set
-		{
-			if (value == CanStartBuild) return;
-			_canStartBuild = value;
-			CanStartBuildChangedEvent?.Invoke(CanStartBuild);
-		}
-	}
-
-	public bool BuildInProgress { get; private set; }
+	public Observable<bool> BuildInProgress { get; } = new Observable<bool>(false);
+	public Observable<bool> IsBuildReady { get; } = new Observable<bool>(false);
 
 	private readonly IEditorPreferencesService _editorPreferencesService;
 	private readonly IActiveProjectService _activeProjectService;
 	private readonly ILogger<MsBuildService> _logger;
-	private readonly IClientDllManager _dllManager;
-	private readonly IPlaymodeService _playmodeService;
 
-	public MsBuildService(IEditorPreferencesService editorPreferencesService, IActiveProjectService activeProjectService, ILogger<MsBuildService> logger, IClientDllManager dllManager, IPlaymodeService playmodeService)
+	public MsBuildService(IEditorPreferencesService editorPreferencesService, IActiveProjectService activeProjectService, ILogger<MsBuildService> logger)
 	{
 		_editorPreferencesService = editorPreferencesService;
 		_activeProjectService = activeProjectService;
 		_logger = logger;
-		_dllManager = dllManager;
-		_playmodeService = playmodeService;
-		
-		_playmodeService.PlaymodeActiveValueChangedEvent += HandlePlaymodeActiveValueChangedEvent;
-		
-		UpdateCanStartBuild();
-	}
-
-	public void Dispose()
-	{
-		_playmodeService.PlaymodeActiveValueChangedEvent -= HandlePlaymodeActiveValueChangedEvent;
-	}
-
-	private void HandlePlaymodeActiveValueChangedEvent(bool isActive) => UpdateCanStartBuild();
-
-	private void UpdateCanStartBuild()
-	{
-		if (_playmodeService.PlaymodeActive)
-		{
-			CanStartBuild = false;
-			return;
-		}
-
-		if (BuildInProgress)
-		{
-			CanStartBuild = false;
-			return;
-		}
-
-		CanStartBuild = true;
 	}
 
 	public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
 	{
+		if (BuildInProgress)
+		{
+			_logger.LogError("Another build in progress");
+			return false;
+		}
+
 		try
 		{
-			if (!CanStartBuild) throw new Exception("Cannot start build process at the moment");
-			BuildInProgress = true;
-			CanStartBuild = false;
-			BuildStartedEvent?.Invoke();
+			BuildInProgress.Value = true;
+			IsBuildReady.Value = false;
 			
 			var msBuildPath = _editorPreferencesService.GetMsBuildPath();
 			if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
-
-			if (_dllManager.DllLoaded())
-			{
-				_dllManager.UnloadDll();
-			}
 
 			var project = _activeProjectService.GetActiveProject();
 		
@@ -104,10 +55,7 @@ public class MsBuildService : IBuildService, IDisposable
 			await msBuildProcess.WaitForExitAsync();
 
 			ParseMsBuildOutput(output);
-			
-			BuildInProgress = false;
-			UpdateCanStartBuild();
-			BuildFinishedEvent?.Invoke();
+			BuildInProgress.Value = false;
 			
 			return true;
 		}
@@ -116,9 +64,7 @@ public class MsBuildService : IBuildService, IDisposable
 			_logger.LogException(e);
 		}
 
-		BuildInProgress = false;
-		UpdateCanStartBuild();
-		BuildFinishedEvent?.Invoke();
+		BuildInProgress.Value = false;
 		
 		return false;
 	}
@@ -150,12 +96,14 @@ public class MsBuildService : IBuildService, IDisposable
 		{
 			errors.ForEach(_logger.LogError);
 			_logger.LogError($"Build failed. Errors: {errorsCount}");
+			IsBuildReady.Value = false;
 		}
 		else
 		{
 			warnings.ForEach(_logger.LogWarning);
 			var warningsCount = warnings.Count;
 			_logger.Log($"Build succeeded. Warnings: {warningsCount}");
+			IsBuildReady.Value = true;
 		}
 	}
 }

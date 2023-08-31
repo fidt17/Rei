@@ -5,6 +5,7 @@
         xmlns:editor="clr-namespace:ReiEditor.ViewModels.Windows.Editor"
         xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
         xmlns:playmode="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
+        xmlns:statusBar="clr-namespace:ReiEditor.Views.Windows.Editor.StatusBar"
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
@@ -17,7 +18,7 @@
         <editor:ProjectEditorWindowViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, *, Auto">
         <!-- Toolbar -->
         <Border Grid.Row="0"
                 HorizontalAlignment="Stretch"
@@ -50,6 +51,11 @@
                 Grid.Column="0" Grid.Row="1"
                 Grid.ColumnSpan="2"
                 DataContext="{Binding Console}" />
+        </Grid>
+        
+        <!-- Status Bar -->
+        <Grid Grid.Row="2">
+            <statusBar:StatusBarView DataContext="{Binding StatusBar}"/>
         </Grid>
     </Grid>
 

@@ -1,16 +1,12 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Build;
 
 public interface IBuildService
 {
-	event Action<bool> CanStartBuildChangedEvent;
-	event Action BuildStartedEvent;
-	event Action BuildFinishedEvent;
-	
-	bool BuildInProgress { get; }
-	bool CanStartBuild { get; }
+	Observable<bool> BuildInProgress { get; }
+	Observable<bool> IsBuildReady { get; }
 	
 	Task<bool> BuildProject(BuildConfigurationEnum configuration);
 }
