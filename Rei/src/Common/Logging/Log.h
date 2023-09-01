@@ -19,7 +19,7 @@ namespace rei::logging
 
 const std::string LOG_SCOPE;
 
-#define SET_LOG_SCOPE(x) const std::string LOG_SCOPE = (x);\
+#define SET_LOG_SCOPE(x) const std::string LOG_SCOPE = (x);
 
 #ifdef _DEBUG
     #define LOG(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Info, __VA_ARGS__);

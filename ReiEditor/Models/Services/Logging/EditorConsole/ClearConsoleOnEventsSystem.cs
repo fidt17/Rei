@@ -36,6 +36,9 @@ public class ClearConsoleOnEventsSystem : IDisposable
 
 	private void HandlePlaymodeActiveValueChangedEvent(bool isActive)
 	{
-		_editorConsoleService.ClearConsole();
+		if (isActive)
+		{
+			_editorConsoleService.ClearConsole();
+		}
 	}
 }

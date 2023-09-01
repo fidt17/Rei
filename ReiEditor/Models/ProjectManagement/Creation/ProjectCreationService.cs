@@ -36,7 +36,6 @@ public class ProjectCreationService : IProjectCreationService
 		try
 		{
 			_logger.LogWarning("Creating project");
-			
 			var project = await CreateFromConfiguration(Configuration);
 			
 			_logger.LogWarning("Project creation succeeded");
@@ -46,6 +45,7 @@ public class ProjectCreationService : IProjectCreationService
 		}
 		catch (Exception e)
 		{
+			Directory.Delete(Configuration.FullPath, true);
 			_logger.LogException(e);
 		}
 		

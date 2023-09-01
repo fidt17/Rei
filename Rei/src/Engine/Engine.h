@@ -4,7 +4,7 @@
 
 namespace rei
 {
-    class REI_API App
+    class REI_API Engine
     {
     public:
         void Configure();

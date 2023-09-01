@@ -1,17 +1,17 @@
-#include "App.h"
+#include "Engine.h"
 #include <thread>
 #include <chrono>
 
 namespace rei
 {
-    SET_LOG_SCOPE("APP")
+    SET_LOG_SCOPE("ENGINE")
     
-    void App::Configure()
+    void Engine::Configure()
     {
         LOG("Configure")
     }
 
-    void App::Start()
+    void Engine::Start()
     {
         LOG("Run")
 
@@ -34,7 +34,7 @@ namespace rei
         });
     }
 
-    void App::Shutdown(const int exitCode)
+    void Engine::Shutdown(const int exitCode)
     {
         LOG("Shutdown. Exit code: " + std::to_string(exitCode))
 
@@ -44,7 +44,7 @@ namespace rei
 
     int Counter = 0;
     
-    void App::OnUpdate()
+    void Engine::OnUpdate()
     {
         LOG("On Update", "Counter = " + std::to_string(Counter++))
     }

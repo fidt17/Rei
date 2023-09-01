@@ -26,4 +26,11 @@ public class ProjectTemplateProvider : IProjectTemplateProvider
 		if (string.IsNullOrWhiteSpace(result)) throw new Exception("Could not load project template");
 		return result;
 	}
+
+	public async Task<string> GetMainFileTemplate()
+	{
+		var result = await _editorResourceService.Load("ProjectTemplates", "SolutionTemplate", "main_cpp_template.txt");
+		if (string.IsNullOrWhiteSpace(result)) throw new Exception("Could not load main file template");
+		return result;
+	}
 }

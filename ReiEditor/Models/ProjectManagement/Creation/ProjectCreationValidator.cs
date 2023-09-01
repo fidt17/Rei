@@ -26,9 +26,15 @@ public class ProjectCreationValidator
 
 	public bool IsProjectPathValid()
 	{
+		bool IsDirectoryEmpty(string path) => !Directory.EnumerateFileSystemEntries(path).Any();
+
 		try
 		{
 			Path.GetFullPath(_configuration.FullPath);
+			if (Directory.Exists(_configuration.FullPath) && !IsDirectoryEmpty(_configuration.FullPath))
+			{
+				return false;
+			}
 		}
 		catch (Exception)
 		{

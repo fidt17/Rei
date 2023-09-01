@@ -148,4 +148,11 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AdditionalFiles>
   </ItemGroup>
+
+
+  <ItemGroup>
+    <AdditionalFiles Include="Resources\ProjectTemplates\SolutionTemplate\main_cpp_template.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AdditionalFiles>
+  </ItemGroup>
 </Project>

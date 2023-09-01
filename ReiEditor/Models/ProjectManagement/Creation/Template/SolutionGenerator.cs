@@ -36,6 +36,7 @@ public class SolutionGenerator : ISolutionGenerator
 			
 		var solutionFilePath = await CreateSolutionFile(config.ProjectName, solutionDirPath, solutionGuid, projectGuid);
 		await CreateProjectFile(config.ProjectName, projectDirPath, projectGuid);
+		await CreateSourceFiles(projectDirPath);
 
 		return solutionFilePath;
 	}
@@ -45,7 +46,11 @@ public class SolutionGenerator : ISolutionGenerator
 		_logger.Log("Creating solution file");
 		
 		var solutionTemplate = await _templateProvider.GetVSSolutionTemplate();
-		var filledTemplate = string.Format(solutionTemplate, projectName, FormatGuid(projectGuid), FormatGuid(solutionGuid));
+		var filledTemplate = string.Format(
+			solutionTemplate, 
+			projectName, 
+			FormatGuid(projectGuid), 
+			FormatGuid(solutionGuid));
 		
 		var filePath = Path.Combine(solutionFolderPath, $"{projectName}{FileExtensions.VS_SOLUTION}");
 		
@@ -59,13 +64,29 @@ public class SolutionGenerator : ISolutionGenerator
 		_logger.Log("Creating VS project file");
 		
 		var projectTemplate = await _templateProvider.GetVSProjectTemplate();
-		var filledTemplate = string.Format(projectTemplate, FormatGuid(projectGuid), projectName, 
-			_engineSettingsProvider.GetEngineDebugIncludeDir(), _engineSettingsProvider.GetEngineReleaseIncludeDir(), _engineSettingsProvider.GetEngineSourceIncludeDir());
+		var filledTemplate = string.Format(
+			projectTemplate, 
+			FormatGuid(projectGuid), projectName, 
+			_engineSettingsProvider.GetEngineDebugIncludeDir(), 
+			_engineSettingsProvider.GetEngineReleaseIncludeDir(), 
+			_engineSettingsProvider.GetEngineSourceIncludeDir(),
+			GetMainFileName());
 		
 		var filePath = Path.Combine(projectFolderPath, $"{projectName}{FileExtensions.VS_PROJECT}");
 		
 		await File.WriteAllTextAsync(filePath, filledTemplate);
 	}
 
+	private async Task CreateSourceFiles(string projectFolderPath)
+	{
+		_logger.Log("Creating source files");
+
+		var template = await _templateProvider.GetMainFileTemplate();
+
+		var filePath = Path.Combine(projectFolderPath, GetMainFileName());
+		await File.WriteAllTextAsync(filePath, template);
+	}
+
+	private static string GetMainFileName() => "ReiApp.cpp";
 	private static string FormatGuid(Guid guid) => "{" + guid + "}";
 }

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Application/App.h"
+#include "Engine/Engine.h"
 
 namespace rei
 {
@@ -8,8 +8,8 @@ namespace rei
     public:
         void Configure();
 
-        std::shared_ptr<IFactory<App>> GetAppFactory() const { return _appFactory; }
+        std::shared_ptr<IFactory<Engine>> GetEngineFactory() const { return _appFactory; }
     private:
-        std::shared_ptr<IFactory<App>> _appFactory = nullptr;
+        std::shared_ptr<IFactory<Engine>> _appFactory = nullptr;
     };
 }

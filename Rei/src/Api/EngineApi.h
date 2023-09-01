@@ -1,25 +1,28 @@
 ﻿#pragma once
 
-#include "Application/App.h"
 #include "Startup/EngineEntryPoint.h"
 
-inline std::shared_ptr<rei::App> App;
+#ifdef REI_APP
+
+inline std::shared_ptr<rei::Engine> Engine;
 
 REI_EXTERN_API inline void CreateApplication()
 {
     auto entryPoint = rei::EngineEntryPoint();
-    entryPoint.ConfigureEngine();
-    App = entryPoint.CreateApplication();
+    entryPoint.ConfigureFramework();
+    Engine = entryPoint.CreateEngine();
 }
 
 REI_EXTERN_API inline void StartApplication()
 {
-    App->Start();
+    Engine->Start();
+    OnProjectStart();
 }
 
 REI_EXTERN_API inline int StopApplication(const int exitCode)
 {
-    App->Shutdown(exitCode);
+    Engine->Shutdown(exitCode);
+    OnProjectShutdown();
 
     return 0;
 }
@@ -30,3 +33,5 @@ REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
     const auto callbackPtr = std::make_shared<std::function<void(const rei::logging::LogMessage&)>>([=](const rei::logging::LogMessage& message) { callback(message); });
     rei::logging::Log::AddLogCallback(callbackPtr);
 }
+
+#endif

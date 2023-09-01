@@ -6,4 +6,5 @@ public interface IProjectTemplateProvider
 {
 	Task<string> GetVSSolutionTemplate();
 	Task<string> GetVSProjectTemplate();
+	Task<string> GetMainFileTemplate();
 }

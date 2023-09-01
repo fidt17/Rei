@@ -1,11 +1,11 @@
 ﻿#include "EngineLifetimeScope.h"
 
-#include "Application/AppFactory.h"
+#include "Engine/EngineFactory.h"
 
 namespace rei
 {
     void EngineLifetimeScope::Configure()
     {
-        _appFactory = std::make_unique<AppFactory>();
+        _appFactory = std::make_unique<EngineFactory>();
     }
 }

@@ -4,36 +4,22 @@ namespace rei
 {
     SET_LOG_SCOPE("ENGINE ENTRY POINT")
     
-    void EngineEntryPoint::ConfigureEngine()
+    void EngineEntryPoint::ConfigureFramework()
     {
         logging::Log::Initialize();
         
-        LOG("Configure Engine")
+        LOG("Configure Framework")
         
         _scope.Configure();
     }
 
-    std::shared_ptr<App> EngineEntryPoint::CreateApplication() const
+    std::shared_ptr<Engine> EngineEntryPoint::CreateEngine() const
     {
-        LOG("Create Application")
+        LOG("Create Engine")
         
-        auto app = _scope.GetAppFactory()->CreateShared();
-        app->Configure();
+        auto engine = _scope.GetEngineFactory()->CreateShared();
+        engine->Configure();
         
-        return app;
+        return engine;
     }
-}
-
-int main()
-{
-    auto entryPoint = rei::EngineEntryPoint();
-    
-    entryPoint.ConfigureEngine();
-    const auto app = entryPoint.CreateApplication();
-    app->Start();
-
-    std::cin.get();
-    app->Shutdown(1);
-
-    return 0;
 }
