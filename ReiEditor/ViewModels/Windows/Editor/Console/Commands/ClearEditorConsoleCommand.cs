@@ -14,12 +14,12 @@ public class ClearEditorConsoleCommand : ICommand, IDisposable
 	public ClearEditorConsoleCommand(IEditorConsoleService editorConsoleService)
 	{
 		_editorConsoleService = editorConsoleService;
-		_editorConsoleService.LogsCountChangedEvent += HandleLogsCountChangedEvent;
+		_editorConsoleService.LogsCount.Subscribe(HandleLogsCountChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_editorConsoleService.LogsCountChangedEvent -= HandleLogsCountChangedEvent;
+		_editorConsoleService.LogsCount.Unsubscribe(HandleLogsCountChangedEvent);
 	}
 
 	private void HandleLogsCountChangedEvent(int count)
@@ -30,7 +30,7 @@ public class ClearEditorConsoleCommand : ICommand, IDisposable
 		});
 	}
 
-	public bool CanExecute(object? parameter) => _editorConsoleService.LogsCount > 0;
+	public bool CanExecute(object? parameter) => _editorConsoleService.LogsCount.Value > 0;
 	
 	public void Execute(object? parameter) => _editorConsoleService.ClearConsole();
 }

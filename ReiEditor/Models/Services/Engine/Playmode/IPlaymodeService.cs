@@ -4,7 +4,7 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public interface IPlaymodeService
 {
-	Observable<bool> IsPlaymodeActive { get; }
+	IObservable<bool> IsPlaymodeActive { get; }
 
 	void StartPlaymode();
 	void StopPlaymode();

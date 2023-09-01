@@ -13,12 +13,12 @@ public class OpenSettingsWindowCommand : ICommand, IDisposable
 	public OpenSettingsWindowCommand(ISettingsWindowService settingsWindowService)
 	{
 		_settingsWindowService = settingsWindowService;
-		_settingsWindowService.IsOpenedValueChangedEvent += HandleIsOpenedValueChangedEvent;
+		_settingsWindowService.IsOpened.Subscribe(HandleIsOpenedValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_settingsWindowService.IsOpenedValueChangedEvent -= HandleIsOpenedValueChangedEvent;
+		_settingsWindowService.IsOpened.Unsubscribe(HandleIsOpenedValueChangedEvent);
 	}
 
 	private void HandleIsOpenedValueChangedEvent(bool isOpened)
@@ -26,7 +26,7 @@ public class OpenSettingsWindowCommand : ICommand, IDisposable
 		CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 	}
 
-	public bool CanExecute(object? parameter) => !_settingsWindowService.IsOpened;
+	public bool CanExecute(object? parameter) => !_settingsWindowService.IsOpened.Value;
 
 	public void Execute(object? parameter)
 	{

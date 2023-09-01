@@ -37,7 +37,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 		StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 		
 		_playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
-		HandlePlaymodeActiveValueChangedEvent(_playmodeService.IsPlaymodeActive);
+		HandlePlaymodeActiveValueChangedEvent(_playmodeService.IsPlaymodeActive.Value);
 	}
 
 	public override void Dispose()

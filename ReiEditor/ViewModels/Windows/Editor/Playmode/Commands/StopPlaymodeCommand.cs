@@ -23,7 +23,7 @@ public class StopPlaymodeCommand : ICommand, IDisposable
 		_playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _playmodeService.IsPlaymodeActive;
+	public bool CanExecute(object? parameter) => _playmodeService.IsPlaymodeActive.Value;
 
 	public void Execute(object? parameter) => _playmodeService.StopPlaymode();
 

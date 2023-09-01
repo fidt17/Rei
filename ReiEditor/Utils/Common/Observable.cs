@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ReiEditor.Utils.Common;
 
-public class Observable<T>
+public class Observable<T> : IObservable<T>
 {
 	private T? _value;
 	public T Value
@@ -23,9 +23,9 @@ public class Observable<T>
 
 	private readonly List<Action<T>> _subscribers = new();
 
-	public Observable(T defaultValue)
+	public Observable(T? defaultValue = default)
 	{
-		Value = defaultValue;
+		_value = defaultValue;
 	}
 
 	public void Subscribe(Action<T> callback, bool invoke = true)

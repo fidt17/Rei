@@ -6,7 +6,9 @@ namespace ReiEditor.Utils.Common.Condition;
 
 public class ConditionGroup : ICondition, IDisposable
 {
-	public Observable<bool> IsTrue { get; } = new(false);
+	public IObservable<bool> IsTrue => _isTrue;
+
+	private readonly Observable<bool> _isTrue = new();
 
 	private readonly List<ICondition> _conditions;
 
@@ -29,5 +31,5 @@ public class ConditionGroup : ICondition, IDisposable
 
 	private void HandleConditionValueChangedEvent(bool isTrue) => UpdateCondition();
 
-	private void UpdateCondition() => IsTrue.Value = _conditions.TrueForAll(x => x.IsTrue);
+	private void UpdateCondition() => _isTrue.Value = _conditions.TrueForAll(x => x.IsTrue.Value);
 }

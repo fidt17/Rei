@@ -26,7 +26,7 @@ public class StartPlaymodeCommand : ICommand, IDisposable
 		_playmodeStarter.CanStartPlaymode.IsTrue.Unsubscribe(HandleCanStartPlaymodeValueChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _playmodeStarter.CanStartPlaymode.IsTrue;
+	public bool CanExecute(object? parameter) => _playmodeStarter.CanStartPlaymode.IsTrue.Value;
 
 	public void Execute(object? parameter)
 	{

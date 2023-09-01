@@ -12,8 +12,11 @@ namespace ReiEditor.Models.Services.Build;
 
 public class MsBuildService : IBuildService
 {
-	public Observable<bool> BuildInProgress { get; } = new Observable<bool>(false);
-	public Observable<bool> IsBuildReady { get; } = new Observable<bool>(false);
+	public Utils.Common.IObservable<bool> BuildInProgress => _buildInProgress;
+	public Utils.Common.IObservable<bool> IsBuildReady => _isBuildReady;
+
+	private readonly Observable<bool> _buildInProgress = new();
+	private readonly Observable<bool> _isBuildReady = new();
 
 	private readonly IEditorPreferencesService _editorPreferencesService;
 	private readonly IActiveProjectService _activeProjectService;
@@ -28,7 +31,7 @@ public class MsBuildService : IBuildService
 
 	public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
 	{
-		if (BuildInProgress)
+		if (_buildInProgress)
 		{
 			_logger.LogError("Another build in progress");
 			return false;
@@ -36,8 +39,8 @@ public class MsBuildService : IBuildService
 
 		try
 		{
-			BuildInProgress.Value = true;
-			IsBuildReady.Value = false;
+			_buildInProgress.Value = true;
+			_isBuildReady.Value = false;
 			
 			var msBuildPath = _editorPreferencesService.GetMsBuildPath();
 			if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
@@ -55,7 +58,7 @@ public class MsBuildService : IBuildService
 			await msBuildProcess.WaitForExitAsync();
 
 			ParseMsBuildOutput(output);
-			BuildInProgress.Value = false;
+			_buildInProgress.Value = false;
 			
 			return true;
 		}
@@ -64,7 +67,7 @@ public class MsBuildService : IBuildService
 			_logger.LogException(e);
 		}
 
-		BuildInProgress.Value = false;
+		_buildInProgress.Value = false;
 		
 		return false;
 	}
@@ -96,14 +99,14 @@ public class MsBuildService : IBuildService
 		{
 			errors.ForEach(_logger.LogError);
 			_logger.LogError($"Build failed. Errors: {errorsCount}");
-			IsBuildReady.Value = false;
+			_isBuildReady.Value = false;
 		}
 		else
 		{
 			warnings.ForEach(_logger.LogWarning);
 			var warningsCount = warnings.Count;
 			_logger.Log($"Build succeeded. Warnings: {warningsCount}");
-			IsBuildReady.Value = true;
+			_isBuildReady.Value = true;
 		}
 	}
 }

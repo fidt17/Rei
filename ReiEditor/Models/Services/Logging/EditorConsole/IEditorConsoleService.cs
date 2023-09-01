@@ -7,9 +7,8 @@ public interface IEditorConsoleService
 {
 	event Action<LogMessage> NewLogEvent;
 	event Action LogsClearedEvent;
-	event Action<int> LogsCountChangedEvent;
 	
-	int LogsCount { get; }
+	Utils.Common.IObservable<int> LogsCount { get; }
 	IEnumerable<LogMessage> Logs { get; }
 
 	void Log(LogMessage message);

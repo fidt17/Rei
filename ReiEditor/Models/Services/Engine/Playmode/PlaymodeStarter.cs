@@ -33,7 +33,7 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
 	
 	public void StartPlaymode()
 	{
-		if (!CanStartPlaymode.IsTrue)
+		if (!CanStartPlaymode.IsTrue.Value)
 		{
 			_logger.LogError($"Cannot start playmode");
 			return;

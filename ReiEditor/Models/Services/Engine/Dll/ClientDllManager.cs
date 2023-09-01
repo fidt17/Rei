@@ -12,10 +12,12 @@ namespace ReiEditor.Models.Services.Engine.Dll;
 
 public class ClientDllManager : IClientDllManager, IDisposable
 {
-	public Observable<bool> DllLoaded { get; } = new Observable<bool>(false);
+	public Utils.Common.IObservable<bool> DllLoaded => _dllLoaded;
 	
 	private IntPtr _loadedDllPtr;
-	
+
+	private readonly Observable<bool> _dllLoaded = new();
+
 	private readonly ILogger<ClientDllManager> _logger;
 	private readonly IResourceService _resourceService;
 	private readonly IActiveProjectService _activeProjectService;
@@ -31,7 +33,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
 
 	public void Dispose()
 	{
-		if (DllLoaded)
+		if (_dllLoaded)
 		{
 			UnloadDll();
 		}
@@ -39,7 +41,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
 
 	public void LoadDll()
 	{
-		if (DllLoaded)
+		if (_dllLoaded)
 		{
 			_logger.LogError("Dll is already loaded");
 			return;
@@ -50,17 +52,17 @@ public class ClientDllManager : IClientDllManager, IDisposable
 		SetDllDirectory(Path.GetDirectoryName(dllPath)!);
 		_loadedDllPtr = LoadLibrary(ClientApi.CLIENT_DLL);
 		_clientApi.SetDllPtr(_loadedDllPtr);
-		DllLoaded.Value = true;
+		_dllLoaded.Value = true;
 		_logger.Log($"Loaded client dll");
 	}
 
 	public void UnloadDll()
 	{
-		if (!DllLoaded) return;
+		if (!_dllLoaded) return;
 
 		FreeLibrary(_loadedDllPtr);
 
-		DllLoaded.Value = false;
+		_dllLoaded.Value = false;
 		_loadedDllPtr = IntPtr.Zero;
 		_logger.Log($"Unloaded client dll");
 	}

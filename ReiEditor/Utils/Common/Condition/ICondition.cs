@@ -4,5 +4,5 @@ namespace ReiEditor.Utils.Common.Condition;
 
 public interface ICondition : IDisposable
 {
-	Observable<bool> IsTrue { get; }
+	IObservable<bool> IsTrue { get; }
 }

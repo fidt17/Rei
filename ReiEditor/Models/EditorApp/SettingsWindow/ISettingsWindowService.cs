@@ -1,12 +1,11 @@
-﻿using System;
+﻿using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.EditorApp.SettingsWindow;
 
 public interface ISettingsWindowService
 {
-	event Action<bool> IsOpenedValueChangedEvent;
+	IObservable<bool> IsOpened { get; }
 	
-	bool IsOpened { get; }
 	void OpenSettingsWindow();
 	void CloseSettingsWindow();
 }

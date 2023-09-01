@@ -22,7 +22,7 @@ public class BuildProjectCommand : ICommand, IDisposable
 		_buildStarter.CanStartBuild.IsTrue.Unsubscribe(HandleCanStartBuildChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _buildStarter.CanStartBuild.IsTrue;
+	public bool CanExecute(object? parameter) => _buildStarter.CanStartBuild.IsTrue.Value;
 
 	public void Execute(object? parameter)
 	{

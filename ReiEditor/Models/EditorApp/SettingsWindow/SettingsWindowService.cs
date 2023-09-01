@@ -1,6 +1,6 @@
-﻿using System;
-using ReiEditor.Models.EditorApp.MainWindow;
+﻿using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor.Settings;
 using ReiEditor.Views.Windows.Editor.Settings;
@@ -9,19 +9,8 @@ namespace ReiEditor.Models.EditorApp.SettingsWindow;
 
 public class SettingsWindowService : ISettingsWindowService
 {
-	public event Action<bool>? IsOpenedValueChangedEvent;
-
-	private bool _isOpened;
-	public bool IsOpened
-	{
-		get => _isOpened;
-		private set
-		{
-			if (value == IsOpened) return;
-			_isOpened = value;
-			IsOpenedValueChangedEvent?.Invoke(IsOpened);
-		}
-	}
+	public IObservable<bool> IsOpened => _isOpened;
+	private readonly Observable<bool> _isOpened = new();
 
 	private EditorSettingsWindowView? _window;
 
@@ -38,7 +27,7 @@ public class SettingsWindowService : ISettingsWindowService
 
 	public void OpenSettingsWindow()
 	{
-		if (IsOpened)
+		if (_isOpened)
 		{
 			_logger.LogError("Cannot open settings window since it is already active");
 			return;
@@ -50,11 +39,11 @@ public class SettingsWindowService : ISettingsWindowService
 			DataContext = vm
 		};
 		_mainWindowService.ShowDialog(_window);
-		IsOpened = true;
+		_isOpened.Value = true;
 
 		_window.Closed += (_, _) =>
 		{
-			IsOpened = false;
+			_isOpened.Value = false;
 			vm.Dispose();
 		};
 	}

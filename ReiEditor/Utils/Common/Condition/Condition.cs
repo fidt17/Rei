@@ -4,14 +4,14 @@ namespace ReiEditor.Utils.Common.Condition;
 
 public class Condition : ICondition, IDisposable
 {
-	public Observable<bool> IsTrue { get; }
+	public IObservable<bool> IsTrue => _isTrue;
+	private readonly Observable<bool> _isTrue = new();
 
-	private readonly Observable<bool> _observable;
+	private readonly IObservable<bool> _observable;
 	private readonly bool _target;
 
-	public Condition(Observable<bool> observable, bool target = false)
+	public Condition(IObservable<bool> observable, bool target = false)
 	{
-		IsTrue = new Observable<bool>(false);
 		_target = target;
 		_observable = observable;
 		_observable.Subscribe(HandleObservableValueChangedEvent);
@@ -22,5 +22,5 @@ public class Condition : ICondition, IDisposable
 		_observable.Unsubscribe(HandleObservableValueChangedEvent);
 	}
 
-	private void HandleObservableValueChangedEvent(bool value) => IsTrue.Value = value == _target;
+	private void HandleObservableValueChangedEvent(bool value) => _isTrue.Value = value == _target;
 }

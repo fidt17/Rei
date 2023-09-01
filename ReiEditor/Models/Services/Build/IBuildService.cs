@@ -5,8 +5,8 @@ namespace ReiEditor.Models.Services.Build;
 
 public interface IBuildService
 {
-	Observable<bool> BuildInProgress { get; }
-	Observable<bool> IsBuildReady { get; }
+	IObservable<bool> BuildInProgress { get; }
+	IObservable<bool> IsBuildReady { get; }
 	
 	Task<bool> BuildProject(BuildConfigurationEnum configuration);
 }

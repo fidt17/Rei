@@ -8,10 +8,11 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public class PlaymodeService : IPlaymodeService, IDisposable
 {
-	public Observable<bool> IsPlaymodeActive { get; } = new Observable<bool>(false);
+	public Utils.Common.IObservable<bool> IsPlaymodeActive => _isPlaymodeActive;
 
 	private IPlaymodeRunner? _activePlaymodeRunner;
 
+	private readonly Observable<bool> _isPlaymodeActive = new();
 	private readonly ILogger<PlaymodeService> _logger;
 	private readonly IClientDllManager _clientDllManager;
 	private readonly IFactory<IPlaymodeRunner> _playmodeRunnerFactory;
@@ -25,7 +26,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 	
 	public void Dispose()
 	{
-		if (IsPlaymodeActive)
+		if (_isPlaymodeActive)
 		{
 			StopPlaymode();
 		}
@@ -33,7 +34,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 
 	public void StartPlaymode()
 	{
-		if (IsPlaymodeActive)
+		if (_isPlaymodeActive)
 		{
 			_logger.LogError("Playmode is already active");
 			return;
@@ -45,7 +46,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 			
 		try
 		{
-			if (_clientDllManager.DllLoaded)
+			if (_clientDllManager.DllLoaded.Value)
 			{
 				_clientDllManager.UnloadDll();
 			}
@@ -70,12 +71,12 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 			return;
 		}
 
-		IsPlaymodeActive.Value = true;
+		_isPlaymodeActive.Value = true;
 	}
 
 	public void StopPlaymode()
 	{
-		if (!IsPlaymodeActive) return;
+		if (!_isPlaymodeActive) return;
 
 		_logger.Log("Stop Playmode");
 
@@ -99,6 +100,6 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 			_logger.LogException(e);
 		}
 
-		IsPlaymodeActive.Value = false;
+		_isPlaymodeActive.Value = false;
 	}
 }
