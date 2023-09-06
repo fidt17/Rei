@@ -17,7 +17,7 @@ namespace rei
 
         Event& operator -=(std::shared_ptr<T> mFunc)
         {
-            remove(_subscribers.begin(), _subscribers.end(), mFunc);
+            _subscribers.erase(remove(_subscribers.begin(), _subscribers.end(), mFunc));
             return *this;
         }
 

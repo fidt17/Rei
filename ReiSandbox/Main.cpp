@@ -1,11 +1,9 @@
 // Gets called when application starts
 void OnProjectStart()
 {
-    LOG("On project start")
 }
 
 // Gets called when application shutdowns
 void OnProjectShutdown()
 {
-    LOG("On project shutdown")
 }

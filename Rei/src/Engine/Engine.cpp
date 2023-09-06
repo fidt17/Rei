@@ -42,10 +42,7 @@ namespace rei
         _mainThread.join();
     }
 
-    int Counter = 0;
-    
     void Engine::OnUpdate()
     {
-        LOG("On Update", "Counter = " + std::to_string(Counter++))
     }
 }

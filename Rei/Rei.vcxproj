@@ -11,7 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Common\pch.h" />
     <ClInclude Include="src\Api\EngineApi.h" />
+    <ClInclude Include="src\Common\Primitives.h" />
     <ClInclude Include="src\Engine\Engine.h" />
     <ClInclude Include="src\Engine\EngineFactory.h" />
     <ClInclude Include="src\Common\Event.h" />
@@ -26,6 +28,14 @@
     <ClInclude Include="src\Startup\EngineEntryPoint.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Common\pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="src\Engine\Engine.cpp" />
     <ClCompile Include="src\Engine\EngineFactory.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
@@ -81,11 +91,11 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>Core.h</ForcedIncludeFiles>
       <AdditionalIncludeDirectories>$(ProjectDir)src</AdditionalIncludeDirectories>
-      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -105,7 +115,7 @@ xcopy /y /d "$(TargetDir)Rei.lib" "$(TargetDir)..\ReiSandbox\"</Command>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>Core.h</ForcedIncludeFiles>
       <AdditionalIncludeDirectories>$(ProjectDir)src</AdditionalIncludeDirectories>
