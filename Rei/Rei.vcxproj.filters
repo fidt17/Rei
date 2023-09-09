@@ -23,6 +23,8 @@
     <ClInclude Include="src\Common\Logging\LogMessage.h" />
     <ClInclude Include="src\Engine\Engine.h" />
     <ClInclude Include="src\Engine\EngineFactory.h" />
-    <ClInclude Include="src\Common\pch.h" />
+    <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Common\Primitives.h" />
+    <ClInclude Include="src\Ecs\Ecs.h" />
   </ItemGroup>
 </Project>

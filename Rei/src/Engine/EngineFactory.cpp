@@ -1,4 +1,5 @@
-﻿#include "EngineFactory.h"
+﻿#include "Core.h"
+#include "EngineFactory.h"
 
 namespace rei
 {
