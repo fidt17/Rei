@@ -4,18 +4,6 @@
 
 namespace rei::ecs
 {
-    void Filter::Include(const std::shared_ptr<ISet>& set)
-    {
-        // todo: check for duplicates
-        _includeSets.push_back(set);
-        _includeMask.Set(set->Id());
-    }
-
-    void Filter::Exclude(const std::shared_ptr<ISet>& set)
-    {
-        _excludeMask.Set(set->Id());
-    }
-
     void Filter::OnEntityChange(const Entity& e)
     {
         const EntityId entityId = e.Id;;

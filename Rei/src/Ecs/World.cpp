@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "World.h"
 #include "Entity.h"
+#include "FiltersRegistry.h"
 
 namespace rei::ecs
 {
@@ -20,22 +21,17 @@ namespace rei::ecs
         return _entities.back();
     }
 
-    std::shared_ptr<Filter> World::CreateFilter()
+    void World::Refresh() const
     {
-        auto filter = std::make_shared<Filter>();
-        _filters.push_back(filter);
-        return filter;
-    }
-
-    void World::UpdateWorld()
-    {
-        for (const auto& changedEntity : _changedEntities)
+        auto& dirtyEntities = _ecsRegistry->GetDirtyEntities();
+        auto& filters = _filterRegistry->GetFilters();
+        for (const auto& changedEntity : dirtyEntities)
         {
-            for (const auto& filter : _filters)
+            for (const auto& filter : filters)
             {
                 filter->OnEntityChange(changedEntity);
             }
         }
-        _changedEntities.clear();
+        _ecsRegistry->ClearDirtyEntities();
     }
 }

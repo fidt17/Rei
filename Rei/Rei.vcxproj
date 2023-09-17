@@ -17,6 +17,7 @@
   <ItemGroup>
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
+    <ClInclude Include="src\Ecs\EcsRegistry.h" />
     <ClInclude Include="src\Ecs\Entity.h" />
     <ClInclude Include="src\Ecs\Filter.h" />
     <ClInclude Include="src\Ecs\TypeId.h" />
@@ -134,6 +135,9 @@
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
     <ClCompile Include="tests\EcsTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
