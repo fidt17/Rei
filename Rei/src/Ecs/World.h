@@ -1,154 +1,102 @@
 ﻿#pragma once
-#include <set>
 #include <unordered_set>
 
 #include "ComponentSet.h"
-#include "Ecs.h"
+#include "Filter.h"
 #include "TypeId.h"
+#include "Entity.h"
 
 namespace rei::ecs
 {
-    struct Filter
-    {
-        std::vector<std::shared_ptr<ISet>> IncludeSets;
-        std::vector<std::shared_ptr<ISet>> ExcludeSets;
-        std::unordered_set<Entity> EntitiesSet;
-        std::vector<Entity> EntitiesList;
-
-        bool IsValid(const Entity e) const
-        {
-            for (const auto& includeSet : IncludeSets)
-            {
-                if (!includeSet->Has(e))
-                {
-                    return false;
-                }
-            }
-
-            for (const auto& excludeSet : ExcludeSets)
-            {
-                if (excludeSet->Has(e))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        void OnEntityChange(const Entity e)
-        {
-            const bool isValid = IsValid(e);
-            const bool exists = EntitiesSet.count(e);
-
-            if (isValid && !exists)
-            {
-                EntitiesSet.insert(e);
-                EntitiesList.push_back(e);
-            }
-            else if (!isValid && exists)
-            {
-                EntitiesSet.erase(e);
-                EntitiesList.erase(std::remove(EntitiesList.begin(), EntitiesList.end(), e), EntitiesList.end());
-            }
-        }
-    };
-
     class World
     {
     public:
         World()
-            : _lastId(0), _currentGeneration(0)
+            : _lastId(0),
+              _currentGeneration(0)
         {
         }
 
-        Entity CreateEntity()
+        Entity& NewEntity();
+
+        template <typename T>
+        T& GetComponent(const EntityId entityId)
         {
-            if (_lastId == ENTITIES_PER_GENERATION)
+            return GetComponent<T>(_entities[entityId]);
+        }
+
+        template <typename T>
+        T& GetComponent(Entity* entity)
+        {
+            return GetComponent<T>(_entities[entity->Id]);
+        }
+
+        template <typename T>
+        T& GetComponent(Entity& e)
+        {
+            auto componentSet = GetSet<T>();
+
+            bool didAddComponent = false;
+            auto& component = componentSet->Get(e, didAddComponent);
+
+            if (didAddComponent)
             {
-                _lastId = 0;
-                _currentGeneration += 1;
+                _changedEntities.insert(e);
             }
 
-            const auto id = _lastId++;
-            const auto gen = _currentGeneration;
-
-            return {id, gen};
+            return component;
         }
 
         template <typename T>
-        void AddComponent(Entity e)
-        {
-            _changedEntities.insert(e);
-            GetSet<T>()->Get(e);
-        }
-
-        template <typename T>
-        T& GetComponent(Entity e)
-        {
-            _changedEntities.insert(e);
-            return GetSet<T>()->Get(e);
-        }
-
-        template <typename T>
-        bool HasComponent(Entity e)
+        bool HasComponent(const Entity& e)
         {
             return GetSet<T>()->Has(e);
         }
 
         template <typename T>
-        void DeleteComponent(Entity e)
+        void DeleteComponent(EntityId entityId)
         {
-            _changedEntities.insert(e);
-            GetSet<T>()->Delete(e);
+            return DeleteComponent<T>(_entities[entityId]);
         }
 
         template <typename T>
-        void PrintSet() { GetSet<T>()->PrintSet(); }
-
-        std::shared_ptr<Filter> CreateFilter()
+        void DeleteComponent(Entity& e)
         {
-            auto filter = std::make_shared<Filter>();
-            _filters.push_back(filter);
-            return filter;
-        }
-
-        template <typename T>
-        void Include(const std::shared_ptr<Filter> f)
-        {
-            f->IncludeSets.push_back(GetSet<T>());
-        }
-
-        template <typename T>
-        void Exclude(const std::shared_ptr<Filter> f)
-        {
-            f->ExcludeSets.push_back(GetSet<T>());
-        }
-
-        void UpdateWorld()
-        {
-            for (const auto changedEntity : _changedEntities)
+            if (GetSet<T>()->Delete(e))
             {
-                for (const auto& filter : _filters)
-                {
-                    filter->OnEntityChange(changedEntity);
-                }
+                _changedEntities.insert(e);
             }
-            _changedEntities.clear();
         }
+
+        std::shared_ptr<Filter> CreateFilter();
+
+        template <typename T>
+        void Include(const std::shared_ptr<Filter>& f)
+        {
+            f->Include(GetSet<T>());
+        }
+
+        template <typename T>
+        void Exclude(const std::shared_ptr<Filter>& f)
+        {
+            f->Exclude(GetSet<T>());
+        }
+
+        void UpdateWorld();
 
     private:
         EntityId _lastId;
         EntityGen _currentGeneration;
 
+        std::vector<Entity> _entities;
         std::vector<std::shared_ptr<ISet>> _componentSets{};
         std::vector<std::shared_ptr<Filter>> _filters{};
         std::unordered_set<Entity> _changedEntities{};
 
         template <typename T>
-        std::shared_ptr<ComponentSet<T>> CreateComponentSet()
+        std::shared_ptr<ComponentSet<T>> CreateComponentSet(u64 id)
         {
-            auto set = std::make_shared<ComponentSet<T>>();
+            auto set = std::make_shared<ComponentSet<T>>(id);
             _componentSets.push_back(std::static_pointer_cast<ISet>(set));
             return set;
         }
@@ -159,7 +107,7 @@ namespace rei::ecs
             const u32 componentId = TypeId::Get<T>();
             if (_componentSets.size() <= componentId)
             {
-                return CreateComponentSet<T>();
+                return CreateComponentSet<T>(componentId);
             }
 
             return std::static_pointer_cast<ComponentSet<T>>(_componentSets.at(componentId));

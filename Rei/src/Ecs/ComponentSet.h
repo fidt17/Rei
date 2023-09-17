@@ -1,6 +1,5 @@
 ﻿#pragma once
-#include "Ecs.h"
-#include "../Common/Logging/Log.h"
+#include "Entity.h"
 
 namespace rei::ecs
 {
@@ -8,54 +7,64 @@ namespace rei::ecs
     {
     public:
         virtual ~ISet() = default;
-        
-        virtual bool Has(const Entity e) const = 0;
+
+        virtual u64 Id() const = 0;
+        virtual bool Has(const Entity& e) const = 0;
     };
 
     template <typename T>
     class ComponentSet : public ISet
     {
     public:
-        T& Get(const Entity e)
+        
+        explicit ComponentSet(const u64 id) : _id(id)
         {
-            if (this->Has(e)) return _values.at(_indexes.at(e.Id));
+
+        }
+        
+        u64 Id() const override { return _id; }
+
+        T& Get(Entity& e, bool& didCreate)
+        {
+            if (this->Has(e))
+            {
+                didCreate = false;
+                return _values.at(_indexes.at(e.Id));
+            }
 
             Resize(e);
             _indexes.at(e.Id) = _values.size();
             _values.emplace_back(T());
+            e.ComponentsMask.Set(_id);
+            didCreate = true;
+
             return _values.back();
         }
 
-        bool Has(const Entity e) const override
+        bool Has(const Entity& e) const override
         {
             return _indexes.size() > e.Id && _indexes.at(e.Id) != MISSING;
         }
 
-        void Delete(const Entity e)
+        bool Delete(Entity& e)
         {
-            if (!this->Has(e)) return;
+            if (!this->Has(e)) return false;
 
             _values[_indexes[e.Id]] = _values[_indexes.back()];
             _indexes.back() = _indexes[e.Id];
             _indexes[e.Id] = MISSING;
-        }
+            e.ComponentsMask.Clear(_id);
 
-        void PrintSet() const
-        {
-            std::string message = "Idx: ";
-            for (const auto idx : _indexes)
-            {
-                message += std::to_string(idx) + " ";
-            }
-            LOG(message)
+            return true;
         }
 
     private:
-        std::vector<i32> _indexes;
-        std::vector<T> _values;
+        const u64 _id;
+        std::vector<i32> _indexes { };
+        std::vector<T> _values { };
         const i32 MISSING = -1;
         
-        void Resize(const Entity e)
+        void Resize(const Entity& e)
         {
             if (_indexes.size() > e.Id) return;
             _indexes.resize(e.Id + 1, MISSING);
