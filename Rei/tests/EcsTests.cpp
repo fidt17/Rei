@@ -29,7 +29,7 @@ TEST_CASE("Create Entity")
 TEST_CASE("Add Single Component")
 {
     World w;
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     const auto r = w.GetRegistry();
 
     r->GetComponent<C1>(e) = C1 { 7 };
@@ -41,7 +41,7 @@ TEST_CASE("Add Single Component")
 TEST_CASE("Add Multiple Components")
 {
     World w;
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     const auto r = w.GetRegistry();
     r->GetComponent<C1>(e) = C1{7};
     r->GetComponent<C2>(e) = C2{14};
@@ -53,7 +53,7 @@ TEST_CASE("Add Multiple Components")
 TEST_CASE("Delete One Component")
 {
     World w;
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     const auto r = w.GetRegistry();
 
     r->GetComponent<C1>(e);
@@ -65,7 +65,7 @@ TEST_CASE("Delete One Component")
 TEST_CASE("Delete Multiple Components")
 {
     World w;
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     const auto r = w.GetRegistry();
 
     r->GetComponent<C1>(e);
@@ -89,7 +89,7 @@ TEST_CASE("Empty Filter")
     const auto ecs = w.GetRegistry();
     const auto f = w.NewFilter();
 
-    auto& e = w.NewEntity();
+    w.NewEntity();
     REQUIRE(f->Entities().empty());
 }
 
@@ -99,7 +99,7 @@ TEST_CASE("Single Include Filter")
     const auto ecs = w.GetRegistry();
     const auto f = w.NewFilter()->Include<C1>();
 
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     REQUIRE(f->Entities().empty());
 
     ecs->GetComponent<C1>(e);
@@ -114,7 +114,7 @@ TEST_CASE("Multiple Include Filter")
     const auto ecs = w.GetRegistry();
     const auto f = w.NewFilter()->Include<C1, C2, C3>();
 
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     REQUIRE(f->Entities().empty());
 
     ecs->GetComponent<C1>(e);
@@ -140,7 +140,7 @@ TEST_CASE("Multiple Include & Exclude Filter")
     
     const auto f = w.NewFilter()->Include<C1, C2, C3>()->Exclude<C3>();
 
-    auto& e = w.NewEntity();
+    auto e = w.NewEntity();
     REQUIRE(f->Entities().empty());
 
     ecs->GetComponent<C1>(e);

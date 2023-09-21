@@ -35,7 +35,6 @@ namespace rei::ecs
             Resize(e);
             _indexes.at(e.Id) = _values.size();
             _values.emplace_back(T());
-            e.ComponentsMask.Set(_id);
             didCreate = true;
 
             return _values.back();
@@ -53,7 +52,6 @@ namespace rei::ecs
             _values[_indexes[e.Id]] = _values[_indexes.back()];
             _indexes.back() = _indexes[e.Id];
             _indexes[e.Id] = MISSING;
-            e.ComponentsMask.Clear(_id);
 
             return true;
         }
@@ -61,7 +59,7 @@ namespace rei::ecs
     private:
         const u64 _id;
         std::vector<i32> _indexes { };
-        std::vector<T> _values { };
+        std::vector<T> _values { }; // todo: track last available idx
         const i32 MISSING = -1;
         
         void Resize(const Entity& e)

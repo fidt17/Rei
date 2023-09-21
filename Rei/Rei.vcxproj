@@ -15,6 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
     <ClInclude Include="src\Ecs\EcsRegistry.h" />
@@ -51,6 +52,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="src\Ecs\BitMask.cpp" />
     <ClCompile Include="src\Ecs\Filter.cpp" />
     <ClCompile Include="src\Ecs\World.cpp" />
     <ClCompile Include="src\Engine\Engine.cpp" />
@@ -59,6 +61,7 @@
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
     <ClCompile Include="src\Startup\EngineLifetimeScope.cpp" />
     <ClCompile Include="src\Startup\EngineEntryPoint.cpp" />
+    <ClCompile Include="tests\BitMaskTests.cpp" />
     <ClCompile Include="tests\catch_amalgamated.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -135,6 +138,7 @@
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
     <ClCompile Include="tests\EcsTests.cpp" />
+    <ClCompile Include="tests\TestInitialization.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
@@ -197,7 +201,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -219,7 +223,7 @@ xcopy /y /d "$(TargetDir)Rei.lib" "$(TargetDir)..\ReiSandbox\"</Command>
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;REI_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;REI_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -243,7 +247,7 @@ xcopy /y /d "$(TargetDir)Rei.lib" "$(TargetDir)..\ReiSandbox\"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>

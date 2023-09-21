@@ -1,4 +1,5 @@
 ﻿#include "Logger.h"
+#include "windows.h"
 
 namespace rei::logging
 {
@@ -22,9 +23,26 @@ namespace rei::logging
         Log(scope, logLevel, message, "");
     }
 
+    void UpdateConsoleColor(const LogLevelEnum logLevel)
+    {
+        switch (logLevel)
+        {
+        case Info:
+            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
+            break;
+        case Warning:
+            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
+            break;
+        case Error:
+            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 12);
+            break;
+        }
+    }
+
     void Logger::Log(const std::string& scope, const LogLevelEnum logLevel, const std::string& message, const std::string& details) const
     {
         const auto logMessage = LogMessage(scope.c_str(), logLevel, message.c_str(), details.c_str());
+        UpdateConsoleColor(logLevel);
         std::cout << logMessage << std::endl;
         _newLogEvent.Invoke(logMessage);
     }

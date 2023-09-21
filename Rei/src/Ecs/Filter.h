@@ -16,7 +16,7 @@ namespace rei::ecs
         std::shared_ptr<Filter> Include()
         {
             (_includeMask.Set(TypeId::Get<Ts>()), ...);
-            (_excludeMask.Clear(TypeId::Get<Ts>()), ...);
+            (_excludeMask.Remove(TypeId::Get<Ts>()), ...);
             
             return shared_from_this();
         }
@@ -24,13 +24,18 @@ namespace rei::ecs
         template <typename... Ts>
         std::shared_ptr<Filter> Exclude()
         {
-            (_includeMask.Clear(TypeId::Get<Ts>()), ...);
+            (_includeMask.Remove(TypeId::Get<Ts>()), ...);
             (_excludeMask.Set(TypeId::Get<Ts>()), ...);
             
             return shared_from_this();
         }
 
-        void OnEntityChange(const Entity& e);
+        void OnEntityChange(const Entity& e, const BitMask& entityMask);
+
+        void ResizeMask(u64 size);
+        
+        const BitMask& GetIncludeMask() const;
+        const BitMask& GetExcludeMask() const;
 
     private:
         BitMask _includeMask; // todo: resize
@@ -38,6 +43,6 @@ namespace rei::ecs
         std::unordered_set<EntityId> _entitiesSet;
         std::vector<EntityId> _entitiesList;
 
-        bool IsValid(const Entity& e) const;
+        bool IsValid(const BitMask& entityMask) const;
     };
 }

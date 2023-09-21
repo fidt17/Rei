@@ -14,6 +14,14 @@ namespace rei::ecs
 
         const std::vector<std::shared_ptr<Filter>>& GetFilters() const { return _filters; }
 
+        void ResizeMasks(const u32 size) const
+        {
+            for (auto& filter : _filters)
+            {
+                filter->ResizeMask(size);
+            }
+        }
+
     private:
         std::vector<std::shared_ptr<Filter>> _filters;
     };

@@ -4,10 +4,10 @@
 
 namespace rei::ecs
 {
-    void Filter::OnEntityChange(const Entity& e)
+    void Filter::OnEntityChange(const Entity& e, const BitMask& entityMask)
     {
         const EntityId entityId = e.Id;;
-        const bool isValid = IsValid(e);
+        const bool isValid = IsValid(entityMask);
         const bool exists = _entitiesSet.count(entityId);
 
         if (isValid && !exists)
@@ -22,8 +22,24 @@ namespace rei::ecs
         }
     }
 
-    bool Filter::IsValid(const Entity& e) const
+    void Filter::ResizeMask(const u64 size)
     {
-        return _includeMask.All(e.ComponentsMask) && !_excludeMask.Any(e.ComponentsMask);
+        _includeMask.Resize(size);
+        _excludeMask.Resize(size);
+    }
+
+    const BitMask& Filter::GetIncludeMask() const
+    {
+        return _includeMask;
+    }
+
+    const BitMask& Filter::GetExcludeMask() const
+    {
+        return _excludeMask;
+    }
+
+    bool Filter::IsValid(const BitMask& entityMask) const
+    {
+        return _includeMask.All(entityMask) && !_excludeMask.Any(entityMask);
     }
 }

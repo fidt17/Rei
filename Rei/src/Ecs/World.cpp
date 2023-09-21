@@ -5,7 +5,7 @@
 
 namespace rei::ecs
 {
-    Entity& World::NewEntity()
+    Entity World::NewEntity()
     {
         if (_lastId == ENTITIES_PER_GENERATION)
         {
@@ -15,10 +15,7 @@ namespace rei::ecs
 
         const auto id = _lastId++;
         const auto gen = _currentGeneration;
-
-        _entities.emplace_back(id, gen);
-
-        return _entities.back();
+        return _ecsRegistry->NewEntity(id, gen);
     }
 
     void World::Refresh() const
@@ -27,11 +24,20 @@ namespace rei::ecs
         auto& filters = _filterRegistry->GetFilters();
         for (const auto& changedEntity : dirtyEntities)
         {
+            const auto& entityMask = _ecsRegistry->GetEntityMask(changedEntity);
             for (const auto& filter : filters)
             {
-                filter->OnEntityChange(changedEntity);
+                filter->OnEntityChange(changedEntity, entityMask);
             }
         }
         _ecsRegistry->ClearDirtyEntities();
+    }
+
+    void World::UpdateBitMasks(const u32 size) const
+    {
+        if (size < sizeof(BitMask::mask) * 8) return;
+
+        _ecsRegistry->ResizeMasks(size);
+        _filterRegistry->ResizeMasks(size);
     }
 }

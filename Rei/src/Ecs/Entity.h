@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "BitMask.h"
 
 namespace rei::ecs
 {
@@ -16,7 +15,6 @@ namespace rei::ecs
 
         EntityId Id = -1;
         EntityGen Generation = 0;
-        BitMask ComponentsMask;
 
         bool operator==(const Entity& other) const
         {
