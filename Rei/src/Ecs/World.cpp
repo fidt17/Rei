@@ -5,17 +5,18 @@
 
 namespace rei::ecs
 {
+    World::World(): _ecsRegistry(std::make_shared<EcsRegistry>()),
+                    _filterRegistry(std::make_shared<FiltersRegistry>())
+    {
+        _ecsRegistry->MaxComponentIdChangedEvent += std::make_shared<std::function<void(u32)>>([this](const u32 s){UpdateBitMasks(s);});
+    }
+
     void World::Refresh()
     {
         auto& dirtyEntities = _ecsRegistry->GetDirtyEntities();
-        auto& filters = _filterRegistry->GetFilters();
-        for (const auto& changedEntity : dirtyEntities)
+        for (const auto& e : dirtyEntities)
         {
-            const auto& entityMask = _ecsRegistry->GetEntityMask(changedEntity);
-            for (const auto& filter : filters)
-            {
-                filter->OnEntityChange(changedEntity, entityMask);
-            }
+            _filterRegistry->HandleEntityChange(e, _ecsRegistry->GetEntityMask(e));
         }
         _ecsRegistry->ClearDirtyEntities();
 

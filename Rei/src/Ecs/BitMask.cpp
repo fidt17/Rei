@@ -52,7 +52,7 @@ namespace rei::ecs
         return false;
     }
 
-    void BitMask::Resize(const u32 size)
+    void BitMask::Resize(const u64 size)
     {
         if (_flags.size() * (sizeof(mask) * 8) > size) return;
         _flags.resize(size);

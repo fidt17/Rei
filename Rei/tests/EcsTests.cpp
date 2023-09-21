@@ -20,89 +20,84 @@ struct C3
     int Value;
 };
 
-TEST_CASE("Create Entity")
-{
-    auto w = World();
-    w.GetRegistry()->NewEntity();
-}
-
 TEST_CASE("Add Single Component")
 {
     World w;
+    ECS_WORLD(w);
     const auto r = w.GetRegistry();
-    auto e = r->NewEntity();
+    const auto e = NEW_ENTITY();
 
-    r->GetComponent<C1>(e) = C1{7};
+    GET(e, C1) = C1{7};
 
-    REQUIRE(r->HasComponent<C1>(e));
-    REQUIRE(r->GetComponent<C1>(e).Value == 7);
+    REQUIRE(HAS(e, C1));
+    REQUIRE(GET(e, C1).Value == 7);
 }
 
 TEST_CASE("Add Multiple Components")
 {
     World w;
-    const auto r = w.GetRegistry();
-    auto e = r->NewEntity();
-    r->GetComponent<C1>(e) = C1{7};
-    r->GetComponent<C2>(e) = C2{14};
+    ECS_WORLD(w);
+    const auto e = NEW_ENTITY();
+    GET(e, C1) = C1{7};
+    GET(e, C2) = C2{14};
 
-    REQUIRE(r->GetComponent<C1>(e).Value == 7);
-    REQUIRE(r->GetComponent<C2>(e).Value == 14);
+    REQUIRE(GET(e, C1).Value == 7);
+    REQUIRE(GET(e, C2).Value == 14);
 }
 
 TEST_CASE("Delete One Component")
 {
     World w;
-    const auto r = w.GetRegistry();
-    auto e = r->NewEntity();
+    ECS_WORLD(w);
+    const auto e = NEW_ENTITY();
 
-    r->GetComponent<C1>(e);
-    REQUIRE(r->HasComponent<C1>(e));
-    r->DeleteComponent<C1>(e);
-    REQUIRE(!r->HasComponent<C1>(e));
+    GET(e, C1);
+    REQUIRE(HAS(e, C1));
+    DEL(e, C1);
+    REQUIRE(!HAS(e, C1));
 }
 
 TEST_CASE("Delete Multiple Components")
 {
     World w;
-    const auto r = w.GetRegistry();
-    auto e = r->NewEntity();
+    ECS_WORLD(w);
+    auto e = NEW_ENTITY();
 
-    r->GetComponent<C1>(e);
-    r->GetComponent<C2>(e);
-    REQUIRE(r->HasComponent<C1>(e));
-    REQUIRE(r->HasComponent<C2>(e));
+    GET(e, C1);
+    GET(e, C2);
+    REQUIRE(HAS(e, C1));
+    REQUIRE(HAS(e, C2));
 
-    r->DeleteComponent<C1>(e);
-    REQUIRE(!r->HasComponent<C1>(e));
-    REQUIRE(r->HasComponent<C2>(e));
+    DEL(e, C1);
+    REQUIRE(!HAS(e, C1));
+    REQUIRE(HAS(e, C2));
 
-    r->GetComponent<C1>(e);
-    r->DeleteComponent<C2>(e);
-    REQUIRE(r->HasComponent<C1>(e));
-    REQUIRE(!r->HasComponent<C2>(e));
+    GET(e, C1);
+    DEL(e, C2);
+    REQUIRE(HAS(e, C1));
+    REQUIRE(!HAS(e, C2));
 }
 
 TEST_CASE("Empty Filter")
 {
     World w;
-    const auto ecs = w.GetRegistry();
+    ECS_WORLD(w);
     const auto f = w.GetFiltersRegistry()->NewFilter();
 
-    ecs->NewEntity();
+    NEW_ENTITY();
     REQUIRE(f->Entities().empty());
 }
 
 TEST_CASE("Single Include Filter")
 {
     World w;
-    const auto ecs = w.GetRegistry();
+    ECS_WORLD(w);
     const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1>();
 
-    auto e = ecs->NewEntity();
+    const auto e = NEW_ENTITY();
     REQUIRE(f->Entities().empty());
 
-    ecs->GetComponent<C1>(e);
+    GET(e, C1);
     w.Refresh();
 
     REQUIRE(f->Entities().size() == 1);
@@ -111,23 +106,23 @@ TEST_CASE("Single Include Filter")
 TEST_CASE("Multiple Include Filter")
 {
     World w;
-    const auto ecs = w.GetRegistry();
+    ECS_WORLD(w);
     const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1, C2, C3>();
 
-    auto e = ecs->NewEntity();
+    const auto e = NEW_ENTITY();
     REQUIRE(f->Entities().empty());
 
-    ecs->GetComponent<C1>(e);
+    GET(e, C1);
     w.Refresh();
 
     REQUIRE(f->Entities().empty());
 
-    ecs->GetComponent<C2>(e);
+    GET(e, C2);
     w.Refresh();
 
     REQUIRE(f->Entities().empty());
 
-    ecs->GetComponent<C3>(e);
+    GET(e, C3);
     w.Refresh();
 
     REQUIRE(f->Entities().size() == 1);
@@ -136,24 +131,23 @@ TEST_CASE("Multiple Include Filter")
 TEST_CASE("Multiple Include & Exclude Filter")
 {
     World w;
-    const auto ecs = w.GetRegistry();
-
+    ECS_WORLD(w);
     const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1, C2, C3>()->Exclude<C3>();
 
-    auto e = ecs->NewEntity();
+    const auto e = NEW_ENTITY();
     REQUIRE(f->Entities().empty());
 
-    ecs->GetComponent<C1>(e);
+    GET(e, C1);
     w.Refresh();
 
     REQUIRE(f->Entities().empty());
 
-    ecs->GetComponent<C2>(e);
+    GET(e, C2);
     w.Refresh();
 
     REQUIRE(f->Entities().size() == 1);
 
-    ecs->GetComponent<C3>(e);
+    GET(e, C3);
     w.Refresh();
 
     REQUIRE(f->Entities().empty());
@@ -162,17 +156,17 @@ TEST_CASE("Multiple Include & Exclude Filter")
 TEST_CASE("Destroyed entity gets removed from filters")
 {
     World w;
-    auto ecs = w.GetRegistry();
-    auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1>();
+    ECS_WORLD(w);
 
-    auto e = ecs->NewEntity();
+    const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1>();
+    const auto e = NEW_ENTITY();
 
-    ecs->GetComponent<C1>(e);
+    GET(e, C1);
     w.Refresh();
 
     REQUIRE(!f->Entities().empty());
 
-    ecs->DestroyEntity(e);
+    DESTROY_ENTITY(e);
     w.Refresh();
 
     REQUIRE(f->Entities().empty());
@@ -181,89 +175,90 @@ TEST_CASE("Destroyed entity gets removed from filters")
 TEST_CASE("Destroyed entity Id is reserved for future entities")
 {
     World w;
-    auto ecs = w.GetRegistry();
+    ECS_WORLD(w);
 
-    auto e0 = ecs->NewEntity();
-    ecs->GetComponent<C1>(e0);
+    auto e0 = NEW_ENTITY();
+    GET(e0, C1);
     REQUIRE((e0.Id == 0 && e0.Generation == 1));
 
-    auto e1 = ecs->NewEntity();
+    auto e1 = NEW_ENTITY();
     REQUIRE((e1.Id == 1 && e1.Generation == 1));
 
-    ecs->DestroyEntity(e0);
+    DESTROY_ENTITY(e0);
     w.Refresh();
     
-    REQUIRE(ecs->GetEntityById(e0.Id).Generation == 0);
+    REQUIRE(w.GetRegistry()->GetEntityById(e0.Id).Generation == 0);
 
-    auto e2 = ecs->NewEntity();
+    auto e2 = NEW_ENTITY();
     REQUIRE((e2.Id == e0.Id && e2.Generation == 2));
-    REQUIRE(!ecs->HasComponent<C1>(e2));
+    REQUIRE(!HAS(e2, C1));
 
-    auto e3 = ecs->NewEntity();
+    auto e3 = NEW_ENTITY();
     REQUIRE((e3.Id == 2 && e3.Generation == 1));
 }
 
 TEST_CASE("Destroyed entity is marked as dead")
 {
     World w;
-    auto ecs = w.GetRegistry();
-    auto e = ecs->NewEntity();
+    ECS_WORLD(w);
+    const auto e = NEW_ENTITY();
 
-    REQUIRE(ecs->IsAlive(e));
+    REQUIRE(IS_ALIVE(e));
 
-    ecs->DestroyEntity(e);
+    DESTROY_ENTITY(e);
     w.Refresh();
 
-    REQUIRE(ecs->IsDead(e));
+    REQUIRE(IS_DEAD(e));
 }
 
 TEST_CASE("Cannot get component on dead entity")
 {
     World w;
-    auto ecs = w.GetRegistry();
-    auto e = ecs->NewEntity();
+    ECS_WORLD(w);
+    const auto e = NEW_ENTITY();
 
-    ecs->DestroyEntity(e);
+    DESTROY_ENTITY(e);
     w.Refresh();
 
     LOGGER_DISABLE()
-    REQUIRE_THROWS(ecs->GetComponent<C1>(e));
+    REQUIRE_THROWS(GET(e, C1));
     LOGGER_ENABLE()
 }
 
 TEST_CASE("Cannot delete component on dead entity")
 {
     World w;
-    auto ecs = w.GetRegistry();
-    auto e = ecs->NewEntity();
-    ecs->DestroyEntity(e);
+    ECS_WORLD(w);
+    const auto e = NEW_ENTITY();
+    DESTROY_ENTITY(e);
     w.Refresh();
 
     LOGGER_DISABLE()
-    REQUIRE_THROWS(ecs->DeleteComponent<C1>(e));
+    REQUIRE_THROWS(DEL(e, C1));
     LOGGER_ENABLE()
 }
 
 TEST_CASE("Cannot check if dead entity has component")
 {
     World w;
-    auto ecs = w.GetRegistry();
-    auto e = ecs->NewEntity();
-    ecs->DestroyEntity(e);
+    ECS_WORLD(w);
+    const auto e = NEW_ENTITY();
+    DESTROY_ENTITY(e);
     w.Refresh();
 
     LOGGER_DISABLE()
-    REQUIRE_THROWS(ecs->HasComponent<C1>(e));
+    REQUIRE_THROWS(HAS(e, C1));
     LOGGER_ENABLE()
 }
 
 TEST_CASE("Cannot get mask of dead entity")
 {
     World w;
-    auto ecs = w.GetRegistry();
-    auto e = ecs->NewEntity();
+    ECS_WORLD(w);
+    const auto ecs = w.GetRegistry();
+    const auto e = NEW_ENTITY();
 
-    ecs->DestroyEntity(e);
+    DESTROY_ENTITY(e);
     w.Refresh();
 
     LOGGER_DISABLE()

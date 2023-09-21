@@ -10,12 +10,7 @@ namespace rei::ecs
     class World : public std::enable_shared_from_this<World>
     {
     public:
-        World()
-            : _ecsRegistry(std::make_shared<EcsRegistry>()),
-              _filterRegistry(std::make_shared<FiltersRegistry>())
-        {
-            _ecsRegistry->MaxComponentIdChangedEvent += std::make_shared<std::function<void(u32)>>([this](const u32 s){UpdateBitMasks(s);});
-        }
+        World();
 
         void Refresh();
 

@@ -15,35 +15,12 @@ namespace rei::ecs
     public:
         REI_EVENT(u32) MaxComponentIdChangedEvent;
 
-        Entity NewEntity()
-        {
-            if (_deadEntities.empty())
-            {
-                const auto id = _entities.size();
-                const auto gen = 1;
-                
-                _entities.emplace_back(id, gen);
-                _entityMasks.emplace_back().Resize(_maxComponentId);
-                return _entities.back();
-            }
+        Entity NewEntity();
 
-            auto id = _deadEntities.front().Id;
-            auto gen = _deadEntities.front().Generation;
-            _deadEntities.pop();
-            
-            _entities[id].Generation = gen + 1;
-            return _entities[id];
-        }
-
-        BitMask& GetEntityMask(const Entity e)
-        {
-            REI_THROW_IF(IsDead(e), "Cannot get mask of dead entity");
-            
-            return _entityMasks[e.Id];
-        }
+        BitMask& GetEntityMask(Entity e);
 
         template <typename T>
-        T& GetComponent(Entity& e)
+        T& Get(Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot get component from dead entity");
             
@@ -63,7 +40,7 @@ namespace rei::ecs
         }
 
         template <typename T>
-        bool HasComponent(const Entity& e)
+        bool Has(const Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot check if dead entity has component")
             
@@ -72,7 +49,7 @@ namespace rei::ecs
         }
 
         template <typename T>
-        void DeleteComponent(Entity& e)
+        void Del(Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot delete component on dead entity")
         
@@ -84,34 +61,38 @@ namespace rei::ecs
             }
         }
 
-        bool IsAlive(const Entity e) const
-        {
-            return _entities[e.Id].Generation == e.Generation;
-        }
-        
-        bool IsDead(const Entity e) const
-        {
-            return !IsAlive(e);
-        }
+        bool IsAlive(Entity e) const;
 
-        void DestroyEntity(const Entity e)
-        {
-            GetEntityMask(e).Clear();
-            _dirtyEntities.insert(e);
-            _destroyedEntities.insert(e);
-        }
+        bool IsDead(Entity e) const;
 
-        void HandleDeadEntity(const Entity e)
-        {
-            _deadEntities.push(e);
-            _entities[e.Id].Generation = 0;
-        }
+        void DestroyEntity(Entity e);
+
+        void HandleDeadEntity(Entity e);
+
+        Entity GetEntityById(EntityId id) const;
+
+        const std::unordered_set<Entity>& GetDirtyEntities() const;
+        void ClearDirtyEntities();
         
-        Entity GetEntityById(const EntityId id) const
-        {
-            return _entities[id];
-        }
+        const std::unordered_set<Entity>& GetDestroyedEntities() const;
+        void ClearDestroyedEntities();
         
+        const std::vector<std::shared_ptr<IComponentSet>>& GetComponentSets() const;
+
+        void ResizeMasks(u32 size);
+
+    private:
+        std::vector<std::shared_ptr<IComponentSet>> _componentSets{};
+        std::unordered_set<Entity> _dirtyEntities{};
+        std::unordered_set<Entity> _destroyedEntities{};
+        std::queue<Entity> _deadEntitiesPool{};
+
+        std::vector<Entity> _entities{};
+        std::vector<BitMask> _entityMasks{};
+
+        u64 _maxComponentId = 0;
+        EntityGen _currentGeneration = 1;
+
         template <typename T>
         std::shared_ptr<ComponentSet<T>> GetSet()
         {
@@ -123,39 +104,12 @@ namespace rei::ecs
 
             return std::static_pointer_cast<ComponentSet<T>>(_componentSets.at(componentId));
         }
-
-        const std::unordered_set<Entity>& GetDirtyEntities() const { return _dirtyEntities; }
-        const std::unordered_set<Entity>& GetDestroyedEntities() const { return _destroyedEntities; }
-        const std::vector<std::shared_ptr<ISet>>& GetComponentSets() const { return _componentSets; }
-
-        void ClearDirtyEntities() { _dirtyEntities.clear(); }
-        void ClearDestroyedEntities() { _destroyedEntities.clear(); }
-
-        void ResizeMasks(const u32 size)
-        {
-            for (auto& entityMask : _entityMasks)
-            {
-                entityMask.Resize(size);
-            }
-        }
-
-    private:
-        std::vector<std::shared_ptr<ISet>> _componentSets{};
-        std::unordered_set<Entity> _dirtyEntities{};
-        std::unordered_set<Entity> _destroyedEntities{};
-        std::queue<Entity> _deadEntities{};
-
-        std::vector<Entity> _entities{};
-        std::vector<BitMask> _entityMasks{};
-
-        u64 _maxComponentId = 0;
-        EntityGen _currentGeneration = 1;
-
+        
         template <typename T>
         std::shared_ptr<ComponentSet<T>> CreateComponentSet(u64 id)
         {
             auto set = std::make_shared<ComponentSet<T>>(id);
-            _componentSets.push_back(std::static_pointer_cast<ISet>(set));
+            _componentSets.push_back(std::static_pointer_cast<IComponentSet>(set));
 
             if (_maxComponentId < set->Id())
             {
@@ -165,5 +119,8 @@ namespace rei::ecs
 
             return set;
         }
+
+        Entity AllocateNewEntity();
+        Entity GetFromPool();
     };
 }

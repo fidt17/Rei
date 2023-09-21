@@ -10,7 +10,7 @@ namespace rei::ecs
     class Filter : public std::enable_shared_from_this<Filter>
     {
     public:
-        const std::vector<EntityId>& Entities() const { return _entitiesList; }
+        const std::vector<Entity>& Entities() const { return _entitiesList; }
 
         template <typename... Ts>
         std::shared_ptr<Filter> Include()
@@ -30,7 +30,7 @@ namespace rei::ecs
             return shared_from_this();
         }
 
-        void OnEntityChange(const Entity& e, const BitMask& entityMask);
+        void OnEntityChange(Entity e, const BitMask& entityMask);
 
         void ResizeMask(u64 size);
         
@@ -40,9 +40,9 @@ namespace rei::ecs
     private:
         BitMask _includeMask; // todo: resize
         BitMask _excludeMask; // todo: resize
-        std::unordered_set<EntityId> _entitiesSet;
-        std::vector<EntityId> _entitiesList;
+        std::unordered_set<Entity> _entitiesSet;
+        std::vector<Entity> _entitiesList;
 
-        bool IsValid(const BitMask& entityMask) const;
+        bool IsValid(const BitMask& mask) const;
     };
 }

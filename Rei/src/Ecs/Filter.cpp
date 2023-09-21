@@ -4,21 +4,20 @@
 
 namespace rei::ecs
 {
-    void Filter::OnEntityChange(const Entity& e, const BitMask& entityMask)
+    void Filter::OnEntityChange(const Entity e, const BitMask& entityMask)
     {
-        const EntityId entityId = e.Id;;
         const bool isValid = IsValid(entityMask);
-        const bool exists = _entitiesSet.count(entityId);
+        const bool exists = _entitiesSet.count(e);
 
         if (isValid && !exists)
         {
-            _entitiesSet.insert(entityId);
-            _entitiesList.push_back(entityId);
+            _entitiesSet.insert(e);
+            _entitiesList.push_back(e);
         }
         else if (!isValid && exists)
         {
-            _entitiesSet.erase(entityId);
-            _entitiesList.erase(std::remove(_entitiesList.begin(), _entitiesList.end(), entityId), _entitiesList.end());
+            _entitiesSet.erase(e);
+            _entitiesList.erase(std::remove(_entitiesList.begin(), _entitiesList.end(), e), _entitiesList.end());
         }
     }
 
@@ -38,8 +37,8 @@ namespace rei::ecs
         return _excludeMask;
     }
 
-    bool Filter::IsValid(const BitMask& entityMask) const
+    bool Filter::IsValid(const BitMask& mask) const
     {
-        return _includeMask.All(entityMask) && !_excludeMask.Any(entityMask);
+        return _includeMask.All(mask) && !_excludeMask.Any(mask);
     }
 }

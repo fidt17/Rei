@@ -10,7 +10,7 @@ namespace rei::ecs
         
         void Set(mask flagIdx);
         void Remove(mask flagIdx);
-        void Resize(u32 size);
+        void Resize(u64 size);
         void Clear();
 
         bool All(const BitMask& other) const;

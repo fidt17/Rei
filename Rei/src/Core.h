@@ -9,3 +9,4 @@
 #include "Common/Assert.h"
 #include "Common/IFactory.h"
 #include "Common/Event.h"
+#include "Ecs/Ecs.h"

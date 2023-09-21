@@ -11,19 +11,12 @@ namespace rei::ecs
             : Id(id), Generation(gen)
         {
         }
-
+        
         EntityId Id = -1;
         EntityGen Generation = 0;
-
-        bool operator==(const Entity& other) const
-        {
-            return Id == other.Id && Generation == other.Generation;
-        }
-
-        std::string ToString() const
-        {
-            return "Entity[" + std::to_string(Id) + ":" + std::to_string(Generation) + "]";
-        }
+        
+        bool operator==(const Entity& other) const;
+        std::string ToString() const;
     };
 }
 
