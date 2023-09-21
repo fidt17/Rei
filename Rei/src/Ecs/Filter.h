@@ -38,8 +38,8 @@ namespace rei::ecs
         const BitMask& GetExcludeMask() const;
 
     private:
-        BitMask _includeMask; // todo: resize
-        BitMask _excludeMask; // todo: resize
+        BitMask _includeMask;
+        BitMask _excludeMask;
         std::unordered_set<Entity> _entitiesSet;
         std::vector<Entity> _entitiesList;
 

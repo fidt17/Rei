@@ -23,6 +23,7 @@
     <ClInclude Include="src\Ecs\Entity.h" />
     <ClInclude Include="src\Ecs\Filter.h" />
     <ClInclude Include="src\Ecs\IComponentSet.h" />
+    <ClInclude Include="src\Ecs\System.h" />
     <ClInclude Include="src\Ecs\TypeId.h" />
     <ClInclude Include="src\Ecs\World.h" />
     <ClInclude Include="src\pch.h" />

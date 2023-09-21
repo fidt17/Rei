@@ -186,7 +186,7 @@ TEST_CASE("Destroyed entity Id is reserved for future entities")
 
     DESTROY_ENTITY(e0);
     w.Refresh();
-    
+
     REQUIRE(w.GetRegistry()->GetEntityById(e0.Id).Generation == 0);
 
     auto e2 = NEW_ENTITY();
@@ -264,4 +264,49 @@ TEST_CASE("Cannot get mask of dead entity")
     LOGGER_DISABLE()
     REQUIRE_THROWS(ecs->GetEntityMask(e));
     LOGGER_ENABLE()
+}
+
+TEST_CASE("Counter system")
+{
+    struct Counter
+    {
+        int Value;
+    };
+
+    class CounterSystem : public System
+    {
+    public:
+        CounterSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FiltersRegistry>& filtersRegistry, const int step)
+            : System(ecs, filtersRegistry), _step(step)
+        {
+            _filter = filtersRegistry->NewFilter()->Include<Counter>();
+        }
+
+        void OnUpdate() override
+        {
+            RUN(_filter, {
+                GET(e, Counter).Value += _step;
+            })
+        }
+
+    private:
+        std::shared_ptr<Filter> _filter;
+        int _step;
+    };
+
+    World w;
+    ECS_WORLD(w);
+
+    w.AddSystem<CounterSystem>(2);
+
+    auto e = NEW_ENTITY();
+    GET(e, Counter);
+
+    w.Refresh();
+    for (int i = 0; i < 100; i++)
+    {
+        w.Run();
+    }
+
+    REQUIRE(GET(e, Counter).Value == 200);
 }
