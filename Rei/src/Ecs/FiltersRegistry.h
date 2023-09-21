@@ -6,7 +6,7 @@ namespace rei::ecs
     class FiltersRegistry
     {
     public:
-        std::shared_ptr<Filter> CreateFilter()
+        std::shared_ptr<Filter> NewFilter()
         {
             _filters.push_back(std::make_shared<Filter>());
             return _filters.back();;

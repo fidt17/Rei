@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "EcsRegistry.h"
-#include "Entity.h"
 #include "FiltersRegistry.h"
 
 namespace rei::ecs
@@ -13,27 +12,19 @@ namespace rei::ecs
     public:
         World()
             : _ecsRegistry(std::make_shared<EcsRegistry>()),
-              _filterRegistry(std::make_shared<FiltersRegistry>()),
-              _lastId(0),
-              _currentGeneration(0)
+              _filterRegistry(std::make_shared<FiltersRegistry>())
         {
             _ecsRegistry->MaxComponentIdChangedEvent += std::make_shared<std::function<void(u32)>>([this](const u32 s){UpdateBitMasks(s);});
         }
 
-        Entity NewEntity();
-        std::shared_ptr<Filter> NewFilter() const { return _filterRegistry->CreateFilter(); }
+        void Refresh();
 
-        void Refresh() const;
-
-        std::shared_ptr<EcsRegistry> GetRegistry() { return _ecsRegistry; }
-        
-        std::shared_ptr<FiltersRegistry> GetFiltersRegistry() { return _filterRegistry; }
+        std::shared_ptr<EcsRegistry> GetRegistry();
+        std::shared_ptr<FiltersRegistry> GetFiltersRegistry();
 
     private:
         std::shared_ptr<EcsRegistry> _ecsRegistry;
         std::shared_ptr<FiltersRegistry> _filterRegistry;
-        EntityId _lastId;
-        EntityGen _currentGeneration;
 
         void UpdateBitMasks(u32 size) const;
     };

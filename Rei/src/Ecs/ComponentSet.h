@@ -10,6 +10,7 @@ namespace rei::ecs
 
         virtual u64 Id() const = 0;
         virtual bool Has(const Entity& e) const = 0;
+        virtual bool Delete(Entity& e) = 0;
     };
 
     template <typename T>
@@ -45,7 +46,7 @@ namespace rei::ecs
             return _indexes.size() > e.Id && _indexes.at(e.Id) != MISSING;
         }
 
-        bool Delete(Entity& e)
+        bool Delete(Entity& e) override
         {
             if (!this->Has(e)) return false;
 

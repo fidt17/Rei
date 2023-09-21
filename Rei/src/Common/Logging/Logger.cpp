@@ -41,9 +41,21 @@ namespace rei::logging
 
     void Logger::Log(const std::string& scope, const LogLevelEnum logLevel, const std::string& message, const std::string& details) const
     {
+        if (!_enabled) return;
+        
         const auto logMessage = LogMessage(scope.c_str(), logLevel, message.c_str(), details.c_str());
         UpdateConsoleColor(logLevel);
         std::cout << logMessage << std::endl;
         _newLogEvent.Invoke(logMessage);
+    }
+
+    void Logger::Enable()
+    {
+        _enabled = true;
+    }
+
+    void Logger::Disable()
+    {
+        _enabled = false;
     }
 }

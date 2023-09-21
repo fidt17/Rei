@@ -25,8 +25,12 @@ const std::string LOG_SCOPE;
     #define LOG(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Info, __VA_ARGS__);
     #define LOG_WARNING(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Warning, __VA_ARGS__);
     #define LOG_ERROR(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Error, __VA_ARGS__);
+    #define LOGGER_ENABLE() rei::logging::Log::GetLogger()->Enable();
+    #define LOGGER_DISABLE() rei::logging::Log::GetLogger()->Disable();
 #else
     #define LOG(...) 
     #define LOG_WARNING(...) 
     #define LOG_ERROR(...) 
+    #define LOGGER_ENABLE() rei::logging::Log::GetLogger()->Enable();
+    #define LOGGER_DISABLE() rei::logging::Log::GetLogger()->Disable();
 #endif

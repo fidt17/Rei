@@ -4,7 +4,6 @@ namespace rei::ecs
 {
     using EntityId = i32;
     using EntityGen = u8;
-    constexpr i32 ENTITIES_PER_GENERATION = 2147483648 - 1;
 
     struct Entity
     {
@@ -19,6 +18,11 @@ namespace rei::ecs
         bool operator==(const Entity& other) const
         {
             return Id == other.Id && Generation == other.Generation;
+        }
+
+        std::string ToString() const
+        {
+            return "Entity[" + std::to_string(Id) + ":" + std::to_string(Generation) + "]";
         }
     };
 }

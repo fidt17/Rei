@@ -23,8 +23,12 @@ namespace rei::logging
         void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message) const;
         void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message, const std::string& details) const;
 
+        void Enable();
+        void Disable();
+        
     private:
         std::string _loggerScope;
         REI_EVENT(const LogMessage&) _newLogEvent;
+        bool _enabled = true;
     };
 }

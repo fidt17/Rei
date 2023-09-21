@@ -5,20 +5,7 @@
 
 namespace rei::ecs
 {
-    Entity World::NewEntity()
-    {
-        if (_lastId == ENTITIES_PER_GENERATION)
-        {
-            _lastId = 0;
-            _currentGeneration += 1;
-        }
-
-        const auto id = _lastId++;
-        const auto gen = _currentGeneration;
-        return _ecsRegistry->NewEntity(id, gen);
-    }
-
-    void World::Refresh() const
+    void World::Refresh()
     {
         auto& dirtyEntities = _ecsRegistry->GetDirtyEntities();
         auto& filters = _filterRegistry->GetFilters();
@@ -31,6 +18,28 @@ namespace rei::ecs
             }
         }
         _ecsRegistry->ClearDirtyEntities();
+
+        auto& destroyedEntities = _ecsRegistry->GetDestroyedEntities();
+        auto& sets = _ecsRegistry->GetComponentSets();
+        for (auto e : destroyedEntities)
+        {
+            for (auto& set : sets)
+            {
+                set->Delete(e);
+            }
+            _ecsRegistry->HandleDeadEntity(e);
+        }
+        _ecsRegistry->ClearDestroyedEntities();
+    }
+
+    std::shared_ptr<EcsRegistry> World::GetRegistry()
+    {
+        return _ecsRegistry;
+    }
+
+    std::shared_ptr<FiltersRegistry> World::GetFiltersRegistry()
+    {
+        return _filterRegistry;
     }
 
     void World::UpdateBitMasks(const u32 size) const
