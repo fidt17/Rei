@@ -3,6 +3,8 @@
 
 namespace rei::ecs
 {
+    // todo: track created filters.
+    // some of them may be identical by mask
     std::shared_ptr<Filter> FiltersRegistry::NewFilter()
     {
         _filters.push_back(std::make_shared<Filter>());

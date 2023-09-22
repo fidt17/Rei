@@ -15,8 +15,8 @@ namespace rei::ecs
         virtual void OnUpdate() = 0;
 
     protected:
-#define RUN(f, FOREACH_BLOCK) { for (const auto e : (f)->Entities()) { FOREACH_BLOCK } }
-    
+        #define FOR(f) for (const auto e : *(f))
+
         const std::shared_ptr<EcsRegistry> _ecs;
         const std::shared_ptr<FiltersRegistry> _filtersRegistry;
     };

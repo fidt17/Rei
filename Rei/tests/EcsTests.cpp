@@ -284,9 +284,10 @@ TEST_CASE("Counter system")
 
         void OnUpdate() override
         {
-            RUN(_filter, {
+            FOR(_filter)
+            {
                 GET(e, Counter).Value += _step;
-            })
+            }
         }
 
     private:
@@ -309,4 +310,83 @@ TEST_CASE("Counter system")
     }
 
     REQUIRE(GET(e, Counter).Value == 200);
+}
+
+TEST_CASE("Entity Creation Destruction Systems")
+{
+    struct Counter
+    {
+        int CreatedEntities;
+        int DestroyedEntities;
+    };
+    
+    struct DestroyEntityEvent { };
+
+    class EntityCreationSystem : public System
+    {
+    public:
+        EntityCreationSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FiltersRegistry>& filtersRegistry)
+            : System(ecs, filtersRegistry)
+        {
+            _counterFilter = filtersRegistry->NewFilter()->Include<Counter>();
+        }
+
+        void OnUpdate() override
+        {
+            const auto e = NEW_ENTITY();
+            GET(e, DestroyEntityEvent);
+
+            FOR(_counterFilter)
+            {
+                GET(e, Counter).CreatedEntities += 1;
+            }
+        }
+    private:
+        std::shared_ptr<Filter> _counterFilter;
+    };
+
+    class HandleDestroyEntityEventSystem : public System
+    {
+    public:
+        HandleDestroyEntityEventSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FiltersRegistry>& filtersRegistry)
+            : System(ecs, filtersRegistry)
+        {
+            _destroyFilter = filtersRegistry->NewFilter()->Include<DestroyEntityEvent>();
+            _counterFilter = filtersRegistry->NewFilter()->Include<Counter>();
+        }
+
+        void OnUpdate() override
+        {
+            FOR(_destroyFilter)
+            {
+                DESTROY_ENTITY(e);
+
+                for (const auto e1 : *(_counterFilter))
+                {
+                    GET(e1, Counter).DestroyedEntities += 1;
+                }
+            }
+        }
+        
+    private:
+        std::shared_ptr<Filter> _destroyFilter;
+        std::shared_ptr<Filter> _counterFilter;
+    };
+
+    World w;
+    ECS_WORLD(w);
+    w.AddSystem<EntityCreationSystem>();
+    w.AddSystem<HandleDestroyEntityEventSystem>();
+
+    const auto counterEntity = NEW_ENTITY();
+    GET(counterEntity, Counter);
+    
+    w.Refresh();
+    for (int i = 0; i < 100; i++)
+    {
+        w.Run();
+    }
+
+    REQUIRE(GET(counterEntity, Counter).CreatedEntities == 100);
+    REQUIRE(GET(counterEntity, Counter).DestroyedEntities == 100);
 }

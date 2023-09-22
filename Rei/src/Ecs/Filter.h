@@ -37,6 +37,9 @@ namespace rei::ecs
         const BitMask& GetIncludeMask() const;
         const BitMask& GetExcludeMask() const;
 
+        std::vector<Entity>::iterator begin() { return _entitiesList.begin(); }
+        std::vector<Entity>::iterator end() { return _entitiesList.end(); }
+        
     private:
         BitMask _includeMask;
         BitMask _excludeMask;
