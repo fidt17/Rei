@@ -11,7 +11,7 @@ namespace rei::ecs
         }
     }
 
-    void FiltersRegistry::ResizeMasks(const u32 size) const
+    void FiltersRegistry::ResizeMasks(const size_t size) const
     {
         for (auto& filter : _filters)
         {

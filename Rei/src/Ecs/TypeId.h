@@ -6,14 +6,14 @@ namespace rei::ecs
     {
     public:
         template <typename>
-        static u64 Get()
+        static size_t Get()
         {
-            static const u32 ID = Allocate();
+            static const size_t ID = Allocate();
             return ID;
         }
 
     private:
-        static u64 Allocate()
+        static size_t Allocate()
         {
             static u32 id = 0;
             return id++;

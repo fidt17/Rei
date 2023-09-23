@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "EcsRegistry.h";
+#include "EcsRegistry.h"
 
 namespace rei::ecs
 {
@@ -72,7 +72,7 @@ namespace rei::ecs
         _destroyedEntities.clear();
     }
 
-    void EcsRegistry::ResizeMasks(const u32 size)
+    void EcsRegistry::ResizeMasks(const size_t size)
     {
         for (auto& entityMask : _entityMasks)
         {
@@ -84,7 +84,7 @@ namespace rei::ecs
     {
         const auto id = _entities.size();
 
-        _entities.emplace_back(id, 1);
+        _entities.emplace_back(static_cast<EntityId>(id), 1);
         _entityMasks.emplace_back().Resize(_maxComponentId);
         return _entities.back();
     }

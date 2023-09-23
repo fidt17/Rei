@@ -8,9 +8,9 @@ namespace rei::ecs
     class ComponentSet : public IComponentSet
     {
     public:
-        explicit ComponentSet(const u64 id) : _id(id) { }
+        explicit ComponentSet(const size_t id) : _id(id) { }
 
-        u64 Id() const override
+        size_t Id() const override
         {
             return _id;
         }
@@ -24,7 +24,7 @@ namespace rei::ecs
             }
 
             Resize(e);
-            _indexes.at(e.Id) = _values.size();
+            _indexes.at(e.Id) = static_cast<EntityId>(_values.size());
             _values.emplace_back(T());
             didCreate = true;
 
@@ -48,10 +48,10 @@ namespace rei::ecs
         }
 
     private:
-        const u64 _id;
-        std::vector<i32> _indexes{};
+        const size_t _id;
+        std::vector<EntityId> _indexes{};
         std::vector<T> _values{};
-        const i32 MISSING = -1;
+        const EntityId MISSING = -1;
 
         void Resize(const Entity e)
         {

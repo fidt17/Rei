@@ -13,7 +13,7 @@ namespace rei::ecs
     class EcsRegistry
     {
     public:
-        REI_EVENT(u32) MaxComponentIdChangedEvent;
+        REI_EVENT(size_t) MaxComponentIdChangedEvent;
 
         Entity NewEntity();
 
@@ -79,7 +79,7 @@ namespace rei::ecs
         
         const std::vector<std::shared_ptr<IComponentSet>>& GetComponentSets() const;
 
-        void ResizeMasks(u32 size);
+        void ResizeMasks(size_t size);
 
     private:
         std::vector<std::shared_ptr<IComponentSet>> _componentSets{};
@@ -90,14 +90,14 @@ namespace rei::ecs
         std::vector<Entity> _entities{};
         std::vector<BitMask> _entityMasks{};
 
-        u64 _maxComponentId = 0;
+        size_t _maxComponentId = 0;
         EntityGen _currentGeneration = 1;
 
         template <typename T>
         std::shared_ptr<ComponentSet<T>> GetSet()
         {
-            const u32 componentId = TypeId::Get<T>();
-            for (int i = _componentSets.size(); i <= componentId; i++)
+            const auto componentId = TypeId::Get<T>();
+            for (auto i = _componentSets.size(); i <= componentId; i++)
             {
                 CreateComponentSet<T>(i);
             }
@@ -106,7 +106,7 @@ namespace rei::ecs
         }
         
         template <typename T>
-        std::shared_ptr<ComponentSet<T>> CreateComponentSet(u64 id)
+        std::shared_ptr<ComponentSet<T>> CreateComponentSet(size_t id)
         {
             auto set = std::make_shared<ComponentSet<T>>(id);
             _componentSets.push_back(std::static_pointer_cast<IComponentSet>(set));

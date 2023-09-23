@@ -4,11 +4,11 @@
 
 namespace rei
 {
-    class REI_API EngineEntryPoint
+    class EngineEntryPoint
     {
     public:
-        void ConfigureFramework();
-        std::shared_ptr<Engine> CreateEngine() const;
+        REI_API void ConfigureFramework();
+        REI_API std::shared_ptr<Engine> CreateEngine() const;
 
     private:
         EngineLifetimeScope _scope;
@@ -20,7 +20,7 @@ namespace rei
     extern void OnProjectStart();
     extern void OnProjectShutdown();
 
-    inline int main()
+    int main()
     {
         auto entryPoint = rei::EngineEntryPoint();
         

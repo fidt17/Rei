@@ -43,7 +43,7 @@ namespace rei::ecs
     {
     public:
         void HandleEntityChange(Entity e, const BitMask& mask) const;
-        void ResizeMasks(u32 size) const;
+        void ResizeMasks(size_t size) const;
         u32 GetFiltersCount() const;
 
     private:

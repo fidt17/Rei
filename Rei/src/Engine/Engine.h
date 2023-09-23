@@ -4,12 +4,12 @@
 
 namespace rei
 {
-    class REI_API Engine
+    class Engine
     {
     public:
         void Configure();
-        void Start();
-        void Shutdown(int exitCode);
+        REI_API void Start();
+        REI_API void Shutdown(int exitCode);
 
     private:
 

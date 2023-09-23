@@ -9,13 +9,13 @@ namespace rei::ecs
 
         void Set(mask flagIdx, bool resizeIfNeeded = false);
         void Remove(mask flagIdx);
-        void Resize(u64 size);
+        void Resize(size_t size);
         void Clear();
 
         bool All(const BitMask& other) const;
         bool Any(const BitMask& other) const;
 
-        u32 Size() const;
+        size_t Size() const;
         std::string ToString() const;
 
         bool operator==(const BitMask& other) const;

@@ -7,12 +7,12 @@ namespace rei::ecs
     class System
     {
     public:
-        void Get(BitMask m);
-
         explicit System(std::shared_ptr<EcsRegistry> ecs, std::shared_ptr<FilterProvider> filters)
             : _ecs(std::move(ecs)), _filters(std::move(filters))
         {
         }
+        
+        virtual ~System() = default;
 
         virtual void OnUpdate() = 0;
 

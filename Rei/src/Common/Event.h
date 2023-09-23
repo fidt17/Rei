@@ -6,7 +6,7 @@
 namespace rei
 {
     template <typename T>
-    class REI_API Event
+    class Event
     {
     public:
         Event& operator +=(std::shared_ptr<T> mFunc)

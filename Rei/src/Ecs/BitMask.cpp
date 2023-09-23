@@ -57,12 +57,12 @@ namespace rei::ecs
         return false;
     }
 
-    u32 BitMask::Size() const
+    size_t BitMask::Size() const
     {
-        return static_cast<u32>(_flags.size());
+        return _flags.size();
     }
 
-    void BitMask::Resize(const u64 size)
+    void BitMask::Resize(const size_t size)
     {
         if (_flags.size() * (sizeof(mask) * 8) > size) return;
         _flags.resize(size);
@@ -93,7 +93,7 @@ namespace rei::ecs
         REI_ASSERT(_flags.size() == other._flags.size(),
                    "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
 
-        for (u64 i = 0; i < _flags.size(); i++)
+        for (auto i = 0; i < _flags.size(); i++)
         {
             if (_flags[i] != other._flags[i]) return false;
         }

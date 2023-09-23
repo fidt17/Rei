@@ -5,12 +5,12 @@
 
 namespace rei::logging
 {
-    class REI_API Log
+    class Log
     {
     public:
-        inline static void Initialize();
-        inline static std::shared_ptr<Logger> GetLogger();
-        inline static void AddLogCallback(REI_EVENT_ACTION(const LogMessage&) logCallback);
+        static void Initialize();
+        REI_API static std::shared_ptr<Logger> GetLogger();
+        REI_API static void AddLogCallback(REI_EVENT_ACTION(const LogMessage&) logCallback);
 
     private:
         inline static std::shared_ptr<Logger> _logger;

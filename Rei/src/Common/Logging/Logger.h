@@ -8,7 +8,7 @@
 
 namespace rei::logging
 {
-    class REI_API Logger
+    class Logger
     {
     public:
         explicit Logger(std::string loggerScope)
@@ -19,9 +19,9 @@ namespace rei::logging
         void AddLogCallback(REI_EVENT_ACTION(const LogMessage&));
         void RemoveLogCallback(REI_EVENT_ACTION(const LogMessage&));
 
-        void Log(LogLevelEnum logLevel, const std::string& message) const;
-        void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message) const;
-        void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message, const std::string& details) const;
+        REI_API void Log(LogLevelEnum logLevel, const std::string& message) const;
+        REI_API void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message) const;
+        REI_API void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message, const std::string& details) const;
 
         void Enable();
         void Disable();

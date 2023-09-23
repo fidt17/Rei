@@ -26,7 +26,7 @@ namespace rei::ecs
         }
     }
 
-    void Filter::ResizeMask(const u64 size)
+    void Filter::ResizeMask(const size_t size)
     {
         _includeMask.Resize(size);
         _excludeMask.Resize(size);

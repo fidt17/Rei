@@ -34,6 +34,6 @@ namespace rei::ecs
         std::shared_ptr<FiltersRegistry> _filterRegistry;
         std::vector<std::shared_ptr<System>> _systems;
 
-        void UpdateBitMasks(u32 size) const;
+        void UpdateBitMasks(size_t size) const;
     };
 }
