@@ -1,17 +1,54 @@
 #pragma once
 #include "Filter.h"
+#include "TypeId.h"
 
 namespace rei::ecs
 {
-    class FiltersRegistry
+    template <typename... Ts>
+    class TypeMask : public BitMask
     {
     public:
-        std::shared_ptr<Filter> NewFilter();
+        TypeMask()
+        {
+            (Set(TypeId::Get<Ts>(), true), ...);
+        }
+    };
 
+    template <typename... Ts>
+    using Include = TypeMask<Ts...>;
+    
+    template <typename... Ts>
+    using Exclude = TypeMask<Ts...>;
+
+    class FilterProvider
+    {
+    public:
+        template <typename... Ti>
+        std::shared_ptr<Filter> Get()
+        {
+            return GetFilter(Include<Ti...>(), BitMask());
+        }
+
+        template <typename... Ti>
+        std::shared_ptr<Filter> Get(const BitMask excludeMask)
+        {
+            return GetFilter(Include<Ti...>(), excludeMask);
+        }
+
+    protected:
+        virtual std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) = 0;
+    };
+    
+    class FiltersRegistry : public FilterProvider
+    {
+    public:
         void HandleEntityChange(Entity e, const BitMask& mask) const;
         void ResizeMasks(u32 size) const;
+        u32 GetFiltersCount() const;
 
     private:
         std::vector<std::shared_ptr<Filter>> _filters;
+
+        std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;
     };
 }

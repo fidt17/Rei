@@ -4,6 +4,11 @@
 
 namespace rei::ecs
 {
+    const std::vector<Entity>& Filter::Entities() const
+    {
+        return _entitiesList;
+    }
+
     void Filter::OnEntityChange(const Entity e, const BitMask& entityMask)
     {
         const bool isValid = IsValid(entityMask);
@@ -27,6 +32,16 @@ namespace rei::ecs
         _excludeMask.Resize(size);
     }
 
+    void Filter::Include(const BitMask& m)
+    {
+        _includeMask = m;
+    }
+
+    void Filter::Exclude(const BitMask& m)
+    {
+        _excludeMask = m;
+    }
+
     const BitMask& Filter::GetIncludeMask() const
     {
         return _includeMask;
@@ -35,6 +50,16 @@ namespace rei::ecs
     const BitMask& Filter::GetExcludeMask() const
     {
         return _excludeMask;
+    }
+
+    std::vector<Entity>::iterator Filter::begin()
+    {
+        return _entitiesList.begin();
+    }
+
+    std::vector<Entity>::iterator Filter::end()
+    {
+        return _entitiesList.end();
     }
 
     bool Filter::IsValid(const BitMask& mask) const

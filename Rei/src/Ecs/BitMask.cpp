@@ -3,29 +3,34 @@
 
 namespace rei::ecs
 {
-    void BitMask::Set(const mask flagIdx)
+    void BitMask::Set(const mask flagIdx, const bool resizeIfNeeded)
     {
-        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(), 
-        "FlagIdx is too large. Idx: " + std::to_string(flagIdx) + ". Mask size: " + std::to_string(_flags.size()))
-        
+        if (resizeIfNeeded)
+        {
+            Resize(flagIdx);
+        }
+    
+        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(),
+                   "FlagIdx is too large. Idx: " + std::to_string(flagIdx) + ". Mask size: " + std::to_string(_flags.size()))
+
         const auto layerIdx = GetLayerIdx(flagIdx);
         _flags.at(layerIdx) |= static_cast<mask>(1) << flagIdx;
     }
 
     void BitMask::Remove(const mask flagIdx)
     {
-        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(), 
-        "FlagIdx is too large. Idx: " + std::to_string(flagIdx) + ". Mask size: " + std::to_string(_flags.size()))
-        
+        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(),
+                   "FlagIdx is too large. Idx: " + std::to_string(flagIdx) + ". Mask size: " + std::to_string(_flags.size()))
+
         const auto layerIdx = GetLayerIdx(flagIdx);
         _flags.at(layerIdx) &= ~(static_cast<mask>(1) << flagIdx);
     }
 
     bool BitMask::All(const BitMask& other) const
     {
-        REI_ASSERT(_flags.size() == other._flags.size(), 
-        "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
-    
+        REI_ASSERT(_flags.size() == other._flags.size(),
+                   "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
+
         for (mask i = 0; i < _flags.size(); i++)
         {
             const mask flag = _flags[i];
@@ -40,9 +45,9 @@ namespace rei::ecs
 
     bool BitMask::Any(const BitMask& other) const
     {
-        REI_ASSERT(_flags.size() == other._flags.size(), 
-        "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
-        
+        REI_ASSERT(_flags.size() == other._flags.size(),
+                   "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
+
         for (mask i = 0; i < _flags.size(); i++)
         {
             const mask flag = _flags[i];
@@ -50,6 +55,11 @@ namespace rei::ecs
         }
 
         return false;
+    }
+
+    u32 BitMask::Size() const
+    {
+        return static_cast<u32>(_flags.size());
     }
 
     void BitMask::Resize(const u64 size)
@@ -76,6 +86,19 @@ namespace rei::ecs
         }
 
         return str;
+    }
+
+    bool BitMask::operator==(const BitMask& other) const
+    {
+        REI_ASSERT(_flags.size() == other._flags.size(),
+                   "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
+
+        for (u64 i = 0; i < _flags.size(); i++)
+        {
+            if (_flags[i] != other._flags[i]) return false;
+        }
+
+        return true;
     }
 
     u32 BitMask::GetLayerIdx(const mask idx) const

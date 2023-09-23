@@ -78,21 +78,11 @@ TEST_CASE("Delete Multiple Components")
     REQUIRE(!HAS(e, C2));
 }
 
-TEST_CASE("Empty Filter")
-{
-    World w;
-    ECS_WORLD(w);
-    const auto f = w.GetFiltersRegistry()->NewFilter();
-
-    NEW_ENTITY();
-    REQUIRE(f->Entities().empty());
-}
-
 TEST_CASE("Single Include Filter")
 {
     World w;
     ECS_WORLD(w);
-    const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1>();
+    const auto f = w.GetFiltersRegistry()->Get<C1>();
 
     const auto e = NEW_ENTITY();
     REQUIRE(f->Entities().empty());
@@ -107,7 +97,7 @@ TEST_CASE("Multiple Include Filter")
 {
     World w;
     ECS_WORLD(w);
-    const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1, C2, C3>();
+    const auto f = w.GetFiltersRegistry()->Get<C1, C2, C3>();
 
     const auto e = NEW_ENTITY();
     REQUIRE(f->Entities().empty());
@@ -132,7 +122,7 @@ TEST_CASE("Multiple Include & Exclude Filter")
 {
     World w;
     ECS_WORLD(w);
-    const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1, C2, C3>()->Exclude<C3>();
+    const auto f = w.GetFiltersRegistry()->Get<C1, C2>(Exclude<C3>());
 
     const auto e = NEW_ENTITY();
     REQUIRE(f->Entities().empty());
@@ -153,12 +143,31 @@ TEST_CASE("Multiple Include & Exclude Filter")
     REQUIRE(f->Entities().empty());
 }
 
+TEST_CASE("Filters with same mask are the same")
+{
+    World w;
+    const auto f1 = w.GetFiltersRegistry()->Get<C1, C2, C3>();
+    const auto f2 = w.GetFiltersRegistry()->Get<C1, C2, C3>();
+
+    REQUIRE(w.GetFiltersRegistry()->GetFiltersCount() == 1);
+
+    const auto f3 = w.GetFiltersRegistry()->Get<C1, C3, C2>();
+    REQUIRE(w.GetFiltersRegistry()->GetFiltersCount() == 1);
+
+    const auto f4 = w.GetFiltersRegistry()->Get<C1, C3, C2, C3>();
+    REQUIRE(w.GetFiltersRegistry()->GetFiltersCount() == 1);
+
+    REQUIRE(f1.get() == f2.get());
+    REQUIRE(f2.get() == f3.get());
+    REQUIRE(f3.get() == f4.get());
+}
+
 TEST_CASE("Destroyed entity gets removed from filters")
 {
     World w;
     ECS_WORLD(w);
 
-    const auto f = w.GetFiltersRegistry()->NewFilter()->Include<C1>();
+    const auto f = w.GetFiltersRegistry()->Get<C1>();
     const auto e = NEW_ENTITY();
 
     GET(e, C1);
@@ -276,10 +285,10 @@ TEST_CASE("Counter system")
     class CounterSystem : public System
     {
     public:
-        CounterSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FiltersRegistry>& filtersRegistry, const int step)
-            : System(ecs, filtersRegistry), _step(step)
+        CounterSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters, const int step)
+            : System(ecs, filters), _step(step)
         {
-            _filter = filtersRegistry->NewFilter()->Include<Counter>();
+            _filter = filters->Get<Counter>();
         }
 
         void OnUpdate() override
@@ -319,16 +328,18 @@ TEST_CASE("Entity Creation Destruction Systems")
         int CreatedEntities;
         int DestroyedEntities;
     };
-    
-    struct DestroyEntityEvent { };
+
+    struct DestroyEntityEvent
+    {
+    };
 
     class EntityCreationSystem : public System
     {
     public:
-        EntityCreationSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FiltersRegistry>& filtersRegistry)
-            : System(ecs, filtersRegistry)
+        EntityCreationSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters)
+            : System(ecs, filters)
         {
-            _counterFilter = filtersRegistry->NewFilter()->Include<Counter>();
+            _counterFilter = filters->Get<Counter>();
         }
 
         void OnUpdate() override
@@ -341,6 +352,7 @@ TEST_CASE("Entity Creation Destruction Systems")
                 GET(e, Counter).CreatedEntities += 1;
             }
         }
+
     private:
         std::shared_ptr<Filter> _counterFilter;
     };
@@ -348,11 +360,11 @@ TEST_CASE("Entity Creation Destruction Systems")
     class HandleDestroyEntityEventSystem : public System
     {
     public:
-        HandleDestroyEntityEventSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FiltersRegistry>& filtersRegistry)
-            : System(ecs, filtersRegistry)
+        HandleDestroyEntityEventSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters)
+            : System(ecs, filters)
         {
-            _destroyFilter = filtersRegistry->NewFilter()->Include<DestroyEntityEvent>();
-            _counterFilter = filtersRegistry->NewFilter()->Include<Counter>();
+            _destroyFilter = filters->Get<DestroyEntityEvent>();
+            _counterFilter = filters->Get<Counter>();
         }
 
         void OnUpdate() override
@@ -367,7 +379,7 @@ TEST_CASE("Entity Creation Destruction Systems")
                 }
             }
         }
-        
+
     private:
         std::shared_ptr<Filter> _destroyFilter;
         std::shared_ptr<Filter> _counterFilter;
@@ -380,7 +392,7 @@ TEST_CASE("Entity Creation Destruction Systems")
 
     const auto counterEntity = NEW_ENTITY();
     GET(counterEntity, Counter);
-    
+
     w.Refresh();
     for (int i = 0; i < 100; i++)
     {
