@@ -15,12 +15,12 @@ namespace rei::ecs
     public:
         REI_EVENT(size_t) MaxComponentIdChangedEvent;
 
-        Entity NewEntity();
+        REI_API Entity NewEntity();
 
-        BitMask& GetEntityMask(Entity e);
+        REI_API BitMask& GetEntityMask(Entity e);
 
         template <typename T>
-        T& Get(Entity e)
+        REI_API T& Get(Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot get component from dead entity");
             
@@ -40,7 +40,7 @@ namespace rei::ecs
         }
 
         template <typename T>
-        bool Has(const Entity e)
+        REI_API bool Has(const Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot check if dead entity has component")
             
@@ -49,7 +49,7 @@ namespace rei::ecs
         }
 
         template <typename T>
-        void Del(Entity e)
+        REI_API void Del(Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot delete component on dead entity")
         
@@ -61,15 +61,15 @@ namespace rei::ecs
             }
         }
 
-        bool IsAlive(Entity e) const;
+        REI_API bool IsAlive(Entity e) const;
 
-        bool IsDead(Entity e) const;
+        REI_API bool IsDead(Entity e) const;
 
-        void DestroyEntity(Entity e);
+        REI_API void DestroyEntity(Entity e);
 
         void HandleDeadEntity(Entity e);
 
-        Entity GetEntityById(EntityId id) const;
+        REI_API Entity GetEntityById(EntityId id) const;
 
         const std::unordered_set<Entity>& GetDirtyEntities() const;
         void ClearDirtyEntities();

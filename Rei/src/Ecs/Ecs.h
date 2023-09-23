@@ -1,5 +1,11 @@
 ﻿#pragma once
 
+#include "World.h"
+#include "EcsRegistry.h"
+#include "FiltersRegistry.h"
+#include "Filter.h"
+#include "BitMask.h"
+
 #define ECS_WORLD(WORLD) auto _ecs = (WORLD).GetRegistry()
 #define NEW_ENTITY() _ecs->NewEntity()
 #define DESTROY_ENTITY(E) _ecs->DestroyEntity(E)

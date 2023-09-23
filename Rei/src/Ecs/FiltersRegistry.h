@@ -49,6 +49,6 @@ namespace rei::ecs
     private:
         std::vector<std::shared_ptr<Filter>> _filters;
 
-        std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;
+        REI_API std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;
     };
 }

@@ -11,23 +11,23 @@ namespace rei::ecs
     class World : public std::enable_shared_from_this<World>
     {
     public:
-        World();
+        REI_API World();
         
         template<typename T>
-        void AddSystem(){
+        REI_API void AddSystem(){
             _systems.emplace_back(std::make_shared<T>(GetRegistry(), GetFiltersRegistry()));
         }
 
         template<typename T, typename... Args>
-        void AddSystem(Args... args){
+        REI_API void AddSystem(Args... args){
             _systems.emplace_back(std::make_shared<T>(GetRegistry(), GetFiltersRegistry(), args...));
         }
 
-        void Run();
-        void Refresh();
+        REI_API void Run();
+        REI_API void Refresh();
 
-        std::shared_ptr<EcsRegistry> GetRegistry();
-        std::shared_ptr<FiltersRegistry> GetFiltersRegistry();
+        REI_API std::shared_ptr<EcsRegistry> GetRegistry();
+        REI_API std::shared_ptr<FiltersRegistry> GetFiltersRegistry();
 
     private:
         std::shared_ptr<EcsRegistry> _ecsRegistry;

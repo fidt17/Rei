@@ -41,7 +41,11 @@
     <ClInclude Include="src\Rei.h" />
     <ClInclude Include="src\Startup\EngineLifetimeScope.h" />
     <ClInclude Include="src\Startup\EngineEntryPoint.h" />
-    <ClInclude Include="tests\catch_amalgamated.hpp" />
+    <ClInclude Include="tests\catch_amalgamated.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Common\pch.cpp">
@@ -67,7 +71,11 @@
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
     <ClCompile Include="src\Startup\EngineLifetimeScope.cpp" />
     <ClCompile Include="src\Startup\EngineEntryPoint.cpp" />
-    <ClCompile Include="tests\BitMaskTests.cpp" />
+    <ClCompile Include="tests\BitMaskTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="tests\catch_amalgamated.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -142,9 +150,20 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>C:\Repos\Rei\Rei\src</AdditionalIncludeDirectories>
       <LinkCompiled>true</LinkCompiled>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="tests\EcsTests.cpp" />
-    <ClCompile Include="tests\TestInitialization.cpp" />
+    <ClCompile Include="tests\EcsTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\TestInitialization.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />

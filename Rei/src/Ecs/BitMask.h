@@ -7,8 +7,8 @@ namespace rei::ecs
     public:
         typedef u64 mask;
 
-        void Set(mask flagIdx, bool resizeIfNeeded = false);
-        void Remove(mask flagIdx);
+        REI_API void Set(mask flagIdx, bool resizeIfNeeded = false);
+        REI_API void Remove(mask flagIdx);
         void Resize(size_t size);
         void Clear();
 
@@ -18,7 +18,7 @@ namespace rei::ecs
         size_t Size() const;
         std::string ToString() const;
 
-        bool operator==(const BitMask& other) const;
+        REI_API bool operator==(const BitMask& other) const;
 
     private:
         std::vector<mask> _flags{0};

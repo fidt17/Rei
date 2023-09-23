@@ -5,7 +5,7 @@ namespace rei::ecs
     using EntityId = i32;
     using EntityGen = u8;
 
-    struct Entity
+    struct REI_API Entity
     {
         Entity(const EntityId id, const EntityGen gen)
             : Id(id), Generation(gen)
