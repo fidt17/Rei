@@ -17,7 +17,9 @@ namespace rei::ecs
         virtual void OnUpdate() = 0;
 
     protected:
-#define FOR(f) for (const auto e : *(f))
+    
+        #define FOR(f) REI_ASSERT_NOT_NULL(f);\
+            for (const auto e : *(f))
 
         const std::shared_ptr<EcsRegistry> _ecs;
         const std::shared_ptr<FilterProvider> _filters;

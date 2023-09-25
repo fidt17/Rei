@@ -3,18 +3,30 @@
 #include <thread>
 #include <chrono>
 
-namespace rei
+#include "Modules/UpdateLoop/Components/UpdateCallback.h"
+#include "Modules/UpdateLoop/Systems/InvokeUpdateCallbackSystem.h"
+
+namespace rei::internal::engine
 {
     SET_LOG_SCOPE("ENGINE")
     
-    void Engine::Configure()
+    Engine::Engine(std::shared_ptr<App> app) : _app(std::move(app)), _ecsWorld(ecs::World())
     {
-        LOG("Configure")
-    }
+        LOG("Create engine")
 
+        _ecsWorld.AddSystem<update_loop::InvokeUpdateCallbackSystem>();
+    }
+    
     void Engine::Start()
     {
         LOG("Run")
+        
+        ECS_WORLD(_ecsWorld);
+        const auto appEntity = NEW_ENTITY();
+        GET(appEntity, update_loop::UpdateCallback) = { [&]{_app->OnUpdate();} };
+        
+        _ecsWorld.Refresh();
+        _app->OnStart();
 
         _mainThread = std::thread([&]()
         {
@@ -38,6 +50,8 @@ namespace rei
     void Engine::Shutdown(const int exitCode)
     {
         LOG("Shutdown. Exit code: " + std::to_string(exitCode))
+        
+        _app->OnShutdown();
 
         _mainThreadRunFlag = false;
         _mainThread.join();
@@ -45,5 +59,6 @@ namespace rei
 
     void Engine::OnUpdate()
     {
+        _ecsWorld.Run();
     }
 }

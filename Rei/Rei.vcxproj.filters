@@ -1,12 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="src\Startup\EngineLifetimeScope.cpp" />
     <ClCompile Include="src\Startup\EngineEntryPoint.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
     <ClCompile Include="src\Engine\Engine.cpp" />
-    <ClCompile Include="src\Engine\EngineFactory.cpp" />
     <ClCompile Include="src\Common\pch.cpp" />
     <ClCompile Include="src\Ecs\Entity.cpp" />
     <ClCompile Include="src\Ecs\World.cpp" />
@@ -18,6 +16,7 @@
     <ClCompile Include="src\Ecs\FiltersRegistry.cpp" />
     <ClCompile Include="tests\BitMaskTests.cpp" />
     <ClCompile Include="tests\TestInitialization.cpp" />
+    <ClCompile Include="src\Startup\EngineScope.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core.h" />
@@ -25,14 +24,12 @@
     <ClInclude Include="src\Common\Event.h" />
     <ClInclude Include="src\Common\IFactory.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />
-    <ClInclude Include="src\Startup\EngineLifetimeScope.h" />
     <ClInclude Include="src\Startup\EngineEntryPoint.h" />
     <ClInclude Include="src\Api\EngineApi.h" />
     <ClInclude Include="src\Common\Logging\Logger.h" />
     <ClInclude Include="src\Common\Logging\LogLevelEnum.h" />
     <ClInclude Include="src\Common\Logging\LogMessage.h" />
     <ClInclude Include="src\Engine\Engine.h" />
-    <ClInclude Include="src\Engine\EngineFactory.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Common\Primitives.h" />
     <ClInclude Include="src\Ecs\Ecs.h" />
@@ -48,5 +45,9 @@
     <ClInclude Include="src\Ecs\IComponentSet.h" />
     <ClInclude Include="src\Ecs\System.h" />
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
+    <ClInclude Include="src\App\App.h" />
+    <ClInclude Include="src\App\AppEntryPoint.h" />
+    <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
+    <ClInclude Include="src\Startup\EngineScope.h" />
   </ItemGroup>
 </Project>

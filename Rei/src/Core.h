@@ -10,4 +10,6 @@
 #include "Common/IFactory.h"
 #include "Common/Event.h"
 
+#include "App/App.h"
+
 #include "Ecs/Ecs.h"

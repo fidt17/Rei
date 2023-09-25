@@ -8,7 +8,7 @@ namespace rei::logging
     class Log
     {
     public:
-        static void Initialize();
+        REI_API static void Initialize();
         REI_API static std::shared_ptr<Logger> GetLogger();
         REI_API static void AddLogCallback(REI_EVENT_ACTION(const LogMessage&) logCallback);
 

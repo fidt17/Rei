@@ -1,12 +1,20 @@
-#include "Ecs/World.h"
-
-// Gets called when application starts
-void OnProjectStart()
+class ProjectApplication final : public rei::App
 {
-    LOG("OK")
-}
+public:
+    void OnStart() override
+    {
+        LOG("APP START")
+    }
 
-// Gets called when application shutdowns
-void OnProjectShutdown()
-{
-}
+    void OnUpdate() override
+    {
+        LOG("APP UPDATE")
+    }
+
+    void OnShutdown() override
+    {
+        LOG("APP SHUTDOWN")
+    }
+};
+
+std::shared_ptr<rei::App> CreateApp() { return std::make_shared<ProjectApplication>(); }
