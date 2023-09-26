@@ -23,11 +23,14 @@ public class ClientApi : IClientApi
 		_dllPtr = dllPtr;
 	}
 
-	public void CreateApplication() => Invoke();
-	public void StartApplication() => Invoke();
+	private delegate IntPtr CreateEngineDelegate();
+	public IntPtr CreateEngine() => Invoke<IntPtr>(typeof(CreateEngineDelegate));
+
+	private delegate void StartEngineDelegate(IntPtr enginePtr);
+	public void Start(IntPtr enginePtr) => Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
 	
-	private delegate int ShutdownApplicationDelegate(int code);
-	public int StopApplication(int code) => Invoke<int>(typeof(ShutdownApplicationDelegate), nameof(StopApplication), code);
+	private delegate int ShutdownEngineDelegate(IntPtr enginePtr, int exitCode);
+	public int Shutdown(IntPtr enginePtr, int exitCode) => Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
 
 	private delegate void callbackDelegate(IntPtr callback);
 	public void AddLogCallback(IntPtr callback) => Invoke(typeof(callbackDelegate), nameof(AddLogCallback), callback);

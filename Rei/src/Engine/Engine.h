@@ -2,6 +2,8 @@
 
 #include <thread>
 
+#include "Modules/MainThread/ReiMainThread.h"
+
 namespace rei::internal::engine
 {
     class Engine
@@ -12,12 +14,10 @@ namespace rei::internal::engine
         REI_API void Shutdown(int exitCode);
 
     private:
-        std::thread _mainThread;
-        bool _mainThreadRunFlag = false;
-
+        main_thread::ReiMainThread _mainThread;
         std::shared_ptr<App> _app;
-        ecs::World _ecsWorld;
+        std::shared_ptr<ecs::World> _ecsWorld;
 
-        void OnUpdate();
+        void OnUpdate() const;
     };
 }

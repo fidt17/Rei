@@ -3,14 +3,14 @@
 
 #include "Logger.h"
 
-namespace rei::logging
+namespace rei::common::logging
 {
     class Log
     {
     public:
         REI_API static void Initialize();
         REI_API static std::shared_ptr<Logger> GetLogger();
-        REI_API static void AddLogCallback(REI_EVENT_ACTION(const LogMessage&) logCallback);
+        REI_API static void AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&));
 
     private:
         inline static std::shared_ptr<Logger> _logger;
@@ -22,15 +22,15 @@ const std::string LOG_SCOPE;
 #define SET_LOG_SCOPE(x) const std::string LOG_SCOPE = (x);
 
 #ifdef _DEBUG
-    #define LOG(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Info, __VA_ARGS__);
-    #define LOG_WARNING(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Warning, __VA_ARGS__);
-    #define LOG_ERROR(...) rei::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::logging::LogLevelEnum::Error, __VA_ARGS__);
-    #define LOGGER_ENABLE() rei::logging::Log::GetLogger()->Enable();
-    #define LOGGER_DISABLE() rei::logging::Log::GetLogger()->Disable();
+    #define LOG(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Info, __VA_ARGS__);
+    #define LOG_WARNING(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Warning, __VA_ARGS__);
+    #define LOG_ERROR(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Error, __VA_ARGS__);
+    #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
+    #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
 #else
     #define LOG(...) 
     #define LOG_WARNING(...) 
     #define LOG_ERROR(...) 
-    #define LOGGER_ENABLE() rei::logging::Log::GetLogger()->Enable();
-    #define LOGGER_DISABLE() rei::logging::Log::GetLogger()->Disable();
+    #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
+    #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
 #endif

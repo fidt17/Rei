@@ -15,7 +15,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\App\App.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
@@ -24,25 +23,27 @@
     <ClInclude Include="src\Ecs\Entity.h" />
     <ClInclude Include="src\Ecs\Filter.h" />
     <ClInclude Include="src\Ecs\IComponentSet.h" />
+    <ClInclude Include="src\Ecs\IEcsModule.h" />
     <ClInclude Include="src\Ecs\System.h" />
     <ClInclude Include="src\Ecs\TypeId.h" />
     <ClInclude Include="src\Ecs\World.h" />
+    <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.h" />
+    <ClInclude Include="src\Modules\UpdateLoop\UpdateLoopModule.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Api\EditorApi.h" />
     <ClInclude Include="src\Common\Primitives.h" />
     <ClInclude Include="src\Engine\Engine.h" />
     <ClInclude Include="src\Common\Event.h" />
-    <ClInclude Include="src\Common\IFactory.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />
     <ClInclude Include="src\Common\Logging\Logger.h" />
     <ClInclude Include="src\Common\Logging\LogLevelEnum.h" />
     <ClInclude Include="src\Common\Logging\LogMessage.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\Rei.h" />
+    <ClInclude Include="src\Startup\App.h" />
     <ClInclude Include="src\Startup\AppEntryPoint.h" />
-    <ClInclude Include="src\Startup\EngineEntryPoint.h" />
     <ClInclude Include="tests\catch_amalgamated.hpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -70,7 +71,9 @@
     <ClCompile Include="src\Engine\Engine.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
+    <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.cpp" />
+    <ClCompile Include="src\Modules\UpdateLoop\UpdateLoopModule.cpp" />
     <ClCompile Include="tests\BitMaskTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

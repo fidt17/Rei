@@ -1,6 +1,6 @@
 #pragma once
 
-namespace rei::logging
+namespace rei::common::logging
 {
     enum LogLevelEnum
     {

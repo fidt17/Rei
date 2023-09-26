@@ -3,7 +3,7 @@
 
 #include "LogLevelEnum.h"
 
-namespace rei::logging
+namespace rei::common::logging
 {
     struct LogMessage
     {

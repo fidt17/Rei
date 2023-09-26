@@ -1,10 +1,12 @@
 ﻿#pragma once
 #include "EcsRegistry.h"
 #include "FiltersRegistry.h"
+#include "IEcsModule.h"
 #include "System.h"
 
 namespace rei::ecs
 {
+    class IEcsModule;
     class EcsRegistry;
     class FiltersRegistry;
 
@@ -21,6 +23,12 @@ namespace rei::ecs
         template<typename T, typename... Args>
         REI_API void AddSystem(Args... args){
             _systems.emplace_back(std::make_shared<T>(GetRegistry(), GetFiltersRegistry(), args...));
+        }
+
+        REI_API void AddModule(const std::shared_ptr<IEcsModule>& m)
+        {
+            m->Configure(shared_from_this());
+            Refresh();
         }
 
         REI_API void Run();

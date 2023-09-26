@@ -1,40 +1,42 @@
 #pragma once
-#include "EngineEntryPoint.h"
+#include "App.h"
+#include "Engine/Engine.h"
 
 #ifdef REI_APP
 
-    std::shared_ptr<rei::internal::engine::Engine> g_Engine;
+extern std::shared_ptr<rei::App> CreateApp();
 
-    extern std::shared_ptr<rei::App> CreateApp();
-
-    REI_EXTERN_API void Initialize()
+namespace rei::external
+{
+    REI_EXTERN_API inline internal::engine::Engine* CreateEngine()
     {
-        auto entryPoint = rei::internal::entry_point::EngineEntryPoint();
-        entryPoint.Initialize();
-        g_Engine = entryPoint.CreateEngine(CreateApp());
+        return new internal::engine::Engine(CreateApp());
     }
 
-    REI_EXTERN_API inline void Start()
+    REI_EXTERN_API inline void Start(internal::engine::Engine* engine)
     {
-        g_Engine->Start();
+        engine->Start();
     }
 
-    REI_EXTERN_API inline int Shutdown(const int exitCode)
+    REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
     {
-        g_Engine->Shutdown(exitCode);
+        engine->Shutdown(exitCode);
         return 0;
     }
+}
 
-    int main()
-    {
-        Initialize();
-        Start();
+int main()
+{
+    auto engine = rei::external::CreateEngine();
+    rei::external::Start(engine);
 
-        std::cin.get();
+    std::cin.get();
 
-        Shutdown(0);
+    rei::external::Shutdown(engine, 0);
 
-        return 0;
-    }
+    delete engine;
+
+    return 0;
+}
 
 #endif

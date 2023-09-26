@@ -6,7 +6,7 @@
 #include "LogMessage.h"
 #include "Common/Event.h"
 
-namespace rei::logging
+namespace rei::common::logging
 {
     class Logger
     {
@@ -16,8 +16,8 @@ namespace rei::logging
         {
         }
 
-        void AddLogCallback(REI_EVENT_ACTION(const LogMessage&));
-        void RemoveLogCallback(REI_EVENT_ACTION(const LogMessage&));
+        void AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&));
+        void RemoveLogCallback(REI_EVENT_DELEGATE(const LogMessage&));
 
         REI_API void Log(LogLevelEnum logLevel, const std::string& message) const;
         REI_API void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message) const;
@@ -27,8 +27,9 @@ namespace rei::logging
         void Disable();
         
     private:
-        std::string _loggerScope;
         REI_EVENT(const LogMessage&) _newLogEvent;
+        
+        std::string _loggerScope;
         bool _enabled = true;
     };
 }

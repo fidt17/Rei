@@ -1,11 +1,20 @@
-// Gets called when application starts
-void OnProjectStart()
+class ProjectApplication final : public rei::App
 {
-    LOG("On project start")
-}
+public:
+    void OnStart() override
+    {
+        LOG("APP START")
+    }
 
-// Gets called when application shutdowns
-void OnProjectShutdown()
-{
-    LOG("On project shutdown")
-}
+    void OnUpdate() override
+    {
+        LOG("APP UPDATE")
+    }
+
+    void OnShutdown() override
+    {
+        LOG("APP SHUTDOWN")
+    }
+};
+
+std::shared_ptr<rei::App> CreateApp() { return std::make_shared<ProjectApplication>(); }

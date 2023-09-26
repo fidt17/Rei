@@ -3,62 +3,58 @@
 #include <thread>
 #include <chrono>
 
+#include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
-#include "Modules/UpdateLoop/Systems/InvokeUpdateCallbackSystem.h"
 
 namespace rei::internal::engine
 {
     SET_LOG_SCOPE("ENGINE")
-    
-    Engine::Engine(std::shared_ptr<App> app) : _app(std::move(app)), _ecsWorld(ecs::World())
-    {
-        LOG("Create engine")
 
-        _ecsWorld.AddSystem<update_loop::InvokeUpdateCallbackSystem>();
+    void ConfigureAppUpdateCallback(const std::shared_ptr<ecs::World>& world, const std::shared_ptr<App>& app)
+    {
+        ECS_WORLD(*world);
+        const auto appEntity = NEW_ENTITY();
+        GET(appEntity, update_loop::UpdateCallback) = {[&]
+        {
+            app->OnUpdate();
+        }};
     }
-    
+
+    Engine::Engine(std::shared_ptr<App> app)
+        :
+        _mainThread(main_thread::ReiMainThread()),
+        _app(std::move(app)),
+        _ecsWorld(std::make_shared<ecs::World>())
+    {
+        common::logging::Log::Initialize();
+
+        LOG("Create engine")
+        
+        _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this]{ OnUpdate(); }));
+
+        _ecsWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
+    }
+
     void Engine::Start()
     {
         LOG("Run")
-        
-        ECS_WORLD(_ecsWorld);
-        const auto appEntity = NEW_ENTITY();
-        GET(appEntity, update_loop::UpdateCallback) = { [&]{_app->OnUpdate();} };
-        
-        _ecsWorld.Refresh();
+
+        ConfigureAppUpdateCallback(_ecsWorld, _app);
+
         _app->OnStart();
-
-        _mainThread = std::thread([&]()
-        {
-            _mainThreadRunFlag = true;
-            while (_mainThreadRunFlag)
-            {
-                try
-                {
-                    OnUpdate();
-                }
-                catch (const std::exception& e)
-                {
-                    LOG_ERROR("Exception in main thread", e.what())
-                }
-
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
-        });
+        _mainThread.Run();
     }
 
     void Engine::Shutdown(const int exitCode)
     {
         LOG("Shutdown. Exit code: " + std::to_string(exitCode))
-        
-        _app->OnShutdown();
 
-        _mainThreadRunFlag = false;
-        _mainThread.join();
+        _app->OnShutdown();
+        _mainThread.Stop();
     }
 
-    void Engine::OnUpdate()
+    void Engine::OnUpdate() const
     {
-        _ecsWorld.Run();
+        _ecsWorld->Run();
     }
 }

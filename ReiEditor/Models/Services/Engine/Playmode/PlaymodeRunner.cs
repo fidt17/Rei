@@ -9,6 +9,8 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 public class PlaymodeRunner : IPlaymodeRunner
 {
 	public event Action? PlaymodeFailedEvent;
+
+	private IntPtr? _enginePtr;
 	
 	private readonly IClientApi _clientApi;
 	private readonly ILogger<PlaymodeRunner> _logger;
@@ -23,14 +25,16 @@ public class PlaymodeRunner : IPlaymodeRunner
 
 	public void StartPlaymode()
 	{
-		_clientApi.CreateApplication();
+		if (_enginePtr != null) throw new Exception("EnginePtr already exists");
+		
+		_enginePtr = _clientApi.CreateEngine();
 		SetupPlaymode();
 
 		Task.Run(() =>
 		{
 			try
 			{
-				_clientApi.StartApplication();
+				_clientApi.Start(_enginePtr.Value);
 			}
 			catch (Exception e)
 			{
@@ -42,7 +46,10 @@ public class PlaymodeRunner : IPlaymodeRunner
 
 	public void StopPlaymode()
 	{
-		_clientApi.StopApplication(1);
+		if (_enginePtr == null) throw new Exception("EnginePtr is missing");
+		
+		_clientApi.Shutdown(_enginePtr.Value, 1);
+		_enginePtr = null;
 	}
 
 	private void SetupPlaymode()

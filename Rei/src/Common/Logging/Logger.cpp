@@ -1,14 +1,14 @@
 ﻿#include "Logger.h"
 #include "windows.h"
 
-namespace rei::logging
+namespace rei::common::logging
 {
-    void Logger::AddLogCallback(REI_EVENT_ACTION(const LogMessage&) callback)
+    void Logger::AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&) callback)
     {
         _newLogEvent += callback;
     }
 
-    void Logger::RemoveLogCallback(REI_EVENT_ACTION(const LogMessage&) callback)
+    void Logger::RemoveLogCallback(REI_EVENT_DELEGATE(const LogMessage&) callback)
     {
         _newLogEvent -= callback;
     }

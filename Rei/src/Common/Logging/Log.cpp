@@ -1,6 +1,6 @@
 ﻿#include "Log.h"
 
-namespace rei::logging
+namespace rei::common::logging
 {
     void Log::Initialize()
     {
@@ -11,8 +11,8 @@ namespace rei::logging
     {
         return _logger;
     }
-
-    void Log::AddLogCallback(REI_EVENT_ACTION(const LogMessage&) logCallback)
+    
+    void Log::AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&) logCallback)
     {
         _logger->AddLogCallback(logCallback);
     }
