@@ -5,7 +5,7 @@ namespace ReiEditor.Models.ProjectManagement.Active;
 
 public class ActiveProjectService : IActiveProjectService
 {
-	public event Action<Project>? ProjectChangedEvent;
+	public event Action<Project>? ActiveProjectChangedEvent;
 
 	private Project? _project;
 
@@ -16,10 +16,7 @@ public class ActiveProjectService : IActiveProjectService
 		_logger = logger;
 	}
 
-	public Project GetActiveProject()
-	{
-		return _project ?? throw new NullReferenceException(nameof(_project));
-	}
+	public Project GetActiveProject() => _project ?? throw new NullReferenceException(nameof(_project));
 
 	public void OpenProject(Project project)
 	{
@@ -29,6 +26,6 @@ public class ActiveProjectService : IActiveProjectService
 		}
 
 		_project = project;
-		ProjectChangedEvent?.Invoke(_project);
+		ActiveProjectChangedEvent?.Invoke(_project);
 	}
 }

@@ -21,7 +21,7 @@ public class ResourceService : IResourceService
 
 	public string GetFullPath(params string[] path)
 	{
-		return Path.Combine(_resourcesPath, Path.Combine(path));
+		return Path.Combine(_resourcesPath, "Project", Path.Combine(path));
 	}
 
 	public async Task<string?> Load(string path)
@@ -38,11 +38,11 @@ public class ResourceService : IResourceService
 		return null;
 	}
 
-	public bool Copy(string from, string to, bool overrideContents)
+	public async Task<bool> Write(string data, string path)
 	{
 		try
 		{
-			File.Copy(from, to, overrideContents);
+			await File.WriteAllTextAsync(path, data);
 			return true;
 		}
 		catch (Exception e)
@@ -51,5 +51,10 @@ public class ResourceService : IResourceService
 		}
 
 		return false;
+	}
+
+	public bool Exists(string path)
+	{
+		return File.Exists(path);
 	}
 }

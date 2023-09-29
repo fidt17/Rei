@@ -62,7 +62,7 @@ public class ProjectCreationService : IProjectCreationService
 		
 		var root = configuration.FullPath;
 		
-		CreateDirectoryStructure(root);
+		Directory.CreateDirectory(root);
 		
 		var solutionPath = await CreateSolution(configuration);
 		project.SetProjectSolutionPath(solutionPath);
@@ -70,14 +70,6 @@ public class ProjectCreationService : IProjectCreationService
 		CreateProjectFile(root, project);
 
 		return project;
-	}
-	
-	private void CreateDirectoryStructure(string root)
-	{
-		_logger.Log("Creating directory structure");
-		
-		_logger.Log($"Creating root directory at: {root}");
-		Directory.CreateDirectory(root);
 	}
 
 	private void CreateProjectFile(string root, Project project)

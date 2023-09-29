@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace ReiEditor.Models.Services.Storage;
+namespace ReiEditor.Models.EditorApp.Storage;
 
 public interface IEditorStorageService
 {

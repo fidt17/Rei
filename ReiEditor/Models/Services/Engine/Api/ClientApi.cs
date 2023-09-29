@@ -7,8 +7,6 @@ namespace ReiEditor.Models.Services.Engine.Api;
 
 public class ClientApi : IClientApi
 {
-	public const string CLIENT_DLL = "Client.dll";
-	
 	private IntPtr _dllPtr;
 	private readonly ILogger<ClientApi> _logger;
 

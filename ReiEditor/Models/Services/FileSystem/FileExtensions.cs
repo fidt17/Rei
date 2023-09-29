@@ -6,31 +6,17 @@ public static class FileExtensions
 {
 	public const string VS_SOLUTION = ".sln";
 	public const string VS_PROJECT = ".vcxproj";
+	public const string EXE = ".exe";
+	
 	public const string REI_PROJECT = ".rei";
 	public const string REI_ENGINE = ".rei_engine";
-	public const string EXE = ".exe";
+	public const string SCENE = ".scene";
 
-	public static FilePickerFileType GetReiProjectFilePickerFileType()
+	public static FilePickerFileType GetFilePicker(string fileExtension)
 	{
-		return new FilePickerFileType(REI_PROJECT)
+		return new FilePickerFileType(fileExtension)
 		{
-			Patterns = new[] { $"*{REI_PROJECT}" }
-		};
-	}
-
-	public static FilePickerFileType GetReiEngineFilePickerFileType()
-	{
-		return new FilePickerFileType(REI_ENGINE)
-		{
-			Patterns = new[] { $"*{REI_ENGINE}" }
-		};
-	}
-	
-	public static FilePickerFileType GetExecutableFilePickerFileType()
-	{
-		return new FilePickerFileType(EXE)
-		{
-			Patterns = new[] { $"*{EXE}" }
+			Patterns = new[] { $"*{fileExtension}" }
 		};
 	}
 }

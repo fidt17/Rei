@@ -59,7 +59,7 @@ public class SetEngineLocationCommand : ICommand
 		{
 			Title = "Select Rei Engine",
 			AllowMultiple = false,
-			FileTypeFilter = new [] {FileExtensions.GetReiEngineFilePickerFileType()}
+			FileTypeFilter = new [] { FileExtensions.GetFilePicker(FileExtensions.REI_ENGINE) }
 		});
         
 		if (result.Count == 0) return null;

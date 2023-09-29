@@ -23,7 +23,7 @@ public class SolutionGenerator : ISolutionGenerator
 	public async Task<string> GenerateSolution(ProjectCreationConfiguration config)
 	{
 		var solutionDirPath = config.FullPath;
-		var projectDirPath = Path.Combine(solutionDirPath, "Scripts");
+		var projectDirPath = Path.Combine(solutionDirPath, "Project/Scripts");
 			
 		_logger.Log($"Creating solution directory at: {solutionDirPath}");
 		Directory.CreateDirectory(solutionDirPath);

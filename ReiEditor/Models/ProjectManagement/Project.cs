@@ -6,9 +6,10 @@ namespace ReiEditor.Models.ProjectManagement;
 
 public class Project
 {
-	public string ProjectName { get; set; } = "";
-	public DateTime LastEditTime { get; set; }
-	public string ProjectSolutionPath { get; set; } = "";
+	[JsonProperty] public string ProjectName { get; private set; } = "";
+	[JsonProperty] public DateTime LastEditTime { get; private set; }
+	[JsonProperty] public string ProjectSolutionPath { get; private set; } = "";
+	[JsonProperty] public bool HasBeenSetup { get; private set; }
 	
 	[JsonIgnore] 
 	public string ProjectFilePath { get; private set; } = "";
@@ -17,6 +18,7 @@ public class Project
 	public void SetProjectLastEditTime(DateTime value) => LastEditTime = value;
 	public void SetProjectFilePath(string value) => ProjectFilePath = Path.GetFullPath(value);
 	public void SetProjectSolutionPath(string value) => ProjectSolutionPath = Path.GetFullPath(value);
+	public void SetHasBeenSetup(bool value) => HasBeenSetup = value;
 	
 	public string GetDirectoryPath() => Path.GetDirectoryName(ProjectFilePath) ?? throw new Exception("Project directory path is missing");
 

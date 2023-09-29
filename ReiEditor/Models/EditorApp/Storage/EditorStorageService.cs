@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Logging.Loggers;
 
-namespace ReiEditor.Models.Services.Storage;
+namespace ReiEditor.Models.EditorApp.Storage;
 
 public class EditorStorageService : IEditorStorageService
 {

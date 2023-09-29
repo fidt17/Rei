@@ -66,7 +66,7 @@ public class OpenProjectCommand : BaseViewModel, ICommand
 		{
 			Title = "Open Project",
 			AllowMultiple = false,
-			FileTypeFilter = new [] {FileExtensions.GetReiProjectFilePickerFileType()}
+			FileTypeFilter = new [] { FileExtensions.GetFilePicker(FileExtensions.REI_PROJECT) }
 		});
 
 		if (result.Count == 0) return null;

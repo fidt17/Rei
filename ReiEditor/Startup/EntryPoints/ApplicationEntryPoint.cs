@@ -32,12 +32,12 @@ public class ApplicationEntryPoint : IDisposable
 
 		_shutdownService.AddShutdownTask(_scope.StopAsync);
 		
-		_activeProjectService.ProjectChangedEvent += HandleProjectChangedEvent;
+		_activeProjectService.ActiveProjectChangedEvent += HandleActiveProjectChangedEvent;
 	}
 
 	public void Dispose()
 	{
-		_activeProjectService.ProjectChangedEvent -= HandleProjectChangedEvent;
+		_activeProjectService.ActiveProjectChangedEvent -= HandleActiveProjectChangedEvent;
 	}
 
 	public void Start()
@@ -89,7 +89,7 @@ public class ApplicationEntryPoint : IDisposable
 		}
 	}
 
-	private void HandleProjectChangedEvent(Project project)
+	private void HandleActiveProjectChangedEvent(Project project)
 	{
 		Dispatcher.UIThread.InvokeAsync(async () =>
 		{

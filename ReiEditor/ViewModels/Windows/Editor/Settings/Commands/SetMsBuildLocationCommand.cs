@@ -60,7 +60,7 @@ public class SetMsBuildLocationCommand : ICommand
 		{
 			Title = "Select MsBuild.exe",
 			AllowMultiple = false,
-			FileTypeFilter = new [] {FileExtensions.GetExecutableFilePickerFileType()}
+			FileTypeFilter = new [] { FileExtensions.GetFilePicker(FileExtensions.EXE) }
 		});
             
 		if (result.Count == 0) return null;
