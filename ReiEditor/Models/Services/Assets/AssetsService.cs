@@ -13,18 +13,6 @@ namespace ReiEditor.Models.Services.Assets;
 
 public class AssetsService : IAssetsService
 {
-	private class AssetPath
-	{
-		public string FullPath { get; }
-		public Type AssetType { get; }
-
-		public AssetPath(string fullPath, Type assetType)
-		{
-			FullPath = fullPath;
-			AssetType = assetType;
-		}
-	}
-	
 	private readonly Dictionary<string, AssetPath> _assetsMap = new();
 	private readonly Dictionary<string, Asset> _loadedAssets = new();
 
@@ -123,5 +111,11 @@ public class AssetsService : IAssetsService
 		await File.WriteAllTextAsync(project.ProjectFilePath, _serializer.Serialize(project));
 		
 		// todo: save dirty assets
+	}
+
+	public Task<IEnumerable<AssetPath>> GetBuildDirtyAssets()
+	{
+		// todo: track build dirty assets
+		return Task.FromResult<IEnumerable<AssetPath>>(_assetsMap.Values);
 	}
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ReiEditor.Models.Services.Assets;
 
@@ -12,4 +13,6 @@ public interface IAssetsService
 	Task<T?> Load<T>(string assetId) where T : Asset;
 	
 	Task SaveProject();
+
+	Task<IEnumerable<AssetPath>> GetBuildDirtyAssets();
 }

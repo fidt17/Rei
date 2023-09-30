@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
 using ReiEditor.Utils.Common;
@@ -21,12 +24,16 @@ public class MsBuildService : IBuildService
 	private readonly IEditorPreferencesService _editorPreferencesService;
 	private readonly IActiveProjectService _activeProjectService;
 	private readonly ILogger<MsBuildService> _logger;
+	private readonly IAssetsService _assetsService;
+	private readonly IAssetBuilder _assetBuilder;
 
-	public MsBuildService(IEditorPreferencesService editorPreferencesService, IActiveProjectService activeProjectService, ILogger<MsBuildService> logger)
+	public MsBuildService(IEditorPreferencesService editorPreferencesService, IActiveProjectService activeProjectService, ILogger<MsBuildService> logger, IAssetsService assetsService, IAssetBuilder assetBuilder)
 	{
 		_editorPreferencesService = editorPreferencesService;
 		_activeProjectService = activeProjectService;
 		_logger = logger;
+		_assetsService = assetsService;
+		_assetBuilder = assetBuilder;
 	}
 
 	public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
@@ -42,22 +49,11 @@ public class MsBuildService : IBuildService
 			_buildInProgress.Value = true;
 			_isBuildReady.Value = false;
 			
-			var msBuildPath = _editorPreferencesService.GetMsBuildPath();
-			if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
-
 			var project = _activeProjectService.GetActiveProject();
-		
-			var msBuildProcess = new Process();
-			msBuildProcess.StartInfo.FileName = msBuildPath;
-			msBuildProcess.StartInfo.Arguments = $"\"{project.ProjectSolutionPath}\" -v:q /t:Clean;Build /p:Configuration={configuration}";
-			msBuildProcess.StartInfo.CreateNoWindow = true;
-			msBuildProcess.StartInfo.RedirectStandardOutput = true;
-			
-			msBuildProcess.Start();
-			string output = await msBuildProcess.StandardOutput.ReadToEndAsync();
-			await msBuildProcess.WaitForExitAsync();
 
-			ParseMsBuildOutput(output);
+			await BuildAssets(project, configuration);
+			await BuildSolution(project, configuration);
+		
 			_buildInProgress.Value = false;
 			
 			return true;
@@ -70,6 +66,35 @@ public class MsBuildService : IBuildService
 		_buildInProgress.Value = false;
 		
 		return false;
+	}
+
+	private async Task BuildAssets(Project project, BuildConfigurationEnum configuration)
+	{
+		var assets = await _assetsService.GetBuildDirtyAssets();
+		var buildFolder = GetBuildFolder(project, configuration);
+		
+		foreach (var assetPath in assets)
+		{
+			await _assetBuilder.Build(assetPath, buildFolder);
+		}
+	}
+
+	private async Task BuildSolution(Project project, BuildConfigurationEnum configuration)
+	{
+		var msBuildPath = _editorPreferencesService.GetMsBuildPath();
+		if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
+		
+		var msBuildProcess = new Process();
+		msBuildProcess.StartInfo.FileName = msBuildPath;
+		msBuildProcess.StartInfo.Arguments = $"\"{project.ProjectSolutionPath}\" -v:q /t:Clean;Build /p:Configuration={configuration}";
+		msBuildProcess.StartInfo.CreateNoWindow = true;
+		msBuildProcess.StartInfo.RedirectStandardOutput = true;
+			
+		msBuildProcess.Start();
+		string output = await msBuildProcess.StandardOutput.ReadToEndAsync();
+		await msBuildProcess.WaitForExitAsync();
+
+		ParseMsBuildOutput(output);
 	}
 
 	private void ParseMsBuildOutput(string output)
@@ -108,5 +133,20 @@ public class MsBuildService : IBuildService
 			_logger.Log($"Build succeeded. Warnings: {warningsCount}");
 			_isBuildReady.Value = true;
 		}
+	}
+
+	private static string GetBuildFolder(Project project, BuildConfigurationEnum configuration)
+	{
+		// todo: based on configuration
+		string buildDir = configuration switch
+		{
+			BuildConfigurationEnum.Debug => "x64Debug",
+			BuildConfigurationEnum.EditorDebug => "x64EditorDebug",
+			BuildConfigurationEnum.Release => "x64Release",
+			BuildConfigurationEnum.EditorRelease => "x64EditorRelease",
+			_ => ""
+		};
+
+		return Path.Combine(project.GetDirectoryPath(), "bin", buildDir, project.ProjectName);
 	}
 }
