@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Newtonsoft.Json;
+using ReiEditor.Models.Services.Scenes;
 
 namespace ReiEditor.Models.ProjectManagement;
 
@@ -10,6 +11,7 @@ public class Project
 	[JsonProperty] public DateTime LastEditTime { get; private set; }
 	[JsonProperty] public string ProjectSolutionPath { get; private set; } = "";
 	[JsonProperty] public bool HasBeenSetup { get; private set; }
+	[JsonProperty] public string LastSceneId { get; private set; } = "";
 	
 	[JsonIgnore] 
 	public string ProjectFilePath { get; private set; } = "";
@@ -19,6 +21,7 @@ public class Project
 	public void SetProjectFilePath(string value) => ProjectFilePath = Path.GetFullPath(value);
 	public void SetProjectSolutionPath(string value) => ProjectSolutionPath = Path.GetFullPath(value);
 	public void SetHasBeenSetup(bool value) => HasBeenSetup = value;
+	public void SetLastScene(Scene scene) => LastSceneId = scene.Id;
 	
 	public string GetDirectoryPath() => Path.GetDirectoryName(ProjectFilePath) ?? throw new Exception("Project directory path is missing");
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -9,11 +10,13 @@ public class SceneManagementService : ISceneManagementService
 {
 	private readonly ILogger<SceneManagementService> _logger;
 	private readonly IAssetsService _assets;
+	private readonly IActiveProjectService _projectService;
 
-	public SceneManagementService(ILogger<SceneManagementService> logger, IAssetsService assets)
+	public SceneManagementService(ILogger<SceneManagementService> logger, IAssetsService assets, IActiveProjectService projectService)
 	{
 		_logger = logger;
 		_assets = assets;
+		_projectService = projectService;
 	}
 
 	public async Task<Scene?> CreateScene(string name, string projectPath)
@@ -32,5 +35,13 @@ public class SceneManagementService : ISceneManagementService
 		}
 
 		return null;
+	}
+
+	public async Task LoadScene(Scene scene)
+	{
+		_logger.Log($"Loading scene [{scene.Name}]");
+		
+		_projectService.GetActiveProject().SetLastScene(scene);
+		await _assets.SaveProject();
 	}
 }

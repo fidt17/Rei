@@ -1,6 +1,8 @@
-﻿namespace ReiEditor.Models.ProjectManagement.Setup;
+﻿using System.Threading.Tasks;
+
+namespace ReiEditor.Models.ProjectManagement.Setup;
 
 public interface IProjectSetupService
 {
-	void AnalyzeProject();
+	Task PrepareProject();
 }

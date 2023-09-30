@@ -1,15 +1,33 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.Services.Assets;
 
 public class AssetsService : IAssetsService
 {
+	private class AssetPath
+	{
+		public string FullPath { get; }
+		public Type AssetType { get; }
+
+		public AssetPath(string fullPath, Type assetType)
+		{
+			FullPath = fullPath;
+			AssetType = assetType;
+		}
+	}
+	
+	private readonly Dictionary<string, AssetPath> _assetsMap = new();
+	private readonly Dictionary<string, Asset> _loadedAssets = new();
+
 	private readonly ILogger<AssetsService> _logger;
 	private readonly IResourceService _resourceService;
 	private readonly ISerializer _serializer;
@@ -21,6 +39,42 @@ public class AssetsService : IAssetsService
 		_resourceService = resourceService;
 		_serializer = serializer;
 		_activeProject = activeProject;
+	}
+	
+	public async Task RefreshAssets()
+	{
+		_logger.LogWarning("Refreshing assets");
+		
+		var projectRoot = _resourceService.GetFullPath();
+
+		var extensionToTypeMap = new Dictionary<string, Type>
+		{
+			{ FileExtensions.SCENE, typeof(Scene) }
+		};
+		
+		_assetsMap.Clear();
+		foreach (var file in Directory.EnumerateFiles(projectRoot, "*.*", SearchOption.AllDirectories))
+		{
+			var extension = Path.GetExtension(file);
+			if (string.IsNullOrEmpty(extension)) continue;
+			if (!extensionToTypeMap.ContainsKey(extension)) continue;
+			
+			try
+			{
+				var asset = await _resourceService.Load<Asset>(file);
+				if (asset == null) throw new Exception($"Could not deserialize asset at path {file}");
+					
+				var id = asset.Id;
+				_assetsMap[id] = new AssetPath(file, extensionToTypeMap[extension]);
+				_logger.Log($"Asset [{id}] {extensionToTypeMap[extension]}");
+			}
+			catch (Exception e)
+			{
+				_logger.LogException(e);
+			}
+		}
+		
+		_logger.Log($"Total assets found: {_assetsMap.Count}");
 	}
 
 	public string AllocateAssetId() => new(Guid.NewGuid().ToString());
@@ -43,6 +97,23 @@ public class AssetsService : IAssetsService
 		}
 		
 		return Task.FromResult(false);
+	}
+
+	public bool Exists<T>(string assetId) where T : Asset => _assetsMap.ContainsKey(assetId) && _assetsMap[assetId].GetType() == typeof(T);
+
+	public async Task<T?> Load<T>(string assetId) where T : Asset
+	{
+		if (_loadedAssets.ContainsKey(assetId)) return (T) _loadedAssets[assetId];
+		
+		if (!_assetsMap.ContainsKey(assetId)) return null;
+		var asset = await _resourceService.Load<T>(_assetsMap[assetId].FullPath);
+		
+		if (asset != null)
+		{
+			_loadedAssets.Add(asset.Id, asset);
+		}
+		
+		return asset;
 	}
 
 	public async Task SaveProject()

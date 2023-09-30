@@ -18,12 +18,10 @@ public class EditorScope : BaseLifetimeScope
 {
 	public EditorScope(BaseLifetimeScope parentScope) : base(nameof(EditorScope), parentScope) { }
 
-	protected override Task OnScopeStart()
+	protected override async Task OnScopeStart()
 	{
-		Scope.Resolve<EditorEntryPoint>().Start();
-		Scope.Resolve<IBuildService>().BuildProject(BuildConfigurationEnum.EditorDebug);
-		
-		return Task.CompletedTask;
+		await Scope.Resolve<EditorEntryPoint>().Start();
+		await Scope.Resolve<IBuildService>().BuildProject(BuildConfigurationEnum.EditorDebug);
 	}
 
 	protected override void ConfigureContainer(ContainerBuilder b)

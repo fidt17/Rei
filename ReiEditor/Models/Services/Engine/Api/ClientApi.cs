@@ -38,6 +38,7 @@ public class ClientApi : IClientApi
 	[DllImport("Kernel32.dll")]
 	private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
 
+/*
 	private void Invoke([CallerMemberName] string caller = "")
 	{
 		try
@@ -50,6 +51,7 @@ public class ClientApi : IClientApi
 			throw;
 		}
 	}
+*/
 	
 	private void Invoke(Type delegateType, [CallerMemberName] string caller = "", params object?[]? args)
 	{
