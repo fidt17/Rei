@@ -2,7 +2,13 @@
 
 #include <thread>
 
+#include "Modules/Assets/AssetManager.h"
 #include "Modules/MainThread/ReiMainThread.h"
+
+namespace rei
+{
+    class App;
+}
 
 namespace rei::internal::engine
 {
@@ -17,6 +23,7 @@ namespace rei::internal::engine
         main_thread::ReiMainThread _mainThread;
         std::shared_ptr<App> _app;
         std::shared_ptr<ecs::World> _ecsWorld;
+        std::shared_ptr<assets::AssetManager> _assetManager;
 
         void OnUpdate() const;
     };

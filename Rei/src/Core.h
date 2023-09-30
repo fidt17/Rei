@@ -9,6 +9,4 @@
 #include "Common/Assert.h"
 #include "Common/Event.h"
 
-#include "Startup/App.h"
-
 #include "Ecs/Ecs.h"

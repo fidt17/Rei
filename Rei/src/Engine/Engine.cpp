@@ -3,8 +3,10 @@
 #include <thread>
 #include <chrono>
 
+#include "Services.h"
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
+#include "Startup/App.h"
 
 namespace rei::internal::engine
 {
@@ -24,11 +26,14 @@ namespace rei::internal::engine
         :
         _mainThread(main_thread::ReiMainThread()),
         _app(std::move(app)),
-        _ecsWorld(std::make_shared<ecs::World>())
+        _ecsWorld(std::make_shared<ecs::World>()),
+        _assetManager(std::make_shared<assets::AssetManager>("C:\\Repos\\Rei Projects\\New Project\\bin\\Resources"))
     {
         common::logging::Log::Initialize();
 
         LOG("Create engine")
+
+        Services::GetInstance()->SetAssetManager(_assetManager);
         
         _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this]{ OnUpdate(); }));
 

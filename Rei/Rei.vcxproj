@@ -27,6 +27,8 @@
     <ClInclude Include="src\Ecs\System.h" />
     <ClInclude Include="src\Ecs\TypeId.h" />
     <ClInclude Include="src\Ecs\World.h" />
+    <ClInclude Include="src\Engine\Services.h" />
+    <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.h" />

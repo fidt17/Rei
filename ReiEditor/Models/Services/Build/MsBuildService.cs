@@ -51,7 +51,7 @@ public class MsBuildService : IBuildService
 			
 			var project = _activeProjectService.GetActiveProject();
 
-			await BuildAssets(project, configuration);
+			await BuildAssets(project);
 			await BuildSolution(project, configuration);
 		
 			_buildInProgress.Value = false;
@@ -68,10 +68,10 @@ public class MsBuildService : IBuildService
 		return false;
 	}
 
-	private async Task BuildAssets(Project project, BuildConfigurationEnum configuration)
+	private async Task BuildAssets(Project project)
 	{
 		var assets = await _assetsService.GetBuildDirtyAssets();
-		var buildFolder = GetBuildFolder(project, configuration);
+		var buildFolder = GetBuildFolder(project);
 		
 		foreach (var assetPath in assets)
 		{
@@ -135,18 +135,8 @@ public class MsBuildService : IBuildService
 		}
 	}
 
-	private static string GetBuildFolder(Project project, BuildConfigurationEnum configuration)
+	private static string GetBuildFolder(Project project)
 	{
-		// todo: based on configuration
-		string buildDir = configuration switch
-		{
-			BuildConfigurationEnum.Debug => "x64Debug",
-			BuildConfigurationEnum.EditorDebug => "x64EditorDebug",
-			BuildConfigurationEnum.Release => "x64Release",
-			BuildConfigurationEnum.EditorRelease => "x64EditorRelease",
-			_ => ""
-		};
-
-		return Path.Combine(project.GetDirectoryPath(), "bin", buildDir, project.ProjectName);
+		return Path.Combine(project.GetDirectoryPath(), "bin");
 	}
 }
