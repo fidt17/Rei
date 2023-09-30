@@ -35,6 +35,7 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
 
 		b.RegisterModule<EditorConsoleModule>();
+		b.RegisterModule<HierarchyModule>();
 		b.RegisterModule<PlaymodeModule>();
 		b.RegisterModule<SettingsModule>();
 		b.RegisterModule<BuildModule>();

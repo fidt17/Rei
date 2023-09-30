@@ -8,7 +8,7 @@ public class Observable<T> : IObservable<T>
 	private T? _value;
 	public T Value
 	{
-		get => _value ?? throw new NullReferenceException();
+		get => _value!;
 		set
 		{
 			if (Value != null && Value.Equals(value)) return;
@@ -23,7 +23,7 @@ public class Observable<T> : IObservable<T>
 
 	private readonly List<Action<T>> _subscribers = new();
 
-	public Observable(T? defaultValue = default)
+	public Observable(T? defaultValue)
 	{
 		_value = defaultValue;
 	}

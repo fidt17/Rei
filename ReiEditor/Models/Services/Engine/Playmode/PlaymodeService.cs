@@ -12,7 +12,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
 
 	private IPlaymodeRunner? _activePlaymodeRunner;
 
-	private readonly Observable<bool> _isPlaymodeActive = new();
+	private readonly Observable<bool> _isPlaymodeActive = new(false);
 	private readonly ILogger<PlaymodeService> _logger;
 	private readonly IClientDllManager _clientDllManager;
 	private readonly IFactory<IPlaymodeRunner> _playmodeRunnerFactory;

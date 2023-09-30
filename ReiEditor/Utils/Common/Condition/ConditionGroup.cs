@@ -8,7 +8,7 @@ public class ConditionGroup : ICondition, IDisposable
 {
 	public IObservable<bool> IsTrue => _isTrue;
 
-	private readonly Observable<bool> _isTrue = new();
+	private readonly Observable<bool> _isTrue = new(false);
 
 	private readonly List<ICondition> _conditions;
 

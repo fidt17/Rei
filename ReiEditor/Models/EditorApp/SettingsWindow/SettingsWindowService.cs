@@ -10,7 +10,7 @@ namespace ReiEditor.Models.EditorApp.SettingsWindow;
 public class SettingsWindowService : ISettingsWindowService
 {
 	public IObservable<bool> IsOpened => _isOpened;
-	private readonly Observable<bool> _isOpened = new();
+	private readonly Observable<bool> _isOpened = new(false);
 
 	private EditorSettingsWindowView? _window;
 

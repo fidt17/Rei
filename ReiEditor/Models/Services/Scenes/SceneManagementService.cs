@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Scenes;
 
 public class SceneManagementService : ISceneManagementService
 {
+	public Utils.Common.IObservable<Scene?> CurrentScene => _currentScene;
+
+	private readonly Observable<Scene?> _currentScene = new(null);
+
 	private readonly ILogger<SceneManagementService> _logger;
 	private readonly IAssetsService _assets;
 	private readonly IActiveProjectService _projectService;
@@ -43,5 +48,7 @@ public class SceneManagementService : ISceneManagementService
 		
 		_projectService.GetActiveProject().SetLastScene(scene);
 		await _assets.SaveProject();
+
+		_currentScene.Value = scene;
 	}
 }

@@ -14,7 +14,7 @@ public class EditorConsoleService : IEditorConsoleService
 	public IEnumerable<LogMessage> Logs => _logs;
 
 	private readonly List<LogMessage> _logs = new();
-	private readonly Observable<int> _logsCount = new();
+	private readonly Observable<int> _logsCount = new(0);
 
 	public void Log(LogMessage message)
 	{

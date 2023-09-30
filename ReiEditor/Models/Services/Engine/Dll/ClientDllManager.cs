@@ -14,7 +14,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
 	
 	private IntPtr _loadedDllPtr;
 
-	private readonly Observable<bool> _dllLoaded = new();
+	private readonly Observable<bool> _dllLoaded = new(false);
 
 	private readonly ILogger<ClientDllManager> _logger;
 	private readonly IActiveProjectService _activeProjectService;

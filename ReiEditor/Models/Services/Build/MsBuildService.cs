@@ -15,8 +15,8 @@ public class MsBuildService : IBuildService
 	public Utils.Common.IObservable<bool> BuildInProgress => _buildInProgress;
 	public Utils.Common.IObservable<bool> IsBuildReady => _isBuildReady;
 
-	private readonly Observable<bool> _buildInProgress = new();
-	private readonly Observable<bool> _isBuildReady = new();
+	private readonly Observable<bool> _buildInProgress = new(false);
+	private readonly Observable<bool> _isBuildReady = new(false);
 
 	private readonly IEditorPreferencesService _editorPreferencesService;
 	private readonly IActiveProjectService _activeProjectService;

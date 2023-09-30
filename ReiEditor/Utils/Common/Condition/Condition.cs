@@ -5,7 +5,7 @@ namespace ReiEditor.Utils.Common.Condition;
 public class Condition : ICondition, IDisposable
 {
 	public IObservable<bool> IsTrue => _isTrue;
-	private readonly Observable<bool> _isTrue = new();
+	private readonly Observable<bool> _isTrue = new(false);
 
 	private readonly IObservable<bool> _observable;
 	private readonly bool _target;
