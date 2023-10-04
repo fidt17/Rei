@@ -1,38 +1,30 @@
 ﻿#pragma once
 #include <filesystem>
-#include <fstream>
+
+#include "BinaryReader.h"
+#include "AssetRef.h"
 
 namespace rei::assets
 {
     class AssetManager
     {
     public:
-        explicit AssetManager(const std::string& resourcesPath)
+        explicit AssetManager(const std::string& resourcesPath);
+
+        template <typename T>
+        T Load(const std::string& path) const
         {
-            current_path(std::filesystem::path(resourcesPath));
+            SET_LOG_SCOPE("AssetManager")
+            LOG_WARNING("Loading asset from: " + path)
+            
+            auto reader = BinaryReader(path);
+            return reader.Get<T>();
         }
 
         template <typename T>
-        bool Load(const std::string& path, T& obj) const
+        T Load(const AssetRef ref) const
         {
-            std::ifstream stream(path, std::ios::in | std::ios::binary);
-            if (stream.bad())
-            {
-                LOG_ERROR("Could not open read stream for " + path);
-                return false;
-            }
-
-            const std::vector<u8> buffer(std::istreambuf_iterator(stream), {});
-            if (buffer.size() != sizeof(T))
-            {
-                LOG_ERROR("Buffer[" + std::to_string(buffer.size()) + "] size does not equal size of desired object [" + std::to_string(sizeof(T)) + "]");
-                return false;
-            }
-            const void* location = buffer.data();
-
-            memcpy(&obj, location, sizeof(T));
-
-            return true;
+            return Load<T>(ref.AssetId.Id + ".bin");
         }
     };
 }

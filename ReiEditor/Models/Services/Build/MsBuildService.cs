@@ -72,10 +72,14 @@ public class MsBuildService : IBuildService
 	{
 		var assets = await _assetsService.GetBuildDirtyAssets();
 		var buildFolder = GetBuildFolder(project);
-		
-		foreach (var assetPath in assets)
+		if (Directory.Exists(buildFolder))
 		{
-			await _assetBuilder.Build(assetPath, buildFolder);
+			Directory.Delete(buildFolder, true);
+		}
+		
+		foreach (var asset in assets)
+		{
+			await _assetBuilder.Build(asset, buildFolder);
 		}
 	}
 

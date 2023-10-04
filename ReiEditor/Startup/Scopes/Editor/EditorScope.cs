@@ -4,7 +4,6 @@ using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
@@ -18,11 +17,7 @@ public class EditorScope : BaseLifetimeScope
 {
 	public EditorScope(BaseLifetimeScope parentScope) : base(nameof(EditorScope), parentScope) { }
 
-	protected override async Task OnScopeStart()
-	{
-		await Scope.Resolve<EditorEntryPoint>().Start();
-		await Scope.Resolve<IBuildService>().BuildProject(BuildConfigurationEnum.EditorDebug);
-	}
+	protected override async Task OnScopeStart() => await Scope.Resolve<EditorEntryPoint>().Start();
 
 	protected override void ConfigureContainer(ContainerBuilder b)
 	{
@@ -34,6 +29,7 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
 		b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
 
+		b.RegisterModule<CommandsModule>();
 		b.RegisterModule<EditorConsoleModule>();
 		b.RegisterModule<HierarchyModule>();
 		b.RegisterModule<PlaymodeModule>();

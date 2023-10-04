@@ -32,10 +32,14 @@
                         DataContext="{Binding PlaymodePanel}" />
 
                     <Button
+                        HotKey="Ctrl+S"
+                        Command="{Binding SaveProjectCommand}"
+                        Content="Save" />
+                    
+                    <Button
                         HotKey="Ctrl+B"
-                        Command="{Binding BuildProjectCommand}">
-                        Build
-                    </Button>
+                        Command="{Binding BuildProjectCommand}"
+                        Content="Build" />
                 </StackPanel>
 
                 <Button Grid.Column="2"
@@ -48,22 +52,22 @@
         <!-- Content -->
         <Grid Grid.Row="1"
               ColumnDefinitions="*, Auto" RowDefinitions="*, Auto">
-            
+
             <hierarchy:HierarchyWindow
                 Width="300"
-                Grid.Column="1" Grid.Row="0" 
+                Grid.Column="1" Grid.Row="0"
                 DataContext="{Binding Hierarchy}" />
-            
+
             <console:ConsoleEditorWindow
                 Height="300"
                 Grid.Column="0" Grid.Row="1"
                 Grid.ColumnSpan="2"
                 DataContext="{Binding Console}" />
         </Grid>
-        
+
         <!-- Status Bar -->
         <Grid Grid.Row="2">
-            <statusBar:StatusBarView DataContext="{Binding StatusBar}"/>
+            <statusBar:StatusBarView DataContext="{Binding StatusBar}" />
         </Grid>
     </Grid>
 

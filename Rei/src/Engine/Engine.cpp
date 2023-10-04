@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "Engine.h"
-#include <thread>
-#include <chrono>
 
 #include "Services.h"
+#include "Modules/Assets/AssetManager.h"
+#include "Modules/Scenes/SceneManager.h"
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
 #include "Startup/App.h"
@@ -16,10 +16,12 @@ namespace rei::internal::engine
     {
         ECS_WORLD(*world);
         const auto appEntity = NEW_ENTITY();
-        GET(appEntity, update_loop::UpdateCallback) = {[&]
-        {
-            app->OnUpdate();
-        }};
+        GET(appEntity, update_loop::UpdateCallback) = {
+            [&]
+            {
+                app->OnUpdate();
+            }
+        };
     }
 
     Engine::Engine(std::shared_ptr<App> app)
@@ -27,15 +29,15 @@ namespace rei::internal::engine
         _mainThread(main_thread::ReiMainThread()),
         _app(std::move(app)),
         _ecsWorld(std::make_shared<ecs::World>()),
-        _assetManager(std::make_shared<assets::AssetManager>("C:\\Repos\\Rei Projects\\New Project\\bin\\Resources"))
+        _assetManager(std::make_shared<assets::AssetManager>("C:\\Repos\\Rei Projects\\New Project\\bin\\Resources")), // todo: from configuration ?
+        _sceneManager(std::make_shared<scenes::SceneManager>())
     {
-        common::logging::Log::Initialize();
 
         LOG("Create engine")
 
         Services::GetInstance()->SetAssetManager(_assetManager);
-        
-        _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this]{ OnUpdate(); }));
+
+        _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
 
         _ecsWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
     }
@@ -44,9 +46,11 @@ namespace rei::internal::engine
     {
         LOG("Run")
 
+        _sceneManager->LoadScene(0);
+        
         ConfigureAppUpdateCallback(_ecsWorld, _app);
-
         _app->OnStart();
+        
         _mainThread.Run();
     }
 

@@ -5,12 +5,13 @@ using ReiEditor.ViewModels.Windows.Editor.Console;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchy;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
-using ReiEditor.Views.Windows.Editor.Build.Commands;
+using ReiEditor.Views.Windows.Editor.Commands;
 
 namespace ReiEditor.ViewModels.Windows.Editor;
 
 public class ProjectEditorWindowViewModel : BaseViewModel
 {
+	public SaveProjectCommand SaveProjectCommand { get; }
 	public BuildProjectCommand BuildProjectCommand { get; }
 	public OpenSettingsWindowCommand OpenSettingsCommand { get; }
 	
@@ -29,12 +30,15 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 		IFactory<BuildProjectCommand> buildProjectCommandFactory,
 		IFactory<OpenSettingsWindowCommand> openSettingsCommandFactory,
 		IFactory<StatusBarViewModel> statusBarViewModelFactory,
-		IFactory<HierarchyWindowViewModel> hierarchy)
+		IFactory<HierarchyWindowViewModel> hierarchy,
+		IFactory<SaveProjectCommand> saveProjectCommand)
 	{
-		PlaymodePanel = playmodePanel.CreateInstance();
-		Console = console.CreateInstance();
+		SaveProjectCommand = saveProjectCommand.CreateInstance();
 		BuildProjectCommand = buildProjectCommandFactory.CreateInstance();
 		OpenSettingsCommand = openSettingsCommandFactory.CreateInstance();
+		
+		PlaymodePanel = playmodePanel.CreateInstance();
+		Console = console.CreateInstance();
 		StatusBar = statusBarViewModelFactory.CreateInstance();
 		Hierarchy = hierarchy.CreateInstance();
 	}

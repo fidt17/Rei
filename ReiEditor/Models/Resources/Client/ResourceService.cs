@@ -24,7 +24,7 @@ public class ResourceService : IResourceService
 
 	public string GetFullPath(params string[] path)
 	{
-		return Path.Combine(_resourcesPath, "Project", Path.Combine(path));
+		return Path.GetFullPath(Path.Combine(_resourcesPath, "Project", Path.Combine(path)));
 	}
 
 	public async Task<T?> Load<T>(string path)
@@ -60,6 +60,7 @@ public class ResourceService : IResourceService
 	{
 		try
 		{
+			Directory.CreateDirectory(path.Replace(Path.GetFileName(path), ""));
 			await File.WriteAllTextAsync(path, data);
 			return true;
 		}

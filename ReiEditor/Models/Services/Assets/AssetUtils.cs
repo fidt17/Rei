@@ -9,6 +9,7 @@ public static class AssetUtils
 {
 	public static readonly Dictionary<Type, string> AssetFileExtensions = new()
 	{
-		{ typeof(Scene), FileExtensions.SCENE }
+		{ typeof(Scene), FileExtensions.SCENE },
+		{ typeof(BuildScenesConfiguration), FileExtensions.ASSET }
 	};
 }

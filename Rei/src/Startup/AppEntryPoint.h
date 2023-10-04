@@ -27,6 +27,7 @@ namespace rei::external
 
 int main()
 {
+    rei::common::logging::Log::Initialize();
     auto engine = rei::external::CreateEngine();
     rei::external::Start(engine);
 

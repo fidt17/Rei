@@ -2,13 +2,15 @@
 
 namespace ReiEditor.Models.Services.Assets;
 
-public class AssetPath
+public class AssetInfo
 {
+	public string Id { get; }
 	public string FullPath { get; }
 	public Type AssetType { get; }
 
-	public AssetPath(string fullPath, Type assetType)
+	public AssetInfo(string id, string fullPath, Type assetType)
 	{
+		Id = id;
 		FullPath = fullPath;
 		AssetType = assetType;
 	}

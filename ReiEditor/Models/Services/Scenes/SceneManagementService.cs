@@ -12,7 +12,8 @@ public class SceneManagementService : ISceneManagementService
 	public Utils.Common.IObservable<Scene?> CurrentScene => _currentScene;
 
 	private readonly Observable<Scene?> _currentScene = new(null);
-
+	private BuildScenesConfiguration? _buildScenesConfiguration;
+	
 	private readonly ILogger<SceneManagementService> _logger;
 	private readonly IAssetsService _assets;
 	private readonly IActiveProjectService _projectService;
@@ -22,6 +23,19 @@ public class SceneManagementService : ISceneManagementService
 		_logger = logger;
 		_assets = assets;
 		_projectService = projectService;
+	}
+
+	public async Task InitializeAsync()
+	{
+		const string assetName = "Build Scenes Configuration";
+		const string projectPath = $"Settings/Build";
+		_buildScenesConfiguration = await _assets.LoadFrom<BuildScenesConfiguration>(projectPath + $"/{assetName}{AssetUtils.AssetFileExtensions[typeof(BuildScenesConfiguration)]}");
+		
+		if (_buildScenesConfiguration == null)
+		{
+			_buildScenesConfiguration = new BuildScenesConfiguration(_assets.AllocateAssetId(), "Build Scenes Configuration");
+			await _assets.Create(_buildScenesConfiguration, projectPath);
+		}
 	}
 
 	public async Task<Scene?> CreateScene(string name, string projectPath)
@@ -50,5 +64,16 @@ public class SceneManagementService : ISceneManagementService
 		await _assets.SaveProject();
 
 		_currentScene.Value = scene;
+	}
+
+	public BuildScenesConfiguration GetBuildConfiguration()
+	{
+		return _buildScenesConfiguration ?? throw new NullReferenceException("BuildScenesConfiguration is missing");
+	}
+
+	public void SetBuildSceneId(Scene scene, int id)
+	{
+		_logger.Log($"Set build scene id. [{scene.Name}] -> {id}");
+		GetBuildConfiguration().Scenes[id] = scene.Id;
 	}
 }

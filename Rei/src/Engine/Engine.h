@@ -1,12 +1,19 @@
 ﻿#pragma once
 
-#include <thread>
-
-#include "Modules/Assets/AssetManager.h"
 #include "Modules/MainThread/ReiMainThread.h"
 
 namespace rei
 {
+    namespace scenes
+    {
+        class SceneManager;
+    }
+
+    namespace assets
+    {
+        class AssetManager;
+    }
+
     class App;
 }
 
@@ -23,7 +30,9 @@ namespace rei::internal::engine
         main_thread::ReiMainThread _mainThread;
         std::shared_ptr<App> _app;
         std::shared_ptr<ecs::World> _ecsWorld;
+        
         std::shared_ptr<assets::AssetManager> _assetManager;
+        std::shared_ptr<scenes::SceneManager> _sceneManager;
 
         void OnUpdate() const;
     };

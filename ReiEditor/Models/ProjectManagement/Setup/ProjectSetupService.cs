@@ -37,7 +37,7 @@ public class ProjectSetupService : IProjectSetupService
 
 		var project = _activeProjectService.GetActiveProject();
 		
-		if (project.HasBeenSetup)
+		if (!project.HasBeenSetup)
 		{
 			project.SetHasBeenSetup(true);
 			await SetupNewProject();
@@ -56,6 +56,7 @@ public class ProjectSetupService : IProjectSetupService
 		var defaultScene = await CreateDefaultScene();
 		if (defaultScene != null)
 		{
+			_sceneManagementService.SetBuildSceneId(defaultScene, 0);
 			_activeProjectService.GetActiveProject().SetLastScene(defaultScene);
 		}
 		
