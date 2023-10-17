@@ -33,7 +33,7 @@ public class SceneManagementService : ISceneManagementService
 		
 		if (_buildScenesConfiguration == null)
 		{
-			_buildScenesConfiguration = new BuildScenesConfiguration(_assets.AllocateAssetId(), "Build Scenes Configuration");
+			_buildScenesConfiguration = new BuildScenesConfiguration(SpecialAssetIds.BUILD_SCENES_CONFIGURATION, "Build Scenes Configuration");
 			await _assets.Create(_buildScenesConfiguration, projectPath);
 		}
 	}

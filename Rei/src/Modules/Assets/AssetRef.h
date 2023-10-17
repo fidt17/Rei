@@ -7,7 +7,7 @@ namespace rei::assets
     {
         const AssetId AssetId;
 
-        explicit AssetRef();
-        explicit AssetRef(assets::AssetId assetId);
+        REI_API explicit AssetRef();
+        REI_API explicit AssetRef(assets::AssetId assetId);
     };
 }

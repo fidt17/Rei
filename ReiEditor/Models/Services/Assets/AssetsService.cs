@@ -161,9 +161,25 @@ public class AssetsService : IAssetsService
 		_saveInProcess.Value = false;
 	}
 
-	public Task<IEnumerable<AssetInfo>> GetBuildDirtyAssets()
+	// todo: track build dirty assets
+	public async Task<IEnumerable<Asset>> GetBuildDirtyAssets()
 	{
-		// todo: track build dirty assets
-		return Task.FromResult<IEnumerable<AssetInfo>>(_assetsMap.Values);
+		var assets = new List<Asset>();
+		
+		foreach (var assetInfo in _assetsMap.Values)
+		{
+			// using reflection to load assets by their type 
+			var loadMethod = typeof(AssetsService).GetMethod(nameof(Load));
+			var genericMethod = loadMethod!.MakeGenericMethod(assetInfo.AssetType);
+			var task = (Task) genericMethod.Invoke(this, new[] { assetInfo.Id })!;
+			await task;
+			var result = task.GetType().GetProperty("Result");
+			var asset = (Asset) result!.GetValue(task)!;
+			if (asset == null) throw new Exception($"Could not load asset with id {assetInfo.Id} of type {assetInfo.AssetType}");
+			
+			assets.Add(asset);
+		}
+		
+		return assets;
 	}
 }

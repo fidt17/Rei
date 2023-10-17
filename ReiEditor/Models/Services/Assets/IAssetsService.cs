@@ -13,10 +13,11 @@ public interface IAssetsService
 	Task RefreshAssets();
 	Task<bool> Create(Asset asset, string projectPath);
 	bool Exists<T>(string assetId) where T : Asset;
+
 	Task<T?> Load<T>(string assetId) where T : Asset;
 	Task<T?> LoadFrom<T>(string projectPath) where T : Asset;
 	
 	Task SaveProject();
 
-	Task<IEnumerable<AssetInfo>> GetBuildDirtyAssets();
+	Task<IEnumerable<Asset>> GetBuildDirtyAssets();
 }

@@ -29,13 +29,10 @@ namespace rei::internal::engine
         _mainThread(main_thread::ReiMainThread()),
         _app(std::move(app)),
         _ecsWorld(std::make_shared<ecs::World>()),
-        _assetManager(std::make_shared<assets::AssetManager>("C:\\Repos\\Rei Projects\\New Project\\bin\\Resources")), // todo: from configuration ?
+        _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
         _sceneManager(std::make_shared<scenes::SceneManager>())
     {
-
         LOG("Create engine")
-
-        Services::GetInstance()->SetAssetManager(_assetManager);
 
         _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
 
@@ -47,10 +44,10 @@ namespace rei::internal::engine
         LOG("Run")
 
         _sceneManager->LoadScene(0);
-        
+
         ConfigureAppUpdateCallback(_ecsWorld, _app);
         _app->OnStart();
-        
+
         _mainThread.Run();
     }
 

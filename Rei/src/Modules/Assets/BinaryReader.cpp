@@ -9,6 +9,11 @@ namespace rei::assets
         REI_THROW_IF(_stream.bad(), "Could not open stream for " + path)
     }
 
+    void BinaryReader::SetPosition(const i64 position)
+    {
+        _stream.seekg(position);
+    }
+
     u8 BinaryReader::GetU8() { return GetByType<u8>(); } 
 
     u16 BinaryReader::GetU16() { return GetByType<u16>(); } 
@@ -29,7 +34,7 @@ namespace rei::assets
 
     std::string BinaryReader::GetStr()
     {
-        const u32 len = GetU32();
+        const i32 len = GetI32();
         std::string str;
         str.resize(len);
         _stream.read(str.data(), len);

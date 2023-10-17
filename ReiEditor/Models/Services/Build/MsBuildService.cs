@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.Active;
-using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
@@ -24,15 +23,13 @@ public class MsBuildService : IBuildService
 	private readonly IEditorPreferencesService _editorPreferencesService;
 	private readonly IActiveProjectService _activeProjectService;
 	private readonly ILogger<MsBuildService> _logger;
-	private readonly IAssetsService _assetsService;
 	private readonly IAssetBuilder _assetBuilder;
 
-	public MsBuildService(IEditorPreferencesService editorPreferencesService, IActiveProjectService activeProjectService, ILogger<MsBuildService> logger, IAssetsService assetsService, IAssetBuilder assetBuilder)
+	public MsBuildService(IEditorPreferencesService editorPreferencesService, IActiveProjectService activeProjectService, ILogger<MsBuildService> logger, IAssetBuilder assetBuilder)
 	{
 		_editorPreferencesService = editorPreferencesService;
 		_activeProjectService = activeProjectService;
 		_logger = logger;
-		_assetsService = assetsService;
 		_assetBuilder = assetBuilder;
 	}
 
@@ -51,7 +48,7 @@ public class MsBuildService : IBuildService
 			
 			var project = _activeProjectService.GetActiveProject();
 
-			await BuildAssets(project);
+			await _assetBuilder.BuildAssets(GetBuildFolder(project));
 			await BuildSolution(project, configuration);
 		
 			_buildInProgress.Value = false;
@@ -66,21 +63,6 @@ public class MsBuildService : IBuildService
 		_buildInProgress.Value = false;
 		
 		return false;
-	}
-
-	private async Task BuildAssets(Project project)
-	{
-		var assets = await _assetsService.GetBuildDirtyAssets();
-		var buildFolder = GetBuildFolder(project);
-		if (Directory.Exists(buildFolder))
-		{
-			Directory.Delete(buildFolder, true);
-		}
-		
-		foreach (var asset in assets)
-		{
-			await _assetBuilder.Build(asset, buildFolder);
-		}
 	}
 
 	private async Task BuildSolution(Project project, BuildConfigurationEnum configuration)

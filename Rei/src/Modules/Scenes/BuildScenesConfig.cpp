@@ -8,8 +8,8 @@ namespace rei::scenes
 {
     BuildScenesConfig::BuildScenesConfig(assets::BinaryReader& reader)
     {
-        const auto scenesCount = reader.GetU32();
-        for (u32 i = 0; i < scenesCount; i++)
+        const auto scenesCount = reader.GetI32();
+        for (auto i = 0; i < scenesCount; i++)
         {
             auto sceneId = reader.GetU32();
             const auto assetId = reader.Get<assets::AssetId>();

@@ -31,6 +31,7 @@
     <ClInclude Include="src\Modules\Assets\AssetId.h" />
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
+    <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
     <ClInclude Include="src\Modules\Assets\BinaryReader.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\Scenes\BuildScenesConfig.h" />
@@ -83,6 +84,7 @@
     <ClCompile Include="src\Modules\Assets\AssetId.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
+    <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
     <ClCompile Include="src\Modules\Assets\BinaryReader.cpp" />
     <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Scenes\BuildScenesConfig.cpp" />

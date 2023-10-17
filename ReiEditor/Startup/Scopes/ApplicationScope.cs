@@ -11,9 +11,9 @@ using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
-using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
+using ReiEditor.Startup.Scopes.Editor.Modules;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows;
@@ -41,7 +41,7 @@ public class ApplicationScope : BaseLifetimeScope
 		b.RegisterGeneric(typeof(SystemConsoleLogger<>)).As(typeof(ILogger<>)).AsSelf();
 		
 		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
-		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
+		b.RegisterModule<SerializationModule>();
 
 		b.RegisterSingleton<EditorResourceService>().As<IEditorResourceService>();
 		b.RegisterSingleton<EngineSettingsProvider>().As<IEngineSettingsProvider>();

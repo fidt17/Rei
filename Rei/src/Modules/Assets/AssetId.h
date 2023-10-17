@@ -7,7 +7,7 @@ namespace rei::assets
     {
         const std::string Id;
 
-        explicit AssetId(std::string str);
-        explicit AssetId(BinaryReader& reader);
+        REI_API explicit AssetId(std::string str);
+        REI_API explicit AssetId(BinaryReader& reader);
     };
 }

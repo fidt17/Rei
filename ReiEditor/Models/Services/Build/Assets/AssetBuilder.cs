@@ -1,68 +1,72 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using ReiEditor.Models.Resources.Client;
+using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.Services.Build.Assets;
 
 public class AssetBuilder : IAssetBuilder
 {
-	private readonly Dictionary<Type, Func<BinaryWriter, AssetInfo, Task>> _builderMap;
-	private readonly IResourceService _resourceService;
+	private readonly IAssetsService _assetsService; 
+	private readonly IBinarySerializer _binarySerializer;
 	
-	public AssetBuilder(IResourceService resourceService)
+	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService)
 	{
-		_resourceService = resourceService;
-		_builderMap = ConfigureBuilderMap();
+		_binarySerializer = binarySerializer;
+		_assetsService = assetsService;
 	}
 
-	public async Task Build(AssetInfo assetInfo, string buildDir)
+	public async Task BuildAssets(string buildFolder)
 	{
-		var assetType = assetInfo.AssetType;
-		if (!_builderMap.ContainsKey(assetType)) throw new Exception("Unsupported asset type");
+		var assets = await _assetsService.GetBuildDirtyAssets();
+		if (Directory.Exists(buildFolder))
+		{
+			Directory.Delete(buildFolder, true);
+		}
+    		
+		var map = await Build(assets, buildFolder, "assets");
+		await Build(map, buildFolder, "map");
+	}
 
+	private async Task Build(BuildAssetMap map, string buildDir, string outputName)
+	{
 		var path = Path.Combine(buildDir, "Resources");
 		Directory.CreateDirectory(path);
-		path = Path.Combine(path, $"{GetAssetName(assetInfo)}.bin");
+		path = Path.Combine(path, $"{outputName}.bin");
 		
 		await using var stream = File.Open(path, FileMode.Create, FileAccess.Write);
 		await using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
+
+		_binarySerializer.Serialize(map, writer);
+		await File.WriteAllTextAsync(path.Replace(".bin", ".json"), JsonConvert.SerializeObject(map, Formatting.Indented));
+	}
+
+	private async Task<BuildAssetMap> Build(IEnumerable<Asset> assets, string buildDir, string outputName)
+	{
+		var map = new BuildAssetMap();
+
+		var innerPath = $"{outputName}.bin";
+		var path = Path.Combine(buildDir, "Resources");
+		Directory.CreateDirectory(path);
+		path = Path.Combine(path, innerPath);
 		
-		await _builderMap[assetType](writer, assetInfo);
-	}
+		await using var stream = File.Open(path, FileMode.OpenOrCreate, FileAccess.Write);
+		await using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
 
-	private string GetAssetName(AssetInfo assetInfo)
-	{
-		if (assetInfo.AssetType == typeof(BuildScenesConfiguration)) return "build_scenes";
-
-		return $"{assetInfo.Id}";
-	}
-
-	private Dictionary<Type, Func<BinaryWriter, AssetInfo, Task>> ConfigureBuilderMap()
-	{
-		return new Dictionary<Type, Func<BinaryWriter, AssetInfo, Task>>
+		var offset = 0L;
+		foreach (var asset in assets)
 		{
-			{
-				typeof(Scene), async (writer, assetPath) =>
-				{
-					var asset = await _resourceService.Load<Scene>(assetPath.FullPath);
-					if (asset == null) throw new Exception($"Could not load asset. {assetPath.FullPath}");
-					SceneAssetBuilder.Build(writer, asset);
-				}
-			},
+			var method = typeof(IBinarySerializer).GetMethod(nameof(IBinarySerializer.Serialize));
+			var generic = method!.MakeGenericMethod(asset.GetType());
+			generic.Invoke(_binarySerializer, new []{asset, (object)writer});
 			
-			{
-				typeof(BuildScenesConfiguration), async (writer, assetPath) =>
-				{
-					var asset = await _resourceService.Load<BuildScenesConfiguration>(assetPath.FullPath);
-					if (asset == null) throw new Exception($"Could not load asset. {assetPath.FullPath}");
-					BuildScenedConfigurationAssetBuilder.Build(writer, asset);
-				}
-			}
-		};
+			map.Add(new BuildAssetMap.AssetBuildInfo(asset.Id, innerPath, offset));
+			offset = writer.BaseStream.Length;
+		}
+
+		return map;
 	}
 }

@@ -11,7 +11,7 @@ namespace rei::scenes
     class Scene;
 
     SceneManager::SceneManager()
-        : _buildScenesConfig(GetAssetManager().Load<BuildScenesConfig>("build_scenes.bin"))
+        : _buildScenesConfig(GetAssetManager().LoadById<BuildScenesConfig>("0"))
     {
     }
 

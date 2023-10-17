@@ -13,17 +13,17 @@ namespace rei
         Services(Services& other) = delete;
         void operator=(const Services&) = delete;
 
-        void SetAssetManager(const std::shared_ptr<assets::AssetManager>& value) { _assetManager = value; }
-        REI_API std::shared_ptr<assets::AssetManager> GetAssetManager() const { return _assetManager; }
+        void SetAssetManager(assets::AssetManager* value) { _assetManager = value; }
+        REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
         
-        static Services* GetInstance();
+        REI_API static Services* GetInstance();
 
     private:
         Services() = default;
         static Services* _instance;
 
-        std::shared_ptr<assets::AssetManager> _assetManager;
+        assets::AssetManager* _assetManager;
     };
 
-    inline assets::AssetManager& GetAssetManager() { return *Services::GetInstance()->GetAssetManager(); }
+    inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
 }
