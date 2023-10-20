@@ -7,7 +7,7 @@ public interface IBinarySerializer
 	void Serialize<T>(T target, BinaryWriter writer);
 }
 
-public interface IBinarySerializer<in T>
+public interface IBinarySerializer<T>
 {
 	void Serialize(T target, BinaryWriter writer);
 }

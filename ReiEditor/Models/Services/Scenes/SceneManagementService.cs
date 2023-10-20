@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Common;
 
@@ -28,13 +29,13 @@ public class SceneManagementService : ISceneManagementService
 	public async Task InitializeAsync()
 	{
 		const string assetName = "Build Scenes Configuration";
-		const string projectPath = $"Settings/Build";
-		_buildScenesConfiguration = await _assets.LoadFrom<BuildScenesConfiguration>(projectPath + $"/{assetName}{AssetUtils.AssetFileExtensions[typeof(BuildScenesConfiguration)]}");
+		const string projectPath = $"Settings/Build/{assetName}{FileExtensions.ASSET}";
+		_buildScenesConfiguration = await _assets.LoadFrom<BuildScenesConfiguration>(projectPath);
 		
 		if (_buildScenesConfiguration == null)
 		{
-			_buildScenesConfiguration = new BuildScenesConfiguration(SpecialAssetIds.BUILD_SCENES_CONFIGURATION, "Build Scenes Configuration");
-			await _assets.Create(_buildScenesConfiguration, projectPath);
+			_buildScenesConfiguration = new BuildScenesConfiguration();
+			await _assets.Create(_buildScenesConfiguration, SpecialAssetIds.BUILD_SCENES_CONFIGURATION, projectPath);
 		}
 	}
 
@@ -42,8 +43,8 @@ public class SceneManagementService : ISceneManagementService
 	{
 		try
 		{
-			var scene = new Scene(_assets.AllocateAssetId(), name);
-			var didCreate = await _assets.Create(scene, projectPath);
+			var scene = new Scene(name);
+			var didCreate = await _assets.Create(scene, projectPath + $"/{name}{FileExtensions.SCENE}");
 			if (!didCreate) throw new Exception("Scene creation failed");
 
 			return scene;
@@ -60,7 +61,7 @@ public class SceneManagementService : ISceneManagementService
 	{
 		_logger.Log($"Loading scene [{scene.Name}]");
 		
-		_projectService.GetActiveProject().SetLastScene(scene);
+		_projectService.GetActiveProject().SetLastScene(_assets.GetAssetId(scene));
 		await _assets.SaveProject();
 
 		_currentScene.Value = scene;
@@ -74,6 +75,6 @@ public class SceneManagementService : ISceneManagementService
 	public void SetBuildSceneId(Scene scene, int id)
 	{
 		_logger.Log($"Set build scene id. [{scene.Name}] -> {id}");
-		GetBuildConfiguration().Scenes[id] = scene.Id;
+		GetBuildConfiguration().Scenes[id] = _assets.GetAssetId(scene);
 	}
 }

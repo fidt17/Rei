@@ -12,8 +12,8 @@ public static class FileExtensions
 	public const string REI_ENGINE = ".rei_engine";
 	
 	public const string SCENE = ".scene";
-	public const string BUILD_SCENES_CONFIG = ".bsc";
 	public const string ASSET = ".asset";
+	public const string META = ".meta";
 
 	public static FilePickerFileType GetFilePicker(string fileExtension)
 	{

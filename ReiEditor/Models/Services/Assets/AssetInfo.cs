@@ -1,17 +1,18 @@
-﻿using System;
-
-namespace ReiEditor.Models.Services.Assets;
+﻿namespace ReiEditor.Models.Services.Assets;
 
 public class AssetInfo
 {
-	public string Id { get; }
 	public string FullPath { get; }
-	public Type AssetType { get; }
+	public AssetMeta Meta { get; }
 
-	public AssetInfo(string id, string fullPath, Type assetType)
+	public AssetInfo(AssetMeta meta, string fullPath)
 	{
-		Id = id;
+		Meta = meta;
 		FullPath = fullPath;
-		AssetType = assetType;
+	}
+
+	public override string ToString()
+	{
+		return $"{Meta.Id} - {Meta.Type} - {FullPath}";
 	}
 }

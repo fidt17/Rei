@@ -1,20 +1,24 @@
 ﻿#include "pch.h"
 #include "BuildScenesConfig.h"
 
-#include "Modules/Assets/AssetId.h"
 #include "Modules/Assets/AssetRef.h"
+#include "../external/json.hpp"
+
+using json = nlohmann::json;
 
 namespace rei::scenes
 {
     BuildScenesConfig::BuildScenesConfig(assets::BinaryReader& reader)
     {
-        const auto scenesCount = reader.GetI32();
-        for (auto i = 0; i < scenesCount; i++)
-        {
-            auto sceneId = reader.GetU32();
-            const auto assetId = reader.Get<assets::AssetId>();
+        const auto str = reader.GetStr();
+        json data = json::parse(str);
 
-            _buildScenes.insert({sceneId, assets::AssetRef(assetId)});
+        auto m = data.at("Scenes").get<std::map<std::string, std::string>>();
+
+        for (const auto& [key, val] : m)
+        {
+            auto idx = std::stoi(key);
+            _buildScenes.insert({idx, assets::AssetRef(assets::AssetId(val))});
         }
     }
 

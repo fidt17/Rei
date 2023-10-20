@@ -8,8 +8,4 @@ public class BuildScenesConfiguration : Asset
 {
 	[JsonProperty]
 	public Dictionary<int, string> Scenes { get; } = new();
-
-	public BuildScenesConfiguration(string id, string name) : base(id, name)
-	{
-	}
 }

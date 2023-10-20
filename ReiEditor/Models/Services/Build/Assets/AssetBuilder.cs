@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Serialization;
 
@@ -10,18 +12,20 @@ namespace ReiEditor.Models.Services.Build.Assets;
 
 public class AssetBuilder : IAssetBuilder
 {
-	private readonly IAssetsService _assetsService; 
+	private readonly IAssetsService _assetsService;
+	private readonly IResourceService _resourceService;
 	private readonly IBinarySerializer _binarySerializer;
 	
-	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService)
+	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService, IResourceService resourceService)
 	{
 		_binarySerializer = binarySerializer;
 		_assetsService = assetsService;
+		_resourceService = resourceService;
 	}
 
 	public async Task BuildAssets(string buildFolder)
 	{
-		var assets = await _assetsService.GetBuildDirtyAssets();
+		var assets = _assetsService.GetBuildDirtyAssets();
 		if (Directory.Exists(buildFolder))
 		{
 			Directory.Delete(buildFolder, true);
@@ -44,7 +48,7 @@ public class AssetBuilder : IAssetBuilder
 		await File.WriteAllTextAsync(path.Replace(".bin", ".json"), JsonConvert.SerializeObject(map, Formatting.Indented));
 	}
 
-	private async Task<BuildAssetMap> Build(IEnumerable<Asset> assets, string buildDir, string outputName)
+	private async Task<BuildAssetMap> Build(IEnumerable<AssetInfo> assetInfos, string buildDir, string outputName)
 	{
 		var map = new BuildAssetMap();
 
@@ -57,13 +61,26 @@ public class AssetBuilder : IAssetBuilder
 		await using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
 
 		var offset = 0L;
-		foreach (var asset in assets)
+		foreach (var assetInfo in assetInfos)
 		{
+			var assetType = AssetUtils.GetAssetType(assetInfo.Meta.Type);
+			object? asset;
+			if (assetType.IsAssignableTo(typeof(Asset)))
+			{
+				asset = await _assetsService.LoadAsset(assetInfo);
+			}
+			else
+			{
+				asset = await _resourceService.Load<object>(assetInfo.FullPath);
+			}
+
+			if (asset == null) throw new Exception($"Could not load asset from {assetInfo.FullPath} of type {assetInfo.Meta.Type}-{assetType}");
+			
 			var method = typeof(IBinarySerializer).GetMethod(nameof(IBinarySerializer.Serialize));
-			var generic = method!.MakeGenericMethod(asset.GetType());
+			var generic = method!.MakeGenericMethod(assetType);
 			generic.Invoke(_binarySerializer, new []{asset, (object)writer});
 			
-			map.Add(new BuildAssetMap.AssetBuildInfo(asset.Id, innerPath, offset));
+			map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.Id, innerPath, offset));
 			offset = writer.BaseStream.Length;
 		}
 
