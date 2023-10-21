@@ -1,5 +1,12 @@
 ﻿#pragma once
-#include "BinaryReader.h"
+
+namespace rei
+{
+    namespace resources
+    {
+        class BinaryReader;
+    }
+}
 
 namespace rei::assets
 {
@@ -8,6 +15,6 @@ namespace rei::assets
         const std::string Id;
 
         REI_API explicit AssetId(std::string str);
-        REI_API explicit AssetId(BinaryReader& reader);
+        REI_API explicit AssetId(resources::BinaryReader& reader);
     };
 }

@@ -12,29 +12,29 @@ public class PlaymodeRunner : IPlaymodeRunner
 
 	private IntPtr? _enginePtr;
 	
-	private readonly IClientApi _clientApi;
+	private readonly IEngineApi _engineApi;
 	private readonly ILogger<PlaymodeRunner> _logger;
-	private readonly IClientLogger _clientLogger;
+	private readonly IEngineLogger _engineLogger;
 
-	public PlaymodeRunner(IClientApi clientApi, ILogger<PlaymodeRunner> logger, IClientLogger clientLogger)
+	public PlaymodeRunner(IEngineApi engineApi, ILogger<PlaymodeRunner> logger, IEngineLogger engineLogger)
 	{
-		_clientApi = clientApi;
+		_engineApi = engineApi;
 		_logger = logger;
-		_clientLogger = clientLogger;
+		_engineLogger = engineLogger;
 	}
 
 	public void StartPlaymode()
 	{
 		if (_enginePtr != null) throw new Exception("EnginePtr already exists");
 		
-		_enginePtr = _clientApi.CreateEngine();
+		_enginePtr = _engineApi.CreateEngine();
 		SetupPlaymode();
 
 		Task.Run(() =>
 		{
 			try
 			{
-				_clientApi.Start(_enginePtr.Value);
+				_engineApi.Start(_enginePtr.Value);
 			}
 			catch (Exception e)
 			{
@@ -48,12 +48,12 @@ public class PlaymodeRunner : IPlaymodeRunner
 	{
 		if (_enginePtr == null) throw new Exception("EnginePtr is missing");
 		
-		_clientApi.Shutdown(_enginePtr.Value, 1);
+		_engineApi.Shutdown(_enginePtr.Value, 1);
 		_enginePtr = null;
 	}
 
 	private void SetupPlaymode()
 	{
-		_clientLogger.SubscribeToClient();
+		_engineLogger.SubscribeToClient();
 	}
 }

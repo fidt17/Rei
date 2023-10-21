@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="src\Startup\EngineEntryPoint.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
     <ClCompile Include="src\Engine\Engine.cpp" />
@@ -15,17 +14,28 @@
     <ClCompile Include="src\Ecs\Filter.cpp" />
     <ClCompile Include="src\Ecs\FiltersRegistry.cpp" />
     <ClCompile Include="tests\BitMaskTests.cpp" />
-    <ClCompile Include="tests\TestInitialization.cpp" />
-    <ClCompile Include="src\Startup\EngineScope.cpp" />
+    <ClCompile Include="src\Engine\Services.cpp" />
+    <ClCompile Include="src\Modules\Assets\AssetId.cpp" />
+    <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
+    <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
+    <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
+    <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
+    <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
+    <ClCompile Include="src\Modules\Resources\Builders\DataAssetBuilder.cpp" />
+    <ClCompile Include="src\Modules\Resources\Builders\SceneAssetBuilder.cpp" />
+    <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp" />
+    <ClCompile Include="src\Modules\Resources\Serialization\BinaryWriter.cpp" />
+    <ClCompile Include="src\Modules\Scenes\BuildScenesConfig.cpp" />
+    <ClCompile Include="src\Modules\Scenes\Scene.cpp" />
+    <ClCompile Include="src\Modules\Scenes\SceneManager.cpp" />
+    <ClCompile Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.cpp" />
+    <ClCompile Include="src\Modules\UpdateLoop\UpdateLoopModule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\Rei.h" />
     <ClInclude Include="src\Common\Event.h" />
-    <ClInclude Include="src\Common\IFactory.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />
-    <ClInclude Include="src\Startup\EngineEntryPoint.h" />
-    <ClInclude Include="src\Api\EngineApi.h" />
     <ClInclude Include="src\Common\Logging\Logger.h" />
     <ClInclude Include="src\Common\Logging\LogLevelEnum.h" />
     <ClInclude Include="src\Common\Logging\LogMessage.h" />
@@ -45,9 +55,27 @@
     <ClInclude Include="src\Ecs\IComponentSet.h" />
     <ClInclude Include="src\Ecs\System.h" />
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
-    <ClInclude Include="src\App\App.h" />
-    <ClInclude Include="src\App\AppEntryPoint.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
-    <ClInclude Include="src\Startup\EngineScope.h" />
+    <ClInclude Include="external\json.hpp" />
+    <ClInclude Include="src\Ecs\IEcsModule.h" />
+    <ClInclude Include="src\Engine\Services.h" />
+    <ClInclude Include="src\Modules\Assets\AssetId.h" />
+    <ClInclude Include="src\Modules\Assets\AssetManager.h" />
+    <ClInclude Include="src\Modules\Assets\AssetRef.h" />
+    <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
+    <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
+    <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
+    <ClInclude Include="src\Modules\Resources\Builders\DataAssetBuilder.h" />
+    <ClInclude Include="src\Modules\Resources\Builders\SceneAssetBuilder.h" />
+    <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
+    <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
+    <ClInclude Include="src\Modules\Scenes\BuildScenesConfig.h" />
+    <ClInclude Include="src\Modules\Scenes\Scene.h" />
+    <ClInclude Include="src\Modules\Scenes\SceneManager.h" />
+    <ClInclude Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.h" />
+    <ClInclude Include="src\Modules\UpdateLoop\UpdateLoopModule.h" />
+    <ClInclude Include="src\Api\EditorApi.h" />
+    <ClInclude Include="src\Startup\App.h" />
+    <ClInclude Include="src\Startup\AppEntryPoint.h" />
   </ItemGroup>
 </Project>

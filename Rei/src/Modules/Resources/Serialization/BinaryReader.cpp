@@ -1,17 +1,23 @@
 ﻿#include "pch.h"
 #include "BinaryReader.h"
 
-namespace rei::assets
+namespace rei::resources
 {
-    BinaryReader::BinaryReader(const std::string& path)
+    BinaryReader::BinaryReader(const std::string& path, const i64 pos)
     {
-        _stream = std::ifstream(path, std::ios::in | std::ios::binary);
+        _stream.open(path, std::ios::in | std::ios::binary);
         REI_THROW_IF(_stream.bad(), "Could not open stream for " + path)
+        SetPosition(pos);
     }
 
     void BinaryReader::SetPosition(const i64 position)
     {
         _stream.seekg(position);
+    }
+
+    void BinaryReader::Close()
+    {
+        _stream.close();
     }
 
     u8 BinaryReader::GetU8() { return GetByType<u8>(); } 

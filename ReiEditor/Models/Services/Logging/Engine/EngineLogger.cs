@@ -5,23 +5,23 @@ using ReiEditor.Models.Services.Logging.EditorConsole;
 
 namespace ReiEditor.Models.Services.Logging.Engine;
 
-public class ClientLogger : IClientLogger
+public class EngineLogger : IEngineLogger
 {
-	private readonly IClientApi.CallbackDelegate _logCallbackDelegate;
+	private readonly IEngineApi.CallbackDelegate _logCallbackDelegate;
 	
 	private readonly IEditorConsoleService _editorConsoleService;
-	private readonly IClientApi _clientApi;
+	private readonly IEngineApi _engineApi;
 
-	public ClientLogger(IEditorConsoleService editorConsoleService, IClientApi clientApi)
+	public EngineLogger(IEditorConsoleService editorConsoleService, IEngineApi engineApi)
 	{
 		_editorConsoleService = editorConsoleService;
-		_clientApi = clientApi;
+		_engineApi = engineApi;
 		_logCallbackDelegate = HandleClientLogEvent;
 	}
 
 	public void SubscribeToClient()
 	{
-		_clientApi.AddLogCallback(Marshal.GetFunctionPointerForDelegate(_logCallbackDelegate));
+		_engineApi.AddLogCallback(Marshal.GetFunctionPointerForDelegate(_logCallbackDelegate));
 	}
 
 	private void HandleClientLogEvent(IntPtr messagePtr)

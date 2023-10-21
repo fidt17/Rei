@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "AssetsMap.h"
 
-rei::assets::AssetsMap::AssetsMap(BinaryReader& reader)
+rei::assets::AssetsMap::AssetsMap(resources::BinaryReader& reader)
 {
     const i32 count = reader.GetI32();
 

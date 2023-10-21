@@ -10,7 +10,6 @@ namespace rei::external
 {
     REI_EXTERN_API inline internal::engine::Engine* CreateEngine()
     {
-        rei::common::logging::Log::Initialize();
         return new internal::engine::Engine(CreateApp());
     }
 
@@ -22,6 +21,7 @@ namespace rei::external
     REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
     {
         engine->Shutdown(exitCode);
+        delete engine;
         return 0;
     }
 }
@@ -36,8 +36,6 @@ int main()
         std::cin.get();
 
         rei::external::Shutdown(engine, 0);
-
-        delete engine;
     }
     catch (const std::exception& e)
     {

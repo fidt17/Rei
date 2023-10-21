@@ -1,6 +1,6 @@
 ﻿namespace ReiEditor.Models.Services.Logging.Engine;
 
-public interface IClientLogger
+public interface IEngineLogger
 {
 	void SubscribeToClient();
 }

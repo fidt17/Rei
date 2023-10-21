@@ -1,11 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Dll;
+using ReiEditor.Models.Services.Logging.Engine;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.Services.Build.Assets;
@@ -13,26 +15,37 @@ namespace ReiEditor.Models.Services.Build.Assets;
 public class AssetBuilder : IAssetBuilder
 {
 	private readonly IAssetsService _assetsService;
-	private readonly IResourceService _resourceService;
 	private readonly IBinarySerializer _binarySerializer;
-	
-	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService, IResourceService resourceService)
+	private readonly IEngineApi _engineApi;
+	private readonly IClientDllManager _dllManager;
+	private readonly ILogger<AssetBuilder> _logger;
+	private readonly IEngineLogger _engineLogger;
+
+	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService, IEngineApi engineApi, IClientDllManager dllManager, ILogger<AssetBuilder> logger, IEngineLogger engineLogger)
 	{
 		_binarySerializer = binarySerializer;
 		_assetsService = assetsService;
-		_resourceService = resourceService;
+		_engineApi = engineApi;
+		_dllManager = dllManager;
+		_logger = logger;
+		_engineLogger = engineLogger;
 	}
 
 	public async Task BuildAssets(string buildFolder)
 	{
-		var assets = _assetsService.GetBuildDirtyAssets();
-		if (Directory.Exists(buildFolder))
+		if (!_dllManager.DllLoaded.Value)
 		{
-			Directory.Delete(buildFolder, true);
+			_dllManager.LoadDll();
 		}
+		
+		_engineLogger.SubscribeToClient();
+		
+		var assets = _assetsService.GetBuildDirtyAssets();
     		
 		var map = await Build(assets, buildFolder, "assets");
 		await Build(map, buildFolder, "map");
+		
+		_dllManager.UnloadDll();
 	}
 
 	private async Task Build(BuildAssetMap map, string buildDir, string outputName)
@@ -57,31 +70,17 @@ public class AssetBuilder : IAssetBuilder
 		Directory.CreateDirectory(path);
 		path = Path.Combine(path, innerPath);
 		
-		await using var stream = File.Open(path, FileMode.OpenOrCreate, FileAccess.Write);
-		await using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
-
-		var offset = 0L;
+		long offset = 0L;
 		foreach (var assetInfo in assetInfos)
 		{
-			var assetType = AssetUtils.GetAssetType(assetInfo.Meta.Type);
-			object? asset;
-			if (assetType.IsAssignableTo(typeof(Asset)))
+			var buildTask = Task.Run(() =>
 			{
-				asset = await _assetsService.LoadAsset(assetInfo);
-			}
-			else
-			{
-				asset = await _resourceService.Load<object>(assetInfo.FullPath);
-			}
-
-			if (asset == null) throw new Exception($"Could not load asset from {assetInfo.FullPath} of type {assetInfo.Meta.Type}-{assetType}");
-			
-			var method = typeof(IBinarySerializer).GetMethod(nameof(IBinarySerializer.Serialize));
-			var generic = method!.MakeGenericMethod(assetType);
-			generic.Invoke(_binarySerializer, new []{asset, (object)writer});
-			
-			map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.Id, innerPath, offset));
-			offset = writer.BaseStream.Length;
+				_logger.Log($"Building asset: {assetInfo.FullPath} to {path} with offset {offset}");
+				var bytesWritten = _engineApi.BuildAsset(assetInfo.FullPath, path, offset);
+				map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.Id, innerPath, offset));
+				offset += bytesWritten;
+			});
+			await buildTask;
 		}
 
 		return map;

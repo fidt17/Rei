@@ -17,7 +17,7 @@ namespace rei::assets
     class AssetsMap
     {
     public:
-        explicit AssetsMap(BinaryReader& reader);
+        explicit AssetsMap(resources::BinaryReader& reader);
 
         BuildAssetInfo GetAssetInfo(const std::string& id) const;
 

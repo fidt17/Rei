@@ -1,14 +1,15 @@
 ﻿#pragma once
 #include <fstream>
 
-namespace rei::assets
+namespace rei::resources
 {
     class BinaryReader
     {
     public:
-        REI_API explicit BinaryReader(const std::string& path);
+        REI_API explicit BinaryReader(const std::string& path, i64 pos = 0);
 
         REI_API void SetPosition(i64 position);
+        REI_API void Close();
         
         REI_API u8 GetU8();
         REI_API u16 GetU16();

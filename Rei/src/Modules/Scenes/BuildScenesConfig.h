@@ -1,12 +1,11 @@
 ﻿#pragma once
 #include "Modules/Assets/AssetRef.h"
-#include "Modules/Assets/BinaryReader.h"
 
 namespace rei::scenes
 {
     struct BuildScenesConfig
     {
-        explicit BuildScenesConfig(assets::BinaryReader& reader);
+        explicit BuildScenesConfig(resources::BinaryReader& reader);
 
         bool Has(u32 id) const;
         assets::AssetRef& GetScene(u32 id);

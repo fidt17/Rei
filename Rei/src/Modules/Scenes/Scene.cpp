@@ -3,7 +3,7 @@
 
 namespace rei::scenes
 {
-    Scene::Scene(assets::BinaryReader& reader)
+    Scene::Scene(resources::BinaryReader& reader)
     {
         LOG("SCENE: " + reader.GetStr());
     }

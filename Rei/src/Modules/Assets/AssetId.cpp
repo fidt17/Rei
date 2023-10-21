@@ -6,7 +6,7 @@ namespace rei::assets
     AssetId::AssetId(std::string str): Id(std::move(str))
     { }
 
-    AssetId::AssetId(BinaryReader& reader)
+    AssetId::AssetId(resources::BinaryReader& reader)
         : Id(reader.GetStr())
     {
     }

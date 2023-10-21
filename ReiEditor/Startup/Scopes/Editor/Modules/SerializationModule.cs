@@ -14,8 +14,6 @@ public class SerializationModule : Module
 		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
 		b.RegisterSingleton<BinarySerializer>().As<IBinarySerializer>();
 
-		b.RegisterSingleton<TextDataSerializer>().As<IBinarySerializer<object>>();
-		b.RegisterSingleton<SceneSerializer>().As<IBinarySerializer<Scene>>();
 		b.RegisterSingleton<BuildAssetMapSerializer>().As<IBinarySerializer<BuildAssetMap>>();
 	}
 }

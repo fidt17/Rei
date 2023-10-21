@@ -8,7 +8,7 @@ using json = nlohmann::json;
 
 namespace rei::scenes
 {
-    BuildScenesConfig::BuildScenesConfig(assets::BinaryReader& reader)
+    BuildScenesConfig::BuildScenesConfig(resources::BinaryReader& reader)
     {
         const auto str = reader.GetStr();
         json data = json::parse(str);

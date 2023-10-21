@@ -2,7 +2,7 @@ using System;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
-public interface IClientApi
+public interface IEngineApi
 {
 	void SetDllPtr(IntPtr ptr);
 
@@ -12,4 +12,6 @@ public interface IClientApi
 	
 	delegate void CallbackDelegate(IntPtr ptr);
 	void AddLogCallback(IntPtr ptr);
+
+	long BuildAsset(string assetPath, string destinationFile, long offset);
 }

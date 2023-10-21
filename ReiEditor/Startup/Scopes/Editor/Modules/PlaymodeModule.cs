@@ -14,13 +14,13 @@ public class PlaymodeModule : Module
 	protected override void Load(ContainerBuilder builder)
 	{
 		builder.RegisterSingleton<ClientDllManager>().As<IClientDllManager>();
-		builder.RegisterSingleton<ClientApi>().As<IClientApi>();
+		builder.RegisterSingleton<EngineApi>().As<IEngineApi>();
 
 		builder.RegisterSingleton<PlaymodeStarter>().As<IPlaymodeStarter>();
 		builder.RegisterSingleton<PlaymodeService>().As<IPlaymodeService>();
 		builder.RegisterType<PlaymodeRunner>().As<IPlaymodeRunner>().InstancePerDependency();
 		
-		builder.RegisterType<ClientLogger>().As<IClientLogger>().InstancePerDependency();
+		builder.RegisterType<EngineLogger>().As<IEngineLogger>().InstancePerDependency();
 		
 		ConfigureViews(builder);
 	}

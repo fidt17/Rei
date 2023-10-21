@@ -48,8 +48,14 @@ public class MsBuildService : IBuildService
 			
 			var project = _activeProjectService.GetActiveProject();
 
-			await _assetBuilder.BuildAssets(GetBuildFolder(project));
+			var buildFolder = GetBuildFolder(project);
+			if (Directory.Exists(buildFolder))
+			{
+				Directory.Delete(buildFolder, true);
+			}
+		
 			await BuildSolution(project, configuration);
+			await _assetBuilder.BuildAssets(buildFolder);
 		
 			_buildInProgress.Value = false;
 			

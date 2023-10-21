@@ -18,13 +18,13 @@ public class ClientDllManager : IClientDllManager, IDisposable
 
 	private readonly ILogger<ClientDllManager> _logger;
 	private readonly IActiveProjectService _activeProjectService;
-	private readonly IClientApi _clientApi;
+	private readonly IEngineApi _engineApi;
 
-	public ClientDllManager(ILogger<ClientDllManager> logger, IActiveProjectService activeProjectService, IClientApi clientApi)
+	public ClientDllManager(ILogger<ClientDllManager> logger, IActiveProjectService activeProjectService, IEngineApi engineApi)
 	{
 		_logger = logger;
 		_activeProjectService = activeProjectService;
-		_clientApi = clientApi;
+		_engineApi = engineApi;
 	}
 
 	public void Dispose()
@@ -47,7 +47,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
 
 		SetDllDirectory(Path.GetDirectoryName(dllPath)!);
 		_loadedDllPtr = LoadLibrary(GetProjectDllName());
-		_clientApi.SetDllPtr(_loadedDllPtr);
+		_engineApi.SetDllPtr(_loadedDllPtr);
 		_dllLoaded.Value = true;
 		_logger.Log($"Loaded client dll");
 	}
