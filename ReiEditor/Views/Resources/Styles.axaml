@@ -18,7 +18,7 @@
         <SolidColorBrush x:Key="Gray_0" Color="#30363d" />
 
         <SolidColorBrush x:Key="White" Color="#e6edf3" />
-
+        <SolidColorBrush x:Key="Clear" Color="#00000000" />
 
         <SolidColorBrush x:Key="Info" Color="#e6edf3" />
         <SolidColorBrush x:Key="Warning" Color="#fcc943" />
@@ -33,6 +33,10 @@
         <Setter Property="Foreground" Value="{StaticResource White}" />
         <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
         <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Button.Clear">
+        <Setter Property="Background" Value="{StaticResource Clear}" />
     </Style>
 
     <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -76,7 +80,7 @@
     <Style Selector="TextBlock.h6">
         <Setter Property="FontSize" Value="10.72" />
     </Style>
-    
+
     <Style Selector="SelectableTextBlock.h1">
         <Setter Property="FontSize" Value="32" />
     </Style>

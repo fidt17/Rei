@@ -30,6 +30,8 @@
         <entry key="Editor/Views/Windows/ProjectSelectionWindowView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ShellWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="ReiEditor/App.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuButton.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/Effects/RingSpinner.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/MainWindow.axaml" value="ReiEditor/ReiEditor.csproj" />

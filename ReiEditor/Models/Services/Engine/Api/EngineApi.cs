@@ -22,7 +22,7 @@ public class EngineApi : IEngineApi
 	}
 
 	private delegate IntPtr CreateEngineDelegate();
-	public IntPtr CreateEngine() => Invoke<IntPtr>(typeof(CreateEngineDelegate));
+	public IntPtr CreateEngine() => Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine");
 
 	private delegate void StartEngineDelegate(IntPtr enginePtr);
 	public void Start(IntPtr enginePtr) => Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
@@ -56,29 +56,29 @@ public class EngineApi : IEngineApi
 	}
 */
 	
-	private void Invoke(Type delegateType, [CallerMemberName] string caller = "", params object?[]? args)
+	private void Invoke(Type delegateType, [CallerMemberName] string methodName = "", params object?[]? args)
 	{
 		try
 		{
-			var d = Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, caller), delegateType);
+			var d = Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType);
 			d.DynamicInvoke(args);
 		}
 		catch (Exception)
 		{
-			_logger.LogError($"Dll invoke error [{caller}]");
+			_logger.LogError($"Dll invoke error [{methodName}]");
 			throw;
 		}
 	}
 
-	private T Invoke<T>(Type delegateType, [CallerMemberName] string caller = "", params object?[]? args)
+	private T Invoke<T>(Type delegateType, string methodName, params object?[]? args)
 	{
 		try
 		{
-			return (T?) Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, caller), delegateType).DynamicInvoke(args) ?? throw new InvalidOperationException(caller);
+			return (T?) Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType).DynamicInvoke(args) ?? throw new InvalidOperationException(methodName);
 		}
-		catch (Exception e)
+		catch (Exception)
 		{
-			_logger.LogError($"Dll invoke error [{caller}]");
+			_logger.LogError($"Dll invoke error [{methodName}]");
 			throw;
 		}
 	}

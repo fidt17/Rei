@@ -1,0 +1,20 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Controls.ContextMenu.ContextMenuButton">
+    <Border
+        x:Name="rootBorder"
+        Background="{StaticResource Clear}"
+        PointerPressed="InputElement_OnPointerPressed">
+        <FlyoutBase.AttachedFlyout>
+            <Flyout
+                Placement="Pointer"
+                FlyoutPresenterClasses="Clear">
+                <contextMenu:ContextMenuView DataContext="{Binding $parent[contextMenu:ContextMenuButton].ContextMenuData}" />
+            </Flyout>
+        </FlyoutBase.AttachedFlyout>
+    </Border>
+</UserControl>

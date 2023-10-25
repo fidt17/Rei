@@ -50,10 +50,6 @@
       <DependentUpon>ContextMenuView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Controls\ContextMenuView.axaml.cs">
-      <DependentUpon>ContextMenuView.axaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Update="Views\Windows\Editor\ProjectEditorWindow.axaml.cs">
       <DependentUpon>ProjectEditorWindow.axaml</DependentUpon>
       <SubType>Code</SubType>
@@ -118,11 +114,14 @@
       <DependentUpon>EditorSetupTabView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Controls\ContextMenu\ContextMenuView.axaml.cs">
+      <DependentUpon>ContextMenuView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
 
 
   <ItemGroup>
-    <AdditionalFiles Include="Views\Controls\ContextMenuView.axaml" />
     <AdditionalFiles Include="Views\Controls\Effects\RingSpinner.axaml" />
     <AdditionalFiles Include="Views\Resources\Styles.axaml" />
     <AdditionalFiles Include="Views\Windows\Editor\ProjectEditorWindow.axaml" />

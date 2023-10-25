@@ -1,12 +1,15 @@
 ﻿using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
+using ReiEditor.ViewModels.Controls;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Hierarchy;
 
 public class HierarchyWindowViewModel : BaseViewModel
 {
 	public ObservableField<string> SceneName { get; } = new("Scene Name");
+
+	public ContextMenuViewModel RootContextMenu { get; } = new();
 
 	private readonly IHierarchyService _hierarchyService;
 
@@ -19,6 +22,8 @@ public class HierarchyWindowViewModel : BaseViewModel
 		_hierarchyService = hierarchyService;
 		
 		_hierarchyService.ActiveHierarchy.Subscribe(HandleActiveHierarchyChangedEvent);
+
+		RootContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("New Entity"));
 	}
 
 	public override void Dispose()

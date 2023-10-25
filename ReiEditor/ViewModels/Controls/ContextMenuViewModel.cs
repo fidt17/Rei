@@ -7,6 +7,8 @@ namespace ReiEditor.ViewModels.Controls;
 
 public class ContextMenuViewModel : BaseViewModel
 {
+	public event Action? AnyCommandExecutedEvent;
+	
 	public class ContextMenuOption
 	{
 		public RelayCommand Command { get; }
@@ -23,5 +25,9 @@ public class ContextMenuViewModel : BaseViewModel
 
 	public ObservableCollection<ContextMenuOption> Options { get; } = new();
 
-	public void AddOption(ContextMenuOption option) => Options.Add(option);
+	public void AddOption(ContextMenuOption option)
+	{
+		Options.Add(option);
+		option.Command.ExecutedEvent += () => AnyCommandExecutedEvent?.Invoke();
+	}
 }

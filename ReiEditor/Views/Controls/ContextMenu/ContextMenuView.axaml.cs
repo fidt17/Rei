@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ReiEditor.Views.Controls;
+namespace ReiEditor.Views.Controls.ContextMenu;
 
 public partial class ContextMenuView : UserControl
 {

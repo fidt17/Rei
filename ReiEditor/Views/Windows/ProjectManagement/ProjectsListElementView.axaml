@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:controls1="clr-namespace:ReiEditor.Views.Controls"
              xmlns:projectManagement="clr-namespace:ReiEditor.ViewModels.Windows.ProjectManagement"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
              mc:Ignorable="d"
              d:DesignWidth="400"
              x:Class="ReiEditor.Views.Windows.ProjectManagement.ProjectsListElementView"
@@ -46,7 +46,7 @@
 
             <Button.Flyout>
                 <Flyout FlyoutPresenterClasses="Clear">
-                    <controls1:ContextMenuView DataContext="{Binding ContextMenu}" />
+                    <contextMenu:ContextMenuView DataContext="{Binding ContextMenu}" />
                 </Flyout>
             </Button.Flyout>
 

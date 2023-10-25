@@ -1,6 +1,5 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Build.Assets;
-using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Models.Services.Serialization.Assets;
 using ReiEditor.Utils.Extensions;
