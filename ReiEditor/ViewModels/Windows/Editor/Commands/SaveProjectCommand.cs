@@ -2,7 +2,7 @@
 using System.Windows.Input;
 using ReiEditor.Models.Services.Assets;
 
-namespace ReiEditor.Views.Windows.Editor.Commands;
+namespace ReiEditor.ViewModels.Windows.Editor.Commands;
 
 public class SaveProjectCommand : ICommand
 {

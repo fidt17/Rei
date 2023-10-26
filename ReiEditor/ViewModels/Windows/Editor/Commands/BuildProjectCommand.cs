@@ -4,7 +4,7 @@ using System.Windows.Input;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Build;
 
-namespace ReiEditor.Views.Windows.Editor.Commands;
+namespace ReiEditor.ViewModels.Windows.Editor.Commands;
 
 public class BuildProjectCommand : ICommand, IDisposable
 {

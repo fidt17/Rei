@@ -2,7 +2,7 @@
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Utils.Extensions;
-using ReiEditor.Views.Windows.Editor.Commands;
+using ReiEditor.ViewModels.Windows.Editor.Commands;
 
 namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
@@ -14,6 +14,7 @@ public class BuildModule : Module
 		builder.RegisterSingleton<AssetBuilder>().As<IAssetBuilder>();
 		builder.RegisterSingleton<BuildStarter>().As<IBuildStarter>();
 		builder.RegisterNonLazy<BuildProcedureTracker>();
+		
 		builder.RegisterType<BuildProjectCommand>();
 	}
 }

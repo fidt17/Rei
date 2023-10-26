@@ -5,7 +5,6 @@ using ReiEditor.ViewModels.Windows.Editor.Console;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchy;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
-using ReiEditor.Views.Windows.Editor.Commands;
 
 namespace ReiEditor.ViewModels.Windows.Editor;
 

@@ -4,12 +4,12 @@ using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
 using ReiEditor.Startup.Scopes.Editor.Modules;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor;
+using ReiEditor.ViewModels.Windows.Editor.Commands;
 
 namespace ReiEditor.Startup.Scopes.Editor;
 
@@ -25,22 +25,22 @@ public class EditorScope : BaseLifetimeScope
 		
 		b.RegisterSingleton<ResourceService>().As<IResourceService>();
 		b.RegisterSingleton<EditorProceduresService>().As<IEditorProceduresService>();
-		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
-		b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
 		b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
+		
+		b.RegisterType<SaveProjectCommand>();
+		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
 
-		b.RegisterModule<CommandsModule>();
 		b.RegisterModule<EditorConsoleModule>();
-		b.RegisterModule<HierarchyModule>();
+		b.RegisterModule<SceneModule>();
 		b.RegisterModule<PlaymodeModule>();
 		b.RegisterModule<SettingsModule>();
 		b.RegisterModule<BuildModule>();
 		b.RegisterModule<StatusBarModule>();
 		
-		ConfigureViews(b);
+		ConfigureViewModules(b);
 	}
 
-	private void ConfigureViews(ContainerBuilder b)
+	private void ConfigureViewModules(ContainerBuilder b)
 	{
 		b.RegisterType<ProjectEditorWindowViewModel>();
 	}

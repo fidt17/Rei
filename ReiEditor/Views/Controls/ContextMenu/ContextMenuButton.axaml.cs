@@ -41,7 +41,10 @@ public partial class ContextMenuButton : UserControl
 
 	private void InputElement_OnPointerPressed(object? sender, PointerPressedEventArgs e)
 	{
-		FlyoutBase.ShowAttachedFlyout((sender as Control)!);
+		if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
+		{
+			FlyoutBase.ShowAttachedFlyout((sender as Control)!);
+		}
 	}
 
 	private void HandleAnyCommandExecutedEvent()

@@ -22,11 +22,7 @@ public class HierarchyService : IHierarchyService, IDisposable
 		_sceneManagementService.CurrentScene.Unsubscribe(HandleCurrentSceneChangedEvent);
 	}
 
-	private void SelectSceneHierarchy(Scene scene)
-	{
-		var h = new Hierarchy(scene.Name);
-		_activeHierarchy.Value = h;
-	}
+	private void SelectSceneHierarchy(Scene scene) => _activeHierarchy.Value = new Hierarchy(scene);
 
 	private void HandleCurrentSceneChangedEvent(Scene? scene)
 	{
