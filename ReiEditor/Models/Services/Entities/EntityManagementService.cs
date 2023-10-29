@@ -6,6 +6,9 @@ namespace ReiEditor.Models.Services.Entities;
 
 public class EntityManagementService : IEntityManagementService
 {
+	public event Action<GameEntity>? EntityCreatedEvent;
+	public event Action<GameEntity>? EntityDeletedEvent;
+	
 	private readonly ILogger<EntityManagementService> _logger;
 	private readonly ISceneManagementService _sceneManagement;
 
@@ -26,6 +29,7 @@ public class EntityManagementService : IEntityManagementService
 			s.AddEntity(e);
 
 			_logger.Log($"Created {e}");
+			EntityCreatedEvent?.Invoke(e);
 			return e;
 		}
 		catch (Exception exception)
@@ -34,5 +38,23 @@ public class EntityManagementService : IEntityManagementService
 		}
 
 		return null;
+	}
+
+	public void DeleteEntity(GameEntity e)
+	{
+		try
+		{
+			if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
+
+			var s = _sceneManagement.CurrentScene.Value;
+			s.DeleteEntity(e);
+
+			_logger.Log($"Deleted {e}");
+			EntityDeletedEvent?.Invoke(e);
+		}
+		catch (Exception exception)
+		{
+			_logger.LogException(exception);
+		}
 	}
 }

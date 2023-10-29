@@ -30,6 +30,8 @@
         <entry key="Editor/Views/Windows/ProjectSelectionWindowView.axaml" value="Editor/Editor.csproj" />
         <entry key="Editor/Views/Windows/ShellWindow.axaml" value="Editor/Editor.csproj" />
         <entry key="ReiEditor/App.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/Buttons/HorizontalExpandToggle.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/Buttons/Toggles/TreeToggle.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuButton.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
@@ -39,8 +41,11 @@
         <entry key="ReiEditor/Views/Resources/Styles.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleLogMessageView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Hierarchies/HierarchyNode.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Hierarchies/HierarchyWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyGameEntity.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyNode.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/PlaymodePanelView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />

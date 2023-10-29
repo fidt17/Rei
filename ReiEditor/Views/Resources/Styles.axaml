@@ -16,6 +16,8 @@
         <SolidColorBrush x:Key="Dark_4" Color="#20262F" />
 
         <SolidColorBrush x:Key="Gray_0" Color="#30363d" />
+        <SolidColorBrush x:Key="Gray_1" Color="#424950" />
+        <SolidColorBrush x:Key="Gray_2" Color="#60686F" />
 
         <SolidColorBrush x:Key="White" Color="#e6edf3" />
         <SolidColorBrush x:Key="Clear" Color="#00000000" />
@@ -37,6 +39,7 @@
 
     <Style Selector="Button.Clear">
         <Setter Property="Background" Value="{StaticResource Clear}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Clear}" />
     </Style>
 
     <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">

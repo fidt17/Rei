@@ -6,7 +6,7 @@
         xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
         xmlns:playmode="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
         xmlns:statusBar="clr-namespace:ReiEditor.Views.Windows.Editor.StatusBar"
-        xmlns:hierarchy="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchy"
+        xmlns:hierarchies="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
@@ -53,7 +53,7 @@
         <Grid Grid.Row="1"
               ColumnDefinitions="*, Auto" RowDefinitions="*, Auto">
 
-            <hierarchy:HierarchyWindow
+            <hierarchies:HierarchyWindow
                 Width="300"
                 Grid.Column="1" Grid.Row="0"
                 DataContext="{Binding Hierarchy}" />

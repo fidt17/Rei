@@ -1,0 +1,55 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Controls.Buttons.HorizontalExpandToggle"
+             x:DataType="buttons:HorizontalExpandToggle">
+
+    <ToggleButton
+        x:Name="toggle"
+        IsChecked="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=buttons:HorizontalExpandToggle}}">
+        <ToggleButton.Styles>
+            <Style Selector="ToggleButton">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="ToggleButton:pointerover /template/ ContentPresenter">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="ToggleButton:checked /template/ ContentPresenter">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="ToggleButton:pressed /template/ ContentPresenter">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+        </ToggleButton.Styles>
+
+        <Border
+            Classes.Expanded="{Binding IsChecked, ElementName=toggle}"
+            Width="8"
+            Height="8"
+            BorderThickness="0, 1, 1, 0">
+            <Border.Styles>
+
+                <Style Selector="Border">
+                    <Setter Property="Transitions">
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:.08" />
+                        </Transitions>
+                    </Setter>
+                </Style>
+
+                <Style Selector="Border.Expanded">
+                    <Setter Property="RenderTransform" Value="rotate(135deg)" />
+                    <Setter Property="BorderBrush" Value="{StaticResource White}" />
+                </Style>
+                <Style Selector="Border:not(.Expanded)">
+                    <Setter Property="RenderTransform" Value="rotate(45deg)" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Gray_2}" />
+                </Style>
+            </Border.Styles>
+
+        </Border>
+    </ToggleButton>
+</UserControl>

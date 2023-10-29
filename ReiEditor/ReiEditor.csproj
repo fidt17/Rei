@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <UpToDateCheckInput Remove="Views\MainWindow.axaml" />
+    <UpToDateCheckInput Remove="Views\Controls\Buttons\Toggles\TreeToggle.axaml" />
   </ItemGroup>
 
 

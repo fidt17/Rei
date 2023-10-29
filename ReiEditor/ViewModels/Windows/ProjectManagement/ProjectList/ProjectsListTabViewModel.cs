@@ -1,9 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Net.Mime;
-using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Threading;
 using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.BookmarkedProjects;
@@ -40,14 +36,6 @@ public class ProjectsListTabViewModel : BaseViewModel
 		
 		_bookmarkedProjectsService.BookmarkedProjectsCollectionChangedEvent += HandleBookmarkedProjectsCollectionChangedEvent;
 		UpdateAvailableProjects(_bookmarkedProjectsService.GetBookmarkedProjects());
-
-		// TODO: Remove
-		Dispatcher.UIThread.InvokeAsync(async () =>
-		{
-			await Task.Delay(500);
-			AvailableProjects.FirstOrDefault()?.OpenProjectCommand.Execute(null);
-		});
-		/////
 	}
 
 	public override void Dispose()

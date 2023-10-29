@@ -4,7 +4,7 @@ using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Commands.Entities;
-using ReiEditor.ViewModels.Windows.Editor.Hierarchy;
+using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
@@ -25,6 +25,6 @@ public class SceneModule : Module
 	private void ConfigureViewModels(ContainerBuilder b)
 	{
 		b.RegisterType<HierarchyWindowViewModel>();
-		b.RegisterType<HierarchyGameEntityViewModel>();
+		b.RegisterType<HierarchyNodeViewModel>();
 	}
 }

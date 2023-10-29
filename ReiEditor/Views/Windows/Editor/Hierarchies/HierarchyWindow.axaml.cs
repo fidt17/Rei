@@ -1,7 +1,6 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace ReiEditor.Views.Windows.Editor.Hierarchy;
+namespace ReiEditor.Views.Windows.Editor.Hierarchies;
 
 public partial class HierarchyWindow : UserControl
 {

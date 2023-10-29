@@ -2,15 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:hierarchy="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Hierarchy"
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
-             xmlns:hierarchy1="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchy"
+             xmlns:behaviours="clr-namespace:ReiEditor.Views.Behaviours"
+             xmlns:hierarchies="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Hierarchies"
+             xmlns:hierarchies1="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
              mc:Ignorable="d"
              d:DesignWidth="300" d:DesignHeight="450"
-             x:Class="ReiEditor.Views.Windows.Editor.Hierarchy.HierarchyWindow"
-             x:DataType="hierarchy:HierarchyWindowViewModel">
+             x:Class="ReiEditor.Views.Windows.Editor.Hierarchies.HierarchyWindow"
+             x:DataType="hierarchies:HierarchyWindowViewModel">
     <Design.DataContext>
-        <hierarchy:HierarchyWindowViewModel />
+        <hierarchies:HierarchyWindowViewModel />
     </Design.DataContext>
 
     <Border Classes="Window">
@@ -29,20 +30,23 @@
 
             <!-- Content -->
             <Border Grid.Row="1" Classes="WindowContent">
-                <Grid>
-                    <contextMenu:ContextMenuButton
-                        ContextMenuData="{Binding RootContextMenu}" />
+                <Grid RowDefinitions="Auto, *">
 
                     <ScrollViewer>
                         <ItemsControl
                             ItemsSource="{Binding Nodes}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="hierarchy:HierarchyGameEntityViewModel">
-                                    <hierarchy1:HierarchyGameEntity Margin="2"/>
+                                <DataTemplate DataType="hierarchies:HierarchyNodeViewModel">
+                                    <hierarchies1:HierarchyNode />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+
+                    <contextMenu:ContextMenuButton
+                        behaviours:TappedBehaviour.Command="{Binding ResetSelectionCommand}"
+                        Grid.Row="1"
+                        ContextMenuData="{Binding RootContextMenu}" />
                 </Grid>
             </Border>
 

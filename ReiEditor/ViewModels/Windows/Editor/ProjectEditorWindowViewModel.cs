@@ -2,7 +2,7 @@
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Commands;
 using ReiEditor.ViewModels.Windows.Editor.Console;
-using ReiEditor.ViewModels.Windows.Editor.Hierarchy;
+using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
 
