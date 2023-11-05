@@ -1,0 +1,31 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:hierarchies="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Hierarchies.HierarchyMoveTargetLine">
+    <Grid
+        Height="8">
+
+        <Grid
+            IsVisible="{Binding IsOver, RelativeSource={RelativeSource AncestorType=hierarchies:HierarchyMoveTargetLine}}"
+            Margin="2">
+            <Border
+                HorizontalAlignment="Left"
+                Width="6"
+                Height="6"
+                BorderThickness="0, 2, 2, 0"
+                BorderBrush="{StaticResource White}"
+                Background="{StaticResource Clear}">
+                <Border.RenderTransform>
+                    <RotateTransform Angle="45" />
+                </Border.RenderTransform>
+            </Border>
+
+            <Grid
+                Margin="6,0,0,0"
+                Background="{StaticResource White}" Height="1" />
+        </Grid>
+    </Grid>
+</UserControl>

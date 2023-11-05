@@ -7,6 +7,7 @@ namespace ReiEditor.Models.Services.Entities;
 public class EntityManagementService : IEntityManagementService
 {
     public event Action<GameEntity>? EntityCreatedEvent;
+    public event Action<GameEntity>? EntityMovedEvent;
     public event Action<GameEntity>? EntityDeletedEvent;
 	
     private readonly ILogger<EntityManagementService> _logger;
@@ -46,6 +47,22 @@ public class EntityManagementService : IEntityManagementService
         {
             if (string.IsNullOrEmpty(name)) throw new Exception($"Invalid entity name [{name}]");
             e.SetName(name);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+        }
+    }
+
+    public void SetParent(GameEntity e, GameEntity? parent, int idx)
+    {
+        var scene = _sceneManagement.CurrentScene.Value;
+        if (scene == null) return;
+        
+        try
+        {
+            if (!scene.MoveEntity(e, parent, idx)) return;
+            EntityMovedEvent?.Invoke(e);
         }
         catch (Exception exception)
         {

@@ -4,12 +4,15 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using ReiEditor.Models.Resources;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
 
 public partial class HierarchyNode : UserControl
 {
+    private const string DragOverClass = "DragOver";
+    
     private HierarchyNodeViewModel? _vm;
     
     public HierarchyNode()
@@ -17,6 +20,8 @@ public partial class HierarchyNode : UserControl
         InitializeComponent();
         
         DataContextChanged += HandleDataContextChangedEvent;
+        
+        ConfigureDragAndDrop();
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -83,5 +88,49 @@ public partial class HierarchyNode : UserControl
             vm?.ConfirmRenameCommand.Execute(NameTextBox.Text);
             RootBorder.Focus();
         }
+    }
+
+    private void ConfigureDragAndDrop()
+    {
+        var target = RootBorder;
+        var pointerDown = false;
+        
+        async void DoDrag(object? sender, PointerPressedEventArgs e)
+        {
+            pointerDown = true;
+            if (_vm == null) return;
+
+            if (!_vm.Selected.Value)
+            {
+                await Task.Delay(100);
+                _vm.SelectCommand.Execute(null);
+            }
+            
+            await Task.Delay(100);
+            if (!pointerDown) return;
+                
+            var dragData = new DataObject();
+            dragData.Set("Node", _vm);
+
+            await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
+        }
+
+        void Drop(object? sender, DragEventArgs e)
+        {
+            if (_vm == null) return;
+            
+            var nodeToMove = e.Data.Get("Node") as HierarchyNodeViewModel;
+            if (nodeToMove == null) return;
+            
+            nodeToMove.MoveNodeCommand.Execute(new MoveNodeCommand.MoveArgs(_vm.Node, _vm.ChildNodes.Count));
+            e.Handled = true;
+        }
+
+        target.PointerPressed += DoDrag;
+        target.PointerReleased += (_, __) =>
+        {
+            pointerDown = false;
+        };
+        AddHandler(DragDrop.DropEvent, Drop);
     }
 }
