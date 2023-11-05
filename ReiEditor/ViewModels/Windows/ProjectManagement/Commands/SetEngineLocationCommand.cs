@@ -51,6 +51,8 @@ public class SetEngineLocationCommand : ICommand
 				_logger.LogException(e);
 			}
 		});
+		
+		CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 	}
 
 	private async Task<string?> GetEnginePath()

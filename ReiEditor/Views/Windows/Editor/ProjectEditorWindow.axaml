@@ -13,7 +13,8 @@
         Width="1300" Height="800"
         Background="{StaticResource Dark_0}"
         Title="Rei Engine"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Focusable="True">
 
     <Design.DataContext>
         <editor:ProjectEditorWindowViewModel />

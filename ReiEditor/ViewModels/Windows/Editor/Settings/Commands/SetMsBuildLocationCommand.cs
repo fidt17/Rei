@@ -52,6 +52,8 @@ public class SetMsBuildLocationCommand : ICommand
 				_logger.LogException(e);
 			}
 		});
+		
+		CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 	}
     
 	private async Task<string?> GetPath()

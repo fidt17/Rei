@@ -8,5 +8,8 @@ public interface IEntityManagementService
 	event Action<GameEntity> EntityDeletedEvent;
 	
 	GameEntity? CreateEntity(string name);
+
+	void RenameEntity(GameEntity e, string name);
+	
 	void DeleteEntity(GameEntity e);
 }

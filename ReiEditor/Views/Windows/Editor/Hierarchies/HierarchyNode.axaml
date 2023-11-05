@@ -47,10 +47,34 @@
                 <TextBlock
                     VerticalAlignment="Center"
                     Margin="4,0,0,0"
-                    Text="{Binding Name}" FontSize="14" />
+                    Text="{Binding Name.Value}"
+                    FontSize="14" />
+
+                <TextBox
+                    x:Name="NameTextBox"
+                    KeyDown="NameTextBox_OnKeyDown"
+                    IsVisible="{Binding IsFocused, RelativeSource={RelativeSource Self}}"
+                    Text="{Binding RenameValue.Value}"
+                    Background="{StaticResource Gray_0}"
+                    CaretBrush="{StaticResource White}"
+                    SelectionBrush="{StaticResource Gray_2}"
+                    Padding="4,1,0,1"
+                    MinHeight="14"
+                    FontSize="14">
+                    <TextBox.Styles>
+                        <Style Selector="TextBox:focus">
+                            <Setter Property="Foreground" Value="{StaticResource White}" />
+                        </Style>
+                        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+                            <Setter Property="Background" Value="{StaticResource Gray_0}" />
+                        </Style>
+                    </TextBox.Styles>
+                </TextBox>
 
                 <contextMenu:ContextMenuButton
-                    ContextMenuData="{Binding ContextMenu}" />
+                    IsVisible="{Binding !IsFocused, ElementName=NameTextBox}"
+                    ContextMenuData="{Binding ContextMenu}"
+                    Tapped="InputElement_OnTapped" />
             </Grid>
         </Grid>
     </Border>
