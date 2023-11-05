@@ -79,8 +79,6 @@ public class HierarchyNodeViewModel : BaseViewModel
                 yield return n;
             }
         }
-
-        System.Console.WriteLine(Name.Value + " " + ChildNodes.Count);
     }
 
     public IEnumerable<HierarchyNodeViewModel> GetAllChildNodesRecursive() => ChildNodes.SelectMany(node => node.GetAllChildNodesRecursive());
@@ -92,9 +90,4 @@ public class HierarchyNodeViewModel : BaseViewModel
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;
     private void StartRename() => RenameValue.Value = Name.Value;
     private void ConfirmRename(string name) => _entityManagementService.RenameEntity(Node.Entity, name);
-
-    private void HandleDropCommand(DragEventArgs obj)
-    {
-        System.Console.WriteLine("DROP");
-    }
 }

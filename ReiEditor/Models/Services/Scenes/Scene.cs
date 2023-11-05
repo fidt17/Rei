@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Dialogs.Internal;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Entities;
+using SkiaSharp;
 
 namespace ReiEditor.Models.Services.Scenes;
 
@@ -32,19 +34,45 @@ public class Scene : Asset
         if (_entities.Exists(x => x.Equals(entity))) throw new Exception($"Entity with Id {entity.Id} already exists in scene");
 
         _entities.Add(entity);
-        entity.Transform._order = _entities.Count - 1;
+        entity.Transform._order = _entities.Where(x => !x.Transform.HasParent()).Max(x => x.Transform._order) + 1;
     }
 
     public void DeleteEntity(GameEntity entity)
     {
         _entities.Remove(entity);
-        UpdateEntitiesTransformOrder();
+        ShiftOrderOfSameParentElementsWithGreaterOrder(entity, entity.Transform._order, -1);
+    }
+
+    private void ShiftOrderOfSameParentElementsWithGreaterOrder(GameEntity entity, int order, int shift)
+    {
+        if (entity.Transform.HasParent())
+        {
+            var parent = GetById(entity.Transform._parent);
+            if (parent == null) return;
+            foreach (var child in parent.Transform._children)
+            {
+                var e = GetById(child);
+                if (e == null) continue;
+                if (e.Transform._order < order) continue;
+
+                e.Transform._order += shift;
+            }
+        }
+        else
+        {
+            var entitiesWithGreaterIds = _entities.Where(x => !x.Transform.HasParent() && x.Transform._order >= order).ToList();
+            foreach (var gameEntity in entitiesWithGreaterIds)
+            {
+                gameEntity.Transform._order += shift;
+            }
+        }
     }
 
     public bool MoveEntity(GameEntity entity, GameEntity? newParent, int order)
     {
         if (!_entities.Contains(entity)) throw new Exception($"{entity} does not belong to the scene {Name}");
         if (newParent != null && entity.Equals(newParent)) return false;
+        if (newParent != null && IsIndirectOrDirectChild(newParent, entity)) return false;
 
         var currentParent = GetById(entity.Transform._parent);
         var currentOrder = entity.Transform._order;
@@ -60,51 +88,40 @@ public class Scene : Asset
 
         if (newParent != null)
         {
-            newParent.Transform._children.Insert(order, entity.Id);
+            newParent.Transform._children.Add(entity.Id);
             entity.Transform._parent = newParent.Id;
         }
-        else
-        {
-            var entitiesWithGreaterIds = _entities.Where(x => x.Transform._order >= order).ToList();
-            foreach (var gameEntity in entitiesWithGreaterIds)
-            {
-                gameEntity.Transform._order += 1;
-            }
-            entity.Transform._order = order;
-        }
-
-        UpdateEntitiesTransformOrder();
+        
+        ShiftOrderOfSameParentElementsWithGreaterOrder(entity, order, 1);
+        entity.Transform._order = order;
 
         return true;
     }
 
     private void RemoveFromParent(GameEntity entity)
     {
+        ShiftOrderOfSameParentElementsWithGreaterOrder(entity, entity.Transform._order, -1);
+        
         if (entity.Transform.HasParent())
         {
             var currentParent = GetById(entity.Transform._parent);
             currentParent?.Transform._children.Remove(entity.Id);
         }
-        else
-        {
-            var entitiesWithGreaterIds = _entities.Where(x => x.Transform._order >= entity.Transform._order).ToList();
-            foreach (var gameEntity in entitiesWithGreaterIds)
-            {
-                gameEntity.Transform._order -= 1;
-            }
-        }
+
+        entity.Transform._parent = 0;
     }
 
-    private void UpdateEntitiesTransformOrder()
+    private bool IsIndirectOrDirectChild(GameEntity e, GameEntity parent)
     {
-        for (var i = 0; i < _entities.Count; i++)
+        foreach (var transformChild in parent.Transform._children)
         {
-            if (!_entities[i].Transform.HasParent()) continue;
+            if (transformChild == e.Id) return true;
             
-            var parent = GetById(_entities[i].Transform._parent);
-            if (parent == null) throw new NullReferenceException();
-            _entities[i].Transform._order = parent.Transform._children.IndexOf(_entities[i].Id);
+            var child = GetById(transformChild);
+            if (child == null) throw new NullReferenceException();
+            if (IsIndirectOrDirectChild(e, child)) return true;
         }
+
+        return false;
     }
-    
 }

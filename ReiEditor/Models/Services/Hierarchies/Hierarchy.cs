@@ -77,6 +77,8 @@ public class Hierarchy
 
     private Node CreateNodeFor(GameEntity e, Scene scene)
     {
+        if (_entityToNodeMap.ContainsKey(e)) return _entityToNodeMap[e];
+            
         Node? parentNode = null;
         if (e.Transform.HasParent())
         {

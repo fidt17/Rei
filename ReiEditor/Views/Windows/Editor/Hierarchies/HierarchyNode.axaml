@@ -7,12 +7,17 @@
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
              xmlns:hierarchies="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Hierarchies"
              xmlns:hierarchies1="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
+             xmlns:converters="clr-namespace:ReiEditor.Views.Converters"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Hierarchies.HierarchyNode"
              x:DataType="hierarchies:HierarchyNodeViewModel">
     <Design.DataContext>
         <hierarchies:HierarchyNodeViewModel />
     </Design.DataContext>
+
+    <UserControl.Resources>
+        <converters:NotEmptyCollectionConverter x:Key="NotEmptyCollectionConverter" />
+    </UserControl.Resources>
 
     <Grid>
         <Border
@@ -43,9 +48,11 @@
 
             <Grid RowDefinitions="Auto, Auto">
 
-                <Grid ColumnDefinitions="Auto, *">
+                <Grid ColumnDefinitions="20, *">
 
-                    <buttons:HorizontalExpandToggle IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
+                    <buttons:HorizontalExpandToggle
+                        IsVisible="{Binding ChildNodes, Converter={StaticResource NotEmptyCollectionConverter}}"
+                        IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
 
                     <Grid Grid.Column="1"
                           HorizontalAlignment="Stretch">
@@ -97,7 +104,6 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </Grid>
-
 
         </Border>
 

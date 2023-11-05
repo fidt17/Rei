@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -95,24 +96,34 @@ public partial class HierarchyNode : UserControl
         var target = RootBorder;
         var pointerDown = false;
         
-        async void DoDrag(object? sender, PointerPressedEventArgs e)
+        void DoDrag(object? sender, PointerPressedEventArgs e)
         {
-            pointerDown = true;
-            if (_vm == null) return;
-
-            if (!_vm.Selected.Value)
+            Dispatcher.UIThread.InvokeAsync(async () =>
             {
-                await Task.Delay(100);
-                _vm.SelectCommand.Execute(null);
-            }
-            
-            await Task.Delay(100);
-            if (!pointerDown) return;
-                
-            var dragData = new DataObject();
-            dragData.Set("Node", _vm);
+                pointerDown = true;
+                if (_vm == null) return;
 
-            await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
+                if (!_vm.Selected.Value)
+                {
+                    await Task.Delay(100);
+                    _vm.SelectCommand.Execute(null);
+                }
+            
+                await Task.Delay(100);
+                if (!pointerDown) return;
+                
+                var dragData = new DataObject();
+                dragData.Set("Node", _vm);
+
+                try
+                {
+                    await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
+                }
+                catch (COMException exception)
+                {
+                    // ignore
+                }
+            });
         }
 
         void Drop(object? sender, DragEventArgs e)
