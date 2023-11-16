@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Avalonia.Dialogs.Internal;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Entities;
-using SkiaSharp;
+using ReiEditor.Models.Services.Hierarchies;
 
 namespace ReiEditor.Models.Services.Scenes;
 
-public class Scene : Asset
+public class Scene : Asset, IDeserializationCallback
 {
     [JsonProperty]
     public string Name { get; }
@@ -17,12 +17,20 @@ public class Scene : Asset
     [JsonIgnore]
     public IEnumerable<GameEntity> Entities => _entities;
 
+    [JsonIgnore]
+    public Hierarchy<GameEntity> Hierarchy { get; private set; } = new("");
+    
     [JsonProperty("Entities")]
     private List<GameEntity> _entities { get; } = new();
 
     public Scene(string name)
     {
         Name = name;
+    }
+
+    public void OnDeserialization(object? sender)
+    {
+        CreateHierarchy();
     }
 
     public int AllocateEntityId() => _entities.Count == 0 ? 1 : _entities.Max(x => x.Id) + 1;
@@ -34,94 +42,89 @@ public class Scene : Asset
         if (_entities.Exists(x => x.Equals(entity))) throw new Exception($"Entity with Id {entity.Id} already exists in scene");
 
         _entities.Add(entity);
-        entity.Transform._order = _entities.Where(x => !x.Transform.HasParent()).Max(x => x.Transform._order) + 1;
+        Hierarchy.AddRootNode(new HierarchyNode<GameEntity>(entity, null));
+        RefreshEntityTransform(entity);
     }
 
     public void DeleteEntity(GameEntity entity)
     {
         _entities.Remove(entity);
-        ShiftOrderOfSameParentElementsWithGreaterOrder(entity, entity.Transform._order, -1);
-    }
-
-    private void ShiftOrderOfSameParentElementsWithGreaterOrder(GameEntity entity, int order, int shift)
-    {
-        if (entity.Transform.HasParent())
+        
+        var node = Hierarchy.GetNode(entity);
+        if (node == null) return;
+        
+        foreach (var child in Hierarchy.GetAllChildNodes(node))
         {
-            var parent = GetById(entity.Transform._parent);
-            if (parent == null) return;
-            foreach (var child in parent.Transform._children)
-            {
-                var e = GetById(child);
-                if (e == null) continue;
-                if (e.Transform._order < order) continue;
+            _entities.Remove(child.Content);
+        }
+            
+        Hierarchy.DeleteNode(node);
 
-                e.Transform._order += shift;
-            }
+        if (node.Parent != null)
+        {
+            RefreshTransforms(node.Parent.ChildNodes.Select(x => x.Content));
         }
         else
         {
-            var entitiesWithGreaterIds = _entities.Where(x => !x.Transform.HasParent() && x.Transform._order >= order).ToList();
-            foreach (var gameEntity in entitiesWithGreaterIds)
-            {
-                gameEntity.Transform._order += shift;
-            }
+            RefreshTransforms(_entities);
         }
     }
 
-    public bool MoveEntity(GameEntity entity, GameEntity? newParent, int order)
+    public bool MoveEntity(GameEntity entity, GameEntity? newParent, int idx)
     {
-        if (!_entities.Contains(entity)) throw new Exception($"{entity} does not belong to the scene {Name}");
-        if (newParent != null && entity.Equals(newParent)) return false;
-        if (newParent != null && IsIndirectOrDirectChild(newParent, entity)) return false;
+        var node = Hierarchy.GetNode(entity);
+        if (node == null) return false;
 
-        var currentParent = GetById(entity.Transform._parent);
-        var currentOrder = entity.Transform._order;
-        
-        if (currentParent == newParent)
+        var parentNode = newParent == null ? null : Hierarchy.GetNode(newParent);
+        var didMove = Hierarchy.MoveNode(node, parentNode, idx);
+        if (!didMove) return false;
+
+        if (parentNode != null)
         {
-            if (order > currentOrder) order -= 1;
-            else if (order == currentOrder) return false;
+            RefreshTransforms(parentNode.ChildNodes.Select(x => x.Content));
+        }
+        else
+        {
+            RefreshTransforms(_entities.Where(x => !x.Transform.HasParent()));
+        }
+
+        var newParentNode = node.Parent;
+        if (newParentNode != parentNode && newParentNode != null)
+        {
+            RefreshTransforms(newParentNode.ChildNodes.Select(x => x.Content));
         }
         
-        order = Math.Clamp(order, 0, newParent == null ? _entities.Count - 1 : newParent.Transform._children.Count);
-        RemoveFromParent(entity);
-
-        if (newParent != null)
-        {
-            newParent.Transform._children.Add(entity.Id);
-            entity.Transform._parent = newParent.Id;
-        }
-        
-        ShiftOrderOfSameParentElementsWithGreaterOrder(entity, order, 1);
-        entity.Transform._order = order;
-
-        return true;
+        return didMove;
     }
 
-    private void RemoveFromParent(GameEntity entity)
+    private void CreateHierarchy()
     {
-        ShiftOrderOfSameParentElementsWithGreaterOrder(entity, entity.Transform._order, -1);
+        Hierarchy = new Hierarchy<GameEntity>(Name);
         
-        if (entity.Transform.HasParent())
+        foreach (var e in _entities)
         {
-            var currentParent = GetById(entity.Transform._parent);
-            currentParent?.Transform._children.Remove(entity.Id);
+            var parent = GetById(e.Transform.Parent);
+            var parentNode = parent != null ? Hierarchy.GetNode(parent) : null;
+            var node = new HierarchyNode<GameEntity>(e, parentNode);
+            Hierarchy.AddRootNode(node);
         }
-
-        entity.Transform._parent = 0;
+        
+        RefreshTransforms(_entities);
     }
 
-    private bool IsIndirectOrDirectChild(GameEntity e, GameEntity parent)
+    private void RefreshTransforms(IEnumerable<GameEntity> entities)
     {
-        foreach (var transformChild in parent.Transform._children)
+        foreach (var e in entities)
         {
-            if (transformChild == e.Id) return true;
-            
-            var child = GetById(transformChild);
-            if (child == null) throw new NullReferenceException();
-            if (IsIndirectOrDirectChild(e, child)) return true;
+            RefreshEntityTransform(e);
         }
+    }
 
-        return false;
+    private void RefreshEntityTransform(GameEntity e)
+    {
+        var node = Hierarchy.GetNode(e);
+        if (node == null) throw new Exception($"Missing node for {e}");
+        e.Transform.SetOrder(Hierarchy.GetNodeOrder(node));
+        e.Transform.SetParent(node.Parent == null ? 0 : node.Parent.Content.Id);
     }
 }

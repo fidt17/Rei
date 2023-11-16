@@ -9,10 +9,10 @@ public class MoveNodeCommand : ICommand
 {
     public class MoveArgs
     {
-        public Hierarchy.Node? Parent { get; }
+        public HierarchyNode<GameEntity>? Parent { get; }
         public int ChildIdx { get; }
 
-        public MoveArgs(Hierarchy.Node? parent, int childIdx)
+        public MoveArgs(HierarchyNode<GameEntity>? parent, int childIdx)
         {
             Parent = parent;
             ChildIdx = childIdx;
@@ -20,9 +20,9 @@ public class MoveNodeCommand : ICommand
     }
 
     private readonly IEntityManagementService _entityManagementService;
-    private readonly Hierarchy.Node _node;
+    private readonly HierarchyNode<GameEntity> _node;
 
-    public MoveNodeCommand(Hierarchy.Node node, IEntityManagementService entityManagementService)
+    public MoveNodeCommand(HierarchyNode<GameEntity> node, IEntityManagementService entityManagementService)
     {
         _node = node;
         _entityManagementService = entityManagementService;
@@ -34,7 +34,7 @@ public class MoveNodeCommand : ICommand
     {
         if (parameter is not MoveArgs args) return;
 
-        _entityManagementService.SetParent(_node.Entity, args.Parent?.Entity, args.ChildIdx);
+        _entityManagementService.SetParent(_node.Content, args.Parent?.Content, args.ChildIdx);
         CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 

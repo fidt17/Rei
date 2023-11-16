@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using ReactiveUI;
+using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Factory;
@@ -22,9 +23,7 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     public ContextMenuViewModel RootContextMenu { get; } = new();
 
-    private Hierarchy? _activeHierarchy;
-	
-    private readonly IHierarchyService _hierarchyService;
+    private readonly Hierarchy<GameEntity> _activeHierarchy;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
 
@@ -33,69 +32,29 @@ public class HierarchyWindowViewModel : BaseViewModel
 #pragma warning restore CS8618
 
     public HierarchyWindowViewModel(
-        IHierarchyService hierarchyService, 
+        Hierarchy<GameEntity> hierarchy,
         IFactory<HierarchyNodeViewModel> hierarchyElementFactory,
         IFactory<CreateSceneEntityCommand> createSceneEntityCommand)
     {
-        _hierarchyService = hierarchyService;
+        _activeHierarchy = hierarchy;
         _hierarchyElementFactory = hierarchyElementFactory;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
-		
-        _hierarchyService.ActiveHierarchy.Subscribe(HandleActiveHierarchyChangedEvent);
+        
+        _activeHierarchy.ChangedEvent += UpdateEntitiesList;
+        SceneName.Set(hierarchy.Name);
+        UpdateEntitiesList(_activeHierarchy);
 
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
-		
         RootContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("New Entity", () => _createSceneEntityCommand.Execute(null)));
     }
 
     public override void Dispose()
     {
         _createSceneEntityCommand.Dispose();
-		
-        _hierarchyService.ActiveHierarchy.Unsubscribe(HandleActiveHierarchyChangedEvent);
-
-        ResetCurrentHierarchy();
-    }
-
-    private void HandleActiveHierarchyChangedEvent(Hierarchy? h)
-    {
-        if (h == null)
-        {
-            ResetCurrentHierarchy();
-            return;
-        }
-		
-        SetHierarchy(h);
-    }
-
-    private void ResetCurrentHierarchy()
-    {
-        if (_activeHierarchy == null) return;
-		
-        ClearHierarchy();
         _activeHierarchy.ChangedEvent -= UpdateEntitiesList;
-
-        _activeHierarchy = null;
     }
 
-    private void SetHierarchy(Hierarchy hierarchy)
-    {
-        if (_activeHierarchy != null) ResetCurrentHierarchy();
-		
-        _activeHierarchy = hierarchy;
-        _activeHierarchy.ChangedEvent += UpdateEntitiesList;
-		
-        SceneName.Set(hierarchy.Name);
-        UpdateEntitiesList(_activeHierarchy);
-    }
-
-    private void ClearHierarchy()
-    {
-        SceneName.Set("");
-        Nodes.ClearAndDispose();
-    }
-
-    private void UpdateEntitiesList(Hierarchy h)
+    private void UpdateEntitiesList(Hierarchy<GameEntity> h)
     {
         Nodes.ClearAndDispose();
 		

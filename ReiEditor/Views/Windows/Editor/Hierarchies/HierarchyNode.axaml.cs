@@ -5,15 +5,12 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using ReiEditor.Models.Resources;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
 
 public partial class HierarchyNode : UserControl
 {
-    private const string DragOverClass = "DragOver";
-    
     private HierarchyNodeViewModel? _vm;
     
     public HierarchyNode()
@@ -119,7 +116,7 @@ public partial class HierarchyNode : UserControl
                 {
                     await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
                 }
-                catch (COMException exception)
+                catch (COMException)
                 {
                     // ignore
                 }
@@ -138,7 +135,7 @@ public partial class HierarchyNode : UserControl
         }
 
         target.PointerPressed += DoDrag;
-        target.PointerReleased += (_, __) =>
+        target.PointerReleased += (_, _) =>
         {
             pointerDown = false;
         };

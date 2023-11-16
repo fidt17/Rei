@@ -1,5 +1,4 @@
-﻿using System.Windows.Input;
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -64,7 +63,7 @@ public partial class HierarchyMoveTargetLine : UserControl
             return;
         }
 
-        if (IsTopLine && NodeData.Node.Entity.Transform._order != 0)
+        if (IsTopLine && NodeData.Node.Content.Transform.Order != 0)
         {
             IsOver = false;
             return;
@@ -83,7 +82,7 @@ public partial class HierarchyMoveTargetLine : UserControl
 
         var thisNode = NodeData.Node;
         var thisNodeParent = thisNode.Parent;
-        var moveIdx = thisNode.Entity.Transform._order + (IsTopLine ? -1 : 1);
+        var moveIdx = thisNode.Content.Transform.Order + (IsTopLine ? 0 : 1);
         nodeToMove.MoveNodeCommand.Execute(new MoveNodeCommand.MoveArgs(thisNodeParent, moveIdx));
     }
 

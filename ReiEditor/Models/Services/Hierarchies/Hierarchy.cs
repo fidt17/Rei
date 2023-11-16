@@ -1,115 +1,108 @@
 using System;
 using System.Collections.Generic;
-using ReiEditor.Models.Services.Entities;
-using ReiEditor.Models.Services.Scenes;
+using System.Linq;
 
 namespace ReiEditor.Models.Services.Hierarchies;
 
-public class Hierarchy
+public class Hierarchy<T> where T : notnull
 {
-    public class Node
-    {
-        public Node? Parent { get; }
-        public GameEntity Entity { get; }
-
-        public IEnumerable<Node> ChildNodes => _childNodes;
-
-        private readonly List<Node> _childNodes = new();
-
-        public Node(GameEntity entity, Node? parent)
-        {
-            Entity = entity;
-            Parent = parent;
-        }
-
-        public void AddNode(Node node) => _childNodes.Add(node);
-        public void RemoveNode(Node node) => _childNodes.Remove(node);
-
-        public void SortNodes() => _childNodes.Sort((a, b) => a.Entity.Transform._order.CompareTo(b.Entity.Transform._order));
-    }
-
-    public event Action<Hierarchy>? ChangedEvent;
+    public event Action<Hierarchy<T>>? ChangedEvent;
 
     public string Name { get; }
-    public IEnumerable<Node> RootNodes => _rootNodes;
+    public IEnumerable<HierarchyNode<T>> RootNodes => _rootNodes;
 
-    private readonly List<Node> _rootNodes = new();
-    private readonly Dictionary<GameEntity, Node> _entityToNodeMap = new();
+    private readonly List<HierarchyNode<T>> _rootNodes = new();
+    private readonly Dictionary<T, HierarchyNode<T>> _nodeMap = new();
 
-    public Hierarchy(Scene scene)
+    public Hierarchy(string name)
     {
-        Name = scene.Name;
-        
-        foreach (var e in scene.Entities)
-        {
-            var n = CreateNodeFor(e, scene);
-            
-            if (e.Transform.HasParent()) continue;
-            _rootNodes.Add(n);
-        }
-        
-        SortHierarchyByTransformId();
+        Name = name;
     }
 
-    public void AddNode(Node node)
+    public HierarchyNode<T>? GetNode(T content)
+    {
+        if (!_nodeMap.ContainsKey(content)) return null;
+        return _nodeMap[content];
+    }
+
+    public int GetNodeOrder(HierarchyNode<T> node)
+    {
+        return node.Parent?.GetChildIdx(node) ?? _rootNodes.IndexOf(node);
+    }
+
+    public void AddRootNode(HierarchyNode<T> node)
     {
         _rootNodes.Add(node);
+        _nodeMap.Add(node.Content, node);
+        
         ChangedEvent?.Invoke(this);
     }
 
-    public void RemoveNodeWhere(Func<Node, bool> filter)
+    public void DeleteNode(HierarchyNode<T> node)
     {
-        bool didChange = false;
-		
-        for (var i = _rootNodes.Count - 1; i >= 0; i--)
+        if (node.Parent == null)
         {
-            if (!filter(_rootNodes[i])) continue;
-			
-            _rootNodes.RemoveAt(i);
-            didChange = true;
+            _rootNodes.Remove(node);
         }
-
-        if (didChange)
+        else
         {
-            ChangedEvent?.Invoke(this);
-        }
-    }
-
-    private Node CreateNodeFor(GameEntity e, Scene scene)
-    {
-        if (_entityToNodeMap.ContainsKey(e)) return _entityToNodeMap[e];
-            
-        Node? parentNode = null;
-        if (e.Transform.HasParent())
-        {
-            var parent = scene.GetById(e.Transform._parent);
-            if (parent == null) throw new Exception("Parent is null. {e}");
-            parentNode = _entityToNodeMap.ContainsKey(parent) ? _entityToNodeMap[parent] : CreateNodeFor(parent, scene);
-        }
-            
-        var node = new Node(e, parentNode);
-        parentNode?.AddNode(node);
-
-        _entityToNodeMap.Add(e, node);
-        return node;
-    }
-    
-    private void SortHierarchyByTransformId()
-    {
-        _rootNodes.Sort((a, b) => a.Entity.Transform._order.CompareTo(b.Entity.Transform._order));
-
-        void SortNodeRecursive(Node node)
-        {
-            node.SortNodes();
-            foreach (var childNode in node.ChildNodes)
-            {
-                SortNodeRecursive(childNode);
-            }
+            node.Parent.RemoveChild(node);
         }
         
-        foreach (var n in _rootNodes)
+        ChangedEvent?.Invoke(this);
+    }
+
+    public bool MoveNode(HierarchyNode<T> node, HierarchyNode<T>? parent, int order)
+    {
+        if (node == parent) return false;
+        if (GetAllChildNodes(node).Contains(parent)) return false;
+
+        if (node.Parent == parent)
         {
-            SortNodeRecursive(n);
+            int currentIdx = parent?.GetChildIdx(node) ?? _rootNodes.IndexOf(node);
+            if (currentIdx == order) return false;
+            
+            if (currentIdx < order)
+            {
+                order -= 1;
+            }
+        }
+
+        if (node.Parent == null)
+        {
+            _rootNodes.Remove(node);
+        }
+        else
+        {
+            node.Parent.RemoveChild(node);
+        }
+        
+        if (parent == null)
+        {
+            _rootNodes.Insert(order, node);
+            node.SetParent(null);
+        }
+        else
+        {
+            parent.AddChild(node, order);
+            node.SetParent(parent);
+        }
+        
+        ChangedEvent?.Invoke(this);
+        
+        return true;
+    }
+
+    public IEnumerable<HierarchyNode<T>> GetAllChildNodes(HierarchyNode<T> parent)
+    {
+        foreach (var child in parent.ChildNodes)
+        {
+            yield return child;
+
+            foreach (var secondChildren in GetAllChildNodes(child))
+            {
+                yield return secondChildren;
+            }
         }
     }
 }

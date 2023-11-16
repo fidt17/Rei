@@ -57,7 +57,7 @@
             <hierarchies:HierarchyWindow
                 Width="300"
                 Grid.Column="1" Grid.Row="0"
-                DataContext="{Binding Hierarchy}" />
+                DataContext="{Binding Hierarchy.Value}" />
 
             <console:ConsoleEditorWindow
                 Height="300"

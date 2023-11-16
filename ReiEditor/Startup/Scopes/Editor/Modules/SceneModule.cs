@@ -1,6 +1,5 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Entities;
-using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Commands.Entities;
@@ -14,8 +13,6 @@ public class SceneModule : Module
 	{
 		b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
 		b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
-		
-		b.RegisterSingleton<HierarchyService>().As<IHierarchyService>();
 
 		b.RegisterType<CreateSceneEntityCommand>();
 		
