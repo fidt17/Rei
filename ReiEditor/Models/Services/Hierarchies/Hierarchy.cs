@@ -6,7 +6,11 @@ namespace ReiEditor.Models.Services.Hierarchies;
 
 public class Hierarchy<T> where T : notnull
 {
-    public event Action<Hierarchy<T>>? ChangedEvent;
+    public event Action<HierarchyNode<T>>? NodeAddedEvent;
+    public event Action<HierarchyNode<T>>? NodeRemovedEvent;
+
+    public delegate void NodeMovedDelegate(HierarchyNode<T> node, HierarchyNode<T>? oldParent, int oldOrder, int newOrder);
+    public event NodeMovedDelegate? NodeMovedEvent;
 
     public string Name { get; }
     public IEnumerable<HierarchyNode<T>> RootNodes => _rootNodes;
@@ -35,7 +39,7 @@ public class Hierarchy<T> where T : notnull
         _rootNodes.Add(node);
         _nodeMap.Add(node.Content, node);
         
-        ChangedEvent?.Invoke(this);
+        NodeAddedEvent?.Invoke(node);
     }
 
     public void DeleteNode(HierarchyNode<T> node)
@@ -49,7 +53,7 @@ public class Hierarchy<T> where T : notnull
             node.Parent.RemoveChild(node);
         }
         
-        ChangedEvent?.Invoke(this);
+        NodeRemovedEvent?.Invoke(node);
     }
 
     public bool MoveNode(HierarchyNode<T> node, HierarchyNode<T>? parent, int order)
@@ -57,12 +61,16 @@ public class Hierarchy<T> where T : notnull
         if (node == parent) return false;
         if (GetAllChildNodes(node).Contains(parent)) return false;
 
+        var oldOrder = 0;
+        var newOrder = order;
+        
+        var oldParent = node.Parent;
         if (node.Parent == parent)
         {
-            int currentIdx = parent?.GetChildIdx(node) ?? _rootNodes.IndexOf(node);
-            if (currentIdx == order) return false;
+            oldOrder = parent?.GetChildIdx(node) ?? _rootNodes.IndexOf(node);
+            if (oldOrder == order) return false;
             
-            if (currentIdx < order)
+            if (oldOrder < order)
             {
                 order -= 1;
             }
@@ -88,7 +96,7 @@ public class Hierarchy<T> where T : notnull
             node.SetParent(parent);
         }
         
-        ChangedEvent?.Invoke(this);
+        NodeMovedEvent?.Invoke(node, oldParent, oldOrder, newOrder);
         
         return true;
     }

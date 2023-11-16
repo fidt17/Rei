@@ -20,38 +20,38 @@
     </UserControl.Resources>
 
     <Grid>
-        <Border
-            x:Name="RootBorder"
-            DragDrop.AllowDrop="True"
-            Classes.IsSelected="{Binding Selected.Value}"
-            behaviours:TappedBehaviour.Command="{Binding SelectCommand}"
-            KeyDown="RootBorder_OnKeyDown"
-            Focusable="True"
-            Padding="4">
+        <Grid
+            RowDefinitions="Auto, Auto">
 
-            <Border.Styles>
-                <Style Selector="Border#RootBorder">
-                    <Setter Property="Background" Value="{StaticResource Dark_2}" />
-                    <Setter Property="BorderThickness" Value="1" />
-                    <Setter Property="BorderBrush" Value="{StaticResource Dark_2}" />
-                </Style>
+            <Border
+                x:Name="RootBorder"
+                KeyDown="RootBorder_OnKeyDown"
+                Padding="4"
+                DragDrop.AllowDrop="True"
+                Classes.IsSelected="{Binding Selected.Value}"
+                behaviours:TappedBehaviour.Command="{Binding SelectCommand}"
+                Focusable="True">
+                <Border.Styles>
+                    <Style Selector="Border#RootBorder">
+                        <Setter Property="Background" Value="{StaticResource Dark_2}" />
+                        <Setter Property="BorderThickness" Value="1" />
+                        <Setter Property="BorderBrush" Value="{StaticResource Dark_2}" />
+                    </Style>
 
-                <Style Selector="Border#RootBorder:pointerover">
-                    <Setter Property="Background" Value="{StaticResource Dark_3}" />
-                </Style>
+                    <Style Selector="Border#RootBorder:pointerover">
+                        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+                    </Style>
 
-                <Style Selector="Border#RootBorder.IsSelected">
-                    <Setter Property="Background" Value="{StaticResource Dark_4}" />
-                    <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
-                </Style>
-            </Border.Styles>
-
-            <Grid RowDefinitions="Auto, Auto">
+                    <Style Selector="Border#RootBorder.IsSelected">
+                        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+                        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+                    </Style>
+                </Border.Styles>
 
                 <Grid ColumnDefinitions="20, *">
 
                     <buttons:HorizontalExpandToggle
-                        IsVisible="{Binding ChildNodes, Converter={StaticResource NotEmptyCollectionConverter}}"
+                        IsVisible="{Binding ChildNodes.Count, Converter={StaticResource NotEmptyCollectionConverter}}"
                         IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
 
                     <Grid Grid.Column="1"
@@ -91,21 +91,21 @@
                     </Grid>
 
                 </Grid>
+            </Border>
 
-                <ItemsControl
-                    Margin="10,0,0,0"
-                    IsVisible="{Binding Expanded.Value}"
-                    Grid.Row="1"
-                    ItemsSource="{Binding ChildNodes}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="hierarchies:HierarchyNodeViewModel">
-                            <hierarchies1:HierarchyNode />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Grid>
-
-        </Border>
+            <!-- Children -->
+            <ItemsControl
+                Margin="10,0,0,0"
+                IsVisible="{Binding Expanded.Value}"
+                Grid.Row="1"
+                ItemsSource="{Binding ChildNodes}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="hierarchies:HierarchyNodeViewModel">
+                        <hierarchies1:HierarchyNode />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
 
         <hierarchies1:HierarchyMoveTargetLine
             NodeData="{Binding}"

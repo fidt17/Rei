@@ -75,23 +75,28 @@ public class Scene : Asset, IDeserializationCallback
         var node = Hierarchy.GetNode(entity);
         if (node == null) return false;
 
-        var parentNode = newParent == null ? null : Hierarchy.GetNode(newParent);
-        var didMove = Hierarchy.MoveNode(node, parentNode, idx);
+        var oldParentNode = node.Parent;
+        var newParentNode = newParent == null ? null : Hierarchy.GetNode(newParent);
+        var didMove = Hierarchy.MoveNode(node, newParentNode, idx);
         if (!didMove) return false;
 
-        if (parentNode != null)
+        if (oldParentNode != null)
         {
-            RefreshTransforms(parentNode.ChildNodes.Select(x => x.Content));
+            RefreshTransforms(oldParentNode.ChildNodes.Select(x => x.Content));
         }
         else
         {
             RefreshTransforms(_entities.Where(x => !x.Transform.HasParent()));
         }
 
-        var newParentNode = node.Parent;
-        if (newParentNode != parentNode && newParentNode != null)
+        if (newParentNode != oldParentNode && newParentNode != null)
         {
             RefreshTransforms(newParentNode.ChildNodes.Select(x => x.Content));
+        }
+        else if (newParentNode == null)
+        {
+            entity.Transform.SetParent(0);
+            RefreshTransforms(_entities.Where(x => !x.Transform.HasParent()));
         }
         
         return didMove;

@@ -23,7 +23,9 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     public ContextMenuViewModel RootContextMenu { get; } = new();
 
-    private readonly Hierarchy<GameEntity> _activeHierarchy;
+    private readonly Dictionary<HierarchyNode<GameEntity>, HierarchyNodeViewModel> _nodeMap = new();
+
+    private Hierarchy<GameEntity> _activeHierarchy;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
 
@@ -40,9 +42,7 @@ public class HierarchyWindowViewModel : BaseViewModel
         _hierarchyElementFactory = hierarchyElementFactory;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
         
-        _activeHierarchy.ChangedEvent += UpdateEntitiesList;
-        SceneName.Set(hierarchy.Name);
-        UpdateEntitiesList(_activeHierarchy);
+        SetHierarchy(hierarchy);
 
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
         RootContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("New Entity", () => _createSceneEntityCommand.Execute(null)));
@@ -51,7 +51,32 @@ public class HierarchyWindowViewModel : BaseViewModel
     public override void Dispose()
     {
         _createSceneEntityCommand.Dispose();
-        _activeHierarchy.ChangedEvent -= UpdateEntitiesList;
+        
+        _activeHierarchy.NodeAddedEvent -= HandleNodeAddedEvent;
+        _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
+        _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
+    }
+
+    public void SetHierarchy(Hierarchy<GameEntity> hierarchy)
+    {
+        ResetHierarchy();
+        
+        _activeHierarchy = hierarchy;
+        _activeHierarchy.NodeAddedEvent += HandleNodeAddedEvent;
+        _activeHierarchy.NodeRemovedEvent += HandleNodeRemovedEvent;
+        _activeHierarchy.NodeMovedEvent += HandleNodeMovedEvent;
+        
+        SceneName.Set(hierarchy.Name);
+        UpdateEntitiesList(_activeHierarchy);
+    }
+
+    private void ResetHierarchy()
+    {
+        Nodes.ClearAndDispose();
+        _activeHierarchy.NodeAddedEvent -= HandleNodeAddedEvent;
+        _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
+        _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
+        _activeHierarchy = null;
     }
 
     private void UpdateEntitiesList(Hierarchy<GameEntity> h)
@@ -60,20 +85,13 @@ public class HierarchyWindowViewModel : BaseViewModel
 		
         foreach (var n in h.RootNodes)
         {
-            var node = _hierarchyElementFactory.CreateInstance(n);
-            node.Selected.ChangedEvent += (b) => HandleNodeSelectedChangedEvent(node, b);
-            Nodes.Add(node);
-			
-            foreach (var childNode in node.CreateChildNodes(_hierarchyElementFactory))
-            {
-                childNode.Selected.ChangedEvent += (b) => HandleNodeSelectedChangedEvent(node, b);
-            }
+            HandleNodeAddedEvent(n);
         }
     }
 
     private void ResetSelection()
     {
-        foreach (var n in GetAllNodes().Where(n => n.Selected.Value))
+        foreach (var n in GetAllNodes())
         {
             n.Deselect();
         }
@@ -90,15 +108,79 @@ public class HierarchyWindowViewModel : BaseViewModel
         }
     }
 
-    private IEnumerable<HierarchyNodeViewModel> GetAllNodes()
+    private IEnumerable<HierarchyNodeViewModel> GetAllNodes() => _nodeMap.Values;
+    
+    private void HandleNodeAddedEvent(HierarchyNode<GameEntity> n)
     {
-        foreach (var node in Nodes)
+        var node = _hierarchyElementFactory.CreateInstance(n);
+        _nodeMap.Add(n, node);
+        node.Selected.ChangedEvent += (b) => HandleNodeSelectedChangedEvent(node, b);
+        Nodes.Add(node);
+			
+        foreach (var childNode in node.CreateChildNodes(_hierarchyElementFactory))
         {
-            yield return node;
-            foreach (var childNodes in node.GetAllChildNodesRecursive())
+            _nodeMap.Add(childNode.Node, childNode);
+            childNode.Selected.ChangedEvent += b => HandleNodeSelectedChangedEvent(node, b);
+        }
+    }
+
+    private void HandleNodeRemovedEvent(HierarchyNode<GameEntity> n)
+    {
+        if (n.Parent == null)
+        {
+            var targetNode = Nodes.FirstOrDefault(x => x.Node == n);
+            if (targetNode == null) return;
+            
+            targetNode.Dispose();
+            _nodeMap.Remove(n);
+            
+            Nodes.Remove(targetNode);
+        }
+        else if (_nodeMap.ContainsKey(n))
+        {
+            var targetNode = _nodeMap[n];
+            
+            targetNode.Dispose();
+            _nodeMap.Remove(n);
+
+            if (_nodeMap.ContainsKey(n.Parent))
             {
-                yield return childNodes;
+                var parent = _nodeMap[n.Parent];
+                parent.ChildNodes.Remove(targetNode);
             }
+        }
+    }
+
+    private void HandleNodeMovedEvent(HierarchyNode<GameEntity> node, HierarchyNode<GameEntity>? oldParent, int oldOrder, int newOrder)
+    {
+        var nodeVm = _nodeMap[node];
+        
+        if (node.Parent == oldParent)
+        {
+            if (oldOrder < newOrder)
+            {
+                newOrder -= 1;
+            }
+        }
+        
+        if (oldParent == null)
+        {
+            Nodes.Remove(nodeVm);
+        }
+        else
+        {
+            var parent = _nodeMap[oldParent];
+            parent.ChildNodes.Remove(nodeVm);
+        }
+
+        if (node.Parent == null)
+        {
+            Nodes.Insert(newOrder, nodeVm);
+        }
+        else
+        {
+            var parent = _nodeMap[node.Parent];
+            parent.ChildNodes.Insert(newOrder, nodeVm);
         }
     }
 }

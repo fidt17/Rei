@@ -25,7 +25,6 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public ObservableField<HierarchyWindowViewModel> Hierarchy { get; } = new(new());
 
     private readonly ISceneManagementService _sceneManagementService;
-    private readonly IFactory<HierarchyWindowViewModel> _hierarchyFactory;
 
 #pragma warning disable CS8618
     public ProjectEditorWindowViewModel() { }
@@ -42,7 +41,6 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         IFactory<SaveProjectCommand> saveProjectCommand)
     {
         _sceneManagementService = sceneManagementService;
-        _hierarchyFactory = hierarchyFactory;
         SaveProjectCommand = saveProjectCommand.CreateInstance();
         BuildProjectCommand = buildProjectCommandFactory.CreateInstance();
         OpenSettingsCommand = openSettingsCommandFactory.CreateInstance();
@@ -50,6 +48,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         PlaymodePanel = playmodePanel.CreateInstance();
         Console = console.CreateInstance();
         StatusBar = statusBarViewModelFactory.CreateInstance();
+        Hierarchy.Value = hierarchyFactory.CreateInstance(new Hierarchy<GameEntity>(""));
         
         _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
     }
@@ -69,6 +68,6 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     
     private void HandleCurrentSceneChangedEvent(Scene? scene)
     {
-        Hierarchy.Value = _hierarchyFactory.CreateInstance(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
+        Hierarchy.Value.SetHierarchy(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
     }
 }

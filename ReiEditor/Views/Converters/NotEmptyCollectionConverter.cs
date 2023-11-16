@@ -9,6 +9,8 @@ public class NotEmptyCollectionConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
+        if (value is int i) return i > 0;
+        
         if (value is ICollection collection)
         {
             return collection.Count > 0;
