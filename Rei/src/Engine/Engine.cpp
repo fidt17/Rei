@@ -28,15 +28,17 @@ namespace rei::internal::engine
         :
         _mainThread(main_thread::ReiMainThread()),
         _app(std::move(app)),
-        _ecsWorld(std::make_shared<ecs::World>()),
+        _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
         _sceneManager(std::make_shared<scenes::SceneManager>())
     {
         LOG("Create engine")
 
+        Services::GetInstance()->SetInternalWorld(_internalWorld.get());
+
         _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
 
-        _ecsWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
+        _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
     }
 
     void Engine::Start()
@@ -45,7 +47,7 @@ namespace rei::internal::engine
 
         _sceneManager->LoadScene(0);
 
-        ConfigureAppUpdateCallback(_ecsWorld, _app);
+        ConfigureAppUpdateCallback(_internalWorld, _app);
         _app->OnStart();
 
         _mainThread.Run();
@@ -61,6 +63,6 @@ namespace rei::internal::engine
 
     void Engine::OnUpdate() const
     {
-        _ecsWorld->Run();
+        _internalWorld->Run();
     }
 }

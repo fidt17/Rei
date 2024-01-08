@@ -29,7 +29,7 @@ namespace rei::internal::engine
     private:
         main_thread::ReiMainThread _mainThread;
         std::shared_ptr<App> _app;
-        std::shared_ptr<ecs::World> _ecsWorld;
+        std::shared_ptr<ecs::World> _internalWorld;
         
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<scenes::SceneManager> _sceneManager;

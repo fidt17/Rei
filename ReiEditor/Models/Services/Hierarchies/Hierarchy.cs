@@ -34,11 +34,14 @@ public class Hierarchy<T> where T : notnull
         return node.Parent?.GetChildIdx(node) ?? _rootNodes.IndexOf(node);
     }
 
-    public void AddRootNode(HierarchyNode<T> node)
+    public void AddNode(HierarchyNode<T> node, bool isRoot)
     {
-        _rootNodes.Add(node);
-        _nodeMap.Add(node.Content, node);
+        if (isRoot)
+        {
+            _rootNodes.Add(node);
+        }
         
+        _nodeMap.Add(node.Content, node);
         NodeAddedEvent?.Invoke(node);
     }
 
@@ -113,4 +116,6 @@ public class Hierarchy<T> where T : notnull
             }
         }
     }
+    
+    public void SortRootNodes(Func<HierarchyNode<T>, HierarchyNode<T>, int> comparison) => _rootNodes.Sort((a,b) => comparison(a, b));
 }

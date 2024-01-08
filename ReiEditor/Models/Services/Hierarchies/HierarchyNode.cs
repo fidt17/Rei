@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace ReiEditor.Models.Services.Hierarchies;
 
@@ -22,4 +23,7 @@ public class HierarchyNode<T>
     public void AddChild(HierarchyNode<T> node, int idx) => _childNodes.Insert(idx, node);
     public void RemoveChild(HierarchyNode<T> node) => _childNodes.Remove(node);
     public int GetChildIdx(HierarchyNode<T> node) => _childNodes.IndexOf(node);
+
+    public void PushChild(HierarchyNode<T> node) => _childNodes.Add(node);
+    public void SortChildren(Func<HierarchyNode<T>, HierarchyNode<T>, int> comparison) => _childNodes.Sort((a,b) => comparison(a, b));
 }

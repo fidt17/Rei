@@ -5,6 +5,9 @@ namespace rei::scenes
 {
     Scene::Scene(resources::BinaryReader& reader)
     {
-        LOG("SCENE: " + reader.GetStr());
+        const auto str = reader.GetStr();
+        nlohmann::json data = nlohmann::json::parse(str);
+
+        _name = data.at("Name");
     }
 }

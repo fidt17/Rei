@@ -10,83 +10,83 @@ namespace ReiEditor.Models.ProjectManagement.Setup;
 
 public class ProjectSetupService : IProjectSetupService
 {
-	private readonly ILogger<ProjectSetupService> _logger;
-	private readonly ISceneManagementService _sceneManagementService;
-	private readonly IActiveProjectService _activeProjectService;
-	private readonly IAssetsService _assetsService;
-	private readonly IEditorProceduresService _editorProceduresService;
+    private readonly ILogger<ProjectSetupService> _logger;
+    private readonly ISceneManagementService _sceneManagementService;
+    private readonly IActiveProjectService _activeProjectService;
+    private readonly IAssetsService _assetsService;
+    private readonly IEditorProceduresService _editorProceduresService;
 
-	public ProjectSetupService(
-		ILogger<ProjectSetupService> logger, 
-		ISceneManagementService sceneManagementService, 
-		IActiveProjectService activeProjectService, 
-		IAssetsService assetsService, 
-		IEditorProceduresService editorProceduresService)
-	{
-		_logger = logger;
-		_sceneManagementService = sceneManagementService;
-		_activeProjectService = activeProjectService;
-		_assetsService = assetsService;
-		_editorProceduresService = editorProceduresService;
-	}
+    public ProjectSetupService(
+        ILogger<ProjectSetupService> logger, 
+        ISceneManagementService sceneManagementService, 
+        IActiveProjectService activeProjectService, 
+        IAssetsService assetsService, 
+        IEditorProceduresService editorProceduresService)
+    {
+        _logger = logger;
+        _sceneManagementService = sceneManagementService;
+        _activeProjectService = activeProjectService;
+        _assetsService = assetsService;
+        _editorProceduresService = editorProceduresService;
+    }
 
-	public async Task PrepareProject()
-	{
-		var prepareProjectProcedure = new Procedure("Loading project");
-		_editorProceduresService.TrackProcedure(prepareProjectProcedure);
+    public async Task PrepareProject()
+    {
+        var prepareProjectProcedure = new Procedure("Loading project");
+        _editorProceduresService.TrackProcedure(prepareProjectProcedure);
 
-		var project = _activeProjectService.GetActiveProject();
+        var project = _activeProjectService.GetActiveProject();
 		
-		if (!project.HasBeenSetup)
-		{
-			await SetupNewProject();
-			project.SetHasBeenSetup(true);
-			await _assetsService.SaveProject();
-			return;
-		}
+        if (!project.HasBeenSetup)
+        {
+            await SetupNewProject();
+            project.SetHasBeenSetup(true);
+            await _assetsService.SaveProject();
+            prepareProjectProcedure.Complete();
+            return;
+        }
 		
-		await OpenLastScene();
-		
-		prepareProjectProcedure.Complete();
-	}
+        await OpenLastScene();
+        prepareProjectProcedure.Complete();
+    }
 	
-	private async Task SetupNewProject()
-	{
-		_logger.Log("Setup new project");
+    private async Task SetupNewProject()
+    {
+        _logger.Log("Setup new project");
 		
-		var defaultScene = await CreateDefaultScene();
-		if (defaultScene != null)
-		{
-			_sceneManagementService.SetBuildSceneId(defaultScene, 0);
-			_activeProjectService.GetActiveProject().SetLastScene(_assetsService.GetAssetId(defaultScene));
-		}
+        var defaultScene = await CreateDefaultScene();
+        if (defaultScene != null)
+        {
+            _sceneManagementService.SetBuildSceneId(defaultScene, 0);
+            _activeProjectService.GetActiveProject().SetLastScene(_assetsService.GetAssetId(defaultScene));
+        }
 		
-	}
+    }
 
-	private async Task OpenLastScene()
-	{
-		var lastSceneId = _activeProjectService.GetActiveProject().LastSceneId;
-		var lastScene = await _assetsService.Load<Scene>(lastSceneId);
+    private async Task OpenLastScene()
+    {
+        var lastSceneId = _activeProjectService.GetActiveProject().LastSceneId;
+        var lastScene = await _assetsService.Load<Scene>(lastSceneId);
 
-		if (lastScene == null)
-		{
-			_logger.LogWarning("Last scene is missing. Creating default one");
-			lastScene = await CreateDefaultScene();
-			await _assetsService.SaveProject();
-		}
+        if (lastScene == null)
+        {
+            _logger.LogWarning("Last scene is missing. Creating default one");
+            lastScene = await CreateDefaultScene();
+            await _assetsService.SaveProject();
+        }
 
-		if (lastScene == null) return;
-		await _sceneManagementService.LoadScene(lastScene);
-	}
+        if (lastScene == null) return;
+        await _sceneManagementService.LoadScene(lastScene);
+    }
 
-	private async Task<Scene?> CreateDefaultScene()
-	{
-		var scene = await _sceneManagementService.CreateScene("New Scene", "Scenes");
-		if (scene == null)
-		{
-			_logger.LogError("Default scene creation failed");
-		}
+    private async Task<Scene?> CreateDefaultScene()
+    {
+        var scene = await _sceneManagementService.CreateScene("New Scene", "Scenes");
+        if (scene == null)
+        {
+            _logger.LogError("Default scene creation failed");
+        }
 
-		return scene;
-	}
+        return scene;
+    }
 }

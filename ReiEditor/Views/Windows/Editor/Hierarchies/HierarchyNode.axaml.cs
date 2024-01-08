@@ -50,7 +50,7 @@ public partial class HierarchyNode : UserControl
         NameTextBox.SelectAll();
     }
 
-    private void RootBorder_OnKeyDown(object? sender, KeyEventArgs e)
+    private void RootBorder_OnKeyDown(object? _, KeyEventArgs e)
     {
         if (_vm == null) return;
         if (!_vm.Selected.Value) return;
@@ -59,7 +59,7 @@ public partial class HierarchyNode : UserControl
         _vm.DeleteCommand.Execute(null);
     }
 
-    private void InputElement_OnTapped(object? sender, TappedEventArgs e)
+    private void InputElement_OnTapped(object? _, TappedEventArgs __)
     {
         if (_vm == null) return;
         if (!_vm.Selected.Value) return;
@@ -74,7 +74,7 @@ public partial class HierarchyNode : UserControl
         });
     }
 
-    private void NameTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    private void NameTextBox_OnKeyDown(object? _, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
@@ -91,7 +91,7 @@ public partial class HierarchyNode : UserControl
     private void ConfigureDragAndDrop()
     {
         var target = RootBorder;
-        var pointerDown = false;
+        bool pointerDown;
         
         void DoDrag(object? sender, PointerPressedEventArgs e)
         {

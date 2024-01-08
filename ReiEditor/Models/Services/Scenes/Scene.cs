@@ -11,7 +11,7 @@ namespace ReiEditor.Models.Services.Scenes;
 
 public class Scene : Asset, IDeserializationCallback
 {
-    [JsonProperty]
+    [JsonProperty("Name")]
     public string Name { get; }
 
     [JsonIgnore]
@@ -42,7 +42,7 @@ public class Scene : Asset, IDeserializationCallback
         if (_entities.Exists(x => x.Equals(entity))) throw new Exception($"Entity with Id {entity.Id} already exists in scene");
 
         _entities.Add(entity);
-        Hierarchy.AddRootNode(new HierarchyNode<GameEntity>(entity, null));
+        Hierarchy.AddNode(new HierarchyNode<GameEntity>(entity, null), true);
         RefreshEntityTransform(entity);
     }
 
@@ -108,13 +108,37 @@ public class Scene : Asset, IDeserializationCallback
         
         foreach (var e in _entities)
         {
-            var parent = GetById(e.Transform.Parent);
-            var parentNode = parent != null ? Hierarchy.GetNode(parent) : null;
-            var node = new HierarchyNode<GameEntity>(e, parentNode);
-            Hierarchy.AddRootNode(node);
+            var node = new HierarchyNode<GameEntity>(e, null);
+            Hierarchy.AddNode(node, !e.Transform.HasParent());
         }
         
-        RefreshTransforms(_entities);
+        foreach (var e in _entities)
+        {
+            var node = Hierarchy.GetNode(e);
+            if (node == null) throw new Exception($"Missing node for {e}");
+
+            if (e.Transform.HasParent())
+            {
+                var parent = GetById(e.Transform.Parent);
+                if (parent == null) throw new Exception($"Missing parent node for {e}, parent id = {e.Transform.Parent}");
+                
+                var parentNode = Hierarchy.GetNode(parent);
+                if (parentNode == null) throw new Exception($"Missing parent node for {parent}");
+                
+                node.SetParent(parentNode);
+                parentNode.PushChild(node);
+            }
+        }
+        
+        foreach (var e in _entities)
+        {
+            var node = Hierarchy.GetNode(e);
+            if (node == null) throw new Exception($"Missing node for {e}");
+            
+            node.SortChildren((a, b) => a.Content.Transform.Order.CompareTo(b.Content.Transform.Order));
+        }
+        
+        Hierarchy.SortRootNodes((a, b) => a.Content.Transform.Order.CompareTo(b.Content.Transform.Order));
     }
 
     private void RefreshTransforms(IEnumerable<GameEntity> entities)

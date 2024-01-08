@@ -44,7 +44,7 @@ public class HierarchyNodeViewModel : BaseViewModel
         Node.Content.NameChangedEvent += HandleNameChangedEvent;
         _entityManagementService = entityManagementService;
 		
-        Name.Value = node.Content.Name + " " + node.Content.Transform.Order;
+        Name.Value = node.Content.Name;
 
         SelectCommand = ReactiveCommand.Create(Select);
         DeleteCommand = ReactiveCommand.Create(Delete);
@@ -55,14 +55,11 @@ public class HierarchyNodeViewModel : BaseViewModel
 
         ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete", Delete));
-        
-        Node.Content.Transform.OrderChangedEvent += HandleNodeTransformOrderChangedEvent;
     }
 
     public override void Dispose()
     {
         Node.Content.NameChangedEvent -= HandleNameChangedEvent;
-        Node.Content.Transform.OrderChangedEvent -= HandleNodeTransformOrderChangedEvent;
     }
 
     public IEnumerable<HierarchyNodeViewModel> CreateChildNodes(IFactory<HierarchyNodeViewModel> nodeFactory)
@@ -92,9 +89,4 @@ public class HierarchyNodeViewModel : BaseViewModel
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;
     private void StartRename() => RenameValue.Value = Name.Value;
     private void ConfirmRename(string name) => _entityManagementService.RenameEntity(Node.Content, name);
-
-    private void HandleNodeTransformOrderChangedEvent(int newOrder)
-    {
-        Name.Value = Node.Content.Name + " " + Node.Content.Transform.Order;
-    }
 }

@@ -23,5 +23,7 @@ namespace rei::scenes
         LOG("Loading scene ["+STRING(id)+"]. Ref: ["+sceneRef.AssetId.Id+"]")
 
         auto scene = GetAssetManager().Load<Scene>(sceneRef);
+
+        LOG("Finished loading scene " + scene.GetName())
     }
 }

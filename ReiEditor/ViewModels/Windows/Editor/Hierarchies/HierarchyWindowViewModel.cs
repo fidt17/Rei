@@ -25,7 +25,7 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     private readonly Dictionary<HierarchyNode<GameEntity>, HierarchyNodeViewModel> _nodeMap = new();
 
-    private Hierarchy<GameEntity> _activeHierarchy;
+    private Hierarchy<GameEntity>? _activeHierarchy;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
 
@@ -51,10 +51,13 @@ public class HierarchyWindowViewModel : BaseViewModel
     public override void Dispose()
     {
         _createSceneEntityCommand.Dispose();
-        
-        _activeHierarchy.NodeAddedEvent -= HandleNodeAddedEvent;
-        _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
-        _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
+
+        if (_activeHierarchy != null)
+        {
+            _activeHierarchy.NodeAddedEvent -= HandleNodeAddedEvent;
+            _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
+            _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
+        }
     }
 
     public void SetHierarchy(Hierarchy<GameEntity> hierarchy)
@@ -73,9 +76,14 @@ public class HierarchyWindowViewModel : BaseViewModel
     private void ResetHierarchy()
     {
         Nodes.ClearAndDispose();
-        _activeHierarchy.NodeAddedEvent -= HandleNodeAddedEvent;
-        _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
-        _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
+
+        if (_activeHierarchy != null)
+        {
+            _activeHierarchy.NodeAddedEvent -= HandleNodeAddedEvent;
+            _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
+            _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
+        }
+        
         _activeHierarchy = null;
     }
 

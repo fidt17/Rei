@@ -1,9 +1,10 @@
 ﻿#include "pch.h"
 #include <regex>
 #include "AssetBuilder.h"
+
+#include <sstream>
+
 #include "Serialization/BinaryWriter.h"
-#include "Builders/DataAssetBuilder.h"
-#include "Builders/SceneAssetBuilder.h"
 
 namespace rei::resources
 {
@@ -13,20 +14,25 @@ namespace rei::resources
         Scene = 1,
     };
 
+    std::string ReadAllText(const std::filesystem::path& path)
+    {
+        REI_ASSERT(std::filesystem::exists(path), "File " + path.string() + " does not exist")
+
+        std::stringstream strStream;
+        strStream << std::ifstream(path).rdbuf();
+
+        return strStream.str();
+    }
+
+    void BuildDataAsset(const std::filesystem::path& assetPath, BinaryWriter& writer)
+    {
+        const std::string str = ReadAllText(assetPath);
+        writer.WriteStr(str);
+    }
+
     i64 Build(const AssetType assetType, const std::filesystem::path& filePath, BinaryWriter& writer)
     {
-        switch (assetType)
-        {
-        case Data:
-            BuildDataAsset(filePath, writer);
-            break;
-        case Scene:
-            BuildSceneAsset(filePath, writer);
-            break;
-        default:
-            REI_THROW("Not supported asset type")
-        }
-
+        BuildDataAsset(filePath, writer);
         return writer.GetPosition();
     }
 
@@ -50,10 +56,10 @@ namespace rei::resources
 
             if (!std::filesystem::exists(dest))
             {
-                std::ofstream outfile (dest);
+                std::ofstream outfile(dest);
                 outfile.close();
             }
-            
+
             BinaryWriter writer(dest, offset);
             const auto bytesWritten = Build(assetType, assetPath, writer);
             writer.Close();

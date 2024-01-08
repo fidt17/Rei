@@ -35,8 +35,6 @@
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
-    <ClInclude Include="src\Modules\Resources\Builders\DataAssetBuilder.h" />
-    <ClInclude Include="src\Modules\Resources\Builders\SceneAssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
     <ClInclude Include="src\Modules\Scenes\BuildScenesConfig.h" />
@@ -92,8 +90,6 @@
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
     <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
-    <ClCompile Include="src\Modules\Resources\Builders\DataAssetBuilder.cpp" />
-    <ClCompile Include="src\Modules\Resources\Builders\SceneAssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
