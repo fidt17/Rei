@@ -13,7 +13,7 @@ namespace rei::internal::update_loop
 
     void InvokeUpdateCallbackSystem::OnUpdate()
     {
-        FOR(_f)
+        FOR(e, _f)
         {
             GET(e, UpdateCallback).Callback();
         }

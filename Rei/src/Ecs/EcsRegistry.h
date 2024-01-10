@@ -23,7 +23,7 @@ namespace rei::ecs
         REI_API T& Get(Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot get component from dead entity");
-            
+
             auto componentSet = GetSet<T>();
 
             bool didAddComponent = false;
@@ -43,7 +43,7 @@ namespace rei::ecs
         REI_API bool Has(const Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot check if dead entity has component")
-            
+
             auto componentSet = GetSet<T>();
             return componentSet->Has(e);
         }
@@ -52,7 +52,7 @@ namespace rei::ecs
         REI_API void Del(Entity e)
         {
             REI_THROW_IF(IsDead(e), "Cannot delete component on dead entity")
-        
+
             auto set = GetSet<T>();
             if (set->Delete(e))
             {
@@ -71,12 +71,14 @@ namespace rei::ecs
 
         REI_API Entity GetEntityById(EntityId id) const;
 
+        const std::vector<Entity>& GetAllEntities() const;
+
         const std::unordered_set<Entity>& GetDirtyEntities() const;
         void ClearDirtyEntities();
-        
+
         const std::unordered_set<Entity>& GetDestroyedEntities() const;
         void ClearDestroyedEntities();
-        
+
         const std::vector<std::shared_ptr<IComponentSet>>& GetComponentSets() const;
 
         void ResizeMasks(size_t size);
@@ -97,19 +99,23 @@ namespace rei::ecs
         std::shared_ptr<ComponentSet<T>> GetSet()
         {
             const auto componentId = TypeId::Get<T>();
-            for (auto i = _componentSets.size(); i <= componentId; i++)
+            if (_componentSets.size() <= componentId || !_componentSets[componentId])
             {
-                CreateComponentSet<T>(i);
+                CreateComponentSet<T>(componentId);
             }
 
             return std::static_pointer_cast<ComponentSet<T>>(_componentSets.at(componentId));
         }
-        
+
         template <typename T>
         std::shared_ptr<ComponentSet<T>> CreateComponentSet(size_t id)
         {
             auto set = std::make_shared<ComponentSet<T>>(id);
-            _componentSets.push_back(std::static_pointer_cast<IComponentSet>(set));
+            if (_componentSets.size() <= id)
+            {
+                _componentSets.resize(id + 1);
+            }
+            _componentSets[id] = std::static_pointer_cast<IComponentSet>(set);
 
             if (_maxComponentId < set->Id())
             {

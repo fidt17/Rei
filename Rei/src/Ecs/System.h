@@ -18,8 +18,8 @@ namespace rei::ecs
 
     protected:
     
-        #define FOR(f) REI_ASSERT_NOT_NULL(f);\
-            for (const auto e : *(f))
+        #define FOR(e, f) REI_ASSERT_NOT_NULL(f);\
+            for (const auto (e) : *(f))
 
         const std::shared_ptr<EcsRegistry> _ecs;
         const std::shared_ptr<FilterProvider> _filters;

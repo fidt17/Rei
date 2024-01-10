@@ -14,10 +14,12 @@ namespace rei::ecs
         
         EntityId Id = -1;
         EntityGen Generation = 0;
-        
+
         bool operator==(const Entity& other) const;
         std::string ToString() const;
     };
+    
+    const Entity NULL_ENTITY(-1, 0);
 }
 
 template <>

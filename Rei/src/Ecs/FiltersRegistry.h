@@ -42,9 +42,12 @@ namespace rei::ecs
     class FiltersRegistry : public FilterProvider
     {
     public:
+        REI_EVENT() NewFilterCreatedEvent;
+        
+        REI_API u32 GetFiltersCount() const;
+        
         void HandleEntityChange(Entity e, const BitMask& mask) const;
         void ResizeMasks(size_t size) const;
-        u32 GetFiltersCount() const;
 
     private:
         std::vector<std::shared_ptr<Filter>> _filters;

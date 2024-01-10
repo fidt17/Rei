@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "SceneEntity.h"
 
 namespace rei::scenes
 {
@@ -7,9 +8,11 @@ namespace rei::scenes
     public:
         explicit Scene(resources::BinaryReader& reader);
 
-        const std::string& GetName() const { return _name; }
-        
+        const std::string& GetName() const;
+        const std::vector<SceneEntity>& GetEntities() const;
+
     private:
         std::string _name;
+        std::vector<SceneEntity> _entities;
     };
 }

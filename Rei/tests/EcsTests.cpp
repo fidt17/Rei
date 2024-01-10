@@ -293,7 +293,7 @@ TEST_CASE("Counter system")
 
         void OnUpdate() override
         {
-            FOR(_filter)
+            FOR(e, _filter)
             {
                 GET(e, Counter).Value += _step;
             }
@@ -347,7 +347,7 @@ TEST_CASE("Entity Creation Destruction Systems")
             const auto e = NEW_ENTITY();
             GET(e, DestroyEntityEvent);
 
-            FOR(_counterFilter)
+            FOR(e, _counterFilter)
             {
                 GET(e, Counter).CreatedEntities += 1;
             }
@@ -369,7 +369,7 @@ TEST_CASE("Entity Creation Destruction Systems")
 
         void OnUpdate() override
         {
-            FOR(_destroyFilter)
+            FOR(e, _destroyFilter)
             {
                 DESTROY_ENTITY(e);
 

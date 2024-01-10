@@ -47,6 +47,11 @@ namespace rei::ecs
         return _entities[id];
     }
 
+    const std::vector<Entity>& EcsRegistry::GetAllEntities() const
+    {
+        return _entities;
+    }
+
     const std::unordered_set<Entity>& EcsRegistry::GetDirtyEntities() const
     {
         return _dirtyEntities;

@@ -3,6 +3,7 @@
 
 #include "Services.h"
 #include "Modules/Assets/AssetManager.h"
+#include "Modules/Components/EntityInfo.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
@@ -49,7 +50,7 @@ namespace rei::internal::engine
 
         ConfigureAppUpdateCallback(_internalWorld, _app);
         _app->OnStart();
-
+        
         _mainThread.Run();
     }
 

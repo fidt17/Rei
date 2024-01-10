@@ -31,8 +31,9 @@ namespace rei::ecs
             Refresh();
         }
 
-        REI_API void Run();
-        REI_API void Refresh();
+        REI_API void Run() const;
+        REI_API void Refresh() const;
+        REI_API void RefreshAll() const;
 
         REI_API std::shared_ptr<EcsRegistry> GetRegistry();
         REI_API std::shared_ptr<FiltersRegistry> GetFiltersRegistry();

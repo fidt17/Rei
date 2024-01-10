@@ -52,6 +52,11 @@ namespace rei::ecs
         return _excludeMask;
     }
 
+    size_t Filter::GetEntitiesCount() const
+    {
+        return _entitiesList.size();
+    }
+
     std::vector<Entity>::iterator Filter::begin()
     {
         return _entitiesList.begin();

@@ -33,12 +33,14 @@
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
+    <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
     <ClInclude Include="src\Modules\Scenes\BuildScenesConfig.h" />
     <ClInclude Include="src\Modules\Scenes\Scene.h" />
+    <ClInclude Include="src\Modules\Scenes\SceneEntity.h" />
     <ClInclude Include="src\Modules\Scenes\SceneManager.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.h" />
@@ -168,6 +170,7 @@
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryWriter.cpp" />
     <ClCompile Include="src\Modules\Scenes\BuildScenesConfig.cpp" />
     <ClCompile Include="src\Modules\Scenes\Scene.cpp" />
+    <ClCompile Include="src\Modules\Scenes\SceneEntity.cpp" />
     <ClCompile Include="src\Modules\Scenes\SceneManager.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\UpdateLoopModule.cpp" />

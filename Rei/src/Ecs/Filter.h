@@ -19,6 +19,7 @@ namespace rei::ecs
         const BitMask& GetIncludeMask() const;
         const BitMask& GetExcludeMask() const;
 
+        REI_API size_t GetEntitiesCount() const;
         REI_API std::vector<Entity>::iterator begin();
         REI_API std::vector<Entity>::iterator end();
 
