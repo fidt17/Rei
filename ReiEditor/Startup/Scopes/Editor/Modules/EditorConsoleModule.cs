@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using ReiEditor.Models.Services.Logging.EditorConsole;
+using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Console;

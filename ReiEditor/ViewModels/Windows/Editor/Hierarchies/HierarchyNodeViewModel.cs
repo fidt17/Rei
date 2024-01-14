@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using ReactiveUI;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Utils;
@@ -13,7 +14,7 @@ using ReiEditor.ViewModels.Controls;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
-public class HierarchyNodeViewModel : BaseViewModel
+public class HierarchyNodeViewModel : BaseViewModel, ISelectable
 {
     public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; } = new();

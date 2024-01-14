@@ -7,11 +7,13 @@
         xmlns:playmode="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
         xmlns:statusBar="clr-namespace:ReiEditor.Views.Windows.Editor.StatusBar"
         xmlns:hierarchies="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
+        xmlns:monitor="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor"
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
-        Width="1300" Height="800"
+        Width="1920" Height="1080"
         Background="{StaticResource Dark_0}"
+        WindowState="Maximized"
         Title="Rei Engine"
         WindowStartupLocation="CenterScreen"
         Focusable="True">
@@ -36,7 +38,7 @@
                         HotKey="Ctrl+S"
                         Command="{Binding SaveProjectCommand}"
                         Content="Save" />
-                    
+
                     <Button
                         HotKey="Ctrl+B"
                         Command="{Binding BuildProjectCommand}"
@@ -54,13 +56,22 @@
         <Grid Grid.Row="1"
               ColumnDefinitions="*, Auto" RowDefinitions="*, Auto">
 
-            <hierarchies:HierarchyWindow
-                Width="300"
-                Grid.Column="1" Grid.Row="0"
-                DataContext="{Binding Hierarchy.Value}" />
+            <Grid Column="0" Row="0" ColumnSpan="2"
+                  ColumnDefinitions="Auto, *, Auto">
+                
+                <hierarchies:HierarchyWindow
+                    Width="280"
+                    Grid.Column="0"
+                    DataContext="{Binding Hierarchy}" />
+                
+                <monitor:MonitorWindow
+                    Width="400"
+                    Grid.Column="2" 
+                    DataContext="{Binding Monitor}"/>
+            </Grid>
 
             <console:ConsoleEditorWindow
-                Height="300"
+                Height="280"
                 Grid.Column="0" Grid.Row="1"
                 Grid.ColumnSpan="2"
                 DataContext="{Binding Console}" />

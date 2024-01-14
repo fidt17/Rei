@@ -1,4 +1,4 @@
-﻿namespace ReiEditor.Models.Services.Logging.EditorConsole;
+﻿namespace ReiEditor.Models.EditorApp.Console;
 
 public interface IEditorConsolePreferencesService
 {

@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using ReiEditor.Models.Services.Logging;
 using ReiEditor.Utils.Common;
 
-namespace ReiEditor.Models.Services.Logging.EditorConsole;
+namespace ReiEditor.Models.EditorApp.Console;
 
 public class EditorConsoleService : IEditorConsoleService
 {

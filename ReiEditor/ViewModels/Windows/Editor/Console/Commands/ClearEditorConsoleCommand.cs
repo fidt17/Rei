@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Input;
 using Avalonia.Threading;
-using ReiEditor.Models.Services.Logging.EditorConsole;
+using ReiEditor.Models.EditorApp.Console;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Console.Commands;
 

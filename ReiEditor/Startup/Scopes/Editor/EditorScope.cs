@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
@@ -30,8 +31,10 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterType<SaveProjectCommand>();
 		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
 
+		b.RegisterSingleton<SelectionService>().As<ISelectionService>();
 		b.RegisterModule<EditorConsoleModule>();
 		b.RegisterModule<SceneModule>();
+		b.RegisterModule<MonitorModule>();
 		b.RegisterModule<PlaymodeModule>();
 		b.RegisterModule<SettingsModule>();
 		b.RegisterModule<BuildModule>();

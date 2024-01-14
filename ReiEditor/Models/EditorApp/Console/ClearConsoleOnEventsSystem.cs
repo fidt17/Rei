@@ -2,7 +2,7 @@
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Engine.Playmode;
 
-namespace ReiEditor.Models.Services.Logging.EditorConsole;
+namespace ReiEditor.Models.EditorApp.Console;
 
 public class ClearConsoleOnEventsSystem : IDisposable
 {

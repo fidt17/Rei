@@ -1,12 +1,12 @@
 ﻿using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
-using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Commands;
 using ReiEditor.ViewModels.Windows.Editor.Console;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
+using ReiEditor.ViewModels.Windows.Editor.Monitor;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
 
@@ -22,7 +22,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public ConsoleEditorWindowViewModel Console { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
 
-    public ObservableField<HierarchyWindowViewModel> Hierarchy { get; } = new(new());
+    public HierarchyWindowViewModel Hierarchy { get; } = new();
+    public MonitorWindowViewModel Monitor { get; } = new();
 
     private readonly ISceneManagementService _sceneManagementService;
 
@@ -38,7 +39,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         IFactory<OpenSettingsWindowCommand> openSettingsCommandFactory,
         IFactory<StatusBarViewModel> statusBarViewModelFactory,
         IFactory<HierarchyWindowViewModel> hierarchyFactory,
-        IFactory<SaveProjectCommand> saveProjectCommand)
+        IFactory<SaveProjectCommand> saveProjectCommand,
+        IFactory<MonitorWindowViewModel> monitorWindowFactory)
     {
         _sceneManagementService = sceneManagementService;
         SaveProjectCommand = saveProjectCommand.CreateInstance();
@@ -48,7 +50,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         PlaymodePanel = playmodePanel.CreateInstance();
         Console = console.CreateInstance();
         StatusBar = statusBarViewModelFactory.CreateInstance();
-        Hierarchy.Value = hierarchyFactory.CreateInstance(new Hierarchy<GameEntity>(""));
+        Hierarchy = hierarchyFactory.CreateInstance(new Hierarchy<GameEntity>(""));
+        Monitor = monitorWindowFactory.CreateInstance();
         
         _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
     }
@@ -68,6 +71,6 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     
     private void HandleCurrentSceneChangedEvent(Scene? scene)
     {
-        Hierarchy.Value.SetHierarchy(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
+        Hierarchy.SetHierarchy(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
     }
 }

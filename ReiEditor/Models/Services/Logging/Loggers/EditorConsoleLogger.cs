@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using ReiEditor.Models.Services.Logging.EditorConsole;
+using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Logging.Loggers;

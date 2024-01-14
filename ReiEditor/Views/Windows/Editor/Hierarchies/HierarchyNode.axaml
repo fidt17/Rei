@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:behaviours="clr-namespace:ReiEditor.Views.Behaviours"
              xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
              xmlns:hierarchies="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Hierarchies"
@@ -29,8 +28,8 @@
                 Padding="4"
                 DragDrop.AllowDrop="True"
                 Classes.IsSelected="{Binding Selected.Value}"
-                behaviours:TappedBehaviour.Command="{Binding SelectCommand}"
-                Focusable="True">
+                Focusable="True"
+                Cursor="Hand">
                 <Border.Styles>
                     <Style Selector="Border#RootBorder">
                         <Setter Property="Background" Value="{StaticResource Dark_2}" />

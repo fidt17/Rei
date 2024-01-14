@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using ReactiveUI;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Utils.Common;
@@ -26,6 +27,7 @@ public class HierarchyWindowViewModel : BaseViewModel
     private readonly Dictionary<HierarchyNode<GameEntity>, HierarchyNodeViewModel> _nodeMap = new();
 
     private Hierarchy<GameEntity>? _activeHierarchy;
+    private readonly ISelectionService _selectionService;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
 
@@ -35,10 +37,12 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     public HierarchyWindowViewModel(
         Hierarchy<GameEntity> hierarchy,
+        ISelectionService selectionService,
         IFactory<HierarchyNodeViewModel> hierarchyElementFactory,
         IFactory<CreateSceneEntityCommand> createSceneEntityCommand)
     {
         _activeHierarchy = hierarchy;
+        _selectionService = selectionService;
         _hierarchyElementFactory = hierarchyElementFactory;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
         
@@ -108,6 +112,8 @@ public class HierarchyWindowViewModel : BaseViewModel
     private void HandleNodeSelectedChangedEvent(HierarchyNodeViewModel node, bool isSelected)
     {
         if (!isSelected) return;
+
+        _selectionService.Select(node);
 		
         foreach (var n in GetAllNodes())
         {
@@ -128,7 +134,7 @@ public class HierarchyWindowViewModel : BaseViewModel
         foreach (var childNode in node.CreateChildNodes(_hierarchyElementFactory))
         {
             _nodeMap.Add(childNode.Node, childNode);
-            childNode.Selected.ChangedEvent += b => HandleNodeSelectedChangedEvent(node, b);
+            childNode.Selected.ChangedEvent += b => HandleNodeSelectedChangedEvent(childNode, b);
         }
     }
 

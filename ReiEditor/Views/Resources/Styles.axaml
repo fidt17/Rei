@@ -126,6 +126,14 @@
         <Setter Property="Background" Value="{StaticResource Dark_3}" />
         <Setter Property="CornerRadius" Value="2" />
     </Style>
+    
+    <Style Selector="Border.MonitorComponent">
+        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="5"></Setter>
+    </Style>
     <!-- END Border Styles -->
 
     <!-- Flyout Styles -->

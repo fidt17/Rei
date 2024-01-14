@@ -1,6 +1,6 @@
 ﻿using ReiEditor.Models.Services.Preferences;
 
-namespace ReiEditor.Models.Services.Logging.EditorConsole;
+namespace ReiEditor.Models.EditorApp.Console;
 
 public class EditorConsolePreferencesService : IEditorConsolePreferencesService
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.Services.Logging;
-using ReiEditor.Models.Services.Logging.EditorConsole;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Console;

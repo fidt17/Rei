@@ -6,7 +6,7 @@
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Hierarchies.HierarchyMoveTargetLine">
     <Grid
-        Height="8">
+        Height="4">
 
         <Grid
             IsVisible="{Binding IsOver, RelativeSource={RelativeSource AncestorType=hierarchies:HierarchyMoveTargetLine}}"

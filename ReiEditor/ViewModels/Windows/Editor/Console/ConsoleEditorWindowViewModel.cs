@@ -3,8 +3,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Threading;
 using DynamicData;
+using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.Services.Logging;
-using ReiEditor.Models.Services.Logging.EditorConsole;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Console.Commands;
 

@@ -1,0 +1,32 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:drawers="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
+             xmlns:components="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components"
+             xmlns:component="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component"
+             mc:Ignorable="d"
+             d:DesignWidth="300" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.EntityMonitorDrawer"
+             x:DataType="drawers:EntityMonitorDrawerViewModel">
+    <Design.DataContext>
+        <drawers:EntityMonitorDrawerViewModel />
+    </Design.DataContext>
+
+    <Border>
+        <StackPanel>
+            <ScrollViewer>
+                <ItemsControl
+                    ItemsSource="{Binding Elements}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="components:TextComponentDrawerViewModel">
+                            <component:TextComponentDrawer />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+        </StackPanel>
+    </Border>
+
+</UserControl>
