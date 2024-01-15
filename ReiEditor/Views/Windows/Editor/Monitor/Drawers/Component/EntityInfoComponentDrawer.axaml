@@ -1,0 +1,33 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:components="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components"
+             xmlns:behaviours="clr-namespace:ReiEditor.Views.Behaviours"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             mc:Ignorable="d"
+             d:DesignWidth="300"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component.EntityInfoComponentDrawer"
+             x:DataType="components:EntityInfoComponentDrawerViewModel">
+    <Design.DataContext>
+        <components:EntityInfoComponentDrawerViewModel />
+    </Design.DataContext>
+
+    <Border Classes="MonitorComponent">
+
+        <Grid ColumnDefinitions="*, Auto">
+            <textBoxes:ReiTextBox
+                Text="{Binding EntityName, Mode=TwoWay}" />
+
+            <TextBlock
+                Grid.Column="1"
+                FontWeight="Bold"
+                Padding="10, 0, 0, 0"
+                VerticalAlignment="Center"
+                Text="{Binding SceneId}">
+            </TextBlock>
+
+        </Grid>
+
+    </Border>
+</UserControl>

@@ -9,18 +9,19 @@
     <Design.DataContext>
         <playmode:PlaymodePanelViewModel />
     </Design.DataContext>
-    
+
     <Border Classes="InnerContent">
         <StackPanel Orientation="Horizontal" Spacing="10">
             <Button Command="{Binding StartPlaymodeCommand}"
-                IsVisible="{Binding !PlayModeActive}">
-                Start
-            </Button>
+                    HotKey="Ctrl+P"
+                    IsVisible="{Binding !PlayModeActive}"
+                    Content="Start" />
+
             <Button Command="{Binding StopPlaymodeCommand}"
-                IsVisible="{Binding PlayModeActive}">
-                Stop
-            </Button>
+                    HotKey="Ctrl+P"
+                    IsVisible="{Binding PlayModeActive}"
+                    Content="Stop" />
         </StackPanel>
     </Border>
-    
+
 </UserControl>

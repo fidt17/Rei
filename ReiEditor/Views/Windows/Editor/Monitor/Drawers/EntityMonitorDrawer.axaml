@@ -18,11 +18,14 @@
             <ScrollViewer>
                 <ItemsControl
                     ItemsSource="{Binding Elements}">
-                    <ItemsControl.ItemTemplate>
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="components:EntityInfoComponentDrawerViewModel">
+                            <component:EntityInfoComponentDrawer />
+                        </DataTemplate>
                         <DataTemplate DataType="components:TextComponentDrawerViewModel">
                             <component:TextComponentDrawer />
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                    </ItemsControl.DataTemplates>
                 </ItemsControl>
             </ScrollViewer>
 

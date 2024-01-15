@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using ReiEditor.ViewModels.Windows.Editor.Monitor;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 
 namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
@@ -10,5 +11,7 @@ public class MonitorModule : Module
     {
         builder.RegisterType<MonitorWindowViewModel>();
         builder.RegisterType<EntityMonitorDrawerViewModel>();
+
+        builder.RegisterType<EntityInfoComponentDrawerViewModel>();
     }
 }

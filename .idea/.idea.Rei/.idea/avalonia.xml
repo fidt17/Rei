@@ -36,6 +36,7 @@
         <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/Effects/RingSpinner.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/TextBoxes/ReiTextBox.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/MainWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/Colors.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/Styles.axaml" value="ReiEditor/ReiEditor.csproj" />
@@ -48,6 +49,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyGameEntity.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyNode.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/EntityInfoComponentDrawer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/TextComponentDraer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/TextComponentDrawer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/EntityMonitorDrawer.axaml" value="ReiEditor/ReiEditor.csproj" />

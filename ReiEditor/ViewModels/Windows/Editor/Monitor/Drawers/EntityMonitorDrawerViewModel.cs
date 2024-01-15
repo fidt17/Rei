@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 
@@ -15,14 +16,12 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
     public EntityMonitorDrawerViewModel() { }
 #pragma warning restore CS8618
 
-    public EntityMonitorDrawerViewModel(GameEntity entity)
+    public EntityMonitorDrawerViewModel(
+        GameEntity entity, 
+        IFactory<EntityInfoComponentDrawerViewModel> entityInfoComponentDrawerFactory)
     {
         _entity = entity;
 
-        var c = new TextComponentDrawerViewModel();
-        c.AddText($"Id: {entity.Id}");
-        c.AddText($"Name: {entity.Name}");
-        
-        Elements.Add(c);
+        Elements.Add(entityInfoComponentDrawerFactory.CreateInstance(entity));
     }
 }
