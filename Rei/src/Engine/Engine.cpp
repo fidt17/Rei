@@ -4,6 +4,7 @@
 #include "Services.h"
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
@@ -31,11 +32,13 @@ namespace rei::internal::engine
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
-        _sceneManager(std::make_shared<scenes::SceneManager>())
+        _sceneManager(std::make_shared<scenes::SceneManager>()),
+        _entityManager(std::make_shared<EntityManager>(_internalWorld))
     {
         LOG("Create engine")
 
         Services::GetInstance()->SetInternalWorld(_internalWorld.get());
+        Services::GetInstance()->SetEntityManager(_entityManager.get());
 
         _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
 
@@ -50,7 +53,7 @@ namespace rei::internal::engine
 
         ConfigureAppUpdateCallback(_internalWorld, _app);
         _app->OnStart();
-        
+
         _mainThread.Run();
     }
 

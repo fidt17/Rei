@@ -34,6 +34,7 @@
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
+    <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
@@ -90,6 +91,7 @@
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
+    <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp">

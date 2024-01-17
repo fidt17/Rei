@@ -1,26 +1,32 @@
+#include <typeindex>
+
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/EntityManagement/EntityManager.h"
+#include "Modules/UpdateLoop/Components/UpdateCallback.h"
 
-class EntityManager
+class MyComponent
 {
-public:
-    rei::ecs::Entity GetBySceneId(const i32 id)
-    {
-        auto w = rei::GetInternalWorld();
-        ECS_WORLD(w);
-        
-        const auto f = w.GetFiltersRegistry()->Get<EntityInfo>();
-        
-        FOR(e, f)
-        {
-            if (GET(e, EntityInfo).Id == id)
-            {
-                return e;
-            }
-        }
-
-        return rei::ecs::NULL_ENTITY;
-    }
 };
+
+namespace rei::internal
+{
+    void AddBehaviourComponent(const ecs::Entity e, const i32 id)
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        if (id == 0)
+        {
+            GET(e, MyComponent);
+            GET(e, update_loop::UpdateCallback).Callback = [=]
+            {
+                LOG("Hello there! My name is " + GET(e, EntityInfo).Name)
+            };
+        }
+        else
+        {
+            REI_THROW("Missing component generation definition. Component ID: " + STRING(id))
+        }
+    }
+}
 
 class ProjectApplication final : public rei::App
 {
@@ -31,20 +37,17 @@ public:
     }
 
     int i = 1;
+
     void OnUpdate() override
     {
         LOG("APP UPDATE")
 
         ECS_WORLD(rei::GetInternalWorld());
-        auto e = EntityManager().GetBySceneId(i);
-        if (e == rei::ecs::NULL_ENTITY)
-        {
-            LOG("Could not find entity with id: " + STRING(i))
-            i = 1;
-            return;
-        }
+        auto e = rei::GetEntityManager().GetBySceneId(1);
 
-        LOG("Found scene entity with id: " + STRING(i++) + ". Name: " + GET(e, EntityInfo).Name)
+        LOG("Found scene entity with id: " + STRING(i++) + ". Name: " + GET(e, EntityInfo).Name + ". Has my component: " + STRING(HAS(e, MyComponent)))
+
+        rei::GetEntityManager().AddBehaviour(e, 0);
     }
 
     void OnShutdown() override

@@ -7,6 +7,8 @@ namespace rei::assets
 
 namespace rei
 {
+    class EntityManager;
+
     class Services
     {
     public:
@@ -19,6 +21,9 @@ namespace rei
         void SetInternalWorld(ecs::World* world) { _internalWorld = world; }
         REI_API ecs::World& GetInternalWorld() const { return *_internalWorld; }
 
+        void SetEntityManager(EntityManager* entityManager) { _entityManager = entityManager; }
+        REI_API EntityManager& GetEntityManager() const { return *_entityManager; }
+
         REI_API static Services* GetInstance();
 
     private:
@@ -27,8 +32,10 @@ namespace rei
 
         assets::AssetManager* _assetManager;
         ecs::World* _internalWorld;
+        EntityManager* _entityManager;
     };
 
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline ecs::World& GetInternalWorld() { return Services::GetInstance()->GetInternalWorld(); }
+    inline EntityManager& GetEntityManager() { return Services::GetInstance()->GetEntityManager(); }
 }
