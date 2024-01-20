@@ -5,6 +5,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Behaviours;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
 using ReiEditor.Startup.Scopes.Editor.Modules;
@@ -29,7 +30,10 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
 		
 		b.RegisterType<SaveProjectCommand>();
+		b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
+		b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
 		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
+		b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
 
 		b.RegisterSingleton<SelectionService>().As<ISelectionService>();
 		b.RegisterModule<EditorConsoleModule>();

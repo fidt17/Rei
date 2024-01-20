@@ -49,6 +49,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyGameEntity.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyNode.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchy/HierarchyWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/BehaviourComponentDrawer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/EntityInfoComponentDrawer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/TextComponentDraer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Component/TextComponentDrawer.axaml" value="ReiEditor/ReiEditor.csproj" />

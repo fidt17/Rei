@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ClCompile Include="{5}" />
+    <ClCompile Include="Internal/BehaviourRegistry.cpp" />
   </ItemGroup>
 
   <PropertyGroup Label="Globals">

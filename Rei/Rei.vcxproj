@@ -33,6 +33,7 @@
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
+    <ClInclude Include="src\Modules\Behaviour\Behaviour.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />

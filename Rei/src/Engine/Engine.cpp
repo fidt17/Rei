@@ -49,10 +49,17 @@ namespace rei::internal::engine
     {
         LOG("Run")
 
-        _sceneManager->LoadScene(0);
-
-        ConfigureAppUpdateCallback(_internalWorld, _app);
-        _app->OnStart();
+        try
+        {
+            _sceneManager->LoadScene(0);
+            ConfigureAppUpdateCallback(_internalWorld, _app);
+            _app->OnStart();
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("Exception on engine start", e.what())
+            Shutdown(-1);
+        }
 
         _mainThread.Run();
     }

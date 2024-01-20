@@ -1,3 +1,5 @@
+#include "Startup/AppEntryPoint.h"
+
 class ProjectApplication final : public rei::App
 {
 public:

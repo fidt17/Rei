@@ -14,7 +14,7 @@
     </Design.DataContext>
 
     <Border>
-        <StackPanel>
+        <StackPanel Spacing="10">
             <ScrollViewer>
                 <ItemsControl
                     ItemsSource="{Binding Elements}">
@@ -22,12 +22,20 @@
                         <DataTemplate DataType="components:EntityInfoComponentDrawerViewModel">
                             <component:EntityInfoComponentDrawer />
                         </DataTemplate>
+                        <DataTemplate DataType="components:BehaviourComponentDrawerViewModel">
+                            <component:BehaviourComponentDrawer />
+                        </DataTemplate>
                         <DataTemplate DataType="components:TextComponentDrawerViewModel">
                             <component:TextComponentDrawer />
                         </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
             </ScrollViewer>
+
+            <Button
+                HorizontalAlignment="Center"
+                Command="{Binding AddBehaviourCommand}"
+                Content="Add Behaviour" />
 
         </StackPanel>
     </Border>

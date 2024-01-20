@@ -49,6 +49,7 @@ public static class AssetUtils
 		{
 			AssetType.Data => FileExtensions.ASSET,
 			AssetType.Scene => FileExtensions.SCENE,
+			AssetType.Behaviour => FileExtensions.H,
 			_ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
 		};
 	}

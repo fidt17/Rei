@@ -17,13 +17,15 @@ public class SceneManagementService : ISceneManagementService
 	
 	private readonly ILogger<SceneManagementService> _logger;
 	private readonly IAssetsService _assets;
+	private readonly IAssetCreator _assetCreator;
 	private readonly IActiveProjectService _projectService;
 
-	public SceneManagementService(ILogger<SceneManagementService> logger, IAssetsService assets, IActiveProjectService projectService)
+	public SceneManagementService(ILogger<SceneManagementService> logger, IAssetsService assets, IActiveProjectService projectService, IAssetCreator assetCreator)
 	{
 		_logger = logger;
 		_assets = assets;
 		_projectService = projectService;
+		_assetCreator = assetCreator;
 	}
 
 	public async Task InitializeAsync()
@@ -35,7 +37,7 @@ public class SceneManagementService : ISceneManagementService
 		if (_buildScenesConfiguration == null)
 		{
 			_buildScenesConfiguration = new BuildScenesConfiguration();
-			await _assets.Create(_buildScenesConfiguration, SpecialAssetIds.BUILD_SCENES_CONFIGURATION, projectPath);
+			await _assetCreator.Create(_buildScenesConfiguration, SpecialAssetIds.BUILD_SCENES_CONFIGURATION, projectPath);
 		}
 	}
 
@@ -44,7 +46,7 @@ public class SceneManagementService : ISceneManagementService
 		try
 		{
 			var scene = new Scene(name);
-			var didCreate = await _assets.Create(scene, projectPath + $"/{name}{FileExtensions.SCENE}");
+			var didCreate = await _assetCreator.Create(scene, projectPath + $"/{name}{FileExtensions.SCENE}");
 			if (!didCreate) throw new Exception("Scene creation failed");
 
 			return scene;
@@ -65,6 +67,8 @@ public class SceneManagementService : ISceneManagementService
 		await _assets.SaveProject();
 
 		_currentScene.Value = scene;
+		
+		_logger.LogWarning($"Loaded scene [{scene.Name}]");
 	}
 
 	public BuildScenesConfiguration GetBuildConfiguration()

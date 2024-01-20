@@ -13,3 +13,4 @@
 #include "Ecs/Ecs.h"
 
 #include "Modules/Assets/AssetManager.h"
+#include "Modules/Behaviour/Behaviour.h"

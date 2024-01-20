@@ -6,6 +6,7 @@
 #include "Engine/Services.h"
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/EntityManagement/EntityManager.h"
 
 namespace rei::scenes
 {
@@ -33,7 +34,7 @@ namespace rei::scenes
     void SceneManager::CreateSceneEntities()
     {
         REI_THROW_IF(!_activeScene, "Active scene is missing")
-        
+
         LOG("Creating scene entities. Entities count: " + std::to_string(_activeScene->GetEntities().size()))
 
         ECS_WORLD(GetInternalWorld());
@@ -41,8 +42,14 @@ namespace rei::scenes
         for (auto sceneEntity : _activeScene->GetEntities())
         {
             auto e = NEW_ENTITY();
-            GET(e, EntityInfo) = { sceneEntity.GetId(), sceneEntity.GetName() };
-            LOG("Created entity. Scene id: " + STRING(sceneEntity.GetId()) + ", World id: " + STRING(e.Id) + ", Name: " + sceneEntity.GetName())
+            GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
+            LOG("New Entity (" + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + ")");
+
+            for (auto behaviourData : sceneEntity.GetBehaviours())
+            {
+                auto& b = GetEntityManager().AddBehaviour(e, 0);
+                b.Init();
+            }
         }
     }
 }

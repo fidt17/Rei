@@ -4,4 +4,5 @@ public enum AssetType
 {
 	Data = 0,
 	Scene = 1,
+	Behaviour = 2,
 }

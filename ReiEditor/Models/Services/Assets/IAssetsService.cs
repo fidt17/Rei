@@ -9,8 +9,6 @@ public interface IAssetsService
 	IObservable<bool> SaveInProcess { get; }
 
 	Task RefreshAssets();
-	Task<bool> Create(Asset asset, string projectPath);
-	Task<bool> Create(Asset asset, string id, string projectPath);
 	bool Exists<T>(string assetId) where T : Asset;
 
 	Task<T?> Load<T>(string assetId) where T : Asset;

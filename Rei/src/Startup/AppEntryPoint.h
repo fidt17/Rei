@@ -1,10 +1,17 @@
 #pragma once
 #include "App.h"
 #include "Engine/Engine.h"
+#include "Modules/EntityManagement/EntityManager.h"
 
 #ifdef REI_APP
 
+namespace rei
+{
+    class BehaviourComponentFactory;
+}
+
 extern std::shared_ptr<rei::App> CreateApp();
+extern void ConfigureComponentsFactory(rei::BehaviourComponentFactory& factory);
 
 namespace rei::external
 {
@@ -31,6 +38,7 @@ int main()
     try
     {
         const auto engine = rei::external::CreateEngine();
+        ConfigureComponentsFactory(rei::GetEntityManager()._componentFactory);
         rei::external::Start(engine);
 
         std::cin.get();

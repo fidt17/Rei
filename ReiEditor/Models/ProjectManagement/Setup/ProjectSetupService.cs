@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
@@ -42,8 +43,6 @@ public class ProjectSetupService : IProjectSetupService
             await SetupNewProject();
             project.SetHasBeenSetup(true);
             await _assetsService.SaveProject();
-            prepareProjectProcedure.Complete();
-            return;
         }
 		
         await OpenLastScene();
@@ -72,11 +71,9 @@ public class ProjectSetupService : IProjectSetupService
         {
             _logger.LogWarning("Last scene is missing. Creating default one");
             lastScene = await CreateDefaultScene();
-            await _assetsService.SaveProject();
         }
 
-        if (lastScene == null) return;
-        await _sceneManagementService.LoadScene(lastScene);
+        await _sceneManagementService.LoadScene(lastScene ?? throw new NullReferenceException("last scene is missing"));
     }
 
     private async Task<Scene?> CreateDefaultScene()
