@@ -92,6 +92,7 @@
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
+    <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />

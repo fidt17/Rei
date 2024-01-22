@@ -13,30 +13,36 @@ namespace ReiEditor.Models.Services.Assets.Behaviours;
 public class BehaviourComponentsService : IBehaviourComponentsService
 {
     private readonly Dictionary<int, BehaviourAssetInfo> _behaviours = new();
-    private int _maxBehaviourId;
+    private int _maxBehaviourId = -1;
 
     private readonly BehaviourFileUtility _utility;
     private readonly IAssetCreator _assetCreator;
     private readonly ISerializer _serializer;
     private readonly IResourceService _resourceService;
+    private readonly BehaviourRegistrySourceGenerator _behaviourRegistrySourceGenerator;
     private readonly ILogger<BehaviourComponentsService> _logger;
 
-    public BehaviourComponentsService(IResourceService resourceService, ISerializer serializer, ILogger<BehaviourComponentsService> logger, IAssetCreator assetCreator)
+    public BehaviourComponentsService(IResourceService resourceService, ISerializer serializer, IAssetCreator assetCreator, ILogger<BehaviourComponentsService> logger)
     {
         _utility = new BehaviourFileUtility(resourceService);
         _resourceService = resourceService;
         _serializer = serializer;
-        _logger = logger;
         _assetCreator = assetCreator;
+        _logger = logger;
+        _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
     }
 
     public async Task<int> ImportBehaviours()
     {
+        _logger.Log("Import behaviours");
+        
+        _behaviours.Clear();
+        
         var behaviourFiles = _utility.GetAllBehaviours();
         var metaFiles = await _utility.GetAllBehaviourMetas();
         
         RegisterBehaviours(behaviourFiles, metaFiles);
-        GenerateBehaviourRegistry();
+        GenerateBehaviourRegistrySourceFile();
 
         return _behaviours.Count;
     }
@@ -61,7 +67,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         foreach (var behaviourFile in newBehaviours)
         {
             if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
-            var metaFile = CreateMetaFile(behaviourFile, _maxBehaviourId++);
+
+            var metaFile = CreateMetaFile(behaviourFile, _maxBehaviourId + 1);
             RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile));
         }
     }
@@ -69,7 +76,10 @@ public class BehaviourComponentsService : IBehaviourComponentsService
     private void RegisterBehaviour(BehaviourAssetInfo behaviourAssetInfo)
     {
         var behaviourId = behaviourAssetInfo.Meta.Object.BehaviourId;
-        if (_behaviours.ContainsKey(behaviourId)) throw new Exception($"Behaviour with id {behaviourId} already exists");
+        if (_behaviours.ContainsKey(behaviourId))
+        {
+            throw new Exception($"Behaviour with id {behaviourId} already exists. Existing value: {_behaviours[behaviourId].Behaviour.FullPath}. New value: {behaviourAssetInfo.Behaviour.FullPath}");
+        }
         _behaviours.Add(behaviourId, behaviourAssetInfo);
         _maxBehaviourId = Math.Max(_maxBehaviourId, behaviourId);
     }
@@ -88,12 +98,14 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         return new ObjectFile<BehaviourMeta>(meta, metaPath);
     }
 
-    private void GenerateBehaviourRegistry()
+    private void GenerateBehaviourRegistrySourceFile()
     {
+        _logger.Log("Generate behaviour registry source file");
+        
         var dir = _resourceService.GetFullPath("Scripts", "Internal");
         Directory.CreateDirectory(dir);
-        var text = "#include <Modules/EntityManagement/EntityManager.h>" +
-                   "\nvoid ConfigureComponentsFactory(rei::BehaviourComponentFactory& factory) { }";
-        File.WriteAllText(Path.Combine(dir, "BehaviourRegistry.cpp"), text);
+
+        var source = _behaviourRegistrySourceGenerator.Generate(_behaviours);
+        File.WriteAllText(Path.Combine(dir, "BehaviourRegistry.cpp"), source);
     }
 }

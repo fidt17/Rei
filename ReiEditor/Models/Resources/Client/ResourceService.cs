@@ -27,6 +27,11 @@ public class ResourceService : IResourceService
 		return Path.GetFullPath(Path.Combine(_resourcesPath, "Project", Path.Combine(path)));
 	}
 
+	public string GetSolutionPath(params string[] path)
+	{
+		return Path.GetFullPath(Path.Combine(GetFullPath("Scripts"), Path.Combine(path)));
+	}
+
 	public async Task<T?> Load<T>(string path)
 	{
 		try

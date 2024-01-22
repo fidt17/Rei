@@ -61,7 +61,6 @@ public class AssetsService : IAssetsService, IDisposable
 
     public async Task RefreshAssets()
     {
-        _logger.Log("- - - - - - - - - -");
         _logger.LogWarning("Refreshing assets...");
 
         var deletedMetaFilesCount = await _assetImporter.DeleteInvalidMetaFiles();
@@ -77,7 +76,6 @@ public class AssetsService : IAssetsService, IDisposable
         _logger.Log($"Total assets found: {_idToAssetInfoMap.Count}");
         _logger.Log($"Behaviours count: {behavioursCount}");
         _logger.Log($"Deleted invalid meta files: {deletedMetaFilesCount}");
-        _logger.Log("- - - - - - - - - -");
     }
     
     public bool Exists<T>(string assetId) where T : Asset => _idToAssetInfoMap.ContainsKey(assetId) && _idToAssetInfoMap[assetId].GetType() == typeof(T);

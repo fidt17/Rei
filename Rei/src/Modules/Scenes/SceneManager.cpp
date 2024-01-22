@@ -48,6 +48,7 @@ namespace rei::scenes
             for (auto behaviourData : sceneEntity.GetBehaviours())
             {
                 auto& b = GetEntityManager().AddBehaviour(e, 0);
+                b.Construct(e, GET(e, EntityInfo));
                 b.Init();
             }
         }

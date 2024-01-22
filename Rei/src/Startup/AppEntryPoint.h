@@ -17,7 +17,9 @@ namespace rei::external
 {
     REI_EXTERN_API inline internal::engine::Engine* CreateEngine()
     {
-        return new internal::engine::Engine(CreateApp());
+        auto engine = new internal::engine::Engine(CreateApp());
+        ConfigureComponentsFactory(GetEntityManager()._componentFactory);
+        return engine;
     }
 
     REI_EXTERN_API inline void Start(internal::engine::Engine* engine)
@@ -38,7 +40,6 @@ int main()
     try
     {
         const auto engine = rei::external::CreateEngine();
-        ConfigureComponentsFactory(rei::GetEntityManager()._componentFactory);
         rei::external::Start(engine);
 
         std::cin.get();
