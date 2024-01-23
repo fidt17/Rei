@@ -13,29 +13,51 @@
         <drawers:EntityMonitorDrawerViewModel />
     </Design.DataContext>
 
-    <Border>
+    <Border Background="{StaticResource Dark_2}">
         <StackPanel Spacing="10">
             <ScrollViewer>
                 <ItemsControl
                     ItemsSource="{Binding Elements}">
                     <ItemsControl.DataTemplates>
                         <DataTemplate DataType="components:EntityInfoComponentDrawerViewModel">
-                            <component:EntityInfoComponentDrawer />
+                            <component:EntityInfoComponentDrawer Margin="5"/>
                         </DataTemplate>
                         <DataTemplate DataType="components:BehaviourComponentDrawerViewModel">
-                            <component:BehaviourComponentDrawer />
+                            <component:BehaviourComponentDrawer Margin="5"/>
                         </DataTemplate>
                         <DataTemplate DataType="components:TextComponentDrawerViewModel">
-                            <component:TextComponentDrawer />
+                            <component:TextComponentDrawer Margin="5"/>
                         </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
             </ScrollViewer>
 
-            <Button
-                HorizontalAlignment="Center"
-                Command="{Binding AddBehaviourCommand}"
-                Content="Add Behaviour" />
+            <StackPanel>
+                <Button
+                    x:Name="AddBehaviourButton"
+                    Width="200"
+                    HorizontalAlignment="Stretch"
+                    Click="AddBehaviourButtonClicked">
+                    <TextBlock Text="Add Behaviour"
+                               HorizontalAlignment="Center" />
+                </Button>
+                
+                <ComboBox
+                    x:Name="BehaviourSelectionComboBox"
+                    IsVisible="False"
+                    LostFocus="BehaviourComboboxLostFocus"
+                    DropDownClosed="BehaviourComboboxClosed"
+                    ItemsSource="{Binding BehaviourSelection}"
+                    SelectionChanged="BehaviourComboboxSelectionChanged"
+                    HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="drawers:BehaviourSelectionData">
+                            <TextBlock Text="{Binding BehaviourName}"
+                                       Cursor="Hand" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
 
         </StackPanel>
     </Border>

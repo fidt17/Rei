@@ -2,9 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Design.PreviewWith>
-        <Button>
-            Press Me
-        </Button>
+        <ComboBox />
     </Design.PreviewWith>
 
     <Styles.Resources>
@@ -25,6 +23,9 @@
         <SolidColorBrush x:Key="Info" Color="#e6edf3" />
         <SolidColorBrush x:Key="Warning" Color="#fcc943" />
         <SolidColorBrush x:Key="Error" Color="#F76F58" />
+
+        <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="#e6edf3" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#20262F" />
     </Styles.Resources>
 
     <!-- Button Styles -->
@@ -126,7 +127,7 @@
         <Setter Property="Background" Value="{StaticResource Dark_3}" />
         <Setter Property="CornerRadius" Value="2" />
     </Style>
-    
+
     <Style Selector="Border.MonitorComponent">
         <Setter Property="Background" Value="{StaticResource Dark_3}" />
         <Setter Property="CornerRadius" Value="2" />
@@ -158,4 +159,21 @@
         <Setter Property="Foreground" Value="{StaticResource White}" />
     </Style>
     <!-- END Message Box Styles -->
+
+    <!-- ComboBox Styles -->
+
+    <Style Selector="ComboBox">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+        <Setter Property="Foreground" Value="{StaticResource White}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ComboBox:pointerover /template/ Border#Background">
+        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+        <Setter Property="BorderBrush" Value="{StaticResource White}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- END ComboBox Styles -->
 </Styles>

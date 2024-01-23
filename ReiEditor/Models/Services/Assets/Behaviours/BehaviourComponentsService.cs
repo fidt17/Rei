@@ -12,6 +12,8 @@ namespace ReiEditor.Models.Services.Assets.Behaviours;
 
 public class BehaviourComponentsService : IBehaviourComponentsService
 {
+    public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours => _behaviours;
+
     private readonly Dictionary<int, BehaviourAssetInfo> _behaviours = new();
     private int _maxBehaviourId = -1;
 
@@ -30,6 +32,13 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         _assetCreator = assetCreator;
         _logger = logger;
         _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
+    }
+
+    public BehaviourAssetInfo? GetBehaviourById(int id)
+    {
+        if (_behaviours.ContainsKey(id)) return _behaviours[id];
+        
+        return null;
     }
 
     public async Task<int> ImportBehaviours()
@@ -86,10 +95,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private ObjectFile<BehaviourMeta> CreateMetaFile(ObjectFile<string> behaviourFile, int behaviourId)
     {
-        var meta = new BehaviourMeta(_assetCreator.AllocateAssetId(), AssetType.Behaviour)
-        {
-            BehaviourId = behaviourId
-        };
+        var meta = new BehaviourMeta(behaviourId, _assetCreator.AllocateAssetId(), AssetType.Behaviour);
 
         var extension = Path.GetExtension(behaviourFile.FullPath);
         var serialized = _serializer.Serialize(meta);

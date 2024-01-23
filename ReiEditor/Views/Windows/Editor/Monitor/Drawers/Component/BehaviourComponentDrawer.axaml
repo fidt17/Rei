@@ -9,14 +9,20 @@
     <Design.DataContext>
         <components:BehaviourComponentDrawerViewModel />
     </Design.DataContext>
-    
+
     <Border Classes="MonitorComponent">
 
-        <Grid ColumnDefinitions="*, Auto">
+        <Grid RowDefinitions="Auto, *">
             <TextBlock
-                FontWeight="Bold"
                 Padding="10, 0, 0, 0"
-                Text="Behaviour Component"/>
+                Text="{Binding Name}" />
+
+            <Border Grid.Row="1" MinHeight="10"
+                    Margin="0,10,0,0"
+                    BorderBrush="{StaticResource Gray_0}"
+                    BorderThickness="0, 1, 0, 0">
+
+            </Border>
 
         </Grid>
 
