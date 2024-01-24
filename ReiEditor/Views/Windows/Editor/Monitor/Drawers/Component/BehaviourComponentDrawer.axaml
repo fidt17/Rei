@@ -3,7 +3,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:components="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             mc:Ignorable="d" d:DesignWidth="300"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component.BehaviourComponentDrawer"
              x:DataType="components:BehaviourComponentDrawerViewModel">
     <Design.DataContext>
@@ -11,20 +13,76 @@
     </Design.DataContext>
 
     <Border Classes="MonitorComponent">
-
         <Grid RowDefinitions="Auto, *">
-            <TextBlock
-                Padding="10, 0, 0, 0"
-                Text="{Binding Name}" />
+            <!-- Header -->
+            <Border Height="30" VerticalAlignment="Top"
+                    Background="{StaticResource Dark_2}"
+                    Padding="0,5,0,5">
+                <Grid ColumnDefinitions="*, Auto">
 
-            <Border Grid.Row="1" MinHeight="10"
-                    Margin="0,10,0,0"
-                    BorderBrush="{StaticResource Gray_0}"
-                    BorderThickness="0, 1, 0, 0">
+                    <Border
+                        Background="{StaticResource Clear}"
+                        Cursor="Hand">
+                        <Grid ColumnDefinitions="Auto, *">
+                            <!-- Expand Toggle -->
+                            <buttons:HorizontalExpandToggle
+                                Grid.Column="0"
+                                IsVisible="True"
+                                VerticalAlignment="Top"
+                                IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
 
+                            <!-- Name Label -->
+                            <TextBlock
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Text="{Binding Name}"
+                                Classes="h4" />
+
+                            <Button
+                                Classes="Clear"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Command="{Binding SwitchExpandState}" />
+
+                        </Grid>
+                    </Border>
+
+                    <!-- Context Menu Button -->
+                    <Button
+                        Grid.Column="1"
+                        Padding="3"
+                        Margin="0,0,7,0"
+                        Classes="Clear">
+                        <Button.Styles>
+                            <Style Selector="Button Ellipse">
+                                <Setter Property="Fill" Value="{StaticResource Gray_1}" />
+                            </Style>
+                            <Style Selector="Button:pointerover Ellipse">
+                                <Setter Property="Fill" Value="{StaticResource White}" />
+                            </Style>
+                        </Button.Styles>
+                        <Button.Flyout>
+                            <Flyout FlyoutPresenterClasses="Clear">
+                                <contextMenu:ContextMenuView DataContext="{Binding ContextMenu}" />
+                            </Flyout>
+                        </Button.Flyout>
+
+                        <StackPanel Spacing="2">
+                            <Ellipse Width="3" Height="3" />
+                            <Ellipse Width="3" Height="3" />
+                            <Ellipse Width="3" Height="3" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </Border>
 
+            <!-- Body -->
+            <Border
+                Grid.Row="1"
+                IsVisible="{Binding Expanded.Value}"
+                MinHeight="48" />
         </Grid>
-
     </Border>
 </UserControl>

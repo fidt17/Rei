@@ -27,9 +27,9 @@ public partial class EntityMonitorDrawer : UserControl
     private void ShowBehaviourComboBox()
     {
         AddBehaviourButton.IsVisible = false;
+        BehaviourSelectionComboBox.SelectedIndex = -1;
         BehaviourSelectionComboBox.IsVisible = true;
         BehaviourSelectionComboBox.IsDropDownOpen = true;
-        BehaviourSelectionComboBox.SelectedIndex = -1;
     }
 
     private void BehaviourComboboxLostFocus(object? sender, RoutedEventArgs e)
@@ -44,11 +44,14 @@ public partial class EntityMonitorDrawer : UserControl
 
     private void BehaviourComboboxSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (BehaviourSelectionComboBox.SelectedIndex < 0) return;
+        if (!BehaviourSelectionComboBox.IsVisible) return;
+        if (e.AddedItems.Count != 1) return;
 
+        BehaviourSelectionData? item = (BehaviourSelectionData?) e.AddedItems[0];
+        if (item == null) return;
         if (DataContext is EntityMonitorDrawerViewModel vm)
         {
-            vm.AddBehaviour(BehaviourSelectionComboBox.SelectedIndex);
+            vm.AddBehaviour(item);
         }
     }
 }

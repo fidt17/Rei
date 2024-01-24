@@ -14,8 +14,8 @@ public class LostFocusBehaviour : AvaloniaObject
         CommandProperty.Changed.Subscribe(x => HandleCommandChanged(x.Sender, x.NewValue.GetValueOrDefault<ICommand>()!));
     }
 
-    public static readonly AttachedProperty<ICommand> CommandProperty = AvaloniaProperty.RegisterAttached<TappedBehaviour, Interactive, ICommand>("Command", default!, false, BindingMode.OneTime);
-    public static readonly AttachedProperty<object> CommandParameterProperty = AvaloniaProperty.RegisterAttached<TappedBehaviour, Interactive, object>("CommandParameter");
+    public static readonly AttachedProperty<ICommand> CommandProperty = AvaloniaProperty.RegisterAttached<LostFocusBehaviour, Interactive, ICommand>("Command", default!, false, BindingMode.OneTime);
+    public static readonly AttachedProperty<object> CommandParameterProperty = AvaloniaProperty.RegisterAttached<LostFocusBehaviour, Interactive, object>("CommandParameter");
 
     private static void HandleCommandChanged(AvaloniaObject element, ICommand commandValue)
     {

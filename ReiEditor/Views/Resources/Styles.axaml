@@ -38,11 +38,6 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
-    <Style Selector="Button.Clear">
-        <Setter Property="Background" Value="{StaticResource Clear}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Clear}" />
-    </Style>
-
     <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{StaticResource Dark_4}" />
         <Setter Property="Foreground" Value="{StaticResource White}" />
@@ -55,6 +50,16 @@
         <Setter Property="Foreground" Value="{StaticResource Gray_0}" />
         <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
         <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    
+    <Style Selector="Button.Clear">
+        <Setter Property="Background" Value="{StaticResource Clear}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Clear}" />
+    </Style>
+    
+    <Style Selector="Button.Clear:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Clear}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Clear}" />
     </Style>
     <!-- END Button Styles -->
 
@@ -133,7 +138,6 @@
         <Setter Property="CornerRadius" Value="2" />
         <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="10"></Setter>
     </Style>
     <!-- END Border Styles -->
 

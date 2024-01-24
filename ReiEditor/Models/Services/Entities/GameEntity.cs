@@ -9,6 +9,7 @@ public class GameEntity
 {
     public event Action<GameEntity, string>? NameChangedEvent;
     public event Action<GameEntity, BehaviourComponent>? BehaviourAddedEvent;
+    public event Action<GameEntity, BehaviourComponent>? BehaviourDeletedEvent;
     
     [JsonProperty]
     public int Id { get; }
@@ -37,10 +38,23 @@ public class GameEntity
         NameChangedEvent?.Invoke(this, Name);
     }
 
+    public bool HasComponent(int id) => _behaviours.Exists(x => x.Id == id);
+    public bool HasBehaviour(BehaviourComponent behaviour) => _behaviours.Contains(behaviour);
+
     public void AddBehaviour(BehaviourComponent behaviour)
     {
+        if (_behaviours.Contains(behaviour)) throw new Exception("Trying to add same behaviour twice");
+        
         _behaviours.Add(behaviour);
         BehaviourAddedEvent?.Invoke(this, behaviour);
+    }
+
+    public void DeleteBehaviour(BehaviourComponent behaviour)
+    {
+        if (!_behaviours.Contains(behaviour)) throw new Exception("Entity does not has such behaviour");
+
+        _behaviours.Remove(behaviour);
+        BehaviourDeletedEvent?.Invoke(this, behaviour);
     }
 
     public bool Equals(GameEntity other) => Id == other.Id;

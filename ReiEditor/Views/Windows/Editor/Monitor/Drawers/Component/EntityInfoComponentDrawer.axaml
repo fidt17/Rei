@@ -12,7 +12,8 @@
         <components:EntityInfoComponentDrawerViewModel />
     </Design.DataContext>
 
-    <Border Classes="MonitorComponent">
+    <Border Classes="MonitorComponent"
+            Padding="10">
 
         <Grid ColumnDefinitions="*, Auto">
             <textBoxes:ReiTextBox

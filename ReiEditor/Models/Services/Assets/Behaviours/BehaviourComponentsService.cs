@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Components;
+using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
@@ -54,6 +56,38 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         GenerateBehaviourRegistrySourceFile();
 
         return _behaviours.Count;
+    }
+
+    public bool AddComponent(GameEntity e, BehaviourComponent component)
+    {
+        if (!_behaviours.ContainsKey(component.Id))
+        {
+            _logger.LogError($"Component with ID {component} has not been registered.");
+            return false;
+        }
+
+        var componentInfo = _behaviours[component.Id];
+        
+        if (e.HasComponent(component.Id))
+        {
+            _logger.LogError($"{e} already has a component {componentInfo.Meta.Object.BehaviourId}:{componentInfo.BehaviourName}");
+            return false;
+        }
+        
+        e.AddBehaviour(component);
+        return true;
+    }
+
+    public bool DeleteComponent(GameEntity e, BehaviourComponent component)
+    {
+        if (!e.HasBehaviour(component))
+        {
+            _logger.LogError($"Cannot delete component {component.Id} from {e}. Entity does not have one.");
+            return false;
+        }
+        
+        e.DeleteBehaviour(component);
+        return true;
     }
 
     private void RegisterBehaviours(List<ObjectFile<string>> behaviourFiles, List<ObjectFile<BehaviourMeta>> metaFiles)

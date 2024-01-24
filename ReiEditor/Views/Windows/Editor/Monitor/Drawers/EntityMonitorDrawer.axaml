@@ -20,13 +20,13 @@
                     ItemsSource="{Binding Elements}">
                     <ItemsControl.DataTemplates>
                         <DataTemplate DataType="components:EntityInfoComponentDrawerViewModel">
-                            <component:EntityInfoComponentDrawer Margin="5"/>
+                            <component:EntityInfoComponentDrawer Margin="1" />
                         </DataTemplate>
                         <DataTemplate DataType="components:BehaviourComponentDrawerViewModel">
-                            <component:BehaviourComponentDrawer Margin="5"/>
+                            <component:BehaviourComponentDrawer Margin="1" />
                         </DataTemplate>
                         <DataTemplate DataType="components:TextComponentDrawerViewModel">
-                            <component:TextComponentDrawer Margin="5"/>
+                            <component:TextComponentDrawer Margin="1" />
                         </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
@@ -41,7 +41,7 @@
                     <TextBlock Text="Add Behaviour"
                                HorizontalAlignment="Center" />
                 </Button>
-                
+
                 <ComboBox
                     x:Name="BehaviourSelectionComboBox"
                     IsVisible="False"

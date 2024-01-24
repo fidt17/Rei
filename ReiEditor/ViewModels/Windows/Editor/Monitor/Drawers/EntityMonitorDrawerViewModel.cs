@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using DynamicData;
 using ReiEditor.Models.Services.Assets.Behaviours;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Utils;
@@ -30,23 +32,27 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     private readonly GameEntity _entity;
     private readonly IFactory<BehaviourComponentDrawerViewModel> _behaviourComponentDrawerFactory;
+    private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly ILogger<EntityMonitorDrawerViewModel> _logger;
 
 #pragma warning disable CS8618
-    public EntityMonitorDrawerViewModel()
-    {
-    }
+    public EntityMonitorDrawerViewModel() { }
 #pragma warning restore CS8618
 
     public EntityMonitorDrawerViewModel(
         GameEntity entity, 
         IFactory<EntityInfoComponentDrawerViewModel> entityInfoComponentDrawerFactory,
         IFactory<BehaviourComponentDrawerViewModel> behaviourComponentDrawerFactory,
-        IBehaviourComponentsService behaviourComponentsService)
+        IBehaviourComponentsService behaviourComponentsService,
+        ILogger<EntityMonitorDrawerViewModel> logger)
     {
         _entity = entity;
         _behaviourComponentDrawerFactory = behaviourComponentDrawerFactory;
+        _behaviourComponentsService = behaviourComponentsService;
+        _logger = logger;
 
         _entity.BehaviourAddedEvent += HandleEntityBehaviourAddedEvent;
+        _entity.BehaviourDeletedEvent += HandleEntityBehaviourDeletedEvent;
         
         Elements.Add(entityInfoComponentDrawerFactory.CreateInstance(entity));
         foreach (var b in _entity.Behaviours)
@@ -65,15 +71,30 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         _entity.BehaviourAddedEvent -= HandleEntityBehaviourAddedEvent;
     }
 
-    public void AddBehaviour(int idx)
+    public void AddBehaviour(BehaviourSelectionData data)
     {
-        var bd = BehaviourSelection[idx];
-        _entity.AddBehaviour(new BehaviourComponent(bd.BehaviourId));
+        var component = new BehaviourComponent(data.BehaviourId);
+        if (!_behaviourComponentsService.AddComponent(_entity, component))
+        {
+            _logger.LogError($"Failed at adding component {data.BehaviourId}:{data.BehaviourName}");
+        }
     }
 
     private void HandleEntityBehaviourAddedEvent(GameEntity e, BehaviourComponent component)
     {
         Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(e, component));
+    }
+
+    private void HandleEntityBehaviourDeletedEvent(GameEntity e, BehaviourComponent component)
+    {
+        foreach (var vm in Elements)
+        {
+            if (vm is not BehaviourComponentDrawerViewModel bvm) continue;
+            if (bvm.BehaviourComponent != component) continue;
+            bvm.Dispose();
+            Elements.Remove(bvm);
+            return;
+        }
     }
 
     private void ConfigureBehaviourSelectionList(IBehaviourComponentsService behaviourComponentsService)
@@ -83,6 +104,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         {
             behaviourSelectionList.Add(new BehaviourSelectionData(b.Key, b.Value.BehaviourName));
         }
+        behaviourSelectionList.Sort((a, b) => string.Compare(a.BehaviourName, b.BehaviourName, StringComparison.Ordinal));
 
         BehaviourSelection.AddRange(behaviourSelectionList);
     }
