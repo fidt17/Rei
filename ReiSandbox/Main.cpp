@@ -3,12 +3,22 @@
 
 class MyBehaviour : public rei::Behaviour
 {
+    BEHAVIOUR_BODY(MyBehaviour)
+    
+    SERIALIZED std::string _property;
+
 public:
     void Init() override
     {
         LOG("------------------------")
     }
 };
+
+MyBehaviour::MyBehaviour(const rei::ecs::Entity entity, const nlohmann::json& data)
+    : Behaviour(entity),
+      _property(data.at("_property"))
+{
+}
 
 void ConfigureComponentsFactory(rei::BehaviourComponentFactory& factory)
 {

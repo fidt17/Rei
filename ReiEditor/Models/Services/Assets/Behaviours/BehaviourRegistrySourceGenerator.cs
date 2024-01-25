@@ -23,6 +23,8 @@ public class BehaviourRegistrySourceGenerator
         str.AppendLine();
         str.AppendLine(GenerateIncludes(behaviours));
         str.AppendLine(GenerateRegistryMethod(behaviours));
+        str.AppendLine();
+        str.AppendLine(GenerateBodyImplementation(behaviours));
         
         return str.ToString();
     }
@@ -72,6 +74,24 @@ public class BehaviourRegistrySourceGenerator
         
         str.AppendLine("}");
 
+        return str.ToString();
+    }
+
+    private string GenerateBodyImplementation(Dictionary<int, BehaviourAssetInfo> behaviours)
+    {
+        var str = new StringBuilder();
+        
+        foreach (var b in behaviours)
+        {
+            var behaviourName = b.Value.BehaviourName;
+
+            str.AppendLine($"{behaviourName}::{behaviourName}(const rei::ecs::Entity e, const nlohmann::json& data)");
+            str.AppendLine($"    : Behaviour(e)");
+            str.AppendLine($"    , _property(data.at(\"_property\"))");
+            str.AppendLine("{" + "}");
+            str.AppendLine();
+        }
+        
         return str.ToString();
     }
 }

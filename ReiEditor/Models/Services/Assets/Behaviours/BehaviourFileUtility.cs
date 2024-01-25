@@ -56,7 +56,7 @@ public class BehaviourFileUtility
     public bool TryGetBehaviourNameFrom(string text, out string name)
     {
         name = "";
-        var regex = new Regex(".*BEHAVIOUR\\((.*)\\).*");
+        var regex = new Regex(".*BEHAVIOUR_BODY\\((.*)\\).*");
         if (!regex.IsMatch(text)) return false;
             
         name = regex.Match(text).Groups[1].Value;

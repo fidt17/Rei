@@ -1,10 +1,5 @@
 ﻿#pragma once
 
-#define BEHAVIOUR(NAME)\
-    class NAME : public rei::Behaviour  // NOLINT(bugprone-macro-parentheses)
-
-struct EntityInfo;
-
 namespace rei
 {
     class Behaviour
@@ -12,15 +7,28 @@ namespace rei
     public:
         virtual ~Behaviour() = default;
 
-        void Construct(ecs::Entity e, const EntityInfo& entityInfo);
+        Behaviour() = default;
+
+        explicit Behaviour(const ecs::Entity e) : _entity(e)
+        {
+        }
+
         virtual void Init() = 0;
 
         REI_API ecs::Entity GetEntity() const;
-        REI_API const std::string& GetName() const;
-        REI_API i32 GetSceneId() const;
+
+        Behaviour& operator=(const Behaviour& other) = default;
 
     private:
-        ecs::Entity _entity {-1, 0};
-        i32 _sceneId = -1;
+        ecs::Entity _entity{-1, 0};
     };
 }
+
+#define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
+    public:\
+    BEHAVIOUR_NAME() = default;\
+    explicit BEHAVIOUR_NAME(const rei::ecs::Entity entity, const nlohmann::json& data);\
+    BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
+    private:
+
+#define SERIALIZED
