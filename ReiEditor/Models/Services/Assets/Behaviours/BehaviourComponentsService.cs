@@ -75,7 +75,19 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         }
         
         e.AddBehaviour(component);
+
+        var i = 0;
+        foreach (var sp in componentInfo.SerializedProperties)
+        {
+            SetPropertyValue(e, component, sp, i++.ToString());
+        }
+        
         return true;
+    }
+
+    public void SetPropertyValue(GameEntity e, BehaviourComponent component, string propertyName, object value)
+    {
+        component.SerializedData[propertyName] = value;
     }
 
     public bool DeleteComponent(GameEntity e, BehaviourComponent component)
@@ -104,7 +116,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                 continue;
             }
 
-            RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile));
+            var properties = _utility.GetSerializedProperties(behaviourFile.Object);
+            RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile, properties));
         }
         
         foreach (var behaviourFile in newBehaviours)
@@ -112,7 +125,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
 
             var metaFile = CreateMetaFile(behaviourFile, _maxBehaviourId + 1);
-            RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile));
+            var properties = _utility.GetSerializedProperties(behaviourFile.Object);
+            RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile, properties));
         }
     }
 

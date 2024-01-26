@@ -84,10 +84,14 @@ public class BehaviourRegistrySourceGenerator
         foreach (var b in behaviours)
         {
             var behaviourName = b.Value.BehaviourName;
+            var serializedProperties = b.Value.SerializedProperties;
 
             str.AppendLine($"{behaviourName}::{behaviourName}(const rei::ecs::Entity e, const nlohmann::json& data)");
             str.AppendLine($"    : Behaviour(e)");
-            str.AppendLine($"    , _property(data.at(\"_property\"))");
+            foreach (var p in serializedProperties)
+            {
+                str.AppendLine($"    , {p}(data.at(\"{p}\"))");
+            }
             str.AppendLine("{" + "}");
             str.AppendLine();
         }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.FileSystem;
+using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Assets.Behaviours;
 
@@ -56,11 +57,29 @@ public class BehaviourFileUtility
     public bool TryGetBehaviourNameFrom(string text, out string name)
     {
         name = "";
-        var regex = new Regex(".*BEHAVIOUR_BODY\\((.*)\\).*");
+        var regex = new Regex($".*{BehaviourMacrosConstants.BEHAVIOUR_BODY}\\((.*)\\).*");
         if (!regex.IsMatch(text)) return false;
             
         name = regex.Match(text).Groups[1].Value;
 
         return true;
+    }
+    
+    public List<string> GetSerializedProperties(string text)
+    {
+        var result = new List<string>();
+        var serializedIndexes = text.AllIndexesOf(BehaviourMacrosConstants.SERIALIZED);
+
+        foreach (var serializedIndex in serializedIndexes)
+        {
+            var endIdx = text.IndexOf(';', serializedIndex);
+            var substring = text.Substring(serializedIndex, endIdx - serializedIndex);
+            var words = substring.Split().ToList();
+            words.RemoveAll(string.IsNullOrWhiteSpace);
+            var variableName = words[^1];
+            result.Add(variableName);
+        }
+
+        return result;
     }
 }
