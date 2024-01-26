@@ -35,6 +35,8 @@ public class ClientDllManager : IClientDllManager, IDisposable
 		}
 	}
 
+	public bool DllExists() => File.Exists(GetDllPath());
+
 	public void LoadDll()
 	{
 		if (_dllLoaded)
@@ -49,7 +51,6 @@ public class ClientDllManager : IClientDllManager, IDisposable
 		_loadedDllPtr = LoadLibrary(GetProjectDllName());
 		_engineApi.SetDllPtr(_loadedDllPtr);
 		_dllLoaded.Value = true;
-		_logger.Log($"Loaded client dll");
 	}
 
 	public void UnloadDll()
@@ -60,7 +61,6 @@ public class ClientDllManager : IClientDllManager, IDisposable
 
 		_dllLoaded.Value = false;
 		_loadedDllPtr = IntPtr.Zero;
-		_logger.Log($"Unloaded client dll");
 	}
 	
 	private string GetProjectDllName() => $"{_activeProjectService.GetActiveProject().ProjectName}.dll";

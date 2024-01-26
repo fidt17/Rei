@@ -25,7 +25,7 @@ public class AssetImporter : IAssetImporter
     {
         _logger.Log("Delete invalid meta files");
         var counter = 0;
-        foreach (var file in Directory.EnumerateFiles(_resourceService.GetFullPath(), $"*{FileExtensions.META}", SearchOption.AllDirectories))
+        foreach (var file in Directory.EnumerateFiles(_resourceService.GetProjectPath(), $"*{FileExtensions.META}", SearchOption.AllDirectories))
         {
             try
             {
@@ -56,7 +56,7 @@ public class AssetImporter : IAssetImporter
     public async Task<List<AssetInfo>> ImportAssets()
     {
         _logger.Log("Import assets");
-        var projectRoot = _resourceService.GetFullPath();
+        var projectRoot = _resourceService.GetProjectPath();
 
         var importedAssets = new List<AssetInfo>();
         foreach (var file in Directory.EnumerateFiles(projectRoot, "*.*", SearchOption.AllDirectories))

@@ -22,14 +22,16 @@ public class ResourceService : IResourceService
 		_resourcesPath = _activeProjectService.GetActiveProject().GetDirectoryPath();
 	}
 
-	public string GetFullPath(params string[] path)
+	public string GetRootPath() => _resourcesPath;
+
+	public string GetProjectPath(params string[] path)
 	{
 		return Path.GetFullPath(Path.Combine(_resourcesPath, "Project", Path.Combine(path)));
 	}
 
 	public string GetSolutionPath(params string[] path)
 	{
-		return Path.GetFullPath(Path.Combine(GetFullPath("Scripts"), Path.Combine(path)));
+		return Path.GetFullPath(Path.Combine(GetProjectPath("Scripts"), Path.Combine(path)));
 	}
 
 	public async Task<T?> Load<T>(string path)

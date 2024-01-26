@@ -98,7 +98,7 @@ public class AssetsService : IAssetsService, IDisposable
 
     public async Task<T?> LoadFrom<T>(string projectPath) where T : Asset
     {
-        var fullPath = _resourceService.GetFullPath(projectPath);
+        var fullPath = _resourceService.GetProjectPath(projectPath);
 		
         if (!_resourceService.Exists(fullPath)) return null;
 		

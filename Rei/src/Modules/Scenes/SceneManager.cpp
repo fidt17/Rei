@@ -23,10 +23,9 @@ namespace rei::scenes
         REI_THROW_IF(!_buildScenesConfig.Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
 
         const auto& sceneRef = _buildScenesConfig.GetScene(id);
-        LOG(" \nLoading scene ["+STRING(id)+"]. Ref: ["+sceneRef.AssetId.Id+"]")
 
         _activeScene = std::make_shared<Scene>(GetAssetManager().Load<Scene>(sceneRef));
-        LOG("Scene name: " + _activeScene->GetName())
+        LOG("Loaded scene \"" + _activeScene->GetName() + "\"")
 
         CreateSceneEntities();
     }
@@ -35,15 +34,12 @@ namespace rei::scenes
     {
         REI_THROW_IF(!_activeScene, "Active scene is missing")
 
-        LOG("Creating scene entities. Entities count: " + std::to_string(_activeScene->GetEntities().size()))
-
         ECS_WORLD(GetInternalWorld());
 
         for (auto sceneEntity : _activeScene->GetEntities())
         {
             auto e = NEW_ENTITY();
             GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
-            LOG("New Entity (" + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + ")");
 
             for (auto behaviourData : sceneEntity.GetBehaviours())
             {

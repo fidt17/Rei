@@ -35,8 +35,6 @@ namespace rei::internal::engine
         _sceneManager(std::make_shared<scenes::SceneManager>()),
         _entityManager(std::make_shared<EntityManager>(_internalWorld))
     {
-        LOG("Create engine")
-
         Services::GetInstance()->SetInternalWorld(_internalWorld.get());
         Services::GetInstance()->SetEntityManager(_entityManager.get());
 
@@ -47,8 +45,6 @@ namespace rei::internal::engine
 
     void Engine::Start()
     {
-        LOG("Run")
-
         try
         {
             _sceneManager->LoadScene(0);

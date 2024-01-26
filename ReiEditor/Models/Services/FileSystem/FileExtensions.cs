@@ -14,6 +14,7 @@ public static class FileExtensions
 	public const string SCENE = ".scene";
 	public const string ASSET = ".asset";
 	public const string META = ".meta";
+	public const string CPP = ".cpp";
 	public const string H = ".h";
 
 	public static FilePickerFileType GetFilePicker(string fileExtension)

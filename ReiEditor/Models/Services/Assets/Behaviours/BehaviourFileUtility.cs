@@ -18,7 +18,7 @@ public class BehaviourFileUtility
     public BehaviourFileUtility(IResourceService resourceService)
     {
         _resourceService = resourceService;
-        _root = _resourceService.GetFullPath();
+        _root = _resourceService.GetProjectPath();
     }
 
     public List<ObjectFile<string>> GetAllBehaviours()

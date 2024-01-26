@@ -38,7 +38,7 @@ public class AssetCreator : IAssetCreator
     {
         try
         {
-            var fullPath = _resourceService.GetFullPath(projectPath);
+            var fullPath = _resourceService.GetProjectPath(projectPath);
             var extension = Path.GetExtension(fullPath);
             if (extension == null) throw new Exception($"Project path {projectPath} is missing extension");
             if (_resourceService.Exists(fullPath)) throw new Exception($"Cannot create asset because another file exists at {fullPath}");

@@ -156,7 +156,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
     {
         _logger.Log("Generate behaviour registry source file");
         
-        var dir = _resourceService.GetFullPath("Scripts", "Internal");
+        var dir = _resourceService.GetProjectPath("Scripts", "Internal");
         Directory.CreateDirectory(dir);
 
         var source = _behaviourRegistrySourceGenerator.Generate(_behaviours);

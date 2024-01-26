@@ -39,7 +39,8 @@ public class BuildStarter : IBuildStarter, IDisposable
 
 	public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
 	{
-		await _assetsService.RefreshAssets();
+		if (!_canStartBuildCondition.IsTrue.Value) return false;
+		
 		return await _buildService.BuildProject(configuration);
 	}
 }
