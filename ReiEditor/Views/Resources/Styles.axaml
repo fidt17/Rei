@@ -16,6 +16,8 @@
         <SolidColorBrush x:Key="Gray_0" Color="#30363d" />
         <SolidColorBrush x:Key="Gray_1" Color="#424950" />
         <SolidColorBrush x:Key="Gray_2" Color="#60686F" />
+        <SolidColorBrush x:Key="Gray_3" Color="#7C848B" />
+        <SolidColorBrush x:Key="Gray_4" Color="#8E969D" />
 
         <SolidColorBrush x:Key="White" Color="#e6edf3" />
         <SolidColorBrush x:Key="Clear" Color="#00000000" />
@@ -39,9 +41,9 @@
     </Style>
 
     <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+        <Setter Property="Background" Value="{StaticResource Dark_3}" />
         <Setter Property="Foreground" Value="{StaticResource White}" />
-        <Setter Property="BorderBrush" Value="{StaticResource White}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_4}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
