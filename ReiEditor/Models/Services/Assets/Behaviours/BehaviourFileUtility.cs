@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Extensions;
 
@@ -38,17 +39,18 @@ public class BehaviourFileUtility
         return behaviours;
     }
 
-    public async Task<List<ObjectFile<BehaviourMeta>>> GetAllBehaviourMetas()
+    public async Task<List<ObjectFile<AssetMeta>>> GetAllBehaviourMetas()
     {
-        var metaFiles = Directory.EnumerateFiles(_root, $"*{FileExtensions.META}", SearchOption.AllDirectories);
-        var metas = new List<ObjectFile<BehaviourMeta>>();
+        var metaFiles = Directory.EnumerateFiles(_root, $"*.h{FileExtensions.META}", SearchOption.AllDirectories);
+        var metas = new List<ObjectFile<AssetMeta>>();
         
         foreach (var metaFile in metaFiles)
         {
-            var meta = await _resourceService.Load<BehaviourMeta>(metaFile);
+            var meta = await _resourceService.Load<AssetMeta>(metaFile);
             if (meta == null) continue;
+            if (!meta.TryGetData(BehaviourMeta.Key, out BehaviourMeta _)) continue;
             
-            metas.Add(new ObjectFile<BehaviourMeta>(meta, metaFile));
+            metas.Add(new ObjectFile<AssetMeta>(meta, metaFile));
         }
 
         return metas;

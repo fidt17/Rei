@@ -70,7 +70,7 @@ public class AssetsService : IAssetsService, IDisposable
         _idToAssetInfoMap.Clear();
         foreach (var asset in assets)
         {
-            _idToAssetInfoMap[asset.Meta.Id] = asset;
+            _idToAssetInfoMap[asset.Meta.AssetId] = asset;
         }
 		
         _logger.Log($"Total assets found: {_idToAssetInfoMap.Count}");
@@ -148,37 +148,23 @@ public class AssetsService : IAssetsService, IDisposable
     }
 
     public AssetInfo GetAssetInfo(Asset asset) => _assetToAssetInfoMap[asset];
-    public string GetAssetId(Asset asset) => GetAssetInfo(asset).Meta.Id;
+    public string GetAssetId(Asset asset) => GetAssetInfo(asset).Meta.AssetId;
 
-    public async Task<Asset> LoadAsset(AssetInfo assetInfo)
-    {
-        // using reflection to load assets by their type 
-        var loadMethod = typeof(AssetsService).GetMethod(nameof(Load));
-        var genericMethod = loadMethod!.MakeGenericMethod(AssetUtils.GetAssetType(assetInfo.Meta.Type));
-        var task = (Task) genericMethod.Invoke(this, new[] { assetInfo.Meta.Id })!;
-        await task;
-        var result = task.GetType().GetProperty("Result");
-        var asset = (Asset) result!.GetValue(task)!;
-        if (asset == null) throw new Exception($"Could not load asset with id {assetInfo.Meta.Id} of type {assetInfo.Meta.Type}");
-
-        return asset;
-    }
-	
     // todo: track build dirty assets
     public IEnumerable<AssetInfo> GetBuildDirtyAssets() => _idToAssetInfoMap.Values;
 
     private void AddToLoadedAssets(Asset asset, AssetInfo assetInfo)
     {
-        if (_idToAssetMap.ContainsKey(assetInfo.Meta.Id)) throw new Exception($"Asset already exists in {nameof(_idToAssetMap)}");
+        if (_idToAssetMap.ContainsKey(assetInfo.Meta.AssetId)) throw new Exception($"Asset already exists in {nameof(_idToAssetMap)}");
         if (_assetToAssetInfoMap.ContainsKey(asset)) throw new Exception($"Asset already exists in {nameof(_assetToAssetInfoMap)}");
 		
-        _idToAssetMap.Add(assetInfo.Meta.Id, asset);
+        _idToAssetMap.Add(assetInfo.Meta.AssetId, asset);
         _assetToAssetInfoMap.Add(asset, assetInfo);
     }
 
     private void HandleAssetCreatedEvent(AssetInfo assetInfo, Asset asset)
     {
-        _idToAssetInfoMap[assetInfo.Meta.Id] = assetInfo;
+        _idToAssetInfoMap[assetInfo.Meta.AssetId] = assetInfo;
         AddToLoadedAssets(asset, assetInfo);
     }
 }

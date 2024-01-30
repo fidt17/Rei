@@ -6,17 +6,17 @@ namespace ReiEditor.Models.Services.Assets.Behaviours;
 public class BehaviourAssetInfo
 {
     public string BehaviourName { get; }
+    public int BehaviourId { get; }
     public IEnumerable<string> SerializedProperties => _serializedProperties;
     
-    public ObjectFile<BehaviourMeta> Meta { get; }
     public ObjectFile<string> Behaviour { get; }
 
     private readonly List<string> _serializedProperties;
 
-    public BehaviourAssetInfo(string behaviourName, ObjectFile<BehaviourMeta> meta, ObjectFile<string> behaviour, List<string> serializedProperties)
+    public BehaviourAssetInfo(string behaviourName, int behaviourId, ObjectFile<string> behaviour, List<string> serializedProperties)
     {
         BehaviourName = behaviourName;
-        Meta = meta;
+        BehaviourId = behaviourId;
         Behaviour = behaviour;
         _serializedProperties = serializedProperties;
     }

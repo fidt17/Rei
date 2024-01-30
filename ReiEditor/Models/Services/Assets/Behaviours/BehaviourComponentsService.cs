@@ -4,11 +4,11 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.Services.Assets.Behaviours;
 
@@ -21,16 +21,14 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private readonly BehaviourFileUtility _utility;
     private readonly IAssetCreator _assetCreator;
-    private readonly ISerializer _serializer;
     private readonly IResourceService _resourceService;
     private readonly BehaviourRegistrySourceGenerator _behaviourRegistrySourceGenerator;
     private readonly ILogger<BehaviourComponentsService> _logger;
 
-    public BehaviourComponentsService(IResourceService resourceService, ISerializer serializer, IAssetCreator assetCreator, ILogger<BehaviourComponentsService> logger)
+    public BehaviourComponentsService(IResourceService resourceService, IAssetCreator assetCreator, ILogger<BehaviourComponentsService> logger)
     {
         _utility = new BehaviourFileUtility(resourceService);
         _resourceService = resourceService;
-        _serializer = serializer;
         _assetCreator = assetCreator;
         _logger = logger;
         _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
@@ -52,7 +50,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         var behaviourFiles = _utility.GetAllBehaviours();
         var metaFiles = await _utility.GetAllBehaviourMetas();
         
-        RegisterBehaviours(behaviourFiles, metaFiles);
+        await RegisterBehaviours(behaviourFiles, metaFiles);
         GenerateBehaviourRegistrySourceFile();
 
         return _behaviours.Count;
@@ -70,7 +68,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         
         if (e.HasComponent(component.Id))
         {
-            _logger.LogError($"{e} already has a component {componentInfo.Meta.Object.BehaviourId}:{componentInfo.BehaviourName}");
+            _logger.LogError($"{e} already has a component {componentInfo.BehaviourId}:{componentInfo.BehaviourName}");
             return false;
         }
         
@@ -102,37 +100,30 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         return true;
     }
 
-    private void RegisterBehaviours(List<ObjectFile<string>> behaviourFiles, List<ObjectFile<BehaviourMeta>> metaFiles)
+    private async Task RegisterBehaviours(List<ObjectFile<string>> behaviourFiles, List<ObjectFile<AssetMeta>> metaFiles)
     {
-        var newBehaviours = new List<ObjectFile<string>>();
         foreach (var behaviourFile in behaviourFiles)
         {
             if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
 
-            var metaFile = metaFiles.Find(x => x.FullPath == behaviourFile.FullPath.Replace(FileExtensions.H, FileExtensions.META));
-            if (metaFile == null)
+            var metaFile = metaFiles.Find(x => x.FullPath == behaviourFile.FullPath + FileExtensions.META);
+
+            if (metaFile == null || !metaFile.Object.TryGetData(BehaviourMeta.Key, out BehaviourMeta? behaviourMeta))
             {
-                newBehaviours.Add(behaviourFile);
-                continue;
+                behaviourMeta = new BehaviourMeta(_maxBehaviourId + 1);
+                await CreateMetaFile(behaviourFile, behaviourMeta);
             }
 
-            var properties = _utility.GetSerializedProperties(behaviourFile.Object);
-            RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile, properties));
-        }
-        
-        foreach (var behaviourFile in newBehaviours)
-        {
-            if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
+            if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.FullPath}");
 
-            var metaFile = CreateMetaFile(behaviourFile, _maxBehaviourId + 1);
             var properties = _utility.GetSerializedProperties(behaviourFile.Object);
-            RegisterBehaviour(new BehaviourAssetInfo(name, metaFile, behaviourFile, properties));
+            RegisterBehaviour(new BehaviourAssetInfo(name, behaviourMeta.BehaviourId, behaviourFile, properties));
         }
     }
 
     private void RegisterBehaviour(BehaviourAssetInfo behaviourAssetInfo)
     {
-        var behaviourId = behaviourAssetInfo.Meta.Object.BehaviourId;
+        var behaviourId = behaviourAssetInfo.BehaviourId;
         if (_behaviours.ContainsKey(behaviourId))
         {
             throw new Exception($"Behaviour with id {behaviourId} already exists. Existing value: {_behaviours[behaviourId].Behaviour.FullPath}. New value: {behaviourAssetInfo.Behaviour.FullPath}");
@@ -141,15 +132,11 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         _maxBehaviourId = Math.Max(_maxBehaviourId, behaviourId);
     }
 
-    private ObjectFile<BehaviourMeta> CreateMetaFile(ObjectFile<string> behaviourFile, int behaviourId)
+    private Task<ObjectFile<AssetMeta>> CreateMetaFile(ObjectFile<string> behaviourFile, BehaviourMeta behaviourMeta)
     {
-        var meta = new BehaviourMeta(behaviourId, _assetCreator.AllocateAssetId(), AssetType.Behaviour);
-
-        var extension = Path.GetExtension(behaviourFile.FullPath);
-        var serialized = _serializer.Serialize(meta);
-        var metaPath = behaviourFile.FullPath.Replace(extension, FileExtensions.META);
-        File.WriteAllText(metaPath, serialized);
-        return new ObjectFile<BehaviourMeta>(meta, metaPath);
+        var meta = new AssetMeta(_assetCreator.AllocateAssetId());
+        meta.AddData(BehaviourMeta.Key, behaviourMeta);
+        return _assetCreator.CreateMetaFile(meta, behaviourFile.FullPath);
     }
 
     private void GenerateBehaviourRegistrySourceFile()

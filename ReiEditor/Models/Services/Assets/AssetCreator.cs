@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
@@ -38,19 +39,18 @@ public class AssetCreator : IAssetCreator
     {
         try
         {
-            var fullPath = _resourceService.GetProjectPath(projectPath);
-            var extension = Path.GetExtension(fullPath);
+            var assetPath = _resourceService.GetProjectPath(projectPath);
+            var extension = Path.GetExtension(assetPath);
             if (extension == null) throw new Exception($"Project path {projectPath} is missing extension");
-            if (_resourceService.Exists(fullPath)) throw new Exception($"Cannot create asset because another file exists at {fullPath}");
+            if (_resourceService.Exists(assetPath)) throw new Exception($"Cannot create asset because another file exists at {assetPath}");
 			
             var data = _serializer.Serialize(asset);
-            if (!await _resourceService.Write(data, fullPath)) throw new Exception("Asset creation failed");
+            if (!await _resourceService.Write(data, assetPath)) throw new Exception("Asset creation failed");
 
-            var meta = new AssetMeta(id, AssetUtils.GetAssetType(asset));
-            var metaPath = fullPath.Replace(extension, FileExtensions.META);
-            await CreateMetaFile(meta, metaPath);
+            var meta = new AssetMeta(id);
+            await CreateMetaFile(meta, assetPath);
 			
-            AssetCreatedEvent?.Invoke(new AssetInfo(meta, fullPath), asset);
+            AssetCreatedEvent?.Invoke(new AssetInfo(meta, assetPath), asset);
 			
             return true;
         }
@@ -62,11 +62,12 @@ public class AssetCreator : IAssetCreator
         return false;
     }
 
-    public async Task<ObjectFile<AssetMeta>> CreateMetaFile(AssetMeta meta, string fullPath)
+    public async Task<ObjectFile<AssetMeta>> CreateMetaFile(AssetMeta meta, string assetPath)
     {
-        var didCreate = await _resourceService.Write(_serializer.Serialize(meta), fullPath);
+        var metaPath = assetPath + FileExtensions.META;
+        var didCreate = await _resourceService.Write(_serializer.Serialize(meta), metaPath);
         if (!didCreate) throw new Exception("Asset Meta file creation failed");
 
-        return new ObjectFile<AssetMeta>(meta, fullPath);
+        return new ObjectFile<AssetMeta>(meta, metaPath);
     }
 }

@@ -13,7 +13,6 @@ public interface IAssetsService
 
 	Task<T?> Load<T>(string assetId) where T : Asset;
 	Task<T?> LoadFrom<T>(string projectPath) where T : Asset;
-	Task<Asset> LoadAsset(AssetInfo assetInfo);
 	
 	Task SaveProject();
 

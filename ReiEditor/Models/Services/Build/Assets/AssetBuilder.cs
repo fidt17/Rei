@@ -77,7 +77,7 @@ public class AssetBuilder : IAssetBuilder
 			{
 				_logger.Log($"Building asset: {assetInfo.FullPath} to {path} with offset {offset}");
 				var bytesWritten = _engineApi.BuildAsset(assetInfo.FullPath, path, offset);
-				map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.Id, innerPath, offset));
+				map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.AssetId, innerPath, offset));
 				offset += bytesWritten;
 			});
 			await buildTask;

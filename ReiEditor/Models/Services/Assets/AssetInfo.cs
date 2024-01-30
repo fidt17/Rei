@@ -1,4 +1,6 @@
-﻿namespace ReiEditor.Models.Services.Assets;
+﻿using ReiEditor.Models.Services.Assets.Meta;
+
+namespace ReiEditor.Models.Services.Assets;
 
 public class AssetInfo
 {
@@ -13,6 +15,6 @@ public class AssetInfo
 
 	public override string ToString()
 	{
-		return $"{Meta.Id} - {Meta.Type} - {FullPath}";
+		return $"{Meta.AssetId} - {FullPath}";
 	}
 }

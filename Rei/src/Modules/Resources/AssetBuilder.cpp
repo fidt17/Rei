@@ -11,7 +11,6 @@ namespace rei::resources
     enum AssetType
     {
         Data = 0,
-        Scene = 1,
     };
 
     std::string ReadAllText(const std::filesystem::path& path)
@@ -30,19 +29,10 @@ namespace rei::resources
         writer.WriteStr(str);
     }
 
-    i64 Build(const AssetType assetType, const std::filesystem::path& filePath, BinaryWriter& writer)
+    i64 Build(const std::filesystem::path& filePath, BinaryWriter& writer)
     {
         BuildDataAsset(filePath, writer);
         return writer.GetPosition();
-    }
-
-    AssetType GetAssetType(const std::filesystem::path& assetPath)
-    {
-        const std::filesystem::path metaPath = std::regex_replace(assetPath.string(), std::regex(assetPath.extension().string()), ".meta");
-        REI_THROW_IF(!std::filesystem::exists(metaPath), "MetaFile " + metaPath.string() + " does not exist")
-
-        const nlohmann::json metaJson = nlohmann::json::parse(std::ifstream(metaPath.string()));
-        return metaJson.at("Type");
     }
 
     i64 BuildAsset(const std::string& file, const std::string& dest, const i64 offset)
@@ -52,8 +42,6 @@ namespace rei::resources
             const std::filesystem::path assetPath = file;
             REI_THROW_IF(!std::filesystem::exists(assetPath), "File " + file + " does not exist")
 
-            const AssetType assetType = GetAssetType(assetPath);
-
             if (!std::filesystem::exists(dest))
             {
                 std::ofstream outfile(dest);
@@ -61,7 +49,7 @@ namespace rei::resources
             }
 
             BinaryWriter writer(dest, offset);
-            const auto bytesWritten = Build(assetType, assetPath, writer);
+            const auto bytesWritten = Build(assetPath, writer);
             writer.Close();
 
             return bytesWritten;

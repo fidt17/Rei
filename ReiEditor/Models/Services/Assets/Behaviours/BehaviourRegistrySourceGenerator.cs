@@ -67,7 +67,7 @@ public class BehaviourRegistrySourceGenerator
         foreach (var b in behaviours)
         {
             var behaviourName = b.Value.BehaviourName;
-            var behaviourId = b.Value.Meta.Object.BehaviourId;
+            var behaviourId = b.Value.BehaviourId;
 
             str.AppendLine($"    f.RegisterComponent<{behaviourName}>({behaviourId});");
         }
