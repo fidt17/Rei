@@ -5,11 +5,10 @@ using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
-using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
 
-namespace ReiEditor.Models.Services.Build;
+namespace ReiEditor.Models.Services.Build.Solution;
 
 public class MsBuildSolutionBuilder : ISolutionBuilder
 {

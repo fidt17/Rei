@@ -1,5 +1,14 @@
 ﻿#pragma once
 
+#define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
+    public:\
+    BEHAVIOUR_NAME() = default;\
+    explicit BEHAVIOUR_NAME(const rei::ecs::Entity entity, const nlohmann::json& data);\
+    BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
+    private:
+
+#define SERIALIZED
+
 namespace rei
 {
     class Behaviour
@@ -23,12 +32,3 @@ namespace rei
         ecs::Entity _entity{-1, 0};
     };
 }
-
-#define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
-    public:\
-    BEHAVIOUR_NAME() = default;\
-    explicit BEHAVIOUR_NAME(const rei::ecs::Entity entity, const nlohmann::json& data);\
-    BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
-    private:
-
-#define SERIALIZED

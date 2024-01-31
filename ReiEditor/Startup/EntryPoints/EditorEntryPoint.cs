@@ -13,47 +13,50 @@ namespace ReiEditor.Startup.EntryPoints;
 
 public class EditorEntryPoint
 {
-	private readonly ILogger<EditorEntryPoint> _logger;
-	private readonly IMainWindowService _mainWindowService;
-	private readonly IFactory<ProjectEditorWindowViewModel> _projectEditorWindowViewModelFactory;
-	private readonly IProjectSetupService _projectSetupService;
-	private readonly IAssetsService _assetsService;
-	private readonly IBuildService _buildService;
-	private readonly ISceneManagementService _sceneManagementService;
+    private readonly ILogger<EditorEntryPoint> _logger;
+    private readonly IMainWindowService _mainWindowService;
+    private readonly IFactory<ProjectEditorWindowViewModel> _projectEditorWindowViewModelFactory;
+    private readonly IProjectSetupService _projectSetupService;
+    private readonly IAssetImporter _assetImporter;
+    private readonly IBuildService _buildService;
+    private readonly ISceneManagementService _sceneManagementService;
 
-	public EditorEntryPoint(
-		ILogger<EditorEntryPoint> logger, 
-		IMainWindowService mainWindowService, 
-		IFactory<ProjectEditorWindowViewModel> projectEditorWindowViewModelFactory,
-		IProjectSetupService projectSetupService, IAssetsService assetsService, IBuildService buildService, ISceneManagementService sceneManagementService)
-	{
-		_logger = logger;
-		_mainWindowService = mainWindowService;
-		_projectEditorWindowViewModelFactory = projectEditorWindowViewModelFactory;
-		_projectSetupService = projectSetupService;
-		_assetsService = assetsService;
-		_buildService = buildService;
-		_sceneManagementService = sceneManagementService;
-	}
+    public EditorEntryPoint(
+        ILogger<EditorEntryPoint> logger, 
+        IMainWindowService mainWindowService, 
+        IFactory<ProjectEditorWindowViewModel> projectEditorWindowViewModelFactory,
+        IProjectSetupService projectSetupService, 
+        IBuildService buildService, 
+        ISceneManagementService sceneManagementService, 
+        IAssetImporter assetImporter)
+    {
+        _logger = logger;
+        _mainWindowService = mainWindowService;
+        _projectEditorWindowViewModelFactory = projectEditorWindowViewModelFactory;
+        _projectSetupService = projectSetupService;
+        _buildService = buildService;
+        _sceneManagementService = sceneManagementService;
+        _assetImporter = assetImporter;
+    }
 
-	public async Task Start()
-	{
-		_logger.LogWarning("\n--- Editor Entry Point ---\n");
-		SetupEditorWindow();
-		
-		await _assetsService.RefreshAssets();
-		await _sceneManagementService.InitializeAsync();
-		
-		await _projectSetupService.PrepareProject();
-		await _buildService.BuildProject(BuildConfigurationEnum.EditorDebug);
-	}
+    public async Task Start()
+    {
+        _logger.LogWarning("\n--- Editor Entry Point ---\n");
+        SetupEditorWindow();
 
-	private void SetupEditorWindow()
-	{
-		var window = new ProjectEditorWindow();
-		var vm = _projectEditorWindowViewModelFactory.CreateInstance();
-		window.DataContext = vm;
+        await _assetImporter.ReimportAll();
+        await _sceneManagementService.InitializeAsync();
 		
-		_mainWindowService.ShowMainWindow(window);
-	}
+        await _projectSetupService.PrepareProject();
+        await _buildService.BuildProject(BuildConfigurationEnum.EditorDebug);
+    }
+
+    private void SetupEditorWindow()
+    {
+        var window = new ProjectEditorWindow();
+        var vm = _projectEditorWindowViewModelFactory.CreateInstance();
+        window.DataContext = vm;
+		
+        _mainWindowService.ShowMainWindow(window);
+    }
 }

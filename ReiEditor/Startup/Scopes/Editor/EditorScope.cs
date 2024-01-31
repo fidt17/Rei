@@ -30,9 +30,11 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
 		
 		b.RegisterType<SaveProjectCommand>();
+		b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();
 		b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
 		b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
 		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
+		b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();
 		b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
 
 		b.RegisterSingleton<SelectionService>().As<ISelectionService>();

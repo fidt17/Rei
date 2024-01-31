@@ -34,11 +34,11 @@ public class ResourceService : IResourceService
 		return Path.GetFullPath(Path.Combine(GetProjectPath("Scripts"), Path.Combine(path)));
 	}
 
-	public async Task<T?> Load<T>(string path)
+	public async Task<T?> Load<T>(string fullPath)
 	{
 		try
 		{
-			var data = await ResourceUtils.Load(path);
+			var data = await ResourceUtils.Load(fullPath);
 			return _serializer.Deserialize<T>(data);
 		}
 		catch (Exception e)
@@ -49,11 +49,11 @@ public class ResourceService : IResourceService
 		return default;
 	}
 
-	public async Task<string?> Load(string path)
+	public async Task<string?> Load(string fullPath)
 	{
 		try
 		{
-			return await ResourceUtils.Load(path);
+			return await ResourceUtils.Load(fullPath);
 		}
 		catch (Exception e)
 		{
@@ -63,12 +63,12 @@ public class ResourceService : IResourceService
 		return null;
 	}
 
-	public async Task<bool> Write(string data, string path)
+	public async Task<bool> Write(string data, string fullPath)
 	{
 		try
 		{
-			Directory.CreateDirectory(path.Replace(Path.GetFileName(path), ""));
-			await File.WriteAllTextAsync(path, data);
+			Directory.CreateDirectory(fullPath.Replace(Path.GetFileName(fullPath), ""));
+			await File.WriteAllTextAsync(fullPath, data);
 			return true;
 		}
 		catch (Exception e)
@@ -79,8 +79,8 @@ public class ResourceService : IResourceService
 		return false;
 	}
 
-	public bool Exists(string path)
+	public bool Exists(string fullPath)
 	{
-		return File.Exists(path);
+		return File.Exists(fullPath);
 	}
 }

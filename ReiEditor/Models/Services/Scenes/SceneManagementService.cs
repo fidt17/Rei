@@ -63,14 +63,14 @@ public class SceneManagementService : ISceneManagementService
 	{
 		_logger.Log($"Loading scene [{scene.Name}]");
 		
-		_projectService.GetActiveProject().SetLastScene(_assets.GetAssetId(scene));
+		_projectService.GetActiveProject().SetLastScene(scene.AssetInfo.Meta.AssetId);
 		await _assets.SaveProject();
 
 		_currentScene.Value = scene;
 		
 		_logger.LogWarning($"Loaded scene [{scene.Name}]");
 	}
-
+	
 	public BuildScenesConfiguration GetBuildConfiguration()
 	{
 		return _buildScenesConfiguration ?? throw new NullReferenceException("BuildScenesConfiguration is missing");
@@ -79,6 +79,6 @@ public class SceneManagementService : ISceneManagementService
 	public void SetBuildSceneId(Scene scene, int id)
 	{
 		_logger.Log($"Set build scene id. [{scene.Name}] -> {id}");
-		GetBuildConfiguration().Scenes[id] = _assets.GetAssetId(scene);
+		GetBuildConfiguration().Scenes[id] = scene.AssetInfo.Meta.AssetId;
 	}
 }

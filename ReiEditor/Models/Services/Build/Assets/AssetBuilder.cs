@@ -15,13 +15,14 @@ namespace ReiEditor.Models.Services.Build.Assets;
 public class AssetBuilder : IAssetBuilder
 {
 	private readonly IAssetsService _assetsService;
+	private readonly IAssetRegistry _assetRegistry;
 	private readonly IBinarySerializer _binarySerializer;
 	private readonly IEngineApi _engineApi;
 	private readonly IClientDllManager _dllManager;
 	private readonly ILogger<AssetBuilder> _logger;
 	private readonly IEngineLogger _engineLogger;
 
-	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService, IEngineApi engineApi, IClientDllManager dllManager, ILogger<AssetBuilder> logger, IEngineLogger engineLogger)
+	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService, IEngineApi engineApi, IClientDllManager dllManager, ILogger<AssetBuilder> logger, IEngineLogger engineLogger, IAssetRegistry assetRegistry)
 	{
 		_binarySerializer = binarySerializer;
 		_assetsService = assetsService;
@@ -29,6 +30,7 @@ public class AssetBuilder : IAssetBuilder
 		_dllManager = dllManager;
 		_logger = logger;
 		_engineLogger = engineLogger;
+		_assetRegistry = assetRegistry;
 	}
 
 	public async Task BuildAssets(string buildFolder)
@@ -39,10 +41,8 @@ public class AssetBuilder : IAssetBuilder
 		}
 		
 		_engineLogger.SubscribeToClient();
-		
-		var assets = _assetsService.GetBuildDirtyAssets();
-    		
-		var map = await Build(assets, buildFolder, "assets");
+
+		var map = await Build(_assetRegistry.GetAllAssets(), buildFolder, "assets");
 		await Build(map, buildFolder, "map");
 		
 		_dllManager.UnloadDll();

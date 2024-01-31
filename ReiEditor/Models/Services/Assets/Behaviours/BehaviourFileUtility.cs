@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Behaviours.Types;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Extensions;
@@ -67,9 +68,9 @@ public class BehaviourFileUtility
         return true;
     }
     
-    public List<string> GetSerializedProperties(string text)
+    public Dictionary<string, ISerializedType> GetSerializedProperties(string text)
     {
-        var result = new List<string>();
+        var result = new Dictionary<string, ISerializedType>();
         var serializedIndexes = text.AllIndexesOf(BehaviourMacrosConstants.SERIALIZED);
 
         foreach (var serializedIndex in serializedIndexes)
@@ -78,10 +79,25 @@ public class BehaviourFileUtility
             var substring = text.Substring(serializedIndex, endIdx - serializedIndex);
             var words = substring.Split().ToList();
             words.RemoveAll(string.IsNullOrWhiteSpace);
+            
+            var variableType = words[^2];
+            var serializedType = GetSerializedTypeForVariableType(variableType);
+            if (serializedType == null) continue;
+
             var variableName = words[^1];
-            result.Add(variableName);
+            result.Add(variableName, serializedType);
         }
 
         return result;
+    }
+
+    private ISerializedType? GetSerializedTypeForVariableType(string type)
+    {
+        if (type == "std::string" || type == "string")
+        {
+            return new StringSerializedType();
+        }
+
+        return null;
     }
 }

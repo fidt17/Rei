@@ -2,10 +2,9 @@
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
-using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Models.Services.FileSystem;
 
-namespace ReiEditor.Models.Services.Build;
+namespace ReiEditor.Models.Services.Build.Solution;
 
 public class SourceTracker : ISourceTracker
 {

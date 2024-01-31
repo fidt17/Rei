@@ -44,6 +44,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         IFactory<EntityInfoComponentDrawerViewModel> entityInfoComponentDrawerFactory,
         IFactory<BehaviourComponentDrawerViewModel> behaviourComponentDrawerFactory,
         IBehaviourComponentsService behaviourComponentsService,
+        IBehaviourRegistry behaviourRegistry,
         ILogger<EntityMonitorDrawerViewModel> logger)
     {
         _entity = entity;
@@ -60,7 +61,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
             Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(_entity, b));
         }
 
-        ConfigureBehaviourSelectionList(behaviourComponentsService);
+        ConfigureBehaviourSelectionList(behaviourRegistry);
     }
 
     public override void Dispose()
@@ -73,11 +74,9 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     public void AddBehaviour(BehaviourSelectionData data)
     {
-        var component = new BehaviourComponent(data.BehaviourId);
-        if (!_behaviourComponentsService.AddComponent(_entity, component))
-        {
-            _logger.LogError($"Failed at adding component {data.BehaviourId}:{data.BehaviourName}");
-        }
+        if (_behaviourComponentsService.AddComponent(_entity, data.BehaviourId)) return;
+        
+        _logger.LogError($"Failed at adding component {data.BehaviourId}:{data.BehaviourName}");
     }
 
     private void HandleEntityBehaviourAddedEvent(GameEntity e, BehaviourComponent component)
@@ -97,10 +96,10 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         }
     }
 
-    private void ConfigureBehaviourSelectionList(IBehaviourComponentsService behaviourComponentsService)
+    private void ConfigureBehaviourSelectionList(IBehaviourRegistry behaviourRegistry)
     {
         var behaviourSelectionList = new List<BehaviourSelectionData>();
-        foreach (var b in behaviourComponentsService.Behaviours)
+        foreach (var b in behaviourRegistry.Behaviours)
         {
             behaviourSelectionList.Add(new BehaviourSelectionData(b.Key, b.Value.BehaviourName));
         }

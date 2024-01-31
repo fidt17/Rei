@@ -57,7 +57,7 @@ public class ProjectSetupService : IProjectSetupService
         if (defaultScene != null)
         {
             _sceneManagementService.SetBuildSceneId(defaultScene, 0);
-            _activeProjectService.GetActiveProject().SetLastScene(_assetsService.GetAssetId(defaultScene));
+            _activeProjectService.GetActiveProject().SetLastScene(defaultScene.AssetInfo.Meta.AssetId);
         }
 		
     }

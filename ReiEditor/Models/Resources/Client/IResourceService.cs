@@ -8,7 +8,7 @@ public interface IResourceService
 	string GetProjectPath(params string[] path);
 	string GetSolutionPath(params string[] path);
 	
-	Task<T?> Load<T>(string path);
-	Task<bool> Write(string data, string path);
-	bool Exists(string path);
+	Task<T?> Load<T>(string fullPath);
+	Task<bool> Write(string data, string fullPath);
+	bool Exists(string fullPath);
 }

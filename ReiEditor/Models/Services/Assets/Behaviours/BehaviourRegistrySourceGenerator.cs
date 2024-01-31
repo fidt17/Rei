@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 
 namespace ReiEditor.Models.Services.Assets.Behaviours;
@@ -14,7 +15,13 @@ public class BehaviourRegistrySourceGenerator
         _resourceService = resourceService;
     }
 
-    public string Generate(Dictionary<int, BehaviourAssetInfo> behaviours)
+    public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours)
+    {
+        var source = GetSourceText(behaviours);
+        return _resourceService.Write(source, _resourceService.GetProjectPath("Scripts", "Internal", "BehaviourRegistry.cpp"));
+    }
+
+    private string GetSourceText(Dictionary<int, BehaviourAssetInfo> behaviours)
     {
         var str = new StringBuilder();
 
@@ -37,6 +44,7 @@ public class BehaviourRegistrySourceGenerator
         var str = new StringBuilder();
 
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
         str.AppendLine();
         
         foreach (var b in behaviours)
@@ -90,7 +98,7 @@ public class BehaviourRegistrySourceGenerator
             str.AppendLine($"    : Behaviour(e)");
             foreach (var p in serializedProperties)
             {
-                str.AppendLine($"    , {p}(data.at(\"{p}\"))");
+                str.AppendLine($"    , {p.Key}(data.at(\"{p.Key}\"))");
             }
             str.AppendLine("{" + "}");
             str.AppendLine();

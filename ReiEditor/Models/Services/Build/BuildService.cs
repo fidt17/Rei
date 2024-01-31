@@ -21,6 +21,7 @@ public class BuildService : IBuildService
     private readonly Observable<bool> _isBuildReady = new(false);
 
     private readonly IResourceService _resourceService;
+    private readonly IAssetImporter _assetImporter;
     private readonly IAssetsService _assetsService;
     private readonly IAssetBuilder _assetBuilder;
     private readonly ISourceTracker _sourceTracker;
@@ -29,7 +30,7 @@ public class BuildService : IBuildService
     private readonly IEditorConsoleService _editorConsoleService;
     private readonly ILogger<BuildService> _logger;
 
-    public BuildService(IResourceService resourceService, IAssetsService assetsService, IAssetBuilder assetBuilder, ISourceTracker sourceTracker, ISolutionBuilder solutionBuilder, IClientDllManager clientDllManager, ILogger<BuildService> logger, IEditorConsoleService editorConsoleService)
+    public BuildService(IResourceService resourceService, IAssetsService assetsService, IAssetBuilder assetBuilder, ISourceTracker sourceTracker, ISolutionBuilder solutionBuilder, IClientDllManager clientDllManager, ILogger<BuildService> logger, IEditorConsoleService editorConsoleService, IAssetImporter assetImporter)
     {
         _resourceService = resourceService;
         _assetsService = assetsService;
@@ -39,6 +40,7 @@ public class BuildService : IBuildService
         _clientDllManager = clientDllManager;
         _logger = logger;
         _editorConsoleService = editorConsoleService;
+        _assetImporter = assetImporter;
     }
 
     public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
@@ -55,7 +57,7 @@ public class BuildService : IBuildService
             
         try
         {
-            await _assetsService.RefreshAssets();
+            await _assetImporter.ReimportAll();
             await _assetsService.SaveProject();
 
             if (!_clientDllManager.DllExists() || await _sourceTracker.ChangedOrNewSourcesExist())

@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Behaviours;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -14,17 +16,37 @@ public class AssetImporter : IAssetImporter
     private readonly ILogger<AssetImporter> _logger;
     private readonly IResourceService _resourceService;
     private readonly IAssetCreator _assetCreator;
+    private readonly IAssetRegistry _assetRegistry;
+    private readonly IBehaviourRegistry _behaviourRegistry;
 
-    public AssetImporter(ILogger<AssetImporter> logger, IResourceService resourceService, IAssetCreator assetCreator)
+    public AssetImporter(
+        ILogger<AssetImporter> logger,
+        IResourceService resourceService,
+        IAssetCreator assetCreator,
+        IBehaviourRegistry behaviourRegistry, 
+        IAssetRegistry assetRegistry)
     {
         _logger = logger;
         _resourceService = resourceService;
         _assetCreator = assetCreator;
+        _behaviourRegistry = behaviourRegistry;
+        _assetRegistry = assetRegistry;
     }
 
-    public async Task<int> DeleteInvalidMetaFiles()
+    public async Task<List<AssetInfo>> ReimportAll()
     {
-        _logger.Log("Delete invalid meta files");
+        await DeleteInvalidMetaFiles();
+        var assets = await ImportAssets();
+        _assetRegistry.RegisterAssets(assets);
+        await _behaviourRegistry.RefreshBehaviours();
+
+        return assets;
+    }
+
+    private async Task DeleteInvalidMetaFiles()
+    {
+        _logger.Log("Locating invalid meta files...");
+        
         var deletedCounter = 0;
         foreach (var file in Directory.EnumerateFiles(_resourceService.GetProjectPath(), $"*{FileExtensions.META}", SearchOption.AllDirectories))
         {
@@ -41,13 +63,13 @@ public class AssetImporter : IAssetImporter
                 _logger.LogException(e);
             }
         }
-
-        return deletedCounter;
+        
+        _logger.Log($"Total invalid meta files deleted: {deletedCounter}");
     }
 
-    public async Task<List<AssetInfo>> ImportAssets()
+    private async Task<List<AssetInfo>> ImportAssets()
     {
-        _logger.Log("Import assets");
+        _logger.Log("Importing assets...");
         var projectRoot = _resourceService.GetProjectPath();
 
         var importedAssets = new List<AssetInfo>();
@@ -89,5 +111,12 @@ public class AssetImporter : IAssetImporter
             FileExtensions.META or 
             FileExtensions.CPP or 
             FileExtensions.VS_PROJECT);
+    }
+
+    private async Task ImportScenes()
+    {
+        // GetAllScenes
+        // foreach entity : scene
+        //  refresh entity behaviours
     }
 }

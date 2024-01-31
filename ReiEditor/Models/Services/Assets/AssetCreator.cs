@@ -12,17 +12,17 @@ namespace ReiEditor.Models.Services.Assets;
 
 public class AssetCreator : IAssetCreator
 {
-    public event Action<AssetInfo, Asset>? AssetCreatedEvent;
-    
     private readonly IResourceService _resourceService;
     private readonly ISerializer _serializer;
+    private readonly IAssetRegistry _assetRegistry;
     private readonly ILogger<AssetCreator> _logger;
 
-    public AssetCreator(IResourceService resourceService, ISerializer serializer, ILogger<AssetCreator> logger)
+    public AssetCreator(IResourceService resourceService, ISerializer serializer, ILogger<AssetCreator> logger, IAssetRegistry assetRegistry)
     {
         _resourceService = resourceService;
         _serializer = serializer;
         _logger = logger;
+        _assetRegistry = assetRegistry;
     }
 
     public string AllocateAssetId()
@@ -50,7 +50,7 @@ public class AssetCreator : IAssetCreator
             var meta = new AssetMeta(id);
             await CreateMetaFile(meta, assetPath);
 			
-            AssetCreatedEvent?.Invoke(new AssetInfo(meta, assetPath), asset);
+            _assetRegistry.AddToLoadedAssets(new AssetInfo(meta, assetPath), asset);
 			
             return true;
         }

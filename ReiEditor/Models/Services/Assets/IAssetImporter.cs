@@ -5,6 +5,5 @@ namespace ReiEditor.Models.Services.Assets;
 
 public interface IAssetImporter
 {
-    Task<int> DeleteInvalidMetaFiles();
-    Task<List<AssetInfo>> ImportAssets();
+    Task<List<AssetInfo>> ReimportAll();
 }

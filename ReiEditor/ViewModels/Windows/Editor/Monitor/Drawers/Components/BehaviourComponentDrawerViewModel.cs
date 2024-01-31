@@ -23,14 +23,17 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     public BehaviourComponentDrawerViewModel() { }
 #pragma warning restore CS8618
 
-    public BehaviourComponentDrawerViewModel(GameEntity entity, BehaviourComponent behaviourComponent, IBehaviourComponentsService behaviourComponentsService)
+    public BehaviourComponentDrawerViewModel(GameEntity entity, BehaviourComponent behaviourComponent, IBehaviourComponentsService behaviourComponentsService, IBehaviourRegistry behaviourRegistry)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
         _behaviourComponentsService = behaviourComponentsService;
 
-        var behaviourInfo = behaviourComponentsService.GetBehaviourById(behaviourComponent.Id);
-        if (behaviourInfo == null) throw new Exception($"Could not load behaviour {behaviourComponent.Id}");
+        if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
+        {
+            throw new Exception($"Could not load behaviour {behaviourComponent.Id}");
+        }
+        
         Name = behaviourInfo.BehaviourName;
 
         ContextMenu = new ContextMenuViewModel();
