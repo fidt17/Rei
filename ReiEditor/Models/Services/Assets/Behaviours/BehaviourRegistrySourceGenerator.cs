@@ -98,7 +98,7 @@ public class BehaviourRegistrySourceGenerator
             str.AppendLine($"    : Behaviour(e)");
             foreach (var p in serializedProperties)
             {
-                str.AppendLine($"    , {p.Key}(data.at(\"{p.Key}\"))");
+                str.AppendLine($"    , {p.Key}(data.at(\"{p.Key}\").at(\"Value\"))");
             }
             str.AppendLine("{" + "}");
             str.AppendLine();

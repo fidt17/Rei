@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
@@ -32,6 +33,11 @@ public class ResourceService : IResourceService
 	public string GetSolutionPath(params string[] path)
 	{
 		return Path.GetFullPath(Path.Combine(GetProjectPath("Scripts"), Path.Combine(path)));
+	}
+
+	public IEnumerable<string> GetAllWithExtension(string extension)
+	{
+		return Directory.EnumerateFiles(GetRootPath(), $"*{extension}", SearchOption.AllDirectories);
 	}
 
 	public async Task<T?> Load<T>(string fullPath)

@@ -49,5 +49,6 @@ public class AssetRegistry : IAssetRegistry
         asset.SetAssetInfo(assetInfo);
         _loadedAssets.Add(assetInfo, asset);
         _assetToAssetInfoMap.Add(asset, assetInfo);
+        _idToAssetInfoMap[assetInfo.Meta.AssetId] = assetInfo;
     }
 }

@@ -5,7 +5,10 @@ namespace ReiEditor.Models.Services.Assets;
 public abstract class Asset
 {
     [JsonIgnore]
-    public AssetInfo AssetInfo { get; private set; }
+    public string AssetId { get; private set; } = "";
 
-    public void SetAssetInfo(AssetInfo assetInfo) => AssetInfo = assetInfo;
+    public void SetAssetInfo(AssetInfo assetInfo)
+    {
+        AssetId = assetInfo.Meta.AssetId;
+    }
 }

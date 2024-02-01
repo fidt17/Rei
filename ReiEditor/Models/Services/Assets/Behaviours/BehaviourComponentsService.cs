@@ -1,4 +1,5 @@
-﻿using ReiEditor.Models.Services.Components;
+﻿using ReiEditor.Models.Services.Assets.Behaviours.Types;
+using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -19,7 +20,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
     {
         if (!_behaviourRegistry.TryGetById(behaviourId, out var componentInfo))
         {
-            _logger.LogError($"Component with ID {behaviourId} has not been registered.");
+            _logger.LogException(new UnregisteredBehaviourException(behaviourId));
             return false;
         }
         
@@ -52,4 +53,23 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         return true;
     }
 
+    public void RefreshComponents(GameEntity e)
+    {
+        foreach (var component in e.Behaviours)
+        {
+            if (!_behaviourRegistry.TryGetById(component.Id, out var componentInfo))
+            {
+                _logger.LogException(new UnregisteredBehaviourException(component.Id));
+                continue;
+            }
+            
+            foreach (var sp in componentInfo.SerializedProperties)
+            {
+                if (!component.HasProperty(sp.Key))
+                {
+                    component.AddProperty(new SerializedProperty(sp.Key, sp.Value, sp.Value.GetDefaultValue()));
+                }
+            }
+        }
+    }
 }

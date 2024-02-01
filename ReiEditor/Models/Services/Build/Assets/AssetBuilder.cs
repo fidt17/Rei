@@ -14,7 +14,6 @@ namespace ReiEditor.Models.Services.Build.Assets;
 
 public class AssetBuilder : IAssetBuilder
 {
-	private readonly IAssetsService _assetsService;
 	private readonly IAssetRegistry _assetRegistry;
 	private readonly IBinarySerializer _binarySerializer;
 	private readonly IEngineApi _engineApi;
@@ -22,10 +21,9 @@ public class AssetBuilder : IAssetBuilder
 	private readonly ILogger<AssetBuilder> _logger;
 	private readonly IEngineLogger _engineLogger;
 
-	public AssetBuilder(IBinarySerializer binarySerializer, IAssetsService assetsService, IEngineApi engineApi, IClientDllManager dllManager, ILogger<AssetBuilder> logger, IEngineLogger engineLogger, IAssetRegistry assetRegistry)
+	public AssetBuilder(IBinarySerializer binarySerializer, IEngineApi engineApi, IClientDllManager dllManager, ILogger<AssetBuilder> logger, IEngineLogger engineLogger, IAssetRegistry assetRegistry)
 	{
 		_binarySerializer = binarySerializer;
-		_assetsService = assetsService;
 		_engineApi = engineApi;
 		_dllManager = dllManager;
 		_logger = logger;

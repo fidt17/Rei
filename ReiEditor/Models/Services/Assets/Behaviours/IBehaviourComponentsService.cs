@@ -7,4 +7,6 @@ public interface IBehaviourComponentsService
 {
     bool AddComponent(GameEntity e, int behaviourId);
     bool DeleteComponent(GameEntity e, BehaviourComponent component);
+
+    void RefreshComponents(GameEntity e);
 }

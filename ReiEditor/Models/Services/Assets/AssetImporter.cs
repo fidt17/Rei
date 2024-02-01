@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Behaviours;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.Services.Assets;
 
@@ -17,28 +18,40 @@ public class AssetImporter : IAssetImporter
     private readonly IResourceService _resourceService;
     private readonly IAssetCreator _assetCreator;
     private readonly IAssetRegistry _assetRegistry;
+    private readonly IAssetsService _assetsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
+    private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly ISerializer _serializer;
 
     public AssetImporter(
         ILogger<AssetImporter> logger,
         IResourceService resourceService,
         IAssetCreator assetCreator,
         IBehaviourRegistry behaviourRegistry, 
-        IAssetRegistry assetRegistry)
+        IAssetRegistry assetRegistry, 
+        IBehaviourComponentsService behaviourComponentsService, 
+        ISerializer serializer, 
+        IAssetsService assetsService)
     {
         _logger = logger;
         _resourceService = resourceService;
         _assetCreator = assetCreator;
         _behaviourRegistry = behaviourRegistry;
         _assetRegistry = assetRegistry;
+        _behaviourComponentsService = behaviourComponentsService;
+        _serializer = serializer;
+        _assetsService = assetsService;
     }
 
     public async Task<List<AssetInfo>> ReimportAll()
     {
         await DeleteInvalidMetaFiles();
+        
         var assets = await ImportAssets();
         _assetRegistry.RegisterAssets(assets);
+        
         await _behaviourRegistry.RefreshBehaviours();
+        await ImportScenes();
 
         return assets;
     }
@@ -115,8 +128,23 @@ public class AssetImporter : IAssetImporter
 
     private async Task ImportScenes()
     {
-        // GetAllScenes
-        // foreach entity : scene
-        //  refresh entity behaviours
+        foreach (var sceneFilePath in _resourceService.GetAllWithExtension(FileExtensions.SCENE))
+        {
+            var scene = await _assetsService.LoadFrom<Scene>(sceneFilePath);
+            
+            if (scene == null)
+            {
+                _logger.LogWarning($"Could not load Scene asset from {sceneFilePath}");
+                continue;
+            }
+            
+            foreach (var sceneEntity in scene.Entities)
+            {
+                _behaviourComponentsService.RefreshComponents(sceneEntity);
+            }
+
+            var data = _serializer.Serialize(scene);
+            await _resourceService.Write(data, sceneFilePath);
+        }
     }
 }

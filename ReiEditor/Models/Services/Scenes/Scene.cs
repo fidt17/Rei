@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
+using ReiEditor.Models.Services.Serialization;
 
 namespace ReiEditor.Models.Services.Scenes;
 
-public class Scene : Asset, IDeserializationCallback
+public class Scene : Asset, IOnDeserialized
 {
     [JsonProperty("Name")]
     public string Name { get; }
@@ -28,7 +28,7 @@ public class Scene : Asset, IDeserializationCallback
         Name = name;
     }
 
-    public void OnDeserialization(object? sender)
+    public void OnDeserialized()
     {
         CreateHierarchy();
     }
@@ -36,7 +36,7 @@ public class Scene : Asset, IDeserializationCallback
     public int AllocateEntityId() => _entities.Count == 0 ? 1 : _entities.Max(x => x.Id) + 1;
 
     public GameEntity? GetById(int id) => _entities.Find(x => x.Id == id);
-    
+
     public void AddEntity(GameEntity entity)
     {
         if (_entities.Exists(x => x.Equals(entity))) throw new Exception($"Entity with Id {entity.Id} already exists in scene");

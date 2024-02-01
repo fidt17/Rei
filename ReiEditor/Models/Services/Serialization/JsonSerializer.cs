@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
 namespace ReiEditor.Models.Services.Serialization;
@@ -8,6 +7,11 @@ public class JsonSerializer : ISerializer
 {
     public string Serialize<T>(T obj)
     {
+        if (obj is IOnSerialization onSerialization)
+        {
+            onSerialization.OnSerialization();
+        }
+        
         var json = JsonConvert.SerializeObject(obj, Formatting.Indented);
         return json;
     }
@@ -17,9 +21,9 @@ public class JsonSerializer : ISerializer
         var t = JsonConvert.DeserializeObject<T>(source);
         if (t == null) throw new Exception($"Could not deserialize [{source}] to [{typeof(T)}]");
 
-        if (t is IDeserializationCallback d)
+        if (t is IOnDeserialized d)
         {
-            d.OnDeserialization(null);
+            d.OnDeserialized();
         }
 
         return t;

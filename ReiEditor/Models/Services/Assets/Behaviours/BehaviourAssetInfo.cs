@@ -9,13 +9,13 @@ public class BehaviourAssetInfo
     public string BehaviourName { get; }
     public int BehaviourId { get; }
     
-    public IReadOnlyDictionary<string, ISerializedType> SerializedProperties => _serializedProperties;
+    public IReadOnlyDictionary<string, SerializedTypeEnum> SerializedProperties => _serializedProperties;
     
     public ObjectFile<string> Behaviour { get; }
 
-    private readonly Dictionary<string, ISerializedType> _serializedProperties;
+    private readonly Dictionary<string, SerializedTypeEnum> _serializedProperties;
 
-    public BehaviourAssetInfo(string behaviourName, int behaviourId, ObjectFile<string> behaviour, Dictionary<string, ISerializedType> serializedProperties)
+    public BehaviourAssetInfo(string behaviourName, int behaviourId, ObjectFile<string> behaviour, Dictionary<string, SerializedTypeEnum> serializedProperties)
     {
         BehaviourName = behaviourName;
         BehaviourId = behaviourId;

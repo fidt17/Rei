@@ -25,9 +25,10 @@ namespace rei::scenes
         const auto& sceneRef = _buildScenesConfig.GetScene(id);
 
         _activeScene = std::make_shared<Scene>(GetAssetManager().Load<Scene>(sceneRef));
-        LOG("Loaded scene \"" + _activeScene->GetName() + "\"")
 
         CreateSceneEntities();
+
+        LOG("Loaded scene \"" + _activeScene->GetName() + "\"")
     }
 
     void SceneManager::CreateSceneEntities()
@@ -36,15 +37,28 @@ namespace rei::scenes
 
         ECS_WORLD(GetInternalWorld());
 
-        for (auto sceneEntity : _activeScene->GetEntities())
+        for (const auto& sceneEntity : _activeScene->GetEntities())
         {
-            auto e = NEW_ENTITY();
-            GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
-
-            for (auto behaviourData : sceneEntity.GetBehaviours())
+            try
             {
-                auto& b = GetEntityManager().AddBehaviour(e, behaviourData.at("Id"), behaviourData.at("SerializedData"));
-                b.Init();
+                auto e = NEW_ENTITY();
+                GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
+
+                for (auto behaviourData : sceneEntity.GetBehaviours())
+                {
+                    const std::string SERIALIZE_DATA = "SerializedData";
+                    nlohmann::json serializedData;
+                    if (behaviourData.contains(SERIALIZE_DATA))
+                    {
+                        serializedData = behaviourData.at(SERIALIZE_DATA);
+                    }
+                    auto& b = GetEntityManager().AddBehaviour(e, behaviourData.at("Id"), serializedData);
+                    b.Init();
+                }
+            }
+            catch (std::exception& e)
+            {
+                LOG_ERROR("Scene entity creation exception. Entity Id " + STRING(sceneEntity.GetId()) + ". Exception: " + e.what());
             }
         }
     }

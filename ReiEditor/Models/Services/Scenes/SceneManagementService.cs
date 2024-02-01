@@ -59,16 +59,14 @@ public class SceneManagementService : ISceneManagementService
 		return null;
 	}
 
-	public async Task LoadScene(Scene scene)
+	public Task LoadScene(Scene scene)
 	{
 		_logger.Log($"Loading scene [{scene.Name}]");
 		
-		_projectService.GetActiveProject().SetLastScene(scene.AssetInfo.Meta.AssetId);
-		await _assets.SaveProject();
-
+		_projectService.GetActiveProject().SetLastScene(scene.AssetId);
 		_currentScene.Value = scene;
 		
-		_logger.LogWarning($"Loaded scene [{scene.Name}]");
+		return Task.CompletedTask;
 	}
 	
 	public BuildScenesConfiguration GetBuildConfiguration()
@@ -79,6 +77,6 @@ public class SceneManagementService : ISceneManagementService
 	public void SetBuildSceneId(Scene scene, int id)
 	{
 		_logger.Log($"Set build scene id. [{scene.Name}] -> {id}");
-		GetBuildConfiguration().Scenes[id] = scene.AssetInfo.Meta.AssetId;
+		GetBuildConfiguration().Scenes[id] = scene.AssetId;
 	}
 }

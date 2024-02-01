@@ -15,19 +15,16 @@ namespace ReiEditor.Models.Services.Assets.Behaviours;
 public class BehaviourFileUtility
 {
     private readonly IResourceService _resourceService;
-    private readonly string _root;
 
     public BehaviourFileUtility(IResourceService resourceService)
     {
         _resourceService = resourceService;
-        _root = _resourceService.GetProjectPath();
     }
 
     public List<ObjectFile<string>> GetAllBehaviours()
     {
-        var headers = Directory.EnumerateFiles(_root, $"*{FileExtensions.H}", SearchOption.AllDirectories).ToList();
         var behaviours = new List<ObjectFile<string>>();
-        headers.ForEach(x =>
+        foreach (var x in _resourceService.GetAllWithExtension(FileExtensions.H).ToList())
         {
             var fileContents = File.ReadAllText(x);
             var isBehaviour = TryGetBehaviourNameFrom(fileContents, out _);
@@ -35,17 +32,16 @@ public class BehaviourFileUtility
             {
                 behaviours.Add(new ObjectFile<string>(fileContents, x));
             }
-        });
+        }
 
         return behaviours;
     }
 
     public async Task<List<ObjectFile<AssetMeta>>> GetAllBehaviourMetas()
     {
-        var metaFiles = Directory.EnumerateFiles(_root, $"*.h{FileExtensions.META}", SearchOption.AllDirectories);
         var metas = new List<ObjectFile<AssetMeta>>();
         
-        foreach (var metaFile in metaFiles)
+        foreach (var metaFile in _resourceService.GetAllWithExtension(FileExtensions.META))
         {
             var meta = await _resourceService.Load<AssetMeta>(metaFile);
             if (meta == null) continue;
@@ -68,9 +64,9 @@ public class BehaviourFileUtility
         return true;
     }
     
-    public Dictionary<string, ISerializedType> GetSerializedProperties(string text)
+    public Dictionary<string, SerializedTypeEnum> GetSerializedProperties(string text)
     {
-        var result = new Dictionary<string, ISerializedType>();
+        var result = new Dictionary<string, SerializedTypeEnum>();
         var serializedIndexes = text.AllIndexesOf(BehaviourMacrosConstants.SERIALIZED);
 
         foreach (var serializedIndex in serializedIndexes)
@@ -82,7 +78,7 @@ public class BehaviourFileUtility
             
             var variableType = words[^2];
             var serializedType = GetSerializedTypeForVariableType(variableType);
-            if (serializedType == null) continue;
+            if (serializedType == SerializedTypeEnum.Invalid) continue;
 
             var variableName = words[^1];
             result.Add(variableName, serializedType);
@@ -91,13 +87,13 @@ public class BehaviourFileUtility
         return result;
     }
 
-    private ISerializedType? GetSerializedTypeForVariableType(string type)
+    private SerializedTypeEnum GetSerializedTypeForVariableType(string type)
     {
         if (type == "std::string" || type == "string")
         {
-            return new StringSerializedType();
+            return SerializedTypeEnum.String;
         }
 
-        return null;
+        return SerializedTypeEnum.Invalid;
     }
 }
