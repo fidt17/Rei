@@ -11,7 +11,9 @@ public interface IResourceService
 
 	IEnumerable<string> GetAllWithExtension(string extension);
 
-	Task<T?> Load<T>(string fullPath);
+	Task<T> Load<T>(string fullPath);
+	Task<T?> TryLoad<T>(string fullPath);
+	
 	Task<bool> Write(string data, string fullPath);
 	bool Exists(string fullPath);
 }

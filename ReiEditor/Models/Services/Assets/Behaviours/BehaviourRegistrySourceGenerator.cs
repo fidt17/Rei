@@ -69,7 +69,7 @@ public class BehaviourRegistrySourceGenerator
     {
         var str = new StringBuilder();
 
-        str.AppendLine("void ConfigureComponentsFactory(rei::BehaviourComponentFactory& f)");
+        str.AppendLine("void ConfigureComponentsFactory(rei::BehaviourRegistry& f)");
         str.AppendLine("{");
         
         foreach (var b in behaviours)
@@ -94,8 +94,8 @@ public class BehaviourRegistrySourceGenerator
             var behaviourName = b.Value.BehaviourName;
             var serializedProperties = b.Value.SerializedProperties;
 
-            str.AppendLine($"{behaviourName}::{behaviourName}(const rei::ecs::Entity e, const nlohmann::json& data)");
-            str.AppendLine($"    : Behaviour(e)");
+            str.AppendLine($"{behaviourName}::{behaviourName}(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)");
+            str.AppendLine($"    : Behaviour(id, e)");
             foreach (var p in serializedProperties)
             {
                 str.AppendLine($"    , {p.Key}(data.at(\"{p.Key}\").at(\"Value\"))");

@@ -66,7 +66,7 @@ public class AssetImporter : IAssetImporter
             try
             {
                 var assetPath = file.Replace(FileExtensions.META, "");
-                if (File.Exists(assetPath) && await _resourceService.Load<AssetMeta>(file) != null) continue;
+                if (File.Exists(assetPath) && await _resourceService.TryLoad<AssetMeta>(file) != null) continue;
                 
                 deletedCounter++;
                 File.Delete(file);
@@ -103,7 +103,7 @@ public class AssetImporter : IAssetImporter
                 }
                 else
                 {
-                    var meta = await _resourceService.Load<AssetMeta>(metaFilePath);
+                    var meta = await _resourceService.TryLoad<AssetMeta>(metaFilePath);
                     if (meta == null) throw new Exception($"Tried to load invalid meta at {metaFilePath}");
                     importedAssets.Add(new AssetInfo(meta, assetPath));
                 }

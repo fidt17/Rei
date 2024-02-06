@@ -3,6 +3,7 @@
 
 #include "Services.h"
 #include "Modules/Assets/AssetManager.h"
+#include "Modules/Behaviour/BehaviourModule.h"
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Scenes/SceneManager.h"
@@ -41,6 +42,7 @@ namespace rei::internal::engine
         _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
 
         _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
+        _internalWorld->AddModule(std::make_shared<BehaviourModule>());
     }
 
     void Engine::Start()

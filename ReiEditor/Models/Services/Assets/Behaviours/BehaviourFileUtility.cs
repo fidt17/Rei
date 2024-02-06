@@ -43,7 +43,7 @@ public class BehaviourFileUtility
         
         foreach (var metaFile in _resourceService.GetAllWithExtension(FileExtensions.META))
         {
-            var meta = await _resourceService.Load<AssetMeta>(metaFile);
+            var meta = await _resourceService.TryLoad<AssetMeta>(metaFile);
             if (meta == null) continue;
             if (!meta.TryGetData(BehaviourMeta.Key, out BehaviourMeta _)) continue;
             

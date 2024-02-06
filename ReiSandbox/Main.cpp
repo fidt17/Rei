@@ -14,13 +14,13 @@ public:
     }
 };
 
-MyBehaviour::MyBehaviour(const rei::ecs::Entity entity, const nlohmann::json& data)
-    : Behaviour(entity),
+MyBehaviour::MyBehaviour(const i32 id, const rei::ecs::Entity entity, const nlohmann::json& data)
+    : Behaviour(id, entity),
       _property(data.at("_property"))
 {
 }
 
-void ConfigureComponentsFactory(rei::BehaviourComponentFactory& factory)
+void ConfigureComponentsFactory(rei::BehaviourRegistry& factory)
 {
     factory.RegisterComponent<MyBehaviour>(0);
 }

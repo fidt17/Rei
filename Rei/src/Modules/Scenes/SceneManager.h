@@ -10,7 +10,8 @@ namespace rei::scenes
         explicit SceneManager();
     
         void LoadScene(int id);
-        void CreateSceneEntities();
+
+        void CreateSceneEntity(const SceneEntity& sceneEntity);
 
     private:
         BuildScenesConfig _buildScenesConfig;

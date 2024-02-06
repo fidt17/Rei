@@ -8,8 +8,7 @@ namespace ReiEditor.Models.Services.Assets;
 public class AssetRegistry : IAssetRegistry
 {
     private readonly Dictionary<string, AssetInfo> _idToAssetInfoMap = new();
-    private readonly Dictionary<AssetInfo, Asset> _loadedAssets = new();
-    private readonly Dictionary<Asset, AssetInfo> _assetToAssetInfoMap = new();
+    private readonly Dictionary<string, Asset> _loadedAssets = new();
 
     public bool Exists<T>(string assetId) where T : Asset => _idToAssetInfoMap.ContainsKey(assetId) && _idToAssetInfoMap[assetId].GetType() == typeof(T);
 
@@ -21,15 +20,16 @@ public class AssetRegistry : IAssetRegistry
         return assetInfo != null;
     }
 
-    public bool TryGetLoadedAsset(string assetId, [NotNullWhen(returnValue: true)] out Asset? asset)
+    public bool TryGetLoadedAsset(string assetId, [NotNullWhen(returnValue: true)] out Asset? asset) => _loadedAssets.TryGetValue(assetId, out asset);
+
+    public IEnumerable<Asset> GetDirtyAssets()
     {
-        asset = null;
-        return TryGetById(assetId, out var assetInfo) && _loadedAssets.TryGetValue(assetInfo, out asset);
+        foreach (var keyValuePair in _loadedAssets)
+        {
+            var asset = keyValuePair.Value;
+            yield return asset;
+        }
     }
-
-    public IEnumerable<(AssetInfo, Asset)> GetDirtyAssets() => _loadedAssets.Select(keyValuePair => (keyValuePair.Key, keyValuePair.Value));
-
-    public AssetInfo GetAssetInfo(Asset asset) => _assetToAssetInfoMap[asset];
 
     public IEnumerable<AssetInfo> GetAllAssets() => _idToAssetInfoMap.Values;
 
@@ -44,11 +44,10 @@ public class AssetRegistry : IAssetRegistry
 
     public void AddToLoadedAssets(AssetInfo assetInfo, Asset asset)
     {
-        if (_loadedAssets.ContainsKey(assetInfo)) throw new Exception($"Asset already exists in {nameof(_loadedAssets)}");
-		
+        if (_loadedAssets.ContainsKey(assetInfo.Meta.AssetId)) throw new Exception($"Asset {assetInfo.Meta.AssetId} {assetInfo.FullPath} is already loaded");
+        
         asset.SetAssetInfo(assetInfo);
-        _loadedAssets.Add(assetInfo, asset);
-        _assetToAssetInfoMap.Add(asset, assetInfo);
+        _loadedAssets[assetInfo.Meta.AssetId] = asset;
         _idToAssetInfoMap[assetInfo.Meta.AssetId] = assetInfo;
     }
 }

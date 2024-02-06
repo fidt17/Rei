@@ -7,18 +7,18 @@
 
 namespace rei
 {
-    class BehaviourComponentFactory;
+    class BehaviourRegistry;
 }
 
 extern std::shared_ptr<rei::App> CreateApp();
-extern void ConfigureComponentsFactory(rei::BehaviourComponentFactory& factory);
+extern void ConfigureComponentsFactory(rei::BehaviourRegistry& factory);
 
 namespace rei::external
 {
     REI_EXTERN_API inline internal::engine::Engine* CreateEngine()
     {
         auto engine = new internal::engine::Engine(CreateApp());
-        ConfigureComponentsFactory(GetEntityManager()._componentFactory);
+        ConfigureComponentsFactory(GetEntityManager().GetBehaviourRegistry());
         return engine;
     }
 

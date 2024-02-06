@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Utils.Common;
@@ -49,6 +51,16 @@ public class AssetsService : IAssetsService
 
     public async Task<T?> LoadFrom<T>(string projectPath) where T : Asset
     {
+        try
+        {
+            var meta = await _resourceService.Load<AssetMeta>(projectPath + FileExtensions.META);
+            return await Load<T>(meta.AssetId);
+        }
+        catch (Exception)
+        {
+            // meta is missing
+        }
+        
         var fullPath = _resourceService.GetProjectPath(projectPath);
         if (!_assetRegistry.TryGetByPath(fullPath, out var assetInfo)) return null;
 
@@ -57,7 +69,7 @@ public class AssetsService : IAssetsService
 
     public async Task<T?> Load<T>(AssetInfo assetInfo) where T : Asset
     {
-        var asset = await _resourceService.Load<T>(assetInfo.FullPath);
+        var asset = await _resourceService.TryLoad<T>(assetInfo.FullPath);
 		
         if (asset != null)
         {
@@ -82,12 +94,12 @@ public class AssetsService : IAssetsService
             project.SetProjectLastEditTime(DateTime.Now);
             await _resourceService.Write(_serializer.Serialize(project), project.ProjectFilePath);
 		
-            foreach (var (assetInfo, asset) in _assetRegistry.GetDirtyAssets())
+            foreach (var asset in _assetRegistry.GetDirtyAssets())
             {
                 try
                 {
                     var data = _serializer.Serialize(asset);
-                    await _resourceService.Write(data, assetInfo.FullPath);
+                    await _resourceService.Write(data, asset.FullPath);
                 }
                 catch (Exception e)
                 {

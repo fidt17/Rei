@@ -3,23 +3,23 @@
 
 namespace rei
 {
-    class BehaviourComponentFactory
+    class BehaviourRegistry
     {
     public:
         template <typename T>
         void RegisterComponent(i32 id)
         {
-            _factoryMethods.insert({
+            _addMethods.insert({
                 id, [=](const ecs::Entity e, const nlohmann::json& data) -> T&
                 {
                     ECS_WORLD(GetInternalWorld());
                     T& t = GET(e, T);
-                    t = T(e, data);
+                    t = T(id, e, data);
                     return t;
                 }
             });
-            
-            _factoryMethodsWithoutSerialization.insert({
+
+            _getMethods.insert({
                 id, [](const ecs::Entity e) -> T&
                 {
                     ECS_WORLD(GetInternalWorld());
@@ -30,23 +30,23 @@ namespace rei
 
         Behaviour& AddBehaviour(const ecs::Entity e, const i32 id, const nlohmann::json& data) const
         {
-            if (_factoryMethods.count(id) == 0)
+            if (_addMethods.count(id) == 0)
                 REI_THROW("Missing component factory. Component ID: " + STRING(id))
 
-            return _factoryMethods.at(id)(e, data);
+            return _addMethods.at(id)(e, data);
         }
-        
-        Behaviour& AddBehaviour(const ecs::Entity e, const i32 id) const
+
+        Behaviour& GetBehaviour(const ecs::Entity e, const i32 id) const
         {
-            if (_factoryMethodsWithoutSerialization.count(id) == 0)
+            if (_getMethods.count(id) == 0)
                 REI_THROW("Missing component factory. Component ID: " + STRING(id))
 
-            return _factoryMethodsWithoutSerialization.at(id)(e);
+            return _getMethods.at(id)(e);
         }
 
     private:
-        std::unordered_map<i32, std::function<Behaviour&(ecs::Entity, const nlohmann::json&)>> _factoryMethods{};
-        std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _factoryMethodsWithoutSerialization{};
+        std::unordered_map<i32, std::function<Behaviour&(ecs::Entity, const nlohmann::json&)>> _addMethods{};
+        std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _getMethods{};
     };
 
     class EntityManager
@@ -55,20 +55,16 @@ namespace rei
         explicit EntityManager(const std::shared_ptr<ecs::World>& world);
 
         REI_API ecs::Entity GetBySceneId(i32 id) const;
-        
-        REI_API Behaviour& AddBehaviour(const ecs::Entity e, const i32 componentId) const
-        {
-            return _componentFactory.AddBehaviour(e, componentId);
-        }
+        REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 componentId) const;
+        REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 componentId, const nlohmann::json& data, bool init = true) const;
 
-        Behaviour& AddBehaviour(const ecs::Entity e, const i32 componentId, const nlohmann::json& data) const
-        {
-            return _componentFactory.AddBehaviour(e, componentId, data);
-        }
+        void InitBehaviour(ecs::Entity e, Behaviour& b) const;
 
-        BehaviourComponentFactory _componentFactory;
+        BehaviourRegistry& GetBehaviourRegistry() { return _behaviourRegistry; }
 
     private:
+        BehaviourRegistry _behaviourRegistry;
+
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<ecs::Filter> _entityInfoFilter;
     };

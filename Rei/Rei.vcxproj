@@ -19,6 +19,7 @@
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
+    <ClInclude Include="src\Ecs\DeleteSystem.h" />
     <ClInclude Include="src\Ecs\Ecs.h" />
     <ClInclude Include="src\Ecs\EcsRegistry.h" />
     <ClInclude Include="src\Ecs\Entity.h" />
@@ -34,6 +35,10 @@
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
     <ClInclude Include="src\Modules\Behaviour\Behaviour.h" />
+    <ClInclude Include="src\Modules\Behaviour\BehaviourModule.h" />
+    <ClInclude Include="src\Modules\Behaviour\Components\BehaviourCollection.h" />
+    <ClInclude Include="src\Modules\Behaviour\Components\StartBehavioursCommand.h" />
+    <ClInclude Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
@@ -93,6 +98,8 @@
     <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
+    <ClCompile Include="src\Modules\Behaviour\BehaviourModule.cpp" />
+    <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />

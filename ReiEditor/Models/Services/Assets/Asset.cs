@@ -6,9 +6,13 @@ public abstract class Asset
 {
     [JsonIgnore]
     public string AssetId { get; private set; } = "";
+    
+    [JsonIgnore]
+    public string FullPath { get; private set; } = "";
 
     public void SetAssetInfo(AssetInfo assetInfo)
     {
         AssetId = assetInfo.Meta.AssetId;
+        FullPath = assetInfo.FullPath;
     }
 }

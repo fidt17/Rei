@@ -11,7 +11,7 @@ public interface IAssetRegistry
 
     void RegisterAssets(IEnumerable<AssetInfo> assets);
     
-    IEnumerable<(AssetInfo, Asset)> GetDirtyAssets();
+    IEnumerable<Asset> GetDirtyAssets();
     IEnumerable<AssetInfo> GetAllAssets();
     
     void AddToLoadedAssets(AssetInfo assetInfo, Asset asset);
