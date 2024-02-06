@@ -1,21 +1,21 @@
 ﻿#pragma once
 #include "BuildScenesConfig.h"
 #include "Scene.h"
+#include "Modules/EntityManagement/EntityManager.h"
 
 namespace rei::scenes
 {
     class SceneManager
     {
     public:
-        explicit SceneManager();
+        explicit SceneManager(std::shared_ptr<EntityManager> entityManager);
     
         void LoadScene(int id);
-
-        void CreateSceneEntity(const SceneEntity& sceneEntity);
 
     private:
         BuildScenesConfig _buildScenesConfig;
 
         std::shared_ptr<Scene> _activeScene;
+        std::shared_ptr<EntityManager> _entityManager;
     };
 }

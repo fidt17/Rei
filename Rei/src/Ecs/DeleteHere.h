@@ -1,13 +1,13 @@
 ﻿#pragma once
 
 template <typename T>
-class DeleteSystem final : public rei::ecs::System
+class DeleteHere final : public rei::ecs::System
 {
 private:
     std::shared_ptr<rei::ecs::Filter> _f;
     
 public:
-    DeleteSystem(const std::shared_ptr<rei::ecs::EcsRegistry>& ecs, const std::shared_ptr<rei::ecs::FilterProvider>& filters)
+    DeleteHere(const std::shared_ptr<rei::ecs::EcsRegistry>& ecs, const std::shared_ptr<rei::ecs::FilterProvider>& filters)
         : System(ecs, filters)
     {
         _f = filters->Get<T>();

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Engine/Services.h"
+#include "Modules/Scenes/SceneEntity.h"
 
 namespace rei
 {
@@ -55,8 +56,13 @@ namespace rei
         explicit EntityManager(const std::shared_ptr<ecs::World>& world);
 
         REI_API ecs::Entity GetBySceneId(i32 id) const;
+        
+        REI_API void CreateEntity(const SceneEntity& sceneEntity) const;
+        
         REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 componentId) const;
         REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 componentId, const nlohmann::json& data, bool init = true) const;
+
+        REI_API void DestroyEntity(ecs::Entity e) const;
 
         void InitBehaviour(ecs::Entity e, Behaviour& b) const;
 
@@ -65,7 +71,7 @@ namespace rei
     private:
         BehaviourRegistry _behaviourRegistry;
 
-        std::shared_ptr<ecs::World> _internalWorld;
+        std::shared_ptr<ecs::EcsRegistry> _ecs;
         std::shared_ptr<ecs::Filter> _entityInfoFilter;
     };
 }

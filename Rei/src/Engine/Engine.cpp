@@ -3,8 +3,6 @@
 
 #include "Services.h"
 #include "Modules/Assets/AssetManager.h"
-#include "Modules/Behaviour/BehaviourModule.h"
-#include "Modules/Components/EntityInfo.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
@@ -33,8 +31,8 @@ namespace rei::internal::engine
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
-        _sceneManager(std::make_shared<scenes::SceneManager>()),
-        _entityManager(std::make_shared<EntityManager>(_internalWorld))
+        _entityManager(std::make_shared<EntityManager>(_internalWorld)),
+        _sceneManager(std::make_shared<scenes::SceneManager>(_entityManager))
     {
         Services::GetInstance()->SetInternalWorld(_internalWorld.get());
         Services::GetInstance()->SetEntityManager(_entityManager.get());
@@ -42,7 +40,6 @@ namespace rei::internal::engine
         _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
 
         _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
-        _internalWorld->AddModule(std::make_shared<BehaviourModule>());
     }
 
     void Engine::Start()

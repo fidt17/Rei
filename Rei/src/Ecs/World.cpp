@@ -14,6 +14,8 @@ namespace rei::ecs
 
     void World::Run() const
     {
+        Refresh();
+        
         for (const auto& system : _systems)
         {
             system->OnUpdate();

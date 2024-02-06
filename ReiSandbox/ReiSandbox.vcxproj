@@ -95,7 +95,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Behaviours\HelloBehaviour.cpp" />
+    <ClCompile Include="Internal\BehaviourRegistry.cpp" />
+    <ClCompile Include="ReiApp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Behaviours\HelloBehaviour.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
