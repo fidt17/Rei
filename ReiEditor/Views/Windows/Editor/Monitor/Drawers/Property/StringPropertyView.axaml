@@ -1,0 +1,31 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.StringPropertyView"
+             x:DataType="property:StringPropertyViewModel">
+
+    <Design.DataContext>
+        <property:StringPropertyViewModel />
+    </Design.DataContext>
+
+    <Grid ColumnDefinitions="Auto, *"
+          Height="20">
+
+        <TextBlock
+            Grid.Column="0"
+            Width="120"
+            VerticalAlignment="Center"
+            FontSize="14"
+            Foreground="{StaticResource Gray_4}"
+            Text="{Binding PropertyName}" />
+
+        <textBoxes:ReiTextBox
+            Grid.Column="1"
+            VerticalAlignment="Center"
+            Text="{Binding Value, Mode=TwoWay}" />
+    </Grid>
+</UserControl>

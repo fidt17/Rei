@@ -5,6 +5,8 @@
              xmlns:components="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components"
              xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             xmlns:property="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:property1="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
              mc:Ignorable="d" d:DesignWidth="300"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component.BehaviourComponentDrawer"
              x:DataType="components:BehaviourComponentDrawerViewModel">
@@ -78,11 +80,21 @@
                 </Grid>
             </Border>
 
-            <!-- Body -->
+            <!-- Properties -->
             <Border
                 Grid.Row="1"
                 IsVisible="{Binding Expanded.Value}"
-                MinHeight="48" />
+                MinHeight="48">
+                <ItemsControl
+                    ItemsSource="{Binding Properties}"
+                    Padding="10">
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="property1:StringPropertyViewModel">
+                            <property:StringPropertyView Margin="1"/>
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

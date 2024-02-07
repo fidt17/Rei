@@ -6,6 +6,8 @@ namespace ReiEditor.Models.Services.Components;
 
 public class SerializedProperty
 {
+    public event Action<object?>? ValueChangedEvent;
+    
     public string Name { get; }
     public SerializedTypeEnum Type { get; }
 
@@ -18,6 +20,7 @@ public class SerializedProperty
             if (Type.IsValidValue(value))
             {
                 _value = value;
+                ValueChangedEvent?.Invoke(_value);
             }
             else
             {

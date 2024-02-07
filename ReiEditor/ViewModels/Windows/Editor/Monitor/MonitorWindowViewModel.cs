@@ -1,4 +1,5 @@
 ﻿using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Build;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;

@@ -31,7 +31,9 @@ public class BehaviourComponent
     public void SetPropertyValue(string propertyName, object? value)
     {
         if (!HasProperty(propertyName)) throw new Exception($"Could not find property with name {propertyName}");
-        
+
         _properties[propertyName].Value = value;
     }
+
+    public SerializedProperty GetProperty(string name) => _properties[name];
 }
