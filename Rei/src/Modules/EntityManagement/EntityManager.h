@@ -57,12 +57,12 @@ namespace rei
 
         REI_API ecs::Entity GetBySceneId(i32 id) const;
         
-        REI_API void CreateEntity(const SceneEntity& sceneEntity) const;
+        REI_API void Create(const SceneEntity& sceneEntity) const;
         
-        REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 componentId) const;
-        REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 componentId, const nlohmann::json& data, bool init = true) const;
+        REI_API Behaviour& GetComponent(ecs::Entity e, i32 componentId) const;
+        REI_API Behaviour& AddComponent(ecs::Entity e, i32 componentId, const nlohmann::json& data, bool init = true) const;
 
-        REI_API void DestroyEntity(ecs::Entity e) const;
+        REI_API void Destroy(ecs::Entity e) const;
 
         void InitBehaviour(ecs::Entity e, Behaviour& b) const;
 

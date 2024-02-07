@@ -28,7 +28,7 @@ namespace rei::scenes
 
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {
-            _entityManager->CreateEntity(sceneEntity);
+            _entityManager->Create(sceneEntity);
         }
 
         LOG("Loaded scene \"" + _activeScene->GetName() + "\"")

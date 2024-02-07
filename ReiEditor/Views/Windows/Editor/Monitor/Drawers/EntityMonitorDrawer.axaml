@@ -13,20 +13,20 @@
         <drawers:EntityMonitorDrawerViewModel />
     </Design.DataContext>
 
-    <Border Background="{StaticResource Dark_2}">
+    <Border>
         <StackPanel Spacing="10">
             <ScrollViewer>
                 <ItemsControl
                     ItemsSource="{Binding Elements}">
                     <ItemsControl.DataTemplates>
                         <DataTemplate DataType="components:EntityInfoComponentDrawerViewModel">
-                            <component:EntityInfoComponentDrawer Margin="1" />
+                            <component:EntityInfoComponentDrawer Margin="0,0,0,1"/>
                         </DataTemplate>
                         <DataTemplate DataType="components:BehaviourComponentDrawerViewModel">
-                            <component:BehaviourComponentDrawer Margin="1" />
+                            <component:BehaviourComponentDrawer Margin="0,0,0,1"/>
                         </DataTemplate>
                         <DataTemplate DataType="components:TextComponentDrawerViewModel">
-                            <component:TextComponentDrawer Margin="1" />
+                            <component:TextComponentDrawer Margin="0,0,0,1"/>
                         </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>

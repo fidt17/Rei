@@ -24,7 +24,7 @@ rei::ecs::Entity rei::EntityManager::GetBySceneId(const i32 id) const
     return ecs::NULL_ENTITY;
 }
 
-void rei::EntityManager::CreateEntity(const SceneEntity& sceneEntity) const
+void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
 {
     ECS_WORLD(GetInternalWorld());
 
@@ -52,7 +52,7 @@ void rei::EntityManager::CreateEntity(const SceneEntity& sceneEntity) const
                 serializedData = behaviourData.at(SERIALIZE_DATA);
             }
 
-            AddBehaviour(e, behaviourId, serializedData, false);
+            AddComponent(e, behaviourId, serializedData, false);
             behavioursToInit.push_back({e, behaviourId});
         }
     }
@@ -63,17 +63,17 @@ void rei::EntityManager::CreateEntity(const SceneEntity& sceneEntity) const
 
     for (const auto& [Entity, BehaviourId] : behavioursToInit)
     {
-        auto& b = GetBehaviour(Entity, BehaviourId);
+        auto& b = GetComponent(Entity, BehaviourId);
         InitBehaviour(Entity, b);
     }
 }
 
-rei::Behaviour& rei::EntityManager::GetBehaviour(const ecs::Entity e, const i32 componentId) const
+rei::Behaviour& rei::EntityManager::GetComponent(const ecs::Entity e, const i32 componentId) const
 {
     return _behaviourRegistry.GetBehaviour(e, componentId);
 }
 
-rei::Behaviour& rei::EntityManager::AddBehaviour(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
+rei::Behaviour& rei::EntityManager::AddComponent(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
 {
     auto& b = _behaviourRegistry.AddBehaviour(e, componentId, data);
 
@@ -87,11 +87,11 @@ rei::Behaviour& rei::EntityManager::AddBehaviour(const ecs::Entity e, const i32 
     return b;
 }
 
-void rei::EntityManager::DestroyEntity(const ecs::Entity e) const
+void rei::EntityManager::Destroy(const ecs::Entity e) const
 {
     for (const auto behaviour : GET(e, BehaviourCollection).Behaviours)
     {
-        GetBehaviour(e, behaviour).Dispose();
+        GetComponent(e, behaviour).Dispose();
     }
     DESTROY_ENTITY(e);
 }

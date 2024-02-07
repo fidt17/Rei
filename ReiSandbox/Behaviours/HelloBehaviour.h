@@ -34,7 +34,7 @@ public:
 
         if (_deathCounter-- <= 0)
         {
-            rei::GetEntityManager().DestroyEntity(GetEntity());
+            rei::GetEntityManager().Destroy(GetEntity());
         }
     }
 

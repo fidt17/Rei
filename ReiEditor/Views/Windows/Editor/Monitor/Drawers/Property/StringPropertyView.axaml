@@ -12,20 +12,22 @@
         <property:StringPropertyViewModel />
     </Design.DataContext>
 
-    <Grid ColumnDefinitions="Auto, *"
-          Height="20">
+    <Border
+        Padding="1">
+        <Grid ColumnDefinitions="Auto, *">
 
-        <TextBlock
-            Grid.Column="0"
-            Width="120"
-            VerticalAlignment="Center"
-            FontSize="14"
-            Foreground="{StaticResource Gray_4}"
-            Text="{Binding PropertyName}" />
+            <TextBlock
+                Grid.Column="0"
+                Width="120"
+                VerticalAlignment="Center"
+                FontSize="14"
+                Foreground="{StaticResource Gray_4}"
+                Text="{Binding PropertyName}" />
 
-        <textBoxes:ReiTextBox
-            Grid.Column="1"
-            VerticalAlignment="Center"
-            Text="{Binding Value, Mode=TwoWay}" />
-    </Grid>
+            <textBoxes:ReiTextBox
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Text="{Binding Value, Mode=TwoWay}" />
+        </Grid>
+    </Border>
 </UserControl>

@@ -3,10 +3,17 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d"
              x:Class="ReiEditor.Views.Controls.TextBoxes.ReiTextBox">
+    <UserControl.Resources>
+        <x:Double x:Key="TextControlThemeMinHeight">10</x:Double>
+    </UserControl.Resources>
+
     <TextBox
+        Padding="5,0,0,0"
+        VerticalContentAlignment="Center"
         LostFocus="InputElement_OnLostFocus"
+        Height="24"
         Text="{Binding TextInternal, RelativeSource={RelativeSource AncestorType=textBoxes:ReiTextBox}, Mode=TwoWay}">
         <TextBox.KeyBindings>
             <KeyBinding Command="{Binding LoseFocus, RelativeSource={RelativeSource AncestorType=textBoxes:ReiTextBox}}" Gesture="Escape" />

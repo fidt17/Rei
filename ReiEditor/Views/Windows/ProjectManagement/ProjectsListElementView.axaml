@@ -16,6 +16,7 @@
         <Button
             HorizontalAlignment="Stretch"
             Command="{Binding OpenProjectCommand}">
+
             <Button.Effect>
                 <DropShadowEffect BlurRadius="10" Opacity="0.2"></DropShadowEffect>
             </Button.Effect>
@@ -25,43 +26,47 @@
                 <StackPanel Grid.Column="0"
                             MinWidth="300">
                     <TextBlock Text="{Binding Project.ProjectName}" FontWeight="Black" />
-                    <TextBlock Text="{Binding Project.ProjectFilePath}" 
+                    <TextBlock Text="{Binding Project.ProjectFilePath}"
                                Margin="0,5,0,0"
-                               Foreground="{StaticResource Gray_3}"/>
+                               Foreground="{StaticResource Gray_3}" />
                 </StackPanel>
 
+                <!--
                 <TextBlock Grid.Column="1"
                            Margin="0,0,20,0"
                            HorizontalAlignment="Right"
                            Text="{Binding Project.LastEditTime}"
                            Foreground="{StaticResource Gray_3}"
                            VerticalAlignment="Bottom" />
+                           -->
+
+                <!-- Context Menu Button -->
+                <Button
+                    Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    x:Name="ContextMenuButton"
+                    Classes="Clear">
+                    <Button.Styles>
+                        <Style Selector="Button Ellipse">
+                            <Setter Property="Fill" Value="{StaticResource Gray_1}" />
+                        </Style>
+                        <Style Selector="Button#ContextMenuButton:pointerover Ellipse">
+                            <Setter Property="Fill" Value="{StaticResource White}" />
+                        </Style>
+                    </Button.Styles>
+                    <Button.Flyout>
+                        <Flyout FlyoutPresenterClasses="Clear">
+                            <contextMenu:ContextMenuView DataContext="{Binding ContextMenu}" />
+                        </Flyout>
+                    </Button.Flyout>
+
+                    <StackPanel Spacing="3">
+                        <Ellipse Width="4" Height="4" />
+                        <Ellipse Width="4" Height="4" />
+                        <Ellipse Width="4" Height="4" />
+                    </StackPanel>
+                </Button>
             </Grid>
-        </Button>
-
-        <!-- Context Menu Button -->
-        <Button
-            HorizontalAlignment="Right"
-            Classes="Clear">
-            <Button.Styles>
-                <Style Selector="Button Ellipse">
-                    <Setter Property="Fill" Value="{StaticResource Gray_1}" />
-                </Style>
-                <Style Selector="Button:pointerover Ellipse">
-                    <Setter Property="Fill" Value="{StaticResource White}" />
-                </Style>
-            </Button.Styles>
-            <Button.Flyout>
-                <Flyout FlyoutPresenterClasses="Clear">
-                    <contextMenu:ContextMenuView DataContext="{Binding ContextMenu}" />
-                </Flyout>
-            </Button.Flyout>
-
-            <StackPanel Spacing="3">
-                <Ellipse Width="4" Height="4" />
-                <Ellipse Width="4" Height="4" />
-                <Ellipse Width="4" Height="4" />
-            </StackPanel>
         </Button>
     </Grid>
 </UserControl>

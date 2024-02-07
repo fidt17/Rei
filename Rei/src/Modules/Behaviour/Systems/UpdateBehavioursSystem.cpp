@@ -18,7 +18,7 @@ void UpdateBehavioursSystem::OnUpdate()
     {
         for (const auto behavioursToInit : GET(e, BehaviourCollection).Behaviours)
         {
-            entityManager.GetBehaviour(e, behavioursToInit).Update();
+            entityManager.GetComponent(e, behavioursToInit).Update();
         }
     }
 }

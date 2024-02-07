@@ -1,8 +1,13 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:system="clr-namespace:System;assembly=System.Runtime">
 
     <Design.PreviewWith>
-        <ComboBox />
+        <Border Classes="MonitorComponent"
+                Width="300"
+                Height="200">
+            <TextBox Height="20" Width="290" Text="123" />
+        </Border>
     </Design.PreviewWith>
 
     <Styles.Resources>
@@ -28,6 +33,20 @@
 
         <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="#e6edf3" />
         <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#20262F" />
+        
+        <SolidColorBrush x:Key="TextControlBackground" Color="#23272D" />
+        <SolidColorBrush x:Key="TextControlForeground" Color="#B8BFC5" />
+        <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
+        
+        <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#23272D" />
+        <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#8F959A" />
+        <Thickness x:Key="TextControlBorderThemeThicknessPointerOver">1</Thickness>
+        
+        <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#23272D" />
+        <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#B8BFC5" />
+        <Thickness x:Key="TextControlBorderThemeThicknessFocused" >1</Thickness>
     </Styles.Resources>
 
     <!-- Button Styles -->
@@ -53,12 +72,12 @@
         <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
         <Setter Property="Cursor" Value="Hand" />
     </Style>
-    
+
     <Style Selector="Button.Clear">
         <Setter Property="Background" Value="{StaticResource Clear}" />
         <Setter Property="BorderBrush" Value="{StaticResource Clear}" />
     </Style>
-    
+
     <Style Selector="Button.Clear:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{StaticResource Clear}" />
         <Setter Property="BorderBrush" Value="{StaticResource Clear}" />
@@ -137,9 +156,6 @@
 
     <Style Selector="Border.MonitorComponent">
         <Setter Property="Background" Value="{StaticResource Dark_3}" />
-        <Setter Property="CornerRadius" Value="2" />
-        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
-        <Setter Property="BorderThickness" Value="1" />
     </Style>
     <!-- END Border Styles -->
 
