@@ -1,24 +1,20 @@
-using System;
+using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.EditorApp.Selection;
 
 public class SelectionService : ISelectionService
 {
-    public event Action<ISelectable?>? SelectionChangedEvent;
+    public IObservable<ISelectable?> ActiveSelection => _activeSelection;
 
-    private ISelectable? _selectable;
-    
+    private readonly Observable<ISelectable?> _activeSelection = new(null);
+
     public void Select(ISelectable selectable)
     {
-        _selectable = selectable;
-        InvokeSelectionChangedEvent();
+        _activeSelection.Value = selectable;
     }
 
     public void ResetSelection()
     {
-        _selectable = null;
-        InvokeSelectionChangedEvent();
+        _activeSelection.Value = null;
     }
-
-    private void InvokeSelectionChangedEvent() => SelectionChangedEvent?.Invoke(_selectable);
 }

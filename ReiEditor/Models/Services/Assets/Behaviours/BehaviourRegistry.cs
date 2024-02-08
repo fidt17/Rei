@@ -49,6 +49,8 @@ public class BehaviourRegistry : IBehaviourRegistry
 
     private async Task RegisterBehaviours(List<ObjectFile<string>> behaviourFiles, List<ObjectFile<AssetMeta>> metaFiles)
     {
+        var newBehaviours = new List<ObjectFile<string>>();
+        
         foreach (var behaviourFile in behaviourFiles)
         {
             if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
@@ -57,10 +59,23 @@ public class BehaviourRegistry : IBehaviourRegistry
 
             if (metaFile == null || !metaFile.Object.TryGetData(BehaviourMeta.Key, out BehaviourMeta? behaviourMeta))
             {
-                behaviourMeta = new BehaviourMeta(_maxBehaviourId + 1);
-                await CreateMetaFile(behaviourFile, behaviourMeta);
+                newBehaviours.Add(behaviourFile);
+                continue;
             }
 
+            if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.FullPath}");
+
+            var properties = _utility.GetSerializedProperties(behaviourFile.Object);
+            RegisterBehaviour(new BehaviourAssetInfo(name, behaviourMeta.BehaviourId, behaviourFile, properties));
+        }
+        
+        foreach (var behaviourFile in newBehaviours)
+        {
+            if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
+            
+            var behaviourMeta = new BehaviourMeta(_maxBehaviourId + 1);
+            await CreateMetaFile(behaviourFile, behaviourMeta);
+            
             if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.FullPath}");
 
             var properties = _utility.GetSerializedProperties(behaviourFile.Object);

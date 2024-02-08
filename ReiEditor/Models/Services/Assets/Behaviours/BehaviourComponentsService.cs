@@ -1,4 +1,5 @@
-﻿using ReiEditor.Models.Services.Assets.Behaviours.Types;
+﻿using System.Linq;
+using ReiEditor.Models.Services.Assets.Behaviours.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -55,11 +56,13 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     public void RefreshComponents(GameEntity e)
     {
-        foreach (var component in e.Behaviours)
+        var behaviours = e.Behaviours.ToList();
+        
+        foreach (var component in behaviours)
         {
             if (!_behaviourRegistry.TryGetById(component.Id, out var componentInfo))
             {
-                _logger.LogException(new UnregisteredBehaviourException(component.Id));
+                e.DeleteBehaviour(component);
                 continue;
             }
             

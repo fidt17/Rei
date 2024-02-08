@@ -14,6 +14,8 @@ namespace ReiEditor.Models.Services.Assets;
 
 public class AssetImporter : IAssetImporter
 {
+    public event Action? ImportedAssetsEvent;
+
     private readonly ILogger<AssetImporter> _logger;
     private readonly IResourceService _resourceService;
     private readonly IAssetCreator _assetCreator;
@@ -52,6 +54,8 @@ public class AssetImporter : IAssetImporter
         
         await _behaviourRegistry.RefreshBehaviours();
         await ImportScenes();
+
+        ImportedAssetsEvent?.Invoke();
 
         return assets;
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Console;
@@ -51,6 +52,9 @@ public class BuildService : IBuildService
             return false;
         }
 
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
+        
         var buildFolder = Path.Combine(_resourceService.GetRootPath(), "bin");
         _buildInProgress.Value = true;
         _isBuildReady.Value = false;
@@ -66,10 +70,11 @@ public class BuildService : IBuildService
             }
             
             await _assetBuilder.BuildAssets(buildFolder);
+            stopwatch.Stop();
         }
         catch (Exception e)
         {
-            _logger.LogError("Build Failed!");
+            _logger.LogError($"Build Failed in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
             _logger.LogException(e);
             _isBuildReady.Value = false;
             _buildInProgress.Value = false;
@@ -77,7 +82,7 @@ public class BuildService : IBuildService
         }
 
         _editorConsoleService.ClearConsole();
-        _logger.Log("Build Complete!");
+        _logger.Log($"Build Complete in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
         _isBuildReady.Value = true;
         _buildInProgress.Value = false;
         

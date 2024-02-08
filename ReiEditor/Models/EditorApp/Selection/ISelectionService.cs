@@ -1,11 +1,9 @@
-﻿using System;
-
-namespace ReiEditor.Models.EditorApp.Selection;
+﻿namespace ReiEditor.Models.EditorApp.Selection;
 
 public interface ISelectionService
 {
-    event Action<ISelectable?> SelectionChangedEvent;
-    
+    Utils.Common.IObservable<ISelectable?> ActiveSelection { get; }
+
     void Select(ISelectable selectable);
     void ResetSelection();
 }

@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Controls.TextBoxes.ReiTextBox">
     <UserControl.Resources>
+        <!-- ReSharper disable once Xaml.RedundantResource -->
         <x:Double x:Key="TextControlThemeMinHeight">10</x:Double>
     </UserControl.Resources>
 

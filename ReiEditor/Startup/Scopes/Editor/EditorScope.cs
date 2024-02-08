@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.Resources.Client;
@@ -28,6 +29,8 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<ResourceService>().As<IResourceService>();
 		b.RegisterSingleton<EditorProceduresService>().As<IEditorProceduresService>();
 		b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
+		b.RegisterNonLazy<RefreshProjectOnWindowActivationSystem>();
+		b.RegisterSingleton<EditorRefreshService>().As<IEditorRefreshService>();
 		
 		b.RegisterType<SaveProjectCommand>();
 		b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();

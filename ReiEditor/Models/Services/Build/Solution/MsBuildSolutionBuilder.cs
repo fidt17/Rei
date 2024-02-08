@@ -12,6 +12,8 @@ namespace ReiEditor.Models.Services.Build.Solution;
 
 public class MsBuildSolutionBuilder : ISolutionBuilder
 {
+    private bool _didCleanBuild;
+    
     private readonly IResourceService _resourceService;
     private readonly IEditorPreferencesService _editorPreferencesService;
     private readonly IActiveProjectService _activeProjectService;
@@ -32,7 +34,15 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
 		
         var msBuildProcess = new Process();
         msBuildProcess.StartInfo.FileName = msBuildPath;
-        msBuildProcess.StartInfo.Arguments = $"\"{_resourceService.GetRootPath()}\" -v:q /t:Clean;Build /p:Configuration={configuration}";
+        if (_didCleanBuild)
+        {
+            msBuildProcess.StartInfo.Arguments = $"\"{_resourceService.GetRootPath()}\" -v:q /t:Build /p:Configuration={configuration}";
+        }
+        else
+        {
+            _didCleanBuild = true;
+            msBuildProcess.StartInfo.Arguments = $"\"{_resourceService.GetRootPath()}\" -v:q /t:Clean;Build /p:Configuration={configuration}";
+        }
         msBuildProcess.StartInfo.CreateNoWindow = true;
         msBuildProcess.StartInfo.RedirectStandardOutput = true;
 			

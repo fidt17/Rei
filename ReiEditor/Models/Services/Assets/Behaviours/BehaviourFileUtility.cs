@@ -66,6 +66,7 @@ public class BehaviourFileUtility
     
     public Dictionary<string, SerializedTypeEnum> GetSerializedProperties(string text)
     {
+        text = RemoveComments(text);
         var result = new Dictionary<string, SerializedTypeEnum>();
         var serializedIndexes = text.AllIndexesOf(BehaviourMacrosConstants.SERIALIZED);
 
@@ -95,5 +96,10 @@ public class BehaviourFileUtility
         }
 
         return SerializedTypeEnum.Invalid;
+    }
+
+    private string RemoveComments(string original)
+    {
+        return Regex.Replace(original, @"((\/[*])([\s\S]+)([*]\/))|([/]{2,}[^\n]+)", "");
     }
 }

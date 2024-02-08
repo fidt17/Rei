@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using ReiEditor.Models.Services.Assets.Behaviours.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.ViewModels.Common;
