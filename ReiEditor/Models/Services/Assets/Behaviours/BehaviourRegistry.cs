@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
@@ -44,6 +45,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         await RegisterBehaviours(behaviourFiles, metaFiles);
         await _behaviourRegistrySourceGenerator.GenerateBehaviourRegistrySourceFile(_behaviours);
         
+        //LogBehaviours();
         _logger.Log($"Total behaviours found: {_behaviours.Count}");
     }
 
@@ -99,5 +101,14 @@ public class BehaviourRegistry : IBehaviourRegistry
         var meta = new AssetMeta(_assetCreator.AllocateAssetId());
         meta.AddData(BehaviourMeta.Key, behaviourMeta);
         return _assetCreator.CreateMetaFile(meta, behaviourFile.FullPath);
+    }
+
+    private void LogBehaviours()
+    {
+        foreach (var behaviourAssetInfo in _behaviours.OrderBy(x => x.Value.BehaviourId))
+        {
+            var value = behaviourAssetInfo.Value;
+            _logger.Log($"{value.BehaviourId,-3} {value.BehaviourName}");
+        }
     }
 }

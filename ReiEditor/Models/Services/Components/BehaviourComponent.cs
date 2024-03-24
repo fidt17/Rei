@@ -7,6 +7,9 @@ namespace ReiEditor.Models.Services.Components;
 public class BehaviourComponent
 {
     [JsonIgnore]
+    public IReadOnlyDictionary<string, SerializedProperty> Properties => _properties;
+    
+    [JsonIgnore]
     public int Id => _id;
     
     [JsonProperty("Id")]
@@ -26,6 +29,12 @@ public class BehaviourComponent
     {
         if (HasProperty(property.Name)) throw new Exception($"Another property with name {property.Name} already exists");
         _properties.Add(property.Name, property);
+    }
+
+    public void RemoveProperty(string name)
+    {
+        if (!HasProperty(name)) return;
+        _properties.Remove(name);
     }
 
     public void SetPropertyValue(string propertyName, object? value)

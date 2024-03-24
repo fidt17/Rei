@@ -1,4 +1,5 @@
 ﻿using System;
+using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Assets.Behaviours.Types;
 
@@ -8,7 +9,10 @@ public static class SerializedTypeExtensions
     {
         return type switch
         {
+            SerializedTypeEnum.Integer => value != null && value.GetType().IsInteger(),
             SerializedTypeEnum.String => value is string,
+            SerializedTypeEnum.Boolean => value is bool,
+            SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }
@@ -17,7 +21,10 @@ public static class SerializedTypeExtensions
     {
         return type switch
         {
-            SerializedTypeEnum.String => new Random().Next().ToString(),
+            SerializedTypeEnum.Integer => 0,
+            SerializedTypeEnum.String => "",
+            SerializedTypeEnum.Boolean => false,
+            SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }

@@ -92,6 +92,12 @@
                         <DataTemplate DataType="property1:StringPropertyViewModel">
                             <property:StringPropertyView Margin="1"/>
                         </DataTemplate>
+                        <DataTemplate DataType="property1:IntegerPropertyViewModel">
+                            <property:IntegerPropertyView Margin="1"/>
+                        </DataTemplate>
+                        <DataTemplate DataType="property1:BooleanPropertyViewModel">
+                            <property:BooleanPropertyView Margin="1"/>
+                        </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
             </Border>

@@ -24,7 +24,7 @@ public class SerializedProperty
             }
             else
             {
-                throw new Exception($"Cannot assign value of type {value?.GetType()} to property {Type.GetType()}");
+                throw new Exception($"Cannot assign value of type {value?.GetType()} to property {Type}");
             }
         }
     }

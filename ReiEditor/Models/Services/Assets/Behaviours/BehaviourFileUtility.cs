@@ -90,9 +90,17 @@ public class BehaviourFileUtility
 
     private SerializedTypeEnum GetSerializedTypeForVariableType(string type)
     {
-        if (type == "std::string" || type == "string")
+        if (type is "int" or "i32" or "u32")
+        {
+            return SerializedTypeEnum.Integer;
+        }
+        else if (type is "std::string" or "string")
         {
             return SerializedTypeEnum.String;
+        }
+        else if (type is "bool")
+        {
+            return SerializedTypeEnum.Boolean;
         }
 
         return SerializedTypeEnum.Invalid;

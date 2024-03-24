@@ -5,14 +5,14 @@ using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 
-public class StringPropertyViewModel : BaseViewModel
+public class IntegerPropertyViewModel : BaseViewModel
 {
     public PropertyNameViewModel PropertyName { get; }
     
     #region Value
 
-    private string _value = "";
-    public string Value
+    private int _value;
+    public int Value
     {
         get => _value;
         set
@@ -27,12 +27,12 @@ public class StringPropertyViewModel : BaseViewModel
     private readonly SerializedProperty _property;
 
 #pragma warning disable CS8618
-    public StringPropertyViewModel() { }
+    public IntegerPropertyViewModel() { }
 #pragma warning restore CS8618
 
-    public StringPropertyViewModel(SerializedProperty property)
+    public IntegerPropertyViewModel(SerializedProperty property)
     {
-        if (property.Type != SerializedTypeEnum.String) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.String}. Actual {property.Type}");
+        if (property.Type != SerializedTypeEnum.Integer) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Integer}. Actual {property.Type}");
         
         _property = property;
 
@@ -51,9 +51,9 @@ public class StringPropertyViewModel : BaseViewModel
 
     private void HandlePropertyValueChangedEvent(object? value)
     {
-        if (value is string str)
+        if (value is int v)
         {
-            Value = str;
+            Value = v;
         }
     }
 }

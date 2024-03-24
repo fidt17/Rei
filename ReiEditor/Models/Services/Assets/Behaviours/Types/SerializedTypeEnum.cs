@@ -2,6 +2,8 @@
 
 public enum SerializedTypeEnum
 {
-    Invalid,
-    String
+    Invalid = 0,
+    String = 1,
+    Integer = 2,
+    Boolean = 3
 }

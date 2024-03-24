@@ -12,7 +12,9 @@ public static class PropertyViewUtils
     {
         return property.Type switch
         {
+            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property),
             SerializedTypeEnum.String => new StringPropertyViewModel(property),
+            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };

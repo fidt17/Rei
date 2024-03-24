@@ -32,16 +32,22 @@ public partial class ReiTextBox : UserControl
         AvaloniaXamlLoader.Load(this);
     }
 
-    public void LoseFocus()
-    {
-        SetValue(TextInternalProperty, GetValue(TextProperty));
-        this.GetWindow().Focus();
-    }
+    public void LoseFocus() => ApplyValue();
 
-    public void Apply()
+    public void Apply() => this.GetWindow().Focus();
+
+    private void ApplyValue()
     {
+        var oldValue = GetValue(TextProperty);
+        var targetValue = GetValue(TextInternalProperty);
         SetValue(TextProperty, GetValue(TextInternalProperty));
-        this.GetWindow().Focus();
+        var actualValue = GetValue(TextProperty);
+
+        if (targetValue != actualValue)
+        {
+            SetValue(TextProperty, oldValue);
+            SetValue(TextInternalProperty, oldValue);
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -54,8 +60,5 @@ public partial class ReiTextBox : UserControl
         }
     }
 
-    private void InputElement_OnLostFocus(object? sender, RoutedEventArgs e)
-    {
-        SetValue(TextProperty, GetValue(TextInternalProperty));
-    }
+    private void InputElement_OnLostFocus(object? sender, RoutedEventArgs e) => ApplyValue();
 }

@@ -3,19 +3,17 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
-             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
-             mc:Ignorable="d"
-             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.StringPropertyView"
-             x:DataType="property:StringPropertyViewModel">
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.BooleanPropertyView"
+             x:DataType="property:BooleanPropertyViewModel">
 
     <Design.DataContext>
-        <property:StringPropertyViewModel />
+        <property:BooleanPropertyViewModel />
     </Design.DataContext>
 
     <Border
         Padding="1">
         <Grid ColumnDefinitions="Auto, *">
-
             <TextBlock
                 Grid.Column="0"
                 Width="120"
@@ -24,10 +22,9 @@
                 Foreground="{StaticResource Gray_4}"
                 Text="{Binding PropertyName.Value}" />
 
-            <textBoxes:ReiTextBox
-                Grid.Column="1"
-                VerticalAlignment="Center"
-                Text="{Binding Value, Mode=TwoWay}" />
+            <CheckBox Grid.Column="1" HorizontalAlignment="Left"
+                      Cursor="Hand"
+                      IsChecked="{Binding Value, Mode=TwoWay}" />
         </Grid>
     </Border>
 </UserControl>

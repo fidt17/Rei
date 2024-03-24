@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using ReiEditor.Models.Services.Assets.Behaviours.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
@@ -71,6 +72,18 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                 if (!component.HasProperty(sp.Key))
                 {
                     component.AddProperty(new SerializedProperty(sp.Key, sp.Value, sp.Value.GetDefaultValue()));
+                }
+            }
+
+            var cachedProperties = new Dictionary<string, SerializedProperty>(component.Properties);
+            foreach (var sp in cachedProperties)
+            {
+                if (!componentInfo.SerializedProperties.TryGetValue(sp.Key, out var propertyType)) continue;
+                
+                if (sp.Value.Type != propertyType)
+                {
+                    component.RemoveProperty(sp.Key);
+                    component.AddProperty(new SerializedProperty(sp.Key, propertyType, propertyType.GetDefaultValue()));
                 }
             }
         }
