@@ -21,8 +21,6 @@
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
     <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
-    <ClCompile Include="src\Modules\Resources\Builders\DataAssetBuilder.cpp" />
-    <ClCompile Include="src\Modules\Resources\Builders\SceneAssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryWriter.cpp" />
     <ClCompile Include="src\Modules\Scenes\BuildScenesConfig.cpp" />
@@ -30,6 +28,12 @@
     <ClCompile Include="src\Modules\Scenes\SceneManager.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\UpdateLoopModule.cpp" />
+    <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
+    <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />
+    <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
+    <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
+    <ClCompile Include="src\Modules\Scenes\SceneEntity.cpp" />
+    <ClCompile Include="src\Modules\Render\Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core.h" />
@@ -65,8 +69,6 @@
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
     <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
-    <ClInclude Include="src\Modules\Resources\Builders\DataAssetBuilder.h" />
-    <ClInclude Include="src\Modules\Resources\Builders\SceneAssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
     <ClInclude Include="src\Modules\Scenes\BuildScenesConfig.h" />
@@ -77,5 +79,18 @@
     <ClInclude Include="src\Api\EditorApi.h" />
     <ClInclude Include="src\Startup\App.h" />
     <ClInclude Include="src\Startup\AppEntryPoint.h" />
+    <ClInclude Include="src\Ecs\DeleteHere.h" />
+    <ClInclude Include="src\Modules\Behaviour\Behaviour.h" />
+    <ClInclude Include="src\Modules\Behaviour\Components\BehaviourCollection.h" />
+    <ClInclude Include="src\Modules\Behaviour\Components\DisposeBehavioursEvent.h" />
+    <ClInclude Include="src\Modules\Behaviour\Components\StartBehavioursEvent.h" />
+    <ClInclude Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.h" />
+    <ClInclude Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.h" />
+    <ClInclude Include="src\Modules\Components\EntityInfo.h" />
+    <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
+    <ClInclude Include="src\Modules\Scenes\SceneEntity.h" />
+    <ClInclude Include="external\glfw\include\GLFW\glfw3.h" />
+    <ClInclude Include="external\glfw\include\GLFW\glfw3native.h" />
+    <ClInclude Include="src\Modules\Render\Renderer.h" />
   </ItemGroup>
 </Project>

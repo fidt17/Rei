@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
+             xmlns:playmode1="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Playmode.PlaymodePanelView"
              x:DataType="playmode:PlaymodePanelViewModel">
@@ -21,6 +22,7 @@
                     HotKey="Ctrl+P"
                     IsVisible="{Binding PlayModeActive}"
                     Content="Stop" />
+
         </StackPanel>
     </Border>
 

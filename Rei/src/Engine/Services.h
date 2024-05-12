@@ -1,12 +1,17 @@
 #pragma once
 
-namespace rei::assets
-{
-    class AssetManager;
-}
-
 namespace rei
 {
+    namespace render
+    {
+        class Renderer;
+    }
+
+    namespace assets
+    {
+        class AssetManager;
+    }
+
     class EntityManager;
 
     class Services
@@ -25,6 +30,9 @@ namespace rei
         void SetEntityManager(EntityManager* entityManager) { _entityManager = entityManager; }
         REI_API EntityManager& GetEntityManager() const { return *_entityManager; }
 
+        void SetRenderer(render::Renderer* renderer) { _renderer = renderer; }
+        REI_API render::Renderer& GetRenderer() const { return *_renderer; }
+
         REI_API static Services* GetInstance();
 
     private:
@@ -33,6 +41,7 @@ namespace rei
 
         assets::AssetManager* _assetManager;
         ecs::World* _internalWorld;
+        render::Renderer* _renderer;
         EntityManager* _entityManager;
     };
 

@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>DEBUG;REI_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei/external/glfw/include</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
@@ -66,7 +66,11 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(TargetDir)..\Rei</AdditionalLibraryDirectories>
     </Link>
+    <PreBuildEvent>
+      <Command>xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -77,7 +81,7 @@
       <PreprocessorDefinitions>RELEASE;REI_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei/external/glfw/include</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
@@ -87,7 +91,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(TargetDir)..\Rei</AdditionalLibraryDirectories>
     </Link>
+    <PreBuildEvent>
+      <Command>xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rei\Rei.vcxproj">
@@ -95,12 +103,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Behaviours\HelloBehaviour.cpp" />
-    <ClCompile Include="Internal\BehaviourRegistry.cpp" />
-    <ClCompile Include="ReiApp.cpp" />
+    <ClInclude Include="Behaviours\MyBehaviour.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Behaviours\HelloBehaviour.h" />
+    <Content Include="Behaviours\MyBehaviour.h.meta" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Internal\BehaviourRegistry.cpp" />
+    <ClCompile Include="ReiApp.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

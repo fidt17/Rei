@@ -27,7 +27,6 @@ namespace rei::internal::engine
 
     Engine::Engine(std::shared_ptr<App> app)
         :
-        _mainThread(main_thread::ReiMainThread()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
@@ -36,8 +35,7 @@ namespace rei::internal::engine
     {
         Services::GetInstance()->SetInternalWorld(_internalWorld.get());
         Services::GetInstance()->SetEntityManager(_entityManager.get());
-
-        _mainThread.AddOnUpdateCallback(std::make_shared<std::function<void()>>([this] { OnUpdate(); }));
+        Services::GetInstance()->SetRenderer(&_renderer);
 
         _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
     }
@@ -46,29 +44,46 @@ namespace rei::internal::engine
     {
         try
         {
+            _runEngine = true;
+            _renderer.SetupWindow(400, 400, "Main Window");
+
             _sceneManager->LoadScene(0);
             ConfigureAppUpdateCallback(_internalWorld, _app);
             _app->OnStart();
         }
-        catch (const std::exception& e)
+        catch (const std::exception& exc)
         {
-            LOG_ERROR("Exception on engine start", e.what())
+            LOG_ERROR("Exception on engine start", exc.what())
             Shutdown(-1);
         }
 
-        _mainThread.Run();
+        RunUpdateLoop();
+    }
+
+    void Engine::RunUpdateLoop()
+    {
+        try
+        {
+            while (_runEngine)
+            {
+                _renderer.Render();
+                _internalWorld->Run();
+            }
+        }
+        catch (const std::exception& exc)
+        {
+            LOG_ERROR("Exception in engine update loop", exc.what())
+            Shutdown(-2);
+        }
     }
 
     void Engine::Shutdown(const int exitCode)
     {
         LOG("Shutdown. Exit code: " + std::to_string(exitCode))
 
-        _app->OnShutdown();
-        _mainThread.Stop();
-    }
+        _runEngine = false;
 
-    void Engine::OnUpdate() const
-    {
-        _internalWorld->Run();
+        _app->OnShutdown();
+        _renderer.Terminate();
     }
 }

@@ -5,19 +5,18 @@
 #include <Modules/EntityManagement/EntityManager.h>
 #include <Modules/Behaviour/Behaviour.h>
 
-#include "../Behaviours/HelloBehaviour.h"
+#include "../Behaviours/MyBehaviour.h"
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
-    f.RegisterComponent<HelloBehaviour>(0);
+    f.RegisterComponent<MyBehaviour>(4);
 }
 
-
-HelloBehaviour::HelloBehaviour(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+MyBehaviour::MyBehaviour(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
-    , _property(data.at("_property").at("Value"))
-    , _property2(data.at("_property2").at("Value"))
-    , _property3(data.at("_property3").at("Value"))
+    , _flag(data.at("_flag").at("Value"))
+    , _counter(data.at("_counter").at("Value"))
+    , _msg(data.at("_msg").at("Value"))
 {}
 
 

@@ -1,0 +1,21 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
+             xmlns:playmode1="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.Editor.Playmode.PlayWindow"
+             x:DataType="playmode:PlaymodePanelViewModel">
+    <ItemsControl
+        ItemsSource="{Binding Hack}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type playmode:PlaymodePanelViewModel}">
+                <playmode1:WindowEngineControl 
+                    Width="1200" 
+                    Height="680" />
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+</UserControl>

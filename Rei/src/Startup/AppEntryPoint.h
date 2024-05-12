@@ -1,7 +1,10 @@
 #pragma once
+#include <thread>
+
 #include "App.h"
 #include "Engine/Engine.h"
 #include "Modules/EntityManagement/EntityManager.h"
+
 
 #ifdef REI_APP
 
@@ -40,11 +43,16 @@ int main()
     try
     {
         const auto engine = rei::external::CreateEngine();
+
+        auto stopEngineThread = std::thread([&]
+        {
+            std::cin.get();
+            engine->Shutdown(1);
+        });
+        
         rei::external::Start(engine);
-
-        std::cin.get();
-
-        rei::external::Shutdown(engine, 0);
+        
+        stopEngineThread.join();
     }
     catch (const std::exception& e)
     {

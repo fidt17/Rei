@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Modules/Render/Renderer.h"
 #include "Modules/Resources/AssetBuilder.h"
 
 typedef void (* LogCallbackDelegate)(const rei::common::logging::LogMessage& msg);
@@ -14,4 +15,9 @@ REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
 REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i64 offset)
 {
     return rei::resources::BuildAsset(file, dest, offset);
+}
+
+REI_EXTERN_API inline void* GetWindowHandle()
+{
+    return rei::Services::GetInstance()->GetRenderer().GetWindowHandler();
 }

@@ -36,6 +36,9 @@ public class EngineApi : IEngineApi
 	private delegate long BuildAssetDelegate(string path, string dest, long offset);
 	public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 
+	private delegate IntPtr GetWindowHandleDelegate();
+	public IntPtr GetWindowHandle() => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle");
+
 	#region UTILS
 	
 	[DllImport("Kernel32.dll")]

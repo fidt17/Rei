@@ -58,16 +58,21 @@
 
             <Grid Column="0" Row="0" ColumnSpan="2"
                   ColumnDefinitions="Auto, *, Auto">
-                
+
                 <hierarchies:HierarchyWindow
                     Width="280"
                     Grid.Column="0"
                     DataContext="{Binding Hierarchy}" />
-                
+
+                <!--Play Window-->
+                <playmode:PlayWindow
+                    Grid.Column="1"
+                    DataContext="{Binding PlaymodePanel}" />
+
                 <monitor:MonitorWindow
                     Width="400"
-                    Grid.Column="2" 
-                    DataContext="{Binding Monitor}"/>
+                    Grid.Column="2"
+                    DataContext="{Binding Monitor}" />
             </Grid>
 
             <console:ConsoleEditorWindow
