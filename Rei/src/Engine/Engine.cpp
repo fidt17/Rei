@@ -8,6 +8,7 @@
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
 #include "Startup/App.h"
+#include "Startup/AppEntryPoint.h"
 
 namespace rei::internal::engine
 {
@@ -45,10 +46,20 @@ namespace rei::internal::engine
         try
         {
             _runEngine = true;
-            _renderer.SetupWindow(400, 400, "Main Window");
+            
+            auto& mainWindow = _windowManager.NewWindow("Main Window", 400, 400);
+            mainWindow.WindowClosed += std::make_shared<std::function<void(window::Window&)>>([&](const window::Window&)
+            {
+                LOG("Main window was closed")
+                Shutdown(1);
+            });
+            
+            _renderer.SetTarget(mainWindow.GetGLFWWindow());
 
             _sceneManager->LoadScene(0);
+            
             ConfigureAppUpdateCallback(_internalWorld, _app);
+            
             _app->OnStart();
         }
         catch (const std::exception& exc)
@@ -66,6 +77,7 @@ namespace rei::internal::engine
         {
             while (_runEngine)
             {
+                _windowManager.OnUpdate();
                 _renderer.Render();
                 _internalWorld->Run();
             }
@@ -84,6 +96,6 @@ namespace rei::internal::engine
         _runEngine = false;
 
         _app->OnShutdown();
-        _renderer.Terminate();
+        _windowManager.Dispose();
     }
 }

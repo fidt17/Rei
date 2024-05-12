@@ -5,6 +5,7 @@
 
 namespace rei::common
 {
+    // TODO: this sucks, rewrite or use existing lib
     template <typename T>
     class Event
     {

@@ -43,16 +43,7 @@ int main()
     try
     {
         const auto engine = rei::external::CreateEngine();
-
-        auto stopEngineThread = std::thread([&]
-        {
-            std::cin.get();
-            engine->Shutdown(1);
-        });
-        
         rei::external::Start(engine);
-        
-        stopEngineThread.join();
     }
     catch (const std::exception& e)
     {

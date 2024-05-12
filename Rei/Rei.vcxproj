@@ -55,6 +55,8 @@
     <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.h" />
     <ClInclude Include="src\Modules\UpdateLoop\UpdateLoopModule.h" />
+    <ClInclude Include="src\Modules\Window\Window.h" />
+    <ClInclude Include="src\Modules\Window\WindowManager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Api\EditorApi.h" />
     <ClInclude Include="src\Common\Primitives.h" />
@@ -188,6 +190,8 @@
     <ClCompile Include="src\Modules\Scenes\SceneManager.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\UpdateLoopModule.cpp" />
+    <ClCompile Include="src\Modules\Window\Window.cpp" />
+    <ClCompile Include="src\Modules\Window\WindowManager.cpp" />
     <ClCompile Include="tests\BitMaskTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

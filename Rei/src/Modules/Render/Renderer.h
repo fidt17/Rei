@@ -9,16 +9,13 @@ namespace rei::render
     class Renderer
     {
     public:
-        void SetupWindow(int width, int height, const std::string& name);
-
+        void SetTarget(GLFWwindow* target);
         void Render();
 
-        void Terminate();
-
         REI_API HWND GetWindowHandler() const;
-
+        
     private:
-        GLFWwindow* _window = nullptr;
+        GLFWwindow* _target = nullptr;
 
         float r = 0;
         float g = 0;

@@ -4,42 +4,14 @@
 
 namespace rei::render
 {
-    static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+    void Renderer::SetTarget(GLFWwindow* target)
     {
-        /*
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        {
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-        }
-        */
-
-        LOG("key: " + STRING(key) + " scancode: " + STRING(scancode) + " " + STRING(action) + " " + STRING(mods))
-    }
-
-    void Renderer::SetupWindow(const int width, const int height, const std::string& name)
-    {
-        if (!glfwInit())
-            REI_THROW("GLFW Initialization error")
-
-        _window = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
-        if (!_window)
-        {
-            glfwTerminate();
-            REI_THROW("Could not create window." + name)
-        }
-
-        glfwSetKeyCallback(_window, key_callback);
-
-        // set window style
-        //SetWindowLongPtr(glfwGetWin32Window(_window), GWL_STYLE, 0);
+        _target = target;
     }
 
     void Renderer::Render()
     {
-        if (_window == nullptr) return;
-        if (glfwWindowShouldClose(_window)) return;
-
-        glfwMakeContextCurrent(_window);
+        glfwMakeContextCurrent(_target);
 
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -55,23 +27,12 @@ namespace rei::render
         glVertex2f(g, -1);
         glEnd();
 
-        /* Swap front and back buffers */
-        glfwSwapBuffers(_window);
-
-        /* Poll for and process events */
-        glfwPollEvents();
-    }
-
-    void Renderer::Terminate()
-    {
-        _window = nullptr;
-        glfwTerminate();
+        glfwSwapBuffers(_target);
     }
 
     HWND Renderer::GetWindowHandler() const
     {
-        REI_ASSERT_NOT_NULL(_window)
-
-        return glfwGetWin32Window(_window);
+        REI_ASSERT_NOT_NULL(_target)
+        return glfwGetWin32Window(_target);
     }
 }

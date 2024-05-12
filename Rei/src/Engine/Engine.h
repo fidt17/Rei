@@ -1,6 +1,6 @@
 ﻿#pragma once
-
 #include "Modules/Render/Renderer.h"
+#include "Modules/Window/WindowManager.h"
 
 namespace rei
 {
@@ -30,6 +30,7 @@ namespace rei::internal::engine
 
     private:
         bool _runEngine = false;
+        window::WindowManager _windowManager;
         render::Renderer _renderer;
         
         std::shared_ptr<App> _app;
