@@ -55,7 +55,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         _entity.BehaviourAddedEvent += HandleEntityBehaviourAddedEvent;
         _entity.BehaviourDeletedEvent += HandleEntityBehaviourDeletedEvent;
         
-        //Elements.Add(entityInfoComponentDrawerFactory.CreateInstance(entity));
+        Elements.Add(entityInfoComponentDrawerFactory.CreateInstance(entity));
         foreach (var b in _entity.Behaviours)
         {
             Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(_entity, b));

@@ -9,6 +9,7 @@
 #include "Common/Logging/Log.h"
 #include "Common/Assert.h"
 #include "Common/Event.h"
+#include "Common/ExitCodes.h"
 
 #include "Ecs/Ecs.h"
 

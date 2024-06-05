@@ -16,4 +16,7 @@ public:
     }
 };
 
-std::shared_ptr<rei::App> CreateApp() { return std::make_shared<ProjectApplication>(); }
+std::shared_ptr<rei::App> CreateApp()
+{
+    return std::make_shared<ProjectApplication>();
+}

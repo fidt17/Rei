@@ -1,5 +1,5 @@
 {
     "RelativeDebugIncludeDir": "\\bin\\x64Debug\\Rei",
     "RelativeReleaseIncludeDir": "\\bin\\x64Release\\Rei",
-    "RelativeSourceIncludeDir": "\\Rei\\src",
+    "RelativeSourceIncludes": "\\Rei\\src;\\Rei\\external",
 }

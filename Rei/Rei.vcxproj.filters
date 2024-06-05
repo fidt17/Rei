@@ -19,7 +19,6 @@
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
-    <ClCompile Include="src\Modules\MainThread\ReiMainThread.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryWriter.cpp" />
@@ -34,6 +33,8 @@
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\Scenes\SceneEntity.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />
+    <ClCompile Include="src\Modules\Window\Window.cpp" />
+    <ClCompile Include="src\Modules\Window\WindowManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core.h" />
@@ -67,7 +68,6 @@
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
-    <ClInclude Include="src\Modules\MainThread\ReiMainThread.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
@@ -92,5 +92,30 @@
     <ClInclude Include="external\glfw\include\GLFW\glfw3.h" />
     <ClInclude Include="external\glfw\include\GLFW\glfw3native.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
+    <ClInclude Include="external\eventpp\callbacklist.h" />
+    <ClInclude Include="external\eventpp\eventdispatcher.h" />
+    <ClInclude Include="external\eventpp\eventpolicies.h" />
+    <ClInclude Include="external\eventpp\eventqueue.h" />
+    <ClInclude Include="external\eventpp\hetercallbacklist.h" />
+    <ClInclude Include="external\eventpp\hetereventdispatcher.h" />
+    <ClInclude Include="external\eventpp\hetereventqueue.h" />
+    <ClInclude Include="external\eventpp\internal\eventpolicies_i.h" />
+    <ClInclude Include="external\eventpp\internal\eventqueue_i.h" />
+    <ClInclude Include="external\eventpp\internal\hetercallbacklist_i.h" />
+    <ClInclude Include="external\eventpp\internal\typeutil_i.h" />
+    <ClInclude Include="external\eventpp\mixins\mixinfilter.h" />
+    <ClInclude Include="external\eventpp\mixins\mixinheterfilter.h" />
+    <ClInclude Include="external\eventpp\utilities\anydata.h" />
+    <ClInclude Include="external\eventpp\utilities\anyid.h" />
+    <ClInclude Include="external\eventpp\utilities\argumentadapter.h" />
+    <ClInclude Include="external\eventpp\utilities\conditionalfunctor.h" />
+    <ClInclude Include="external\eventpp\utilities\conditionalremover.h" />
+    <ClInclude Include="external\eventpp\utilities\counterremover.h" />
+    <ClInclude Include="external\eventpp\utilities\eventmaker.h" />
+    <ClInclude Include="external\eventpp\utilities\eventutil.h" />
+    <ClInclude Include="external\eventpp\utilities\orderedqueuelist.h" />
+    <ClInclude Include="external\eventpp\utilities\scopedremover.h" />
+    <ClInclude Include="src\Modules\Window\Window.h" />
+    <ClInclude Include="src\Modules\Window\WindowManager.h" />
   </ItemGroup>
 </Project>

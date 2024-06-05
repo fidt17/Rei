@@ -6,5 +6,5 @@ public interface IEngineSettingsProvider : IAsyncInitializable
 {
 	string GetEngineDebugIncludeDir();
 	string GetEngineReleaseIncludeDir();
-	string GetEngineSourceIncludeDir();
+	string GetEngineSourceIncludes();
 }

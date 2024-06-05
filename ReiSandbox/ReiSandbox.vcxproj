@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>DEBUG;REI_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei/external/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei\external</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
@@ -69,7 +69,8 @@
       <AdditionalLibraryDirectories>$(TargetDir)..\Rei</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -81,7 +82,7 @@
       <PreprocessorDefinitions>RELEASE;REI_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei/external/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei\external</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
@@ -94,7 +95,8 @@
       <AdditionalLibraryDirectories>$(TargetDir)..\Rei</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

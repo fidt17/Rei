@@ -41,31 +41,36 @@ namespace rei::internal::engine
         _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
     }
 
+    void Engine::ConfigureMainWindow()
+    {
+        const auto mainWindow = _mainWindowHandler.CreateMainWindow(_windowManager);
+        _mainWindowHandler.MainWindowClosedEvent.append([&]
+        {
+            LOG("Main window was closed")
+            _renderer.SetTarget(nullptr);
+            Shutdown(MAIN_WINDOW_CLOSED_EXIT_CODE);
+        });
+
+        _renderer.SetTarget(mainWindow->GetGLFWWindow());
+    }
+
     void Engine::Start()
     {
         try
         {
             _runEngine = true;
-            
-            auto& mainWindow = _windowManager.NewWindow("Main Window", 400, 400);
-            mainWindow.WindowClosed += std::make_shared<std::function<void(window::Window&)>>([&](const window::Window&)
-            {
-                LOG("Main window was closed")
-                Shutdown(1);
-            });
-            
-            _renderer.SetTarget(mainWindow.GetGLFWWindow());
 
+            ConfigureMainWindow();
             _sceneManager->LoadScene(0);
-            
+
             ConfigureAppUpdateCallback(_internalWorld, _app);
-            
+
             _app->OnStart();
         }
         catch (const std::exception& exc)
         {
             LOG_ERROR("Exception on engine start", exc.what())
-            Shutdown(-1);
+            Shutdown(ENGINE_INITIALIZATION_ERROR_EXIT_CODE);
         }
 
         RunUpdateLoop();
@@ -85,17 +90,25 @@ namespace rei::internal::engine
         catch (const std::exception& exc)
         {
             LOG_ERROR("Exception in engine update loop", exc.what())
-            Shutdown(-2);
+            Shutdown(ENGINE_UPDATE_ERROR_EXIT_CODE);
         }
     }
 
     void Engine::Shutdown(const int exitCode)
     {
-        LOG("Shutdown. Exit code: " + std::to_string(exitCode))
+        if (!_runEngine) return;
+        
+        LOG("Engine shutdown")
 
+        _exitCode = exitCode;
         _runEngine = false;
 
         _app->OnShutdown();
         _windowManager.Dispose();
+    }
+
+    int Engine::GetExitCode() const
+    {
+        return _exitCode;
     }
 }

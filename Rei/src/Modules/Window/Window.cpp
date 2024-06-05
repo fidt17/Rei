@@ -22,21 +22,21 @@ namespace rei::window
     void Window::OnUpdate()
     {
         REI_ASSERT_NOT_NULL(_glfwWindow);
-        
+
         if (glfwWindowShouldClose(_glfwWindow))
         {
-            Close();
+            CloseRequestEvent();
         }
     }
 
     void Window::Close()
     {
-        REI_ASSERT_NOT_NULL(_glfwWindow);
+        if (_glfwWindow == nullptr) return;
         
         glfwDestroyWindow(_glfwWindow);
         _glfwWindow = nullptr;
 
-        WindowClosed.Invoke(*this);
+        WindowClosedEvent(*this);
     }
 
     GLFWwindow* Window::GetGLFWWindow() const
@@ -54,11 +54,7 @@ namespace rei::window
 
     void Window::OnKeyCallback(const int key, const int action, const int mods)
     {
-        LOG("key: " + STRING(key) + " action: " + STRING(action) + " scancode: " + STRING(mods))
-
-        if (key == GLFW_KEY_ESCAPE)
-        {
-            Close();
-        }
+        //LOG("key: " + STRING(key) + " action: " + STRING(action) + " scancode: " + STRING(mods))
+        OnKeyEvent(key, action, mods);
     }
 }

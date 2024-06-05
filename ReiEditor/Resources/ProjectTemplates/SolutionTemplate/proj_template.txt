@@ -108,13 +108,16 @@
       <AdditionalLibraryDirectories>{2}</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);Rei.lib</AdditionalDependencies>
     </Link>
+    
     <PostBuildEvent>
       <Command>
       </Command>
     </PostBuildEvent>
+    
     <PreBuildEvent>
       <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"</Command>
     </PreBuildEvent>
+    
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='EditorDebug|x64'">
     <ClCompile>
@@ -176,7 +179,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>RElEASE;REI_APP;REI_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RELEASE;REI_APP;REI_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>

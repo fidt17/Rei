@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
-using ReiEditor.Models.ProjectManagement.Creation.Template;
+using ReiEditor.Models.ProjectManagement.Template;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
@@ -64,8 +64,9 @@ public class ProjectCreationService : IProjectCreationService
 		
 		Directory.CreateDirectory(root);
 		
-		var solutionPath = await CreateSolution(configuration);
-		project.SetProjectSolutionPath(solutionPath);
+		var result = await CreateSolution(configuration);
+		project.SetProjectSolutionPath(result.SolutionPath);
+		project.SetProjectVisualStudioProjectPath(result.ProjectPath);
 		
 		CreateProjectFile(root, project);
 
@@ -81,10 +82,10 @@ public class ProjectCreationService : IProjectCreationService
 		File.WriteAllText(projectFilePath, _serializer.Serialize(project));
 	}
 
-	private async Task<string> CreateSolution(ProjectCreationConfiguration configuration)
+	private async Task<SolutionGenerationResult> CreateSolution(ProjectCreationConfiguration configuration)
 	{
 		_logger.Log("Creating solution");
-		var solutionPath = await _solutionGenerator.GenerateSolution(configuration);
-		return solutionPath;
+		var result = await _solutionGenerator.GenerateSolution(configuration);
+		return result;
 	}
 }

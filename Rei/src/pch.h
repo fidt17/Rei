@@ -4,3 +4,4 @@
 
 #include "Common/Primitives.h"
 #include "../external/json.hpp"
+#include "../external/eventpp/callbacklist.h"

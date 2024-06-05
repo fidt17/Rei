@@ -1,6 +1,6 @@
 ﻿#include "Renderer.h"
 
-#include "GLFW/glfw3.h"
+#include "glfw/glfw3.h"
 
 namespace rei::render
 {
@@ -11,6 +11,8 @@ namespace rei::render
 
     void Renderer::Render()
     {
+        if (_target == nullptr) return;
+        
         glfwMakeContextCurrent(_target);
 
         glClear(GL_COLOR_BUFFER_BIT);

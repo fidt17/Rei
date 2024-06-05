@@ -6,6 +6,7 @@ using ReiEditor.Models.EditorApp.Shutdown;
 using ReiEditor.Models.EditorApp.Storage;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.EditorSetup;
+using ReiEditor.Models.ProjectManagement.Template;
 using ReiEditor.Models.Resources.Editor;
 using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
@@ -53,6 +54,9 @@ public class ApplicationScope : BaseLifetimeScope
 		});
 		
 		b.RegisterSingleton<WindowsFileExplorerProvider>().As<IFileExplorerProvider>();
+		
+		b.RegisterSingleton<ProjectTemplateProvider>().As<IProjectTemplateProvider>();
+		b.RegisterSingleton<SolutionGenerator>().As<ISolutionGenerator>();
 
 		b.RegisterSingleton<EditorSettingsService>().As<IEditorSettingsService>();
 		b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();

@@ -9,9 +9,9 @@ namespace rei::window
         WindowManager();
         void OnUpdate();
 
-        Window& NewWindow(const std::string& name, int width, int height);
-        void HandleWindowClosedEvent(const Window& w);
+        std::shared_ptr<Window> NewWindow(const std::string& name, int width, int height);
 
+        void CloseWindow(Window& w);
         void CloseAll();
         void Dispose();
 

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
@@ -16,19 +17,22 @@ public class ProjectSetupService : IProjectSetupService
     private readonly IActiveProjectService _activeProjectService;
     private readonly IAssetsService _assetsService;
     private readonly IEditorProceduresService _editorProceduresService;
+    private readonly IProjectUpdateService _projectUpdateService;
 
     public ProjectSetupService(
         ILogger<ProjectSetupService> logger, 
         ISceneManagementService sceneManagementService, 
         IActiveProjectService activeProjectService, 
         IAssetsService assetsService, 
-        IEditorProceduresService editorProceduresService)
+        IEditorProceduresService editorProceduresService, 
+        IProjectUpdateService projectUpdateService)
     {
         _logger = logger;
         _sceneManagementService = sceneManagementService;
         _activeProjectService = activeProjectService;
         _assetsService = assetsService;
         _editorProceduresService = editorProceduresService;
+        _projectUpdateService = projectUpdateService;
     }
 
     public async Task PrepareProject()
@@ -43,6 +47,10 @@ public class ProjectSetupService : IProjectSetupService
             await SetupNewProject();
             project.SetHasBeenSetup(true);
             await _assetsService.SaveProject();
+        }
+        else
+        {
+            await _projectUpdateService.UpdateProject(project);
         }
 		
         await OpenLastScene();

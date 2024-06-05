@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
@@ -103,6 +102,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         return _assetCreator.CreateMetaFile(meta, behaviourFile.FullPath);
     }
 
+    /*
     private void LogBehaviours()
     {
         foreach (var behaviourAssetInfo in _behaviours.OrderBy(x => x.Value.BehaviourId))
@@ -111,4 +111,5 @@ public class BehaviourRegistry : IBehaviourRegistry
             _logger.Log($"{value.BehaviourId,-3} {value.BehaviourName}");
         }
     }
+*/
 }

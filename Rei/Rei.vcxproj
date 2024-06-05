@@ -15,10 +15,34 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="external\glfw\include\GLFW\glfw3.h" />
-    <ClInclude Include="external\glfw\include\GLFW\glfw3native.h" />
+    <ClInclude Include="external\eventpp\callbacklist.h" />
+    <ClInclude Include="external\eventpp\eventdispatcher.h" />
+    <ClInclude Include="external\eventpp\eventpolicies.h" />
+    <ClInclude Include="external\eventpp\eventqueue.h" />
+    <ClInclude Include="external\eventpp\hetercallbacklist.h" />
+    <ClInclude Include="external\eventpp\hetereventdispatcher.h" />
+    <ClInclude Include="external\eventpp\hetereventqueue.h" />
+    <ClInclude Include="external\eventpp\internal\eventpolicies_i.h" />
+    <ClInclude Include="external\eventpp\internal\eventqueue_i.h" />
+    <ClInclude Include="external\eventpp\internal\hetercallbacklist_i.h" />
+    <ClInclude Include="external\eventpp\internal\typeutil_i.h" />
+    <ClInclude Include="external\eventpp\mixins\mixinfilter.h" />
+    <ClInclude Include="external\eventpp\mixins\mixinheterfilter.h" />
+    <ClInclude Include="external\eventpp\utilities\anydata.h" />
+    <ClInclude Include="external\eventpp\utilities\anyid.h" />
+    <ClInclude Include="external\eventpp\utilities\argumentadapter.h" />
+    <ClInclude Include="external\eventpp\utilities\conditionalfunctor.h" />
+    <ClInclude Include="external\eventpp\utilities\conditionalremover.h" />
+    <ClInclude Include="external\eventpp\utilities\counterremover.h" />
+    <ClInclude Include="external\eventpp\utilities\eventmaker.h" />
+    <ClInclude Include="external\eventpp\utilities\eventutil.h" />
+    <ClInclude Include="external\eventpp\utilities\orderedqueuelist.h" />
+    <ClInclude Include="external\eventpp\utilities\scopedremover.h" />
+    <ClInclude Include="external\glfw\glfw3.h" />
+    <ClInclude Include="external\glfw\glfw3native.h" />
     <ClInclude Include="external\json.hpp" />
     <ClInclude Include="src\Common\Assert.h" />
+    <ClInclude Include="src\Common\ExitCodes.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
     <ClInclude Include="src\Ecs\DeleteHere.h" />
@@ -55,6 +79,7 @@
     <ClInclude Include="src\Modules\UpdateLoop\Components\UpdateCallback.h" />
     <ClInclude Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.h" />
     <ClInclude Include="src\Modules\UpdateLoop\UpdateLoopModule.h" />
+    <ClInclude Include="src\Modules\Window\MainWindowHandler.h" />
     <ClInclude Include="src\Modules\Window\Window.h" />
     <ClInclude Include="src\Modules\Window\WindowManager.h" />
     <ClInclude Include="src\pch.h" />
@@ -190,6 +215,7 @@
     <ClCompile Include="src\Modules\Scenes\SceneManager.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\Systems\InvokeUpdateCallbackSystem.cpp" />
     <ClCompile Include="src\Modules\UpdateLoop\UpdateLoopModule.cpp" />
+    <ClCompile Include="src\Modules\Window\MainWindowHandler.cpp" />
     <ClCompile Include="src\Modules\Window\Window.cpp" />
     <ClCompile Include="src\Modules\Window\WindowManager.cpp" />
     <ClCompile Include="tests\BitMaskTests.cpp">
@@ -348,7 +374,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
@@ -358,7 +384,8 @@
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
+xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">
@@ -371,7 +398,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
@@ -381,7 +408,8 @@
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
+xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -396,7 +424,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -410,7 +438,8 @@
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
+xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

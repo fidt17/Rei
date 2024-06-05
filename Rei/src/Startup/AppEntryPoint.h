@@ -5,7 +5,6 @@
 #include "Engine/Engine.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
-
 #ifdef REI_APP
 
 namespace rei
@@ -44,14 +43,46 @@ int main()
     {
         const auto engine = rei::external::CreateEngine();
         rei::external::Start(engine);
+        return engine->GetExitCode();
     }
     catch (const std::exception& e)
     {
         LOG_ERROR("Exception", e.what())
-        return -1;
+        return DEFAULT_ERROR_EXIT_CODE;
+    }
+}
+
+#else
+
+class BlankApp final : public rei::App
+{
+public:
+    void OnStart() override
+    {
     }
 
-    return 0;
+    void OnUpdate() override
+    {
+    }
+
+    void OnShutdown() override
+    {
+    }
+};
+
+int main()
+{
+    try
+    {
+        auto engine = new rei::internal::engine::Engine(std::make_shared<BlankApp>());
+        engine->Start();
+        return engine->GetExitCode();
+    }
+    catch (const std::exception& e)
+    {
+        LOG_ERROR("Exception", e.what())
+        return DEFAULT_ERROR_EXIT_CODE;
+    }
 }
 
 #endif

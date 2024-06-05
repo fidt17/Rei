@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Editor;
 
-namespace ReiEditor.Models.ProjectManagement.Creation.Template;
+namespace ReiEditor.Models.ProjectManagement.Template;
 
 public class ProjectTemplateProvider : IProjectTemplateProvider
 {

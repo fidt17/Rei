@@ -9,7 +9,10 @@ namespace rei::window
     class Window
     {
     public:
-        REI_EVENT(Window&) WindowClosed;
+        eventpp::CallbackList<void (Window&)> WindowClosedEvent;
+        
+        eventpp::CallbackList<void (int key, int action, int mods)> OnKeyEvent;
+        eventpp::CallbackList<void ()> CloseRequestEvent;
         
         Window(const std::string& name, int width, int height);
 
@@ -24,7 +27,7 @@ namespace rei::window
         }
 
         void OnUpdate();
-        
+
         void Close();
 
         GLFWwindow* GetGLFWWindow() const;

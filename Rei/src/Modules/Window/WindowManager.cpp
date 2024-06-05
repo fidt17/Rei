@@ -16,6 +16,8 @@ namespace rei::window
 
     void WindowManager::OnUpdate()
     {
+        if (_windows.empty()) return;
+        
         for (const auto& window : _windows)
         {
             window->OnUpdate();
@@ -24,21 +26,20 @@ namespace rei::window
         glfwPollEvents();
     }
 
-    Window& WindowManager::NewWindow(const std::string& name, const int width, const int height)
+    std::shared_ptr<Window> WindowManager::NewWindow(const std::string& name, const int width, const int height)
     {
         _windows.emplace_back(std::make_shared<Window>(name, width, height));
-        const auto w = _windows.back();
 
-        //w->WindowClosed += std::make_shared<std::function<void(Window&)>>([this](const Window& closeWindow) { HandleWindowClosedEvent(closeWindow); });
-
-        return *w;
+        return _windows.back();
     }
 
-    void WindowManager::HandleWindowClosedEvent(const Window& w)
+    void WindowManager::CloseWindow(Window& w)
     {
-        _windows.erase(std::remove_if(_windows.begin(), _windows.end(), [&](const std::shared_ptr<Window>& checkWindow)
+        w.Close();
+        
+        _windows.erase(std::find_if(_windows.begin(), _windows.end(), [&](const std::shared_ptr<Window>& other)
         {
-            return *checkWindow == w;
+            return *other == w;
         }), _windows.end());
     }
 
@@ -54,6 +55,5 @@ namespace rei::window
     void WindowManager::Dispose()
     {
         CloseAll();
-        glfwTerminate();
     }
 }

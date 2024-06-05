@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace ReiEditor.Models.ProjectManagement.Creation.Template;
+namespace ReiEditor.Models.ProjectManagement.Template;
 
 public interface IProjectTemplateProvider
 {
