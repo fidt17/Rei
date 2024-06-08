@@ -10,7 +10,6 @@ namespace rei::common::logging
     public:
         REI_API static void Initialize();
         REI_API static std::shared_ptr<Logger> GetLogger();
-        REI_API static void AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&));
 
     private:
         inline static std::shared_ptr<Logger> _logger;
@@ -27,10 +26,12 @@ const std::string LOG_SCOPE;
     #define LOG_ERROR(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Error, __VA_ARGS__);
     #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
     #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
+    #define LOG_USE_COUNT(x) LOG("Use count of " + std::string(#x) + " = " + STRING(x.use_count()))
 #else
     #define LOG(...) 
     #define LOG_WARNING(...) 
     #define LOG_ERROR(...) 
     #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
     #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
+    #define LOG_USE_COUNT(x) 
 #endif

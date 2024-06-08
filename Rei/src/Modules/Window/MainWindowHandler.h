@@ -8,6 +8,8 @@ public:
 
     std::shared_ptr<rei::window::Window> CreateMainWindow(rei::window::WindowManager& windowManager)
     {
+        REI_ASSERT_S(_window == nullptr)
+
         _window = windowManager.NewWindow("Main Window", 400, 400);
 
         _window->OnKeyEvent.append([&](const int key, const int, const int)
@@ -27,6 +29,11 @@ public:
             MainWindowClosedEvent();
         });
 
+        return _window;
+    }
+
+    std::shared_ptr<rei::window::Window> GetMainWindow()
+    {
         return _window;
     }
 

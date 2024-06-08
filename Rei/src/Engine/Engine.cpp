@@ -8,7 +8,6 @@
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
 #include "Startup/App.h"
-#include "Startup/AppEntryPoint.h"
 
 namespace rei::internal::engine
 {
@@ -34,6 +33,7 @@ namespace rei::internal::engine
         _entityManager(std::make_shared<EntityManager>(_internalWorld)),
         _sceneManager(std::make_shared<scenes::SceneManager>(_entityManager))
     {
+        Services::GetInstance()->SetEngine(this);
         Services::GetInstance()->SetInternalWorld(_internalWorld.get());
         Services::GetInstance()->SetEntityManager(_entityManager.get());
         Services::GetInstance()->SetRenderer(&_renderer);
@@ -41,9 +41,9 @@ namespace rei::internal::engine
         _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
     }
 
-    void Engine::ConfigureMainWindow()
+    std::shared_ptr<window::Window> Engine::CreateMainWindow()
     {
-        const auto mainWindow = _mainWindowHandler.CreateMainWindow(_windowManager);
+        auto mainWindow = _mainWindowHandler.CreateMainWindow(_windowManager);
         _mainWindowHandler.MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")
@@ -52,6 +52,8 @@ namespace rei::internal::engine
         });
 
         _renderer.SetTarget(mainWindow->GetGLFWWindow());
+
+        return mainWindow;
     }
 
     void Engine::Start()
@@ -60,7 +62,6 @@ namespace rei::internal::engine
         {
             _runEngine = true;
 
-            ConfigureMainWindow();
             _sceneManager->LoadScene(0);
 
             ConfigureAppUpdateCallback(_internalWorld, _app);
@@ -82,6 +83,9 @@ namespace rei::internal::engine
         {
             while (_runEngine)
             {
+                _mainThread.Run();
+                if (!_runEngine) break;
+                
                 _windowManager.OnUpdate();
                 _renderer.Render();
                 _internalWorld->Run();
@@ -97,18 +101,25 @@ namespace rei::internal::engine
     void Engine::Shutdown(const int exitCode)
     {
         if (!_runEngine) return;
-        
-        LOG("Engine shutdown")
 
+        LOG("Engine shutdown")
+        
         _exitCode = exitCode;
         _runEngine = false;
 
         _app->OnShutdown();
         _windowManager.Dispose();
+
+        LOG("Shutdown complete")
     }
 
     int Engine::GetExitCode() const
     {
         return _exitCode;
+    }
+
+    rei::engine::MainThread& Engine::GetMainThread()
+    {
+        return _mainThread;
     }
 }

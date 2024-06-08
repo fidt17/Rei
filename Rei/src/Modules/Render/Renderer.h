@@ -11,8 +11,6 @@ namespace rei::render
     public:
         void SetTarget(GLFWwindow* target);
         void Render();
-
-        REI_API HWND GetWindowHandler() const;
         
     private:
         GLFWwindow* _target = nullptr;

@@ -31,7 +31,13 @@ namespace rei::external
 
     REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
     {
-        engine->Shutdown(exitCode);
+        auto t = std::make_shared<engine::Task>([&]
+        {
+            engine->Shutdown(exitCode);
+        });
+        engine->GetMainThread().AddTask(t);
+        t->WaitForCompletion();
+
         delete engine;
         return 0;
     }
@@ -42,6 +48,7 @@ int main()
     try
     {
         const auto engine = rei::external::CreateEngine();
+        engine->CreateMainWindow();
         rei::external::Start(engine);
         return engine->GetExitCode();
     }
@@ -75,6 +82,7 @@ int main()
     try
     {
         auto engine = new rei::internal::engine::Engine(std::make_shared<BlankApp>());
+        LOG("B")
         engine->Start();
         return engine->GetExitCode();
     }

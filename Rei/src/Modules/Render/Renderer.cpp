@@ -1,18 +1,21 @@
 ﻿#include "Renderer.h"
-
 #include "glfw/glfw3.h"
 
 namespace rei::render
 {
+    SET_LOG_SCOPE("RENDERER")
+
     void Renderer::SetTarget(GLFWwindow* target)
     {
+        LOG(target == nullptr ? "Reset render target" : "Set render target")
+
         _target = target;
     }
 
     void Renderer::Render()
     {
         if (_target == nullptr) return;
-        
+
         glfwMakeContextCurrent(_target);
 
         glClear(GL_COLOR_BUFFER_BIT);
@@ -30,11 +33,5 @@ namespace rei::render
         glEnd();
 
         glfwSwapBuffers(_target);
-    }
-
-    HWND Renderer::GetWindowHandler() const
-    {
-        REI_ASSERT_NOT_NULL(_target)
-        return glfwGetWin32Window(_target);
     }
 }

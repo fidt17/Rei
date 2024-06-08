@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -15,5 +16,5 @@ public interface IEngineApi
 
 	long BuildAsset(string assetPath, string destinationFile, long offset);
 
-	IntPtr GetWindowHandle();
+	Task<IntPtr> CreatePlaymodeWindow();
 }

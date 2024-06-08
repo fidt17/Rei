@@ -3,16 +3,6 @@
 
 namespace rei::common::logging
 {
-    void Logger::AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&) callback)
-    {
-        _newLogEvent += callback;
-    }
-
-    void Logger::RemoveLogCallback(REI_EVENT_DELEGATE(const LogMessage&) callback)
-    {
-        _newLogEvent -= callback;
-    }
-
     void Logger::Log(const LogLevelEnum logLevel, const std::string& message) const
     {
         Log("", logLevel, message, "");
@@ -52,8 +42,8 @@ namespace rei::common::logging
         }
 
         std::cout << logMessage << "\n";
-        
-        _newLogEvent.Invoke(logMessage);
+
+        NewLogEvent(logMessage);
     }
 
     void Logger::Enable()

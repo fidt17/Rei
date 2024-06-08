@@ -31,7 +31,7 @@ namespace rei::window
         void Close();
 
         GLFWwindow* GetGLFWWindow() const;
-        HWND GetWindowHandler() const;
+        REI_API HWND GetWindowHandle() const;
 
     private:
         GLFWwindow* _glfwWindow;

@@ -21,7 +21,6 @@
                     HotKey="Ctrl+P"
                     IsVisible="{Binding PlayModeActive}"
                     Content="Stop" />
-
         </StackPanel>
     </Border>
 

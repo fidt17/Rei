@@ -14,11 +14,20 @@ namespace rei
 
     class EntityManager;
 
+    namespace internal::engine
+    {
+        class Engine;
+    }
+
     class Services
     {
     public:
         Services(Services& other) = delete;
         void operator=(const Services&) = delete;
+
+        void SetEngine(internal::engine::Engine* value) { _engine = value; }
+        REI_API internal::engine::Engine& GetEngine() const { return *_engine; }
+        REI_API bool EngineExists() { return _engine != nullptr; }
 
         void SetAssetManager(assets::AssetManager* value) { _assetManager = value; }
         REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
@@ -39,12 +48,14 @@ namespace rei
         Services() = default;
         static Services* _instance;
 
+        internal::engine::Engine* _engine;
         assets::AssetManager* _assetManager;
         ecs::World* _internalWorld;
         render::Renderer* _renderer;
         EntityManager* _entityManager;
     };
 
+    inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline ecs::World& GetInternalWorld() { return Services::GetInstance()->GetInternalWorld(); }
     inline std::shared_ptr<ecs::World> GetInternalWorldPtr() { return Services::GetInstance()->GetInternalWorldPtr(); }

@@ -1,15 +1,15 @@
 ﻿#pragma once
-#include "Modules/Render/Renderer.h"
+#include "Engine/Engine.h"
+#include "Engine/Services.h"
 #include "Modules/Resources/AssetBuilder.h"
 
-typedef void (* LogCallbackDelegate)(const rei::common::logging::LogMessage& msg);
+typedef void (*LogCallbackDelegate)(const rei::common::logging::LogMessage& msg);
 REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
 {
-    const auto callbackPtr = std::make_shared<std::function<void(const rei::common::logging::LogMessage&)>>([=](const rei::common::logging::LogMessage& message)
+    rei::common::logging::Log::GetLogger()->NewLogEvent.append([=](const rei::common::logging::LogMessage& msg)
     {
-        callback(message);
+        callback(msg);
     });
-    rei::common::logging::Log::AddLogCallback(callbackPtr);
 }
 
 REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i64 offset)
@@ -17,7 +17,20 @@ REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i
     return rei::resources::BuildAsset(file, dest, offset);
 }
 
-REI_EXTERN_API inline void* GetWindowHandle()
+REI_EXTERN_API inline void* CreatePlaymodeWindow()
 {
-    return rei::Services::GetInstance()->GetRenderer().GetWindowHandler();
+    auto& engine = rei::Services::GetInstance()->GetEngine();
+    std::shared_ptr<rei::window::Window> window;
+
+    auto t = std::make_shared<rei::engine::Task>(
+        [&]
+        {
+            window = engine.CreateMainWindow();
+        }
+    );
+
+    engine.GetMainThread().AddTask(t);
+    t->WaitForCompletion();
+
+    return window->GetWindowHandle();
 }

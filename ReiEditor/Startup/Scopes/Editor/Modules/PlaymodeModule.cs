@@ -3,6 +3,7 @@ using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Engine;
+using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
 using ReiEditor.ViewModels.Windows.Editor.Playmode.Commands;
@@ -18,9 +19,10 @@ public class PlaymodeModule : Module
 
 		builder.RegisterSingleton<PlaymodeStarter>().As<IPlaymodeStarter>();
 		builder.RegisterSingleton<PlaymodeService>().As<IPlaymodeService>();
-		builder.RegisterType<PlaymodeRunner>().As<IPlaymodeRunner>().InstancePerDependency();
+		builder.RegisterSingleton<PlaymodeRunner>().As<IPlaymodeRunner>();
+		builder.RegisterSingleton<PlaymodeWindowController>().As<IPlaymodeWindowController>();
 		
-		builder.RegisterType<EngineLogger>().As<IEngineLogger>().InstancePerDependency();
+		builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
 		
 		ConfigureViews(builder);
 	}

@@ -55,6 +55,7 @@
     <ClInclude Include="src\Ecs\System.h" />
     <ClInclude Include="src\Ecs\TypeId.h" />
     <ClInclude Include="src\Ecs\World.h" />
+    <ClInclude Include="src\Engine\MainThread.h" />
     <ClInclude Include="src\Engine\Services.h" />
     <ClInclude Include="src\Modules\Assets\AssetId.h" />
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
@@ -122,6 +123,7 @@
     <ClCompile Include="src\Engine\Engine.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
+    <ClCompile Include="src\Engine\MainThread.cpp" />
     <ClCompile Include="src\Engine\Services.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetId.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />

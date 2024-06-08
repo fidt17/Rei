@@ -16,14 +16,4 @@ namespace rei::common::logging
         
         return _logger;
     }
-
-    void Log::AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&) logCallback)
-    {
-        if (_logger == nullptr)
-        {
-            Initialize();
-        }
-        
-        _logger->AddLogCallback(logCallback);
-    }
 }

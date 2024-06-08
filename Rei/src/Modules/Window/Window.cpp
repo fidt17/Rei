@@ -16,7 +16,7 @@ namespace rei::window
         });
         
         // set window style
-        //SetWindowLongPtr(glfwGetWin32Window(_window), GWL_STYLE, 0);
+        SetWindowLongPtr(glfwGetWin32Window(_glfwWindow), GWL_STYLE, 0);
     }
 
     void Window::OnUpdate()
@@ -46,7 +46,7 @@ namespace rei::window
         return _glfwWindow;
     }
 
-    HWND Window::GetWindowHandler() const
+    HWND Window::GetWindowHandle() const
     {
         REI_ASSERT_NOT_NULL(_glfwWindow)
         return glfwGetWin32Window(_glfwWindow);

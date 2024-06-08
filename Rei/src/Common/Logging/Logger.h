@@ -11,13 +11,12 @@ namespace rei::common::logging
     class Logger
     {
     public:
+        eventpp::CallbackList<void(const LogMessage&)> NewLogEvent;
+        
         explicit Logger(std::string loggerScope)
             : _loggerScope(std::move(loggerScope))
         {
         }
-
-        void AddLogCallback(REI_EVENT_DELEGATE(const LogMessage&));
-        void RemoveLogCallback(REI_EVENT_DELEGATE(const LogMessage&));
 
         REI_API void Log(LogLevelEnum logLevel, const std::string& message) const;
         REI_API void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message) const;
@@ -27,8 +26,6 @@ namespace rei::common::logging
         void Disable();
         
     private:
-        REI_EVENT(const LogMessage&) _newLogEvent;
-        
         std::string _loggerScope;
         bool _enabled = true;
     };
