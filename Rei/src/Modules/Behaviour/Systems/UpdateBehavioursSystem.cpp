@@ -5,20 +5,25 @@
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
-UpdateBehavioursSystem::UpdateBehavioursSystem(const std::shared_ptr<rei::ecs::EcsRegistry>& ecs,
-                                               const std::shared_ptr<rei::ecs::FilterProvider>& filters): System(ecs, filters)
+namespace rei::behaviour
 {
-    _f = filters->Get<BehaviourCollection>();
-}
-
-void UpdateBehavioursSystem::OnUpdate()
-{
-    const auto& entityManager = rei::GetEntityManager();
-    FOR(e, _f)
+    UpdateBehavioursSystem::UpdateBehavioursSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
+                                                   const std::shared_ptr<ecs::FilterProvider>& filters,
+                                                   const std::shared_ptr<EntityManager>& entityManager) :
+        System(ecs, filters),
+        _entityManager(entityManager)
     {
-        for (const auto behavioursToInit : GET(e, BehaviourCollection).Behaviours)
+        _f = filters->Get<BehaviourCollection>();
+    }
+
+    void UpdateBehavioursSystem::OnUpdate()
+    {
+        FOR(e, _f)
         {
-            entityManager.GetComponent(e, behavioursToInit).Update();
+            for (const auto behavioursToInit : GET(e, BehaviourCollection).Behaviours)
+            {
+                _entityManager->GetComponent(e, behavioursToInit).Update();
+            }
         }
     }
 }

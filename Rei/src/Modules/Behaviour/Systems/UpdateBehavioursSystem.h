@@ -1,12 +1,20 @@
 ﻿#pragma once
+#include "Modules/EntityManagement/EntityManager.h"
 
-class UpdateBehavioursSystem final : public rei::ecs::System
+namespace rei::behaviour
 {
-private:
-    std::shared_ptr<rei::ecs::Filter> _f;
-    
-public:
-    UpdateBehavioursSystem(const std::shared_ptr<rei::ecs::EcsRegistry>& ecs, const std::shared_ptr<rei::ecs::FilterProvider>& filters);
+    class UpdateBehavioursSystem final : public ecs::System
+    {
+    public:
+        UpdateBehavioursSystem(
+            const std::shared_ptr<ecs::EcsRegistry>&,
+            const std::shared_ptr<ecs::FilterProvider>&,
+            const std::shared_ptr<EntityManager>&);
 
-    void OnUpdate() override;
-};
+        void OnUpdate() override;
+        
+    private:
+        std::shared_ptr<ecs::Filter> _f;
+        std::shared_ptr<EntityManager> _entityManager;
+    };
+}

@@ -1,25 +1,10 @@
 ﻿#pragma once
 #include "Common/Tasks/TaskExecutor.h"
-#include "Modules/RenderingModule/Renderer.h"
+#include "Modules/Render/Renderer.h"
+#include "Modules/Scenes/SceneManager.h"
 #include "Modules/Window/MainWindowHandler.h"
 #include "Modules/Window/WindowManager.h"
-
-namespace rei
-{
-    class EntityManager;
-
-    namespace scenes
-    {
-        class SceneManager;
-    }
-
-    namespace assets
-    {
-        class AssetManager;
-    }
-
-    class App;
-}
+#include "Startup/App.h"
 
 namespace rei::internal::engine
 {
@@ -41,8 +26,8 @@ namespace rei::internal::engine
         bool _runEngine = false;
         int _exitCode;
 
-        window::WindowManager _windowManager;
-        MainWindowHandler _mainWindowHandler;
+        std::shared_ptr<window::WindowManager> _windowManager;
+        std::shared_ptr<MainWindowHandler> _mainWindowHandler;
 
         std::shared_ptr<TaskExecutor> _reiMainThread;
         std::shared_ptr<render::Renderer> _renderer;
@@ -54,7 +39,7 @@ namespace rei::internal::engine
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<scenes::SceneManager> _sceneManager;
 
-        void ConfigureInternalWorld();
+        void ConfigureInternalWorld() const;
         void RunUpdateLoop();
     };
 }

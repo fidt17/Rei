@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Ecs/System.h"
 
 namespace rei::ecs
 {

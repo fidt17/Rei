@@ -1,12 +1,21 @@
 ﻿#pragma once
 
-class StartBehavioursSystem final : public rei::ecs::System
+namespace rei
 {
-private:
-    std::shared_ptr<rei::ecs::Filter> _f;
-    
-public:
-    StartBehavioursSystem(const std::shared_ptr<rei::ecs::EcsRegistry>& ecs, const std::shared_ptr<rei::ecs::FilterProvider>& filters);
+    class EntityManager;
+}
 
-    void OnUpdate() override;
-};
+namespace rei::behaviour
+{
+    class StartBehavioursSystem final : public ecs::System
+    {
+    public:
+        StartBehavioursSystem(const std::shared_ptr<ecs::EcsRegistry>&, const std::shared_ptr<ecs::FilterProvider>&, const std::shared_ptr<EntityManager>&);
+
+        void OnUpdate() override;
+        
+    private:
+        std::shared_ptr<ecs::Filter> _f;
+        std::shared_ptr<EntityManager> _entityManager;
+    };
+}

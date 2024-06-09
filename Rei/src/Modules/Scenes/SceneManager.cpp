@@ -3,7 +3,6 @@
 
 #include "BuildScenesConfig.h"
 #include "Scene.h"
-#include "Engine/Services.h"
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
@@ -11,8 +10,9 @@ namespace rei::scenes
 {
     class Scene;
 
-    SceneManager::SceneManager(const std::shared_ptr<EntityManager> entityManager)
-        : _buildScenesConfig(GetAssetManager().LoadById<BuildScenesConfig>("0")),
+    SceneManager::SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager)
+        : _buildScenesConfig(assetManager->LoadById<BuildScenesConfig>("0")),
+          _assetManager(assetManager),
           _entityManager(entityManager)
     {
     }
@@ -24,7 +24,7 @@ namespace rei::scenes
 
         const auto& sceneRef = _buildScenesConfig.GetScene(id);
 
-        _activeScene = std::make_shared<Scene>(GetAssetManager().Load<Scene>(sceneRef));
+        _activeScene = std::make_shared<Scene>(_assetManager->Load<Scene>(sceneRef));
 
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {

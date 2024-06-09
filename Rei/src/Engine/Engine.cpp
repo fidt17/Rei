@@ -4,7 +4,7 @@
 #include <utility>
 
 #include "Services.h"
-#include "Ecs/DeleteHere.h"
+#include "Ecs/Systems/DeleteHere.h"
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
@@ -17,32 +17,32 @@ namespace rei::internal::engine
 {
     SET_LOG_SCOPE("ENGINE")
 
-    Engine::Engine(std::shared_ptr<App> app)
-        :
+    Engine::Engine(std::shared_ptr<App> app) :
+        _windowManager(std::make_shared<window::WindowManager>()),
+        _mainWindowHandler(std::make_shared<MainWindowHandler>()),
         _reiMainThread(std::make_shared<TaskExecutor>()),
         _renderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
         _entityManager(std::make_shared<EntityManager>(_internalWorld)),
-        _sceneManager(std::make_shared<scenes::SceneManager>(_entityManager))
+        _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager))
     {
         Services::GetInstance()->SetEngine(this);
-        Services::GetInstance()->SetInternalWorld(_internalWorld.get());
-        Services::GetInstance()->SetEntityManager(_entityManager.get());
-        Services::GetInstance()->SetRenderer(_renderer.get());
+        Services::GetInstance()->SetInternalWorld(_internalWorld);
+        Services::GetInstance()->SetEntityManager(_entityManager);
 
         ConfigureInternalWorld();
     }
 
-    void Engine::ConfigureInternalWorld()
+    void Engine::ConfigureInternalWorld() const
     {
         _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
-        _internalWorld->AddSystem([&] { _windowManager.OnUpdate(); });
+        _internalWorld->AddSystem([&] { _windowManager->OnUpdate(); });
 
-        _internalWorld->AddSystem<StartBehavioursSystem>();
-        _internalWorld->AddSystem<DeleteHere<StartBehavioursEvent>>();
-        _internalWorld->AddSystem<UpdateBehavioursSystem>();
+        _internalWorld->AddSystem<behaviour::StartBehavioursSystem>(_entityManager);
+        _internalWorld->AddSystem<ecs::DeleteHere<StartBehavioursEvent>>();
+        _internalWorld->AddSystem<behaviour::UpdateBehavioursSystem>(_entityManager);
 
         _internalWorld->AddSystem([&] { _app->OnUpdate(); });
         _internalWorld->AddSystem([&] { _renderer->Render(); });
@@ -50,8 +50,8 @@ namespace rei::internal::engine
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow()
     {
-        auto mainWindow = _mainWindowHandler.CreateMainWindow(_windowManager);
-        _mainWindowHandler.MainWindowClosedEvent.append([&]
+        auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager);
+        _mainWindowHandler->MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")
             _renderer->SetTarget(nullptr);
@@ -107,7 +107,7 @@ namespace rei::internal::engine
         _runEngine = false;
 
         _app->OnShutdown();
-        _windowManager.Dispose();
+        _windowManager->Dispose();
 
         LOG("Shutdown complete")
     }
