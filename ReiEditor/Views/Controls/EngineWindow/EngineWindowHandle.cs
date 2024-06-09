@@ -1,0 +1,19 @@
+﻿using System;
+using Avalonia.Controls.Platform;
+using Avalonia.Platform;
+using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.ViewModels.Windows.Editor.Rendering;
+
+namespace ReiEditor.Views.Controls.EngineWindow;
+
+public class EngineWindowHandle : PlatformHandle, INativeControlHostDestroyableControlHandle
+{
+    public readonly EngineWindowProviderViewModel ViewModel;
+    
+    public EngineWindowHandle(EngineWindowProviderViewModel vm, IntPtr handle, string? descriptor) : base(handle, descriptor)
+    {
+        ViewModel = vm;
+    }
+
+    public void Destroy() { }
+}

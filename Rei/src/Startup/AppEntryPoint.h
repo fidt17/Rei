@@ -30,12 +30,10 @@ namespace rei::external
 
     REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
     {
-        auto t = std::make_shared<Task>([&]
+        engine->ExecuteOnMainThread([&]
         {
             engine->Shutdown(exitCode);
-        });
-        engine->GetMainThread().AddTask(t);
-        t->WaitForCompletion();
+        })->WaitForCompletion();
 
         delete engine;
         return 0;

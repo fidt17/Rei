@@ -1,28 +1,25 @@
 ﻿using System;
 using Avalonia.Controls;
-using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
 using ReiEditor.ViewModels.Windows.Editor.Rendering;
 
-namespace ReiEditor.Views.Windows.Editor.Playmode;
-
-public class EngineWindowHandle : PlatformHandle, INativeControlHostDestroyableControlHandle
-{
-    public EngineWindowHandle(IntPtr handle, string? descriptor) : base(handle, descriptor)
-    {
-    }
-
-    public void Destroy()
-    {
-        
-    }
-}
+namespace ReiEditor.Views.Controls.EngineWindow;
 
 public class WindowEngineControl : NativeControlHost
 {
     private EngineWindowHandle? _handle;
-    
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+
+        if (DataContext is EngineWindowProviderViewModel vm)
+        {
+            vm.ResizeWindow(e.NewSize.Width, e.NewSize.Height);
+        }
+    }
+
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         try
@@ -31,8 +28,8 @@ public class WindowEngineControl : NativeControlHost
             
             if (DataContext is EngineWindowProviderViewModel vm)
             {
-                var ptr = vm.WindowPointer;
-                _handle = new EngineWindowHandle(ptr, "desc");
+                var ptr = vm.WindowHandlePointer;
+                _handle = new EngineWindowHandle(vm, ptr, "desc");
 
                 return _handle;
             }
@@ -41,7 +38,7 @@ public class WindowEngineControl : NativeControlHost
         }
         catch (Exception e)
         {
-            System.Console.WriteLine(e);
+            Console.WriteLine(e);
         }
 
         return new PlatformHandle(new IntPtr(0), "empty");

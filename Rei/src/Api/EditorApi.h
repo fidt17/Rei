@@ -26,20 +26,28 @@ REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i
     return rei::resources::BuildAsset(file, dest, offset);
 }
 
-REI_EXTERN_API inline void* CreatePlaymodeWindow()
+REI_EXTERN_API inline rei::window::Window* CreatePlaymodeWindow()
 {
-    auto& engine = rei::Services::GetInstance()->GetEngine();
     std::shared_ptr<rei::window::Window> window;
 
-    auto t = std::make_shared<rei::Task>(
-        [&]
-        {
-            window = engine.CreateMainWindow();
-        }
-    );
+    rei::GetEngine().ExecuteOnMainThread([&]
+    {
+        window = rei::GetEngine().CreateMainWindow();
+        window->DisableStyle();
+    })->WaitForCompletion();
 
-    engine.GetMainThread().AddTask(t);
-    t->WaitForCompletion();
+    return window.get();
+}
 
+REI_EXTERN_API inline HWND GetWindowHandle(const rei::window::Window* window)
+{
     return window->GetWindowHandle();
+}
+
+REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const int width, const int height)
+{
+    rei::GetEngine().ExecuteOnMainThread([&]
+    {
+        window->Resize(width, height);
+    })->WaitForCompletion();
 }

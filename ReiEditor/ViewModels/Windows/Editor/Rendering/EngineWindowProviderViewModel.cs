@@ -1,13 +1,25 @@
 ﻿using System;
+using ReiEditor.Models.Services.Engine.Api;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Rendering;
 
 public class EngineWindowProviderViewModel
 {
-    public readonly IntPtr WindowPointer;
+    public readonly IntPtr WindowHandlePointer;
 
-    public EngineWindowProviderViewModel(IntPtr windowPointer)
+    private readonly IntPtr _windowPointer;
+    private readonly IEngineApi _engineApi;
+
+    public EngineWindowProviderViewModel(IntPtr windowPointer, IEngineApi engineApi)
     {
-        WindowPointer = windowPointer;
+        _windowPointer = windowPointer;
+        WindowHandlePointer = engineApi.GetWindowHandle(windowPointer);
+        
+        _engineApi = engineApi;
+    }
+
+    public void ResizeWindow(double width, double height)
+    {
+        _engineApi.ResizeWindow(_windowPointer, (int) width, (int) height);
     }
 }

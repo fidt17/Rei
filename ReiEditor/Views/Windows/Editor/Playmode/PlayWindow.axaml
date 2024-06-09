@@ -5,25 +5,24 @@
              xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
              xmlns:playmode1="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
              xmlns:rendering="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Rendering"
+             xmlns:engineWindow="clr-namespace:ReiEditor.Views.Controls.EngineWindow"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.Editor.Playmode.PlayWindow"
              x:DataType="playmode:PlaymodePanelViewModel">
-             
+
     <Design.DataContext>
         <playmode:PlaymodePanelViewModel />
     </Design.DataContext>
 
-    <Grid>
+    <Border Classes="Window">
         <ContentControl
             Content="{Binding WindowProvider}">
             <ContentControl.DataTemplates>
                 <DataTemplate DataType="{x:Type rendering:EngineWindowProviderViewModel}">
-                    <playmode1:WindowEngineControl
-                        Width="1200"
-                        Height="680" />
+                    <engineWindow:WindowEngineControl />
                 </DataTemplate>
             </ContentControl.DataTemplates>
         </ContentControl>
-    </Grid>
+    </Border>
 
 </UserControl>

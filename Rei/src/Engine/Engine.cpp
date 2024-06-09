@@ -19,7 +19,7 @@ namespace rei::internal::engine
 
     Engine::Engine(std::shared_ptr<App> app) :
         _windowManager(std::make_shared<window::WindowManager>()),
-        _mainWindowHandler(std::make_shared<MainWindowHandler>()),
+        _mainWindowHandler(std::make_shared<window::MainWindowHandler>()),
         _reiMainThread(std::make_shared<TaskExecutor>()),
         _renderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
@@ -119,8 +119,10 @@ namespace rei::internal::engine
         return _exitCode;
     }
 
-    TaskExecutor& Engine::GetMainThread() const
+    std::shared_ptr<Task> Engine::ExecuteOnMainThread(std::function<void()> fn) const
     {
-        return *_reiMainThread;
+        auto t = std::make_shared<Task>(fn);
+        _reiMainThread->AddTask(t);
+        return t;
     }
 }

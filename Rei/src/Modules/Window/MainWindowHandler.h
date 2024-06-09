@@ -1,42 +1,18 @@
 ﻿#pragma once
 #include "WindowManager.h"
 
-class MainWindowHandler
+namespace rei::window
 {
-public:
-    eventpp::CallbackList<void()> MainWindowClosedEvent;
-
-    std::shared_ptr<rei::window::Window> CreateMainWindow(rei::window::WindowManager& windowManager)
+    class MainWindowHandler
     {
-        REI_ASSERT_S(_window == nullptr)
+    public:
+        eventpp::CallbackList<void()> MainWindowClosedEvent;
 
-        _window = windowManager.NewWindow("Main Window", 400, 400);
+        std::shared_ptr<Window> CreateMainWindow(WindowManager& windowManager);
 
-        _window->OnKeyEvent.append([&](const int key, const int, const int)
-        {
-            if (key != GLFW_KEY_ESCAPE) return;
+        std::shared_ptr<Window> GetMainWindow();
 
-            windowManager.CloseWindow(*_window);
-        });
-
-        _window->CloseRequestEvent.append([&]
-        {
-            windowManager.CloseWindow(*_window);
-        });
-
-        _window->WindowClosedEvent.append([&](const rei::window::Window&)
-        {
-            MainWindowClosedEvent();
-        });
-
-        return _window;
-    }
-
-    std::shared_ptr<rei::window::Window> GetMainWindow()
-    {
-        return _window;
-    }
-
-private:
-    std::shared_ptr<rei::window::Window> _window;
-};
+    private:
+        std::shared_ptr<Window> _window;
+    };
+}

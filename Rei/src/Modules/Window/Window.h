@@ -10,7 +10,6 @@ namespace rei::window
     {
     public:
         eventpp::CallbackList<void (Window&)> WindowClosedEvent;
-        
         eventpp::CallbackList<void (int key, int action, int mods)> OnKeyEvent;
         eventpp::CallbackList<void ()> CloseRequestEvent;
         
@@ -29,6 +28,9 @@ namespace rei::window
         void OnUpdate();
 
         void Close();
+        
+        REI_API void DisableStyle() const;
+        REI_API void Resize(int width, int height) const;
 
         GLFWwindow* GetGLFWWindow() const;
         REI_API HWND GetWindowHandle() const;
@@ -36,6 +38,7 @@ namespace rei::window
     private:
         GLFWwindow* _glfwWindow;
         
-        void OnKeyCallback(int key, int action, int mods);
+        void OnKeyCallback(int key, int action, int mods) const;
+        void OnWindowResized(int width, int height) const;
     };
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Avalonia.Threading;
+using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Utils.Factory;
@@ -38,6 +39,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 	
     private readonly IPlaymodeService _playmodeService;
     private readonly IPlaymodeWindowController _playmodeWindowController;
+    private readonly IEngineApi _engineApi;
 
 #pragma warning disable CS8618
     public PlaymodePanelViewModel()
@@ -50,11 +52,13 @@ public class PlaymodePanelViewModel : BaseViewModel
         IPlaymodeService playmodeService, 
         IFactory<StartPlaymodeCommand> startPlaymodeCommand, 
         IFactory<StopPlaymodeCommand> stopPlaymodeCommand,
-        IPlaymodeWindowController playmodeWindowController)
+        IPlaymodeWindowController playmodeWindowController,
+        IEngineApi engineApi)
     {
         _windowProvider = null;
         _playmodeService = playmodeService;
         _playmodeWindowController = playmodeWindowController;
+        _engineApi = engineApi;
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 
@@ -83,7 +87,7 @@ public class PlaymodePanelViewModel : BaseViewModel
             }
             else
             {
-                WindowProvider = new EngineWindowProviderViewModel(ptr.Value);
+                WindowProvider = new EngineWindowProviderViewModel(ptr.Value, _engineApi);
             }
         });
     }

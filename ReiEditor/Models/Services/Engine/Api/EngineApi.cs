@@ -8,6 +8,8 @@ namespace ReiEditor.Models.Services.Engine.Api;
 
 public class EngineApi : IEngineApi
 {
+    private delegate IntPtr ActionDelegate();
+    
     private IntPtr _dllPtr;
     private readonly ILogger<EngineApi> _logger;
 
@@ -29,18 +31,23 @@ public class EngineApi : IEngineApi
     public void Start(IntPtr enginePtr) => Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
 	
     private delegate int ShutdownEngineDelegate(IntPtr enginePtr, int exitCode);
-    public int Shutdown(IntPtr enginePtr, int exitCode) => Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
+    public void Shutdown(IntPtr enginePtr, int exitCode) => Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
 
     public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
 
-    private delegate long BuildAssetDelegate(string path, string dest, long offset);
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
 
+    private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 
-    private delegate IntPtr CreatePlaymodeWindowDelegate();
-    public Task<IntPtr> CreatePlaymodeWindow() => InvokeAsync<IntPtr>(typeof(CreatePlaymodeWindowDelegate), "CreatePlaymodeWindow");
+    public Task<IntPtr> CreatePlaymodeWindow() => InvokeAsync<IntPtr>(typeof(ActionDelegate), "CreatePlaymodeWindow");
+
+    private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);
+    public IntPtr GetWindowHandle(IntPtr windowPtr) => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle", windowPtr);
+
+    private delegate IntPtr ResizeWindowDelegate(IntPtr windowPtr, int width, int height);
+    public void ResizeWindow(IntPtr windowPtr, int width, int height) => Invoke(typeof(ResizeWindowDelegate), "ResizeWindow", windowPtr, width, height);
 
     #region UTILS
 	

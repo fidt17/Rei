@@ -22,14 +22,14 @@ namespace rei::internal::engine
         REI_API int GetExitCode() const;
 
         REI_API std::shared_ptr<window::Window> CreateMainWindow();
-        REI_API TaskExecutor& GetMainThread() const;
+        REI_API std::shared_ptr<Task> ExecuteOnMainThread(std::function<void()>) const;
 
     private:
         bool _runEngine = false;
         int _exitCode;
 
         std::shared_ptr<window::WindowManager> _windowManager;
-        std::shared_ptr<MainWindowHandler> _mainWindowHandler;
+        std::shared_ptr<window::MainWindowHandler> _mainWindowHandler;
 
         std::shared_ptr<TaskExecutor> _reiMainThread;
         std::shared_ptr<render::Renderer> _renderer;
