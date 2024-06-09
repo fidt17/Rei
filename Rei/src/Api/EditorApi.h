@@ -12,6 +12,15 @@ REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
     });
 }
 
+typedef void (*ShutdownCallbackDelegate)(int exitCode);
+REI_EXTERN_API inline void AddShutdownCallback(const ShutdownCallbackDelegate callback)
+{
+    rei::GetEngine().ShutdownEvent.append([=](const int exitCode)
+    {
+        callback(exitCode);
+    });
+}
+
 REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i64 offset)
 {
     return rei::resources::BuildAsset(file, dest, offset);

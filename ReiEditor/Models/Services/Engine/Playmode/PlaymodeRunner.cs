@@ -10,6 +10,7 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 public class PlaymodeRunner : IPlaymodeRunner
 {
     public event Action? PlaymodeFailedEvent;
+    public event Action? PlaymodeExitedEvent;
 
     private IntPtr? _enginePtr;
 	
@@ -17,15 +18,24 @@ public class PlaymodeRunner : IPlaymodeRunner
     private readonly ILogger<PlaymodeRunner> _logger;
     private readonly IEngineLogger _engineLogger;
     private readonly IPlaymodeWindowController _playmodeWindowController;
+    private readonly IEngineShutdownListener _shutdownListener;
 
-    public PlaymodeRunner(IEngineApi engineApi, ILogger<PlaymodeRunner> logger, IEngineLogger engineLogger, IPlaymodeWindowController playmodeWindowController)
+    public PlaymodeRunner(
+        IEngineApi engineApi,
+        ILogger<PlaymodeRunner> logger,
+        IEngineLogger engineLogger,
+        IPlaymodeWindowController playmodeWindowController,
+        IEngineShutdownListener shutdownListener)
     {
         _engineApi = engineApi;
         _logger = logger;
         _engineLogger = engineLogger;
         _playmodeWindowController = playmodeWindowController;
+        _shutdownListener = shutdownListener;
+        
+        _shutdownListener.EngineShutdownEvent += HandleEngineShutdownEvent;
     }
-
+    
     public void StartPlaymode()
     {
         if (_enginePtr != null) throw new Exception("EnginePtr already exists");
@@ -52,14 +62,20 @@ public class PlaymodeRunner : IPlaymodeRunner
         if (_enginePtr == null) throw new Exception("EnginePtr is missing");
 
         _engineApi.Shutdown(_enginePtr.Value, 1);
-        _playmodeWindowController.DestroyWindow();
-		
-        _enginePtr = null;
     }
 
     private void SetupPlaymode()
     {
         _engineLogger.SubscribeToClient();
+        _shutdownListener.SubscribeToClient();
         _playmodeWindowController.SetupWindow();
+    }
+
+    private void HandleEngineShutdownEvent(int obj)
+    {
+        _playmodeWindowController.DestroyWindow();
+        _enginePtr = null;
+        
+        PlaymodeExitedEvent?.Invoke();
     }
 }

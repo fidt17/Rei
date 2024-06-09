@@ -11,6 +11,8 @@ namespace rei::internal::engine
     class Engine
     {
     public:
+        eventpp::CallbackList<void(int)> ShutdownEvent;
+        
         REI_API explicit Engine(std::shared_ptr<App> app);
         Engine(const Engine& e) = delete;
         

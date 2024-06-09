@@ -110,6 +110,8 @@ namespace rei::internal::engine
         _windowManager->Dispose();
 
         LOG("Shutdown complete")
+
+        ShutdownEvent(_exitCode);
     }
 
     int Engine::GetExitCode() const

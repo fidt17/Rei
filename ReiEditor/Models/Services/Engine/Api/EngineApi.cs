@@ -31,10 +31,12 @@ public class EngineApi : IEngineApi
     private delegate int ShutdownEngineDelegate(IntPtr enginePtr, int exitCode);
     public int Shutdown(IntPtr enginePtr, int exitCode) => Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
 
-    private delegate void callbackDelegate(IntPtr callback);
-    public void AddLogCallback(IntPtr callback) => Invoke(typeof(callbackDelegate), nameof(AddLogCallback), callback);
+    public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
+
+    public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
+
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 
     private delegate IntPtr CreatePlaymodeWindowDelegate();

@@ -12,7 +12,9 @@ public interface IEngineApi
 	int Shutdown(IntPtr enginePtr, int exitCode);
 	
 	delegate void CallbackDelegate(IntPtr ptr);
+	
 	void AddLogCallback(IntPtr ptr);
+	void AddShutdownCallback(IntPtr callback);
 
 	long BuildAsset(string assetPath, string destinationFile, long offset);
 

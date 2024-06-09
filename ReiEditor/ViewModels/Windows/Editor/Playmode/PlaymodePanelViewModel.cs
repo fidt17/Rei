@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Windows.Playmode;
@@ -17,7 +16,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #region WindowProvider
 
-    private EngineWindowProviderViewModel? _windowProvider = null;
+    private EngineWindowProviderViewModel? _windowProvider;
     public EngineWindowProviderViewModel? WindowProvider
     {
         get => _windowProvider;
@@ -41,7 +40,10 @@ public class PlaymodePanelViewModel : BaseViewModel
     private readonly IPlaymodeWindowController _playmodeWindowController;
 
 #pragma warning disable CS8618
-    public PlaymodePanelViewModel() { }
+    public PlaymodePanelViewModel()
+    {
+        _windowProvider = null;
+    }
 #pragma warning restore CS8618
 
     public PlaymodePanelViewModel(
@@ -50,6 +52,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         IFactory<StopPlaymodeCommand> stopPlaymodeCommand,
         IPlaymodeWindowController playmodeWindowController)
     {
+        _windowProvider = null;
         _playmodeService = playmodeService;
         _playmodeWindowController = playmodeWindowController;
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
@@ -72,7 +75,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     private void HandleWindowPointerChangedEvent(IntPtr? ptr)
     {
-        Dispatcher.UIThread.InvokeAsync(async () =>
+        Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (ptr == null)
             {
