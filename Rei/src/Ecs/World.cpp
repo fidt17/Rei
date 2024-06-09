@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "World.h"
+
+#include "CallbackSystem.h"
 #include "Entity.h"
 #include "FiltersRegistry.h"
 
@@ -10,6 +12,11 @@ namespace rei::ecs
     {
         _ecsRegistry->MaxComponentIdChangedEvent.append([this](const size_t s) { UpdateBitMasks(s); });
         _filterRegistry->NewFilterCreatedEvent.append([this] { RefreshAll(); });
+    }
+
+    void World::AddSystem(const std::function<void()>& fn)
+    {
+        AddSystem<CallbackSystem>(fn);
     }
 
     void World::Run() const

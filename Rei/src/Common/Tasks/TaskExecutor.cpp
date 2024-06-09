@@ -1,9 +1,9 @@
 ﻿#include "pch.h"
-#include "MainThread.h"
+#include "TaskExecutor.h"
 
-namespace rei::engine
+namespace rei
 {
-    void MainThread::Run()
+    void TaskExecutor::CompleteTasks()
     {
         while (!_tasksQueue.empty())
         {
@@ -13,7 +13,7 @@ namespace rei::engine
         }
     }
 
-    void MainThread::AddTask(std::shared_ptr<Task>& t)
+    void TaskExecutor::AddTask(std::shared_ptr<Task>& t)
     {
         _tasksQueue.push(t);
     }

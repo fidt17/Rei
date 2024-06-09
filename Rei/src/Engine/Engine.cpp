@@ -1,33 +1,25 @@
 #include "pch.h"
 #include "Engine.h"
 
+#include <utility>
+
 #include "Services.h"
+#include "Ecs/DeleteHere.h"
 #include "Modules/Assets/AssetManager.h"
+#include "Modules/Behaviour/Components/StartBehavioursEvent.h"
+#include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
+#include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
 #include "Modules/EntityManagement/EntityManager.h"
-#include "Modules/RenderingModule/RenderingModule.h"
 #include "Modules/Scenes/SceneManager.h"
-#include "Modules/UpdateLoop/UpdateLoopModule.h"
-#include "Modules/UpdateLoop/Components/UpdateCallback.h"
 #include "Startup/App.h"
 
 namespace rei::internal::engine
 {
     SET_LOG_SCOPE("ENGINE")
 
-    void ConfigureAppUpdateCallback(const std::shared_ptr<ecs::World>& world, const std::shared_ptr<App>& app)
-    {
-        ECS_WORLD(*world);
-        const auto appEntity = NEW_ENTITY();
-        GET(appEntity, update_loop::UpdateCallback) = {
-            [&]
-            {
-                app->OnUpdate();
-            }
-        };
-    }
-
     Engine::Engine(std::shared_ptr<App> app)
         :
+        _reiMainThread(std::make_shared<TaskExecutor>()),
         _renderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
@@ -40,8 +32,20 @@ namespace rei::internal::engine
         Services::GetInstance()->SetEntityManager(_entityManager.get());
         Services::GetInstance()->SetRenderer(_renderer.get());
 
-        _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
-        _internalWorld->AddModule(std::make_shared<render::RenderingModule>(_renderer));
+        ConfigureInternalWorld();
+    }
+
+    void Engine::ConfigureInternalWorld()
+    {
+        _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
+        _internalWorld->AddSystem([&] { _windowManager.OnUpdate(); });
+
+        _internalWorld->AddSystem<StartBehavioursSystem>();
+        _internalWorld->AddSystem<DeleteHere<StartBehavioursEvent>>();
+        _internalWorld->AddSystem<UpdateBehavioursSystem>();
+
+        _internalWorld->AddSystem([&] { _app->OnUpdate(); });
+        _internalWorld->AddSystem([&] { _renderer->Render(); });
     }
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow()
@@ -66,9 +70,6 @@ namespace rei::internal::engine
             _runEngine = true;
 
             _sceneManager->LoadScene(0);
-
-            ConfigureAppUpdateCallback(_internalWorld, _app);
-
             _app->OnStart();
         }
         catch (const std::exception& exc)
@@ -86,9 +87,6 @@ namespace rei::internal::engine
         {
             while (_runEngine)
             {
-                _mainThread.Run();
-                
-                _windowManager.OnUpdate();
                 _internalWorld->Run();
             }
         }
@@ -104,7 +102,7 @@ namespace rei::internal::engine
         if (!_runEngine) return;
 
         LOG("Engine shutdown")
-        
+
         _exitCode = exitCode;
         _runEngine = false;
 
@@ -119,8 +117,8 @@ namespace rei::internal::engine
         return _exitCode;
     }
 
-    rei::engine::MainThread& Engine::GetMainThread()
+    TaskExecutor& Engine::GetMainThread() const
     {
-        return _mainThread;
+        return *_reiMainThread;
     }
 }

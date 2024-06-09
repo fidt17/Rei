@@ -1,5 +1,4 @@
 #pragma once
-#include <thread>
 
 #include "App.h"
 #include "Engine/Engine.h"
@@ -31,7 +30,7 @@ namespace rei::external
 
     REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
     {
-        auto t = std::make_shared<engine::Task>([&]
+        auto t = std::make_shared<Task>([&]
         {
             engine->Shutdown(exitCode);
         });

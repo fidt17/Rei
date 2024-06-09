@@ -22,7 +22,7 @@ REI_EXTERN_API inline void* CreatePlaymodeWindow()
     auto& engine = rei::Services::GetInstance()->GetEngine();
     std::shared_ptr<rei::window::Window> window;
 
-    auto t = std::make_shared<rei::engine::Task>(
+    auto t = std::make_shared<rei::Task>(
         [&]
         {
             window = engine.CreateMainWindow();

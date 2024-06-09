@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "MainThread.h"
+#include "Common/Tasks/TaskExecutor.h"
 #include "Modules/RenderingModule/Renderer.h"
 #include "Modules/Window/MainWindowHandler.h"
 #include "Modules/Window/WindowManager.h"
@@ -35,15 +35,16 @@ namespace rei::internal::engine
         REI_API int GetExitCode() const;
 
         REI_API std::shared_ptr<window::Window> CreateMainWindow();
-        REI_API rei::engine::MainThread& GetMainThread();
+        REI_API TaskExecutor& GetMainThread() const;
 
     private:
         bool _runEngine = false;
         int _exitCode;
 
-        rei::engine::MainThread _mainThread;
         window::WindowManager _windowManager;
         MainWindowHandler _mainWindowHandler;
+
+        std::shared_ptr<TaskExecutor> _reiMainThread;
         std::shared_ptr<render::Renderer> _renderer;
         
         std::shared_ptr<App> _app;
@@ -53,6 +54,7 @@ namespace rei::internal::engine
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<scenes::SceneManager> _sceneManager;
 
+        void ConfigureInternalWorld();
         void RunUpdateLoop();
     };
 }

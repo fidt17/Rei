@@ -25,6 +25,8 @@ namespace rei::ecs
             _systems.emplace_back(std::make_shared<T>(GetRegistry(), GetFiltersRegistry(), args...));
         }
 
+        REI_API void AddSystem(const std::function<void()>& fn);
+
         REI_API void AddModule(const std::shared_ptr<IEcsModule>& m)
         {
             m->Configure(shared_from_this());
