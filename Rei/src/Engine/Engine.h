@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "MainThread.h"
-#include "Modules/Render/Renderer.h"
+#include "Modules/RenderingModule/Renderer.h"
 #include "Modules/Window/MainWindowHandler.h"
 #include "Modules/Window/WindowManager.h"
 
@@ -39,13 +39,12 @@ namespace rei::internal::engine
 
     private:
         bool _runEngine = false;
+        int _exitCode;
 
         rei::engine::MainThread _mainThread;
         window::WindowManager _windowManager;
         MainWindowHandler _mainWindowHandler;
-        render::Renderer _renderer;
-
-        int _exitCode;
+        std::shared_ptr<render::Renderer> _renderer;
         
         std::shared_ptr<App> _app;
         std::shared_ptr<ecs::World> _internalWorld;

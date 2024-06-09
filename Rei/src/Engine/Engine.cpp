@@ -4,6 +4,7 @@
 #include "Services.h"
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
+#include "Modules/RenderingModule/RenderingModule.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Modules/UpdateLoop/UpdateLoopModule.h"
 #include "Modules/UpdateLoop/Components/UpdateCallback.h"
@@ -27,6 +28,7 @@ namespace rei::internal::engine
 
     Engine::Engine(std::shared_ptr<App> app)
         :
+        _renderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
@@ -36,9 +38,10 @@ namespace rei::internal::engine
         Services::GetInstance()->SetEngine(this);
         Services::GetInstance()->SetInternalWorld(_internalWorld.get());
         Services::GetInstance()->SetEntityManager(_entityManager.get());
-        Services::GetInstance()->SetRenderer(&_renderer);
+        Services::GetInstance()->SetRenderer(_renderer.get());
 
         _internalWorld->AddModule(std::make_shared<update_loop::UpdateLoopModule>());
+        _internalWorld->AddModule(std::make_shared<render::RenderingModule>(_renderer));
     }
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow()
@@ -47,11 +50,11 @@ namespace rei::internal::engine
         _mainWindowHandler.MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")
-            _renderer.SetTarget(nullptr);
+            _renderer->SetTarget(nullptr);
             Shutdown(MAIN_WINDOW_CLOSED_EXIT_CODE);
         });
 
-        _renderer.SetTarget(mainWindow->GetGLFWWindow());
+        _renderer->SetTarget(mainWindow->GetGLFWWindow());
 
         return mainWindow;
     }
@@ -84,10 +87,8 @@ namespace rei::internal::engine
             while (_runEngine)
             {
                 _mainThread.Run();
-                if (!_runEngine) break;
                 
                 _windowManager.OnUpdate();
-                _renderer.Render();
                 _internalWorld->Run();
             }
         }
