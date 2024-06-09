@@ -8,14 +8,14 @@ namespace rei::ecs
     World::World(): _ecsRegistry(std::make_shared<EcsRegistry>()),
                     _filterRegistry(std::make_shared<FiltersRegistry>())
     {
-        _ecsRegistry->MaxComponentIdChangedEvent += std::make_shared<std::function<void(size_t)>>([this](const size_t s) { UpdateBitMasks(s); });
-        _filterRegistry->NewFilterCreatedEvent += std::make_shared<std::function<void()>>([this]() { RefreshAll(); });
+        _ecsRegistry->MaxComponentIdChangedEvent.append([this](const size_t s) { UpdateBitMasks(s); });
+        _filterRegistry->NewFilterCreatedEvent.append([this] { RefreshAll(); });
     }
 
     void World::Run() const
     {
         Refresh();
-        
+
         for (const auto& system : _systems)
         {
             system->OnUpdate();

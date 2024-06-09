@@ -42,7 +42,7 @@ namespace rei::ecs
     class FiltersRegistry : public FilterProvider
     {
     public:
-        REI_EVENT() NewFilterCreatedEvent;
+        eventpp::CallbackList<void()> NewFilterCreatedEvent;
         
         REI_API u32 GetFiltersCount() const;
         

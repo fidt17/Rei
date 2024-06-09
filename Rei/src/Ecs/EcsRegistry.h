@@ -13,7 +13,7 @@ namespace rei::ecs
     class EcsRegistry
     {
     public:
-        REI_EVENT(size_t) MaxComponentIdChangedEvent;
+        eventpp::CallbackList<void(size_t)> MaxComponentIdChangedEvent;
 
         REI_API Entity NewEntity();
 
@@ -120,7 +120,7 @@ namespace rei::ecs
             if (_maxComponentId < set->Id())
             {
                 _maxComponentId = set->Id();
-                MaxComponentIdChangedEvent.Invoke(_maxComponentId);
+                MaxComponentIdChangedEvent(_maxComponentId);
             }
 
             return set;

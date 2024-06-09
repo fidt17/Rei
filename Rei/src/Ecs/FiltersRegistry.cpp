@@ -40,7 +40,7 @@ namespace rei::ecs
         ResizeMasks(std::max(includeMask.Size(), excludeMask.Size()));
             
         _filters.push_back(std::move(f));
-        NewFilterCreatedEvent.Invoke();
+        NewFilterCreatedEvent();
         return _filters.back();
     }
 }

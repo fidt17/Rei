@@ -1,10 +1,8 @@
 ﻿#pragma once
-#include <functional>
 #include <string>
 
 #include "LogLevelEnum.h"
 #include "LogMessage.h"
-#include "Common/Event.h"
 
 namespace rei::common::logging
 {
