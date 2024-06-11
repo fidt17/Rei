@@ -74,6 +74,7 @@
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
+    <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
@@ -101,6 +102,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="tests\render\BaseRenderScenario.h" />
+    <ClInclude Include="tests\render\hello_triangle\hello_triangle.h" />
+    <ClInclude Include="tests\render\hello_triangle\hello_triangle_e1.h" />
+    <ClInclude Include="tests\render\hello_triangle\hello_triangle_e2.h" />
+    <ClInclude Include="tests\render\hello_triangle\hello_triangle_e3.h" />
+    <ClInclude Include="tests\render\hello_triangle\hello_triangle_indexed.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
@@ -362,6 +369,7 @@
       <AdditionalIncludeDirectories>C:\Repos\Rei\Rei\src;C:\Repos\Rei\Rei\external;</AdditionalIncludeDirectories>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
+    <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
