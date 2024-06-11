@@ -1,7 +1,7 @@
 ﻿#include "Renderer.h"
 #include "../../../tests/render/BaseRenderScenario.h"
 
-#define RENDER_SCENARIO_NUM 4
+#define RENDER_SCENARIO_NUM 5
 
 #if RENDER_SCENARIO_NUM == 0
     #include "../../../tests/render/hello_triangle/hello_triangle.h"
@@ -18,6 +18,9 @@
 #elif RENDER_SCENARIO_NUM == 4
     #include "../../../tests/render/hello_triangle/hello_triangle_e3.h"
     #define CREATE_RENDER_SCENARIO(TARGET) std::make_shared<hello_triangle_e3>(TARGET)
+#elif RENDER_SCENARIO_NUM == 5
+    #include "../../../tests/render/shader_ex//shader_e0.h"
+    #define CREATE_RENDER_SCENARIO(TARGET) std::make_shared<shader_e0>(TARGET)
 #endif
 
 namespace rei::render
