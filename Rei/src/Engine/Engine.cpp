@@ -107,7 +107,7 @@ namespace rei::internal::engine
         _runEngine = false;
 
         _app->OnShutdown();
-        _windowManager->Dispose();
+        _renderer->Dispose();
 
         LOG("Shutdown complete")
 

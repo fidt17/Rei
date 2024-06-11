@@ -3,17 +3,6 @@
 
 namespace rei::window
 {
-    WindowManager::WindowManager()
-    {
-        glfwSetErrorCallback([](int error_code, const char* description)
-        {
-            LOG_ERROR("GLFW ERROR. " + STRING(error_code) + " " + description);
-        });
-
-        if (!glfwInit())
-            REI_THROW("GLFW Initialization error")
-    }
-
     void WindowManager::OnUpdate()
     {
         if (_windows.empty()) return;
@@ -50,11 +39,5 @@ namespace rei::window
             window->Close();
         }
         _windows.clear();
-    }
-
-    void WindowManager::Dispose()
-    {
-        CloseAll();
-        glfwTerminate();
     }
 }

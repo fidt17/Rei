@@ -38,9 +38,11 @@
     <ClInclude Include="external\eventpp\utilities\eventutil.h" />
     <ClInclude Include="external\eventpp\utilities\orderedqueuelist.h" />
     <ClInclude Include="external\eventpp\utilities\scopedremover.h" />
+    <ClInclude Include="external\glad\glad.h" />
     <ClInclude Include="external\glfw\glfw3.h" />
     <ClInclude Include="external\glfw\glfw3native.h" />
     <ClInclude Include="external\json.hpp" />
+    <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
@@ -101,6 +103,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="external\glad.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">Create</PrecompiledHeader>
