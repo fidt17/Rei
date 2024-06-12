@@ -549,6 +549,9 @@
   <ItemGroup>
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="resources\shaders\test\test.rshader" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

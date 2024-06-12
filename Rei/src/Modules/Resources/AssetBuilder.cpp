@@ -13,6 +13,14 @@ namespace rei::resources
         Data = 0,
     };
 
+    void EraseBOM(std::string& str)
+    {
+        if (str[0] == -17 && str[1] == -69 && str[2] == -65)
+        {
+            str.erase(0,3);
+        }
+    }
+
     std::string ReadAllText(const std::filesystem::path& path)
     {
         REI_ASSERT(std::filesystem::exists(path), "File " + path.string() + " does not exist")
@@ -20,7 +28,10 @@ namespace rei::resources
         std::stringstream strStream;
         strStream << std::ifstream(path).rdbuf();
 
-        return strStream.str();
+        auto str = strStream.str();
+        EraseBOM(str);
+        
+        return str;
     }
 
     void BuildDataAsset(const std::filesystem::path& assetPath, BinaryWriter& writer)

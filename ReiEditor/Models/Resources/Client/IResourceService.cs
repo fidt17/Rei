@@ -10,6 +10,7 @@ public interface IResourceService
 	string GetSolutionPath(params string[] path);
 
 	IEnumerable<string> GetAllWithExtension(string extension);
+	IEnumerable<string> CopyFilesRecursively(string source, string target);
 
 	Task<T> Load<T>(string fullPath);
 	Task<T?> TryLoad<T>(string fullPath);

@@ -11,9 +11,8 @@
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
-        Width="1920" Height="1080"
+        Width="960" Height="540"
         Background="{StaticResource Dark_0}"
-        WindowState="Maximized"
         Title="Rei Engine"
         WindowStartupLocation="CenterScreen"
         Focusable="True">

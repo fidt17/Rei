@@ -5,6 +5,7 @@ namespace rei::render
     class Shader
     {
     public:
+        explicit Shader(resources::BinaryReader& reader);
         Shader(const char* vertexSource, const char* fragmentSource);
         ~Shader();
 

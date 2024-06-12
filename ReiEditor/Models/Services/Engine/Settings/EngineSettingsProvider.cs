@@ -52,6 +52,8 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
         return includes.Aggregate("", (current, include) => current + ";" + (_enginePath + include));
     }
 
+    public string GetEngineResourcesDir() => _enginePath + _engineSettings.RelativeResourcesDir;
+
     private void HandleEditorSettingsSetEvent() => LoadEngineSettings();
 
     private void LoadEngineSettings()

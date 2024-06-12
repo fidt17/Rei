@@ -1,0 +1,27 @@
+﻿#ifdef VERTEX
+    layout (location = 0) in vec3 aPos;
+    layout (location = 1) in vec3 aColor;
+    
+    uniform float xOffset;
+    
+    out vec3 screenPos;
+    
+    void main()
+    {
+       gl_Position = vec4(aPos.x + xOffset, aPos.y, aPos.z, 1.0);
+       screenPos = aPos;
+    }
+#endif
+
+#ifdef FRAGMENT
+    in vec3 screenPos;
+    
+    out vec4 FragColor;
+    
+    void main()
+    {
+       float dist  = 1 - distance(screenPos, vec3(0f, 0f, 0));
+       dist = pow(dist, 10);
+       FragColor = vec4(dist, dist, dist, 1f);
+    }
+#endif

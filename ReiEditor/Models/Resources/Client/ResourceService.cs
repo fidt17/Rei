@@ -40,6 +40,20 @@ public class ResourceService : IResourceService
         return Directory.EnumerateFiles(GetRootPath(), $"*{extension}", SearchOption.AllDirectories);
     }
 
+    public IEnumerable<string> CopyFilesRecursively(string source, string target)
+    {
+        foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(dirPath.Replace(source, target));
+        }
+
+        foreach (string newPath in Directory.GetFiles(source, "*.*",SearchOption.AllDirectories))
+        {
+            File.Copy(newPath, newPath.Replace(source, target), true);
+            yield return newPath;
+        }
+    }   
+
     public async Task<T?> TryLoad<T>(string fullPath)
     {
         try

@@ -24,6 +24,9 @@ namespace rei
         void SetEntityManager(const std::shared_ptr<EntityManager>& entityManager) { _entityManager = entityManager; }
         REI_API EntityManager& GetEntityManager() const { return *_entityManager; }
 
+        void SetAssetManager(const std::shared_ptr<assets::AssetManager>& assetManager) { _assetManager = assetManager; }
+        REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
+
         REI_API static Services* GetInstance();
 
     private:
@@ -33,9 +36,11 @@ namespace rei
         internal::engine::Engine* _engine;
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<EntityManager> _entityManager;
+        std::shared_ptr<assets::AssetManager> _assetManager;
     };
 
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
     inline ecs::World& GetInternalWorld() { return Services::GetInstance()->GetInternalWorld(); }
     inline EntityManager& GetEntityManager() { return Services::GetInstance()->GetEntityManager(); }
+    inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
 }

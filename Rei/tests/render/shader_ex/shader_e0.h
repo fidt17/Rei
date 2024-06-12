@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "Engine/Engine.h"
+#include "Engine/Services.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 #include "Modules/Render/Shaders/Shader.h"
@@ -65,27 +67,6 @@ public:
     }
 
 private:
-    const char* _vertexShaderSource = "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;\n"
-        "layout (location = 1) in vec3 aColor;\n"
-        "out vec3 screenPos;\n"
-        "uniform float xOffset;\n"
-        "void main()\n"
-        "{\n"
-        "   gl_Position = vec4(aPos.x + xOffset, aPos.y, aPos.z, 1.0);\n"
-        "   screenPos = aPos;\n"
-        "}\0";
-
-    const char* _fragmentShaderSource = "#version 330 core\n"
-        "in vec3 screenPos;\n"
-        "out vec4 FragColor;\n"
-        "void main()\n"
-        "{\n"
-        "   float dist  = 1 - distance(screenPos, vec3(0f, 0f, 0));\n"
-        "   dist = pow(dist, 10);\n"
-        "   FragColor = vec4(dist, dist, dist, 1f);\n"
-        "}\n\0";
-    
-    rei::render::Shader _shader = {std::string (_vertexShaderSource).c_str(), std::string (_fragmentShaderSource).c_str()};
+    rei::render::Shader _shader = rei::GetAssetManager().LoadById<rei::render::Shader>("18f9681e-8003-485d-b584-f1a2812e3348");
     unsigned int _vertexBuffer, _vertexArray;
 };

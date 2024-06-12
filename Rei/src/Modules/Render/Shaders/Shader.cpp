@@ -6,6 +6,17 @@
 
 namespace rei::render
 {
+    Shader::Shader(resources::BinaryReader& reader)
+    {
+        const auto content = reader.GetStr();
+
+        const std::string version = "#version 330 core\n";
+        const std::string vertexShader = version + "#define VERTEX;\n" + content;
+        const std::string fragmentShader = version + "#define FRAGMENT;\n" + content;
+
+        _id = ShaderUtility().CreateShaderProgram(vertexShader.c_str(), fragmentShader.c_str());
+    }
+
     Shader::Shader(const char* vertexSource, const char* fragmentSource)
     {
         _id = ShaderUtility().CreateShaderProgram(vertexSource, fragmentSource);

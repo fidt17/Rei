@@ -29,6 +29,7 @@ namespace rei::internal::engine
         _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager))
     {
         Services::GetInstance()->SetEngine(this);
+        Services::GetInstance()->SetAssetManager(_assetManager);
         Services::GetInstance()->SetInternalWorld(_internalWorld);
         Services::GetInstance()->SetEntityManager(_entityManager);
 

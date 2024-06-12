@@ -48,10 +48,8 @@ public class ProjectSetupService : IProjectSetupService
             project.SetHasBeenSetup(true);
             await _assetsService.SaveProject();
         }
-        else
-        {
-            await _projectUpdateService.UpdateProject(project);
-        }
+        
+        await _projectUpdateService.UpdateProject(project);
 		
         await OpenLastScene();
         prepareProjectProcedure.Complete();
@@ -67,7 +65,6 @@ public class ProjectSetupService : IProjectSetupService
             _sceneManagementService.SetBuildSceneId(defaultScene, 0);
             _activeProjectService.GetActiveProject().SetLastScene(defaultScene.AssetId);
         }
-		
     }
 
     private async Task OpenLastScene()

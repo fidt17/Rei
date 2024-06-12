@@ -6,6 +6,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Behaviours;
 using ReiEditor.Startup.Common;
@@ -38,6 +39,7 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();
 		b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
 		b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
+		b.RegisterSingleton<EngineResourcesImporter>().As<IEngineResourcesImporter>();
 		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
 		b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();
 		b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
