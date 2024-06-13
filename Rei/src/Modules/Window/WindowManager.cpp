@@ -7,12 +7,12 @@ namespace rei::window
     {
         if (_windows.empty()) return;
 
+        glfwPollEvents();
+        
         for (const auto& window : _windows)
         {
             window->OnUpdate();
         }
-
-        glfwPollEvents();
     }
 
     std::shared_ptr<Window> WindowManager::NewWindow(const std::string& name, const int width, const int height)

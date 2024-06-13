@@ -24,7 +24,7 @@ namespace rei::render
 
     Shader::~Shader()
     {
-        glDeleteShader(_id);
+        glDeleteProgram(_id);
     }
 
     void Shader::Use() const

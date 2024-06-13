@@ -41,6 +41,7 @@ namespace rei::internal::engine
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<scenes::SceneManager> _sceneManager;
 
+        void SetupGLFW() const;
         void ConfigureInternalWorld() const;
         void RunUpdateLoop();
     };

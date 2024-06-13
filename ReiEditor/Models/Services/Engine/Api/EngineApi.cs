@@ -11,11 +11,13 @@ public class EngineApi : IEngineApi
     private delegate IntPtr ActionDelegate();
     
     private IntPtr _dllPtr;
+    private readonly bool _logInvokingMethods;
     private readonly ILogger<EngineApi> _logger;
 
     public EngineApi(ILogger<EngineApi> logger)
     {
         _logger = logger;
+        _logInvokingMethods = false;
     }
 
     public void SetDllPtr(IntPtr dllPtr)
@@ -34,7 +36,6 @@ public class EngineApi : IEngineApi
     public void Shutdown(IntPtr enginePtr, int exitCode) => Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
 
     public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
-
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
 
@@ -58,7 +59,10 @@ public class EngineApi : IEngineApi
     {
         try
         {
-            _logger.Log($"Invoke [{methodName}]");
+            if (_logInvokingMethods)
+            {
+                _logger.Log($"Invoke [{methodName}]");
+            }
             var d = Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType);
             d.DynamicInvoke(args);
         }
@@ -73,7 +77,10 @@ public class EngineApi : IEngineApi
     {
         try
         {
-            _logger.Log($"Invoke [{methodName}]");
+            if (_logInvokingMethods)
+            {
+                _logger.Log($"Invoke [{methodName}]");
+            }
             return (T?) Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType).DynamicInvoke(args) ?? throw new InvalidOperationException(methodName);
         }
         catch (Exception)

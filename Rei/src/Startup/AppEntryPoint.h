@@ -79,7 +79,6 @@ int main()
     try
     {
         auto engine = new rei::internal::engine::Engine(std::make_shared<BlankApp>());
-        LOG("B")
         engine->Start();
         return engine->GetExitCode();
     }

@@ -10,20 +10,12 @@ namespace rei::render
     class Renderer
     {
     public:
-        Renderer();
+        Renderer() = default;
         void SetTarget(GLFWwindow* target);
-        void Render();
+        void Render() const;
 
         void Dispose();
     private:
         GLFWwindow* _target = nullptr;
-
-        float r = 0;
-        float g = 0;
-        float b = 0;
-        float timeScale = 0.001f;
-        float rSpeed = 1 * timeScale;
-        float gSpeed = 2.f * timeScale;
-        float bSpeed = 3.f * timeScale;
     };
 }

@@ -34,11 +34,28 @@ namespace rei::internal::engine
         Services::GetInstance()->SetEntityManager(_entityManager);
 
         ConfigureInternalWorld();
+        SetupGLFW();
+    }
+
+    void Engine::SetupGLFW() const
+    {
+        glfwSetErrorCallback([](int error_code, const char* description)
+        {
+            LOG_ERROR("GLFW ERROR. " + STRING(error_code) + " " + description);
+        });
+
+        if (!glfwInit())
+        {
+            REI_THROW("GLFW Initialization error")
+        }
+
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     }
 
     void Engine::ConfigureInternalWorld() const
     {
-        _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
         _internalWorld->AddSystem([&] { _windowManager->OnUpdate(); });
 
         _internalWorld->AddSystem<behaviour::StartBehavioursSystem>(_entityManager);
@@ -47,6 +64,8 @@ namespace rei::internal::engine
 
         _internalWorld->AddSystem([&] { _app->OnUpdate(); });
         _internalWorld->AddSystem([&] { _renderer->Render(); });
+        
+        _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
     }
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow()
@@ -109,9 +128,9 @@ namespace rei::internal::engine
 
         _app->OnShutdown();
         _renderer->Dispose();
+        glfwTerminate();
 
         LOG("Shutdown complete")
-
         ShutdownEvent(_exitCode);
     }
 

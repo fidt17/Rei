@@ -7,10 +7,10 @@ public:
         : _target(target)
     {
     }
-    virtual ~BaseRenderScenario() = default;
 
     virtual void Setup() = 0;
     virtual void Render() = 0;
+    virtual void Dispose() = 0;
 
 protected:
     GLFWwindow* _target;

@@ -1,10 +1,8 @@
 ﻿#pragma once
-#include "Engine/Engine.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Shaders/ShaderUtility.h"
 
 class BaseRenderScenario;
 
@@ -15,6 +13,12 @@ public:
         : BaseRenderScenario(target),
           _vertexBuffer(0), _vertexArray(0)
     {
+    }
+
+    void Dispose() override
+    {
+        glDeleteBuffers(1, &_vertexBuffer);
+        glDeleteVertexArrays(1, &_vertexArray);
     }
 
     void ConfigureVertexData()
