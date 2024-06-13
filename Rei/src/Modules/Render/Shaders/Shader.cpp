@@ -32,6 +32,16 @@ namespace rei::render
         glUseProgram(_id);
     }
 
+    i32 Shader::GetLocation(const std::string& name) const
+    {
+        return glGetUniformLocation(_id, name.c_str());
+    }
+
+    void Shader::SetInt(const std::string& name, int value) const
+    {
+        glUniform1i(glGetUniformLocation(_id, name.c_str()), value);
+    }
+
     void Shader::SetFloat(const std::string& name, const float value) const
     {
         glUniform1f(glGetUniformLocation(_id, name.c_str()), value);

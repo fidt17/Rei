@@ -113,6 +113,7 @@
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_indexed.h" />
     <ClInclude Include="tests\render\shader_ex\shader_e0.h" />
     <ClInclude Include="tests\render\textures\texture_e0.h" />
+    <ClInclude Include="tests\render\textures\texture_e1.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
@@ -555,8 +556,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\shaders\test\test.rshader" />
+    <Content Include="resources\shaders\test\test_2.rshader" />
     <Content Include="resources\shaders\unlit.rshader" />
+    <Content Include="resources\textures\circle.png" />
     <Content Include="resources\textures\test_texture.png" />
+    <Content Include="resources\textures\ring.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

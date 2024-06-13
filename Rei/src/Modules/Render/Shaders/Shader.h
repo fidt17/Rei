@@ -11,6 +11,8 @@ namespace rei::render
 
         void Use() const;
 
+        i32 GetLocation(const std::string& name) const;
+        void SetInt(const std::string& name, int value) const;
         void SetFloat(const std::string& name, float value) const;
         
     private:

@@ -1,7 +1,7 @@
 ﻿#include "Renderer.h"
 #include "../../../tests/render/BaseRenderScenario.h"
 
-#define RENDER_SCENARIO_NUM 6
+#define RENDER_SCENARIO_NUM 7
 
 #if RENDER_SCENARIO_NUM == 0
     #include "../../../tests/render/hello_triangle/hello_triangle.h"
@@ -24,6 +24,9 @@
 #elif RENDER_SCENARIO_NUM == 6
     #include "../../../tests/render/textures/texture_e0.h"
     #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<texture_e0>(TARGET)
+#elif RENDER_SCENARIO_NUM == 7
+    #include "../../../tests/render/textures/texture_e1.h"
+    #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<texture_e1>(TARGET)
 #endif
 
 namespace rei::render
