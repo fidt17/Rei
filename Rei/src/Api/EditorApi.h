@@ -23,7 +23,7 @@ REI_EXTERN_API inline void AddShutdownCallback(const ShutdownCallbackDelegate ca
 
 REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i64 offset)
 {
-    return rei::resources::BuildAsset(file, dest, offset);
+    return rei::resources::AssetBuilder().BuildAsset(file, dest, offset);
 }
 
 REI_EXTERN_API inline rei::window::Window* CreatePlaymodeWindow()

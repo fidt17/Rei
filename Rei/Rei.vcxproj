@@ -43,6 +43,7 @@
     <ClInclude Include="external\glfw\glfw3native.h" />
     <ClInclude Include="external\json.hpp" />
     <ClInclude Include="external\KHR\khrplatform.h" />
+    <ClInclude Include="external\stb_image.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
@@ -76,6 +77,7 @@
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
+    <ClInclude Include="src\Modules\Render\Textures\Texture2D.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
@@ -110,6 +112,7 @@
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_e3.h" />
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_indexed.h" />
     <ClInclude Include="tests\render\shader_ex\shader_e0.h" />
+    <ClInclude Include="tests\render\textures\texture_e0.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
@@ -373,6 +376,7 @@
     </ClCompile>
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
+    <ClCompile Include="src\Modules\Render\Textures\Texture2D.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
@@ -551,6 +555,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\shaders\test\test.rshader" />
+    <Content Include="resources\shaders\unlit.rshader" />
+    <Content Include="resources\textures\test_texture.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

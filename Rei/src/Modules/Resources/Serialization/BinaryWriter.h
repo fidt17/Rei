@@ -12,6 +12,8 @@ namespace rei::resources
         REI_API void SetPosition(i64 position);
         REI_API i64 GetPosition();
         REI_API void Close();
+
+        REI_API void WriteBytes(const unsigned char* bytes, i32 length);
         
         REI_API void WriteU8(u8);
         REI_API void WriteU16(u16);

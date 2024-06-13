@@ -73,7 +73,7 @@ public class AssetBuilder : IAssetBuilder
 		{
 			var buildTask = Task.Run(() =>
 			{
-				_logger.Log($"Building asset: {assetInfo.FullPath} to {path} with offset {offset}");
+				_logger.Log($"Building asset: {assetInfo.Meta.AssetId}");
 				var bytesWritten = _engineApi.BuildAsset(assetInfo.FullPath, path, offset);
 				map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.AssetId, innerPath, offset));
 				offset += bytesWritten;

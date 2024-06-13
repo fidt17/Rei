@@ -10,6 +10,8 @@ namespace rei::resources
 
         REI_API void SetPosition(i64 position);
         REI_API void Close();
+
+        REI_API unsigned char* GetBytes(i32& length);
         
         REI_API u8 GetU8();
         REI_API u16 GetU16();
