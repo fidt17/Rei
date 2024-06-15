@@ -7,7 +7,7 @@ namespace rei::window
     {
         REI_ASSERT_S(_window == nullptr)
 
-        _window = windowManager.NewWindow("Main Window", 400, 400);
+        _window = windowManager.NewWindow("Main Window", 600, 600);
 
         _window->OnKeyEvent.append([&](const int key, const int, const int)
         {

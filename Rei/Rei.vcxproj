@@ -541,6 +541,7 @@
     <ClInclude Include="tests\render\textures\texture_e0.h" />
     <ClInclude Include="tests\render\textures\texture_e1.h" />
     <ClInclude Include="tests\render\transform\transform_e0.h" />
+    <ClInclude Include="tests\render\transform\transform_e1.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
@@ -986,6 +987,7 @@
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />
     <Content Include="resources\shaders\test\test_3.rshader" />
+    <Content Include="resources\shaders\test\test_4.rshader" />
     <Content Include="resources\shaders\unlit.rshader" />
     <Content Include="resources\textures\circle.png" />
     <Content Include="resources\textures\test_texture.png" />

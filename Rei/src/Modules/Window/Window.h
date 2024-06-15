@@ -31,6 +31,7 @@ namespace rei::window
         
         REI_API void DisableStyle() const;
         REI_API void Resize(int width, int height) const;
+        REI_API void CenterWindow() const;
 
         GLFWwindow* GetGLFWWindow() const;
         REI_API HWND GetWindowHandle() const;
