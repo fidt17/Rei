@@ -3,6 +3,7 @@
 
 #include "ShaderUtility.h"
 #include "glad/glad.h"
+#include "glm/gtc/type_ptr.hpp"
 
 namespace rei::render
 {
@@ -39,11 +40,16 @@ namespace rei::render
 
     void Shader::SetInt(const std::string& name, int value) const
     {
-        glUniform1i(glGetUniformLocation(_id, name.c_str()), value);
+        glUniform1i(GetLocation(name), value);
     }
 
     void Shader::SetFloat(const std::string& name, const float value) const
     {
-        glUniform1f(glGetUniformLocation(_id, name.c_str()), value);
+        glUniform1f(GetLocation(name), value);
+    }
+
+    void Shader::SetMatrix4f(const std::string& name, glm::mat4 value) const
+    {
+        glUniformMatrix4fv(GetLocation(name), 1, GL_FALSE, value_ptr(value)); 
     }
 }

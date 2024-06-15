@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "glm/fwd.hpp"
 
 namespace rei::render
 {
@@ -14,6 +15,7 @@ namespace rei::render
         i32 GetLocation(const std::string& name) const;
         void SetInt(const std::string& name, int value) const;
         void SetFloat(const std::string& name, float value) const;
+        void SetMatrix4f(const std::string& name, glm::mat4 value) const;
         
     private:
         u32 _id;
