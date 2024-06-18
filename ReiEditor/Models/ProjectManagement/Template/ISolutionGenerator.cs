@@ -7,4 +7,5 @@ public interface ISolutionGenerator
 {
 	Task<SolutionGenerationResult> GenerateSolution(ProjectCreationConfiguration projectCreationConfiguration);
 	Task UpdateProjectFile(string projectFilePath);
+	Task AddClCompile(string projectFilePath, string includePath);
 }

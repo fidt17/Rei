@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -11,7 +12,10 @@ public class EngineResourcesImporter : IEngineResourcesImporter
     private readonly ILogger<EngineResourcesImporter> _logger;
     private readonly IResourceService _resourceService;
 
-    public EngineResourcesImporter(ILogger<EngineResourcesImporter> logger, IEngineSettingsProvider engineSettingsProvider, IResourceService resourceService)
+    public EngineResourcesImporter(
+        ILogger<EngineResourcesImporter> logger,
+        IEngineSettingsProvider engineSettingsProvider,
+        IResourceService resourceService)
     {
         _logger = logger;
         _engineSettingsProvider = engineSettingsProvider;
@@ -20,20 +24,30 @@ public class EngineResourcesImporter : IEngineResourcesImporter
 
     public Task Import()
     {
-        var engineResourcesPath = _engineSettingsProvider.GetEngineResourcesDir();
         var targetDir = _resourceService.GetProjectPath("Engine Resources");
+        CopyResources(targetDir);
 
-        _logger.LogWarning($"Importing engine resources");
-        _logger.Log($"From {engineResourcesPath}. To {targetDir}");
-        var filesCounter = 0;
-        foreach (var file in _resourceService.CopyFilesRecursively(engineResourcesPath, targetDir))
-        {
-            _logger.Log($"{file}");
-            filesCounter += 1;
-        }
-        
-        _logger.Log($"Engine resources importing complete. Total number of files: {filesCounter}");
-        
+        _logger.Log($"Engine resources importing complete");
+
         return Task.CompletedTask;
+    }
+
+    private void CopyResources(string to)
+    {
+        var from = _engineSettingsProvider.GetEngineResourcesDir();
+        
+        _logger.LogWarning($"Importing engine resources");
+        _logger.Log($"From {from}. To {to}");
+        
+        var fromPaths = new List<string>
+        {
+            "/shaders",
+            "/textures"
+        };
+        
+        foreach (var dirName in fromPaths)
+        {
+            _resourceService.CopyFilesRecursively(from + dirName, to + dirName);
+        }
     }
 }

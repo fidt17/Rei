@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,6 +8,7 @@ using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Behaviours.Types;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Extensions;
 
@@ -14,24 +16,63 @@ namespace ReiEditor.Models.Services.Assets.Behaviours;
 
 public class BehaviourFileUtility
 {
-    private readonly IResourceService _resourceService;
+    public class BehaviourPathData
+    {
+        public string Content { get; }
+        public string Path { get; }
+        public string MetaPath { get; }
+        public bool IsEngineBehaviour { get; }
 
-    public BehaviourFileUtility(IResourceService resourceService)
+        public BehaviourPathData(string content, string path, string metaPath, bool isEngineBehaviour)
+        {
+            Content = content;
+            Path = path;
+            MetaPath = metaPath;
+            IsEngineBehaviour = isEngineBehaviour;
+        }
+    }
+    
+    private readonly IResourceService _resourceService;
+    private readonly IEngineSettingsProvider _engineSettingsProvider;
+
+    public BehaviourFileUtility(IResourceService resourceService, IEngineSettingsProvider engineSettingsProvider)
     {
         _resourceService = resourceService;
+        _engineSettingsProvider = engineSettingsProvider;
     }
 
-    public List<ObjectFile<string>> GetAllBehaviours()
+    public List<BehaviourPathData> GetAllBehaviours()
     {
-        var behaviours = new List<ObjectFile<string>>();
-        foreach (var x in _resourceService.GetAllWithExtension(FileExtensions.H).ToList())
+        var behaviours = new List<BehaviourPathData>();
+
+        void tryAddBehaviour(string path, bool isEngineBehaviour)
         {
-            var fileContents = File.ReadAllText(x);
+            var fileContents = File.ReadAllText(path);
             var isBehaviour = TryGetBehaviourNameFrom(fileContents, out _);
             if (isBehaviour)
             {
-                behaviours.Add(new ObjectFile<string>(fileContents, x));
+                var metaPath = path + FileExtensions.META;
+
+                if (isEngineBehaviour)
+                {
+                    metaPath = metaPath.Replace(_engineSettingsProvider.GetEngineResourcesDir(), _resourceService.GetRootPath("Internal"));
+                }
+                
+                behaviours.Add(new BehaviourPathData(fileContents, path, metaPath, isEngineBehaviour));
             }
+        }
+
+        // project header files
+        foreach (var x in _resourceService.GetAllWithExtension(FileExtensions.H).ToList())
+        {
+            tryAddBehaviour(x, false);
+        }
+
+        // engine behaviour header files
+        var engineBehavioursPath = _engineSettingsProvider.GetEngineBehavioursDir();
+        foreach (var x in Directory.EnumerateFiles(engineBehavioursPath, $"*{FileExtensions.H}", SearchOption.AllDirectories))
+        {
+            tryAddBehaviour(x, true);
         }
 
         return behaviours;
@@ -51,6 +92,31 @@ public class BehaviourFileUtility
         }
 
         return metas;
+    }
+    
+    public string GetBehaviourNamespaceFrom(string text)
+    {
+        const string NAMESPACE = "namespace";
+        var namespaceIndexes = text.AllIndexesOf(NAMESPACE);
+        if (namespaceIndexes.Count == 0) return "";
+        if (namespaceIndexes.Count > 1)
+        {
+            throw new Exception("Multiple or nested namespaces were found in the behaviour file. This is not supported.");
+        }
+
+        var startIndex = namespaceIndexes[0] + NAMESPACE.Length;
+        int endIndex = startIndex;
+
+        for (; endIndex < text.Length; endIndex++)
+        {
+            var ch = text[endIndex];
+            if (ch is '{' or '\r' or '\n') break;
+        }
+
+        var result = text.Substring(startIndex, endIndex - startIndex);
+        result = result.Replace(" ", "");
+
+        return result;
     }
     
     public bool TryGetBehaviourNameFrom(string text, out string name)

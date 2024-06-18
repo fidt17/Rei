@@ -18,7 +18,7 @@ public class SourceTracker : ISourceTracker
 
     public async Task<bool> ChangedOrNewSourcesExist()
     {
-        var solutionPath = _resourceService.GetSolutionPath();
+        var solutionPath = _resourceService.GetScriptsPath();
         
         bool result = false;
         var fileExtensions = new List<string> { FileExtensions.CPP, FileExtensions.H };

@@ -69,6 +69,29 @@ public class SolutionGenerator : ISolutionGenerator
         await File.WriteAllTextAsync(projectFilePath, filledTemplate);
     }
 
+    public async Task AddClCompile(string projectFilePath, string includePath)
+    {
+        if (string.IsNullOrWhiteSpace(includePath)) return;
+        
+        if (includePath[0] == '\\' || includePath[0] == '/')
+        {
+            includePath = includePath.Remove(0, 1);
+        }
+
+        includePath = includePath.Replace("\\", "/");
+        
+        var projectFile = await File.ReadAllTextAsync(projectFilePath);
+        if (projectFile == null) throw new Exception($"Missing project file. Path: {projectFilePath}");
+
+        if (projectFile.Contains(includePath)) return;
+
+        const string GROUP = "<ItemGroup Label=\"ClCompile\">";
+        var groupIdx = projectFile.IndexOf(GROUP, StringComparison.Ordinal) + GROUP.Length;
+
+        projectFile = projectFile.Insert(groupIdx, $"\n   <ClCompile Include=\"{includePath}\" />\n");
+        await File.WriteAllTextAsync(projectFilePath, projectFile);
+    }
+
     private async Task<string> CreateSolutionFile(string projectName, string solutionFolderPath, Guid solutionGuid, Guid projectGuid)
     {
         _logger.Log("Creating solution file");

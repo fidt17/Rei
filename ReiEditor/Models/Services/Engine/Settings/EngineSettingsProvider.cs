@@ -53,6 +53,7 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
     }
 
     public string GetEngineResourcesDir() => _enginePath + _engineSettings.RelativeResourcesDir;
+    public string GetEngineBehavioursDir() => GetEngineResourcesDir() + "\\rei_behaviours";
 
     private void HandleEditorSettingsSetEvent() => LoadEngineSettings();
 

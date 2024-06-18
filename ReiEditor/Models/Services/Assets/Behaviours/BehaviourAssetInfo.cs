@@ -6,8 +6,10 @@ namespace ReiEditor.Models.Services.Assets.Behaviours;
 
 public class BehaviourAssetInfo
 {
+    public string Namespace { get; }
     public string BehaviourName { get; }
     public int BehaviourId { get; }
+    public bool IsEngineBehaviour { get; }
     
     public IReadOnlyDictionary<string, SerializedTypeEnum> SerializedProperties => _serializedProperties;
     
@@ -15,11 +17,13 @@ public class BehaviourAssetInfo
 
     private readonly Dictionary<string, SerializedTypeEnum> _serializedProperties;
 
-    public BehaviourAssetInfo(string behaviourName, int behaviourId, ObjectFile<string> behaviour, Dictionary<string, SerializedTypeEnum> serializedProperties)
+    public BehaviourAssetInfo(string behaviourNamespace, string behaviourName, int behaviourId, ObjectFile<string> behaviour, Dictionary<string, SerializedTypeEnum> serializedProperties, bool isEngineBehaviour)
     {
+        Namespace = behaviourNamespace;
         BehaviourName = behaviourName;
         BehaviourId = behaviourId;
         Behaviour = behaviour;
         _serializedProperties = serializedProperties;
+        IsEngineBehaviour = isEngineBehaviour;
     }
 }

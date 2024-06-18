@@ -56,7 +56,7 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
     private void ParseMsBuildOutput(string output)
     {
         var project = _activeProjectService.GetActiveProject();
-        var projectDirPath = Path.GetDirectoryName(_resourceService.GetSolutionPath()) + "\\Scripts\\";
+        var projectDirPath = Path.GetDirectoryName(_resourceService.GetScriptsPath()) + "\\Scripts\\";
 
         var warnings = new List<string>();
         var errors = new List<string>();

@@ -40,7 +40,7 @@ public class BehaviourRegistrySourceGenerator
     {
         const string INCLUDE_FORMAT = "#include {0}";
 
-        var solutionPath = _resourceService.GetSolutionPath();
+        var solutionPath = _resourceService.GetScriptsPath();
         var str = new StringBuilder();
 
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
@@ -50,9 +50,19 @@ public class BehaviourRegistrySourceGenerator
         foreach (var b in behaviours)
         {
             var fullPath = Path.GetFullPath(b.Value.Behaviour.FullPath);
-            var headerInclude = fullPath.Replace(solutionPath, "");
-            headerInclude = headerInclude.Replace("\\", "/");
-            str.AppendLine(string.Format(INCLUDE_FORMAT, $"\"..{headerInclude}\""));
+            if (!b.Value.IsEngineBehaviour)
+            {
+                var headerInclude = fullPath.Replace(solutionPath, "");
+                headerInclude = headerInclude.Replace("\\", "/");
+                str.AppendLine(string.Format(INCLUDE_FORMAT, $"\"..{headerInclude}\""));
+            }
+            else
+            {
+                var headerInclude = fullPath.Replace(solutionPath, "");
+                headerInclude = headerInclude.Replace("\\", "/");
+                headerInclude = headerInclude.Remove(0, headerInclude.IndexOf("rei_behaviours"));
+                str.AppendLine(string.Format(INCLUDE_FORMAT, $"\"{headerInclude}\""));
+            }
         }
 
         return str.ToString();
@@ -74,10 +84,11 @@ public class BehaviourRegistrySourceGenerator
         
         foreach (var b in behaviours)
         {
+            var behaviourNamespace = b.Value.Namespace;
             var behaviourName = b.Value.BehaviourName;
             var behaviourId = b.Value.BehaviourId;
 
-            str.AppendLine($"    f.RegisterComponent<{behaviourName}>({behaviourId});");
+            str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId});");
         }
         
         str.AppendLine("}");
@@ -91,10 +102,11 @@ public class BehaviourRegistrySourceGenerator
         
         foreach (var b in behaviours)
         {
+            var behaviourNamespace = b.Value.Namespace;
             var behaviourName = b.Value.BehaviourName;
             var serializedProperties = b.Value.SerializedProperties;
 
-            str.AppendLine($"{behaviourName}::{behaviourName}(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)");
+            str.AppendLine($"{behaviourNamespace}::{behaviourName}::{behaviourName}(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)");
             str.AppendLine($"    : Behaviour(id, e)");
             foreach (var p in serializedProperties)
             {

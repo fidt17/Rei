@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
+#include "../../../resources/rei_behaviours/render/Camera.h"
+#include "../../../src/Ecs/RefComponent.h"
+#include "Engine/Engine.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
@@ -102,9 +105,9 @@ class transform_e1 : public BaseRenderScenario
 public:
     explicit transform_e1(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("661984c0-4c8d-46a5-8451-e92d8d6c5cd5")),
-          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("702e3f65-78ed-46e7-a611-b640a387b10d")),
-          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("0d3c40b8-e7bd-4c79-8662-0489c8203c23"))
+          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("ea898740-84a0-4a87-809a-fdb57717e812")),
+          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")),
+          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("a00be948-8be9-49d1-98af-f013a594156e"))
     {
     }
 
@@ -118,30 +121,28 @@ public:
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        _shader.Use();
         _shader.SetInt("texture1", 0);
         _shader.SetInt("texture2", 1);
 
         auto view = glm::mat4(1.0f);
         view = translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
-        glm::mat4 projection = glm::perspective(glm::radians(90.0f), 600.0f / 600.0f, 0.1f, 100.0f);
-
         _shader.SetMatrix4f("view", view);
-        _shader.SetMatrix4f("projection", projection);
     }
 
     f32 _timeScale = 1.f;
 
     void Render() override
     {
+        if (_camera.IsNull()) return;
+
         auto time = static_cast<float>(glfwGetTime()) * _timeScale;
         auto sinTime = static_cast<float>(sin(time));
 
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        _shader.Use();
+        _shader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
 
         glActiveTexture(GL_TEXTURE0);
         _firstTexture.Use();
@@ -167,10 +168,10 @@ public:
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i + (time * 100); 
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            float angle = 20.0f * i + (time * 100);
+            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.0f, 0.0f));
             _shader.SetMatrix4f("model", model);
-            
+
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 

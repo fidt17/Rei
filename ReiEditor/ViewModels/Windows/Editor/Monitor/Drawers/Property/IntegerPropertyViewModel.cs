@@ -51,9 +51,18 @@ public class IntegerPropertyViewModel : BaseViewModel
 
     private void HandlePropertyValueChangedEvent(object? value)
     {
-        if (value is int v)
+        if (value is long l)
         {
-            Value = v;
+            Value = (int) l;
+        }
+        else if (value is int i)
+        {
+            Value = i;
+        }
+        else
+        {
+            Value = 0;
+            throw new Exception($"Not supported value type: {value}");
         }
     }
 }

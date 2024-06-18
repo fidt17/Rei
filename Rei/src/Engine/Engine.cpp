@@ -10,6 +10,7 @@
 #include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
 #include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
 #include "Modules/EntityManagement/EntityManager.h"
+#include "Modules/Render/Systems/AssignMainCameraSystem.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Startup/App.h"
 
@@ -21,7 +22,7 @@ namespace rei::internal::engine
         _windowManager(std::make_shared<window::WindowManager>()),
         _mainWindowHandler(std::make_shared<window::MainWindowHandler>()),
         _reiMainThread(std::make_shared<TaskExecutor>()),
-        _renderer(std::make_shared<render::Renderer>()),
+        _mainRenderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
@@ -63,8 +64,10 @@ namespace rei::internal::engine
         _internalWorld->AddSystem<behaviour::UpdateBehavioursSystem>(_entityManager);
 
         _internalWorld->AddSystem([&] { _app->OnUpdate(); });
-        _internalWorld->AddSystem([&] { _renderer->Render(); });
-        
+
+        _internalWorld->AddSystem<render::AssignMainCameraSystem>(_mainRenderer);
+        _internalWorld->AddSystem([&] { _mainRenderer->Render(); });
+
         _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
     }
 
@@ -74,11 +77,18 @@ namespace rei::internal::engine
         _mainWindowHandler->MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")
-            _renderer->SetTarget(nullptr);
+            _mainRenderer->SetTarget(nullptr);
             Shutdown(MAIN_WINDOW_CLOSED_EXIT_CODE);
         });
 
-        _renderer->SetTarget(mainWindow->GetGLFWWindow());
+        mainWindow->SizeChangedEvent.append([&](const int width, const int height)
+        {
+            if (_mainRenderer->GetCamera().IsNull()) return;
+
+            _mainRenderer->GetCamera().Get().SetOutputSize(width, height);
+        });
+
+        _mainRenderer->SetTarget(mainWindow->GetGLFWWindow());
 
         return mainWindow;
     }
@@ -127,7 +137,7 @@ namespace rei::internal::engine
         _runEngine = false;
 
         _app->OnShutdown();
-        _renderer->Dispose();
+        _mainRenderer->Dispose();
         glfwTerminate();
 
         LOG("Shutdown complete")

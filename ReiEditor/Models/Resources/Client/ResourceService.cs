@@ -23,24 +23,15 @@ public class ResourceService : IResourceService
         _resourcesPath = _activeProjectService.GetActiveProject().GetDirectoryPath();
     }
 
-    public string GetRootPath() => _resourcesPath;
+    public string GetRootPath(params string[] path) => Path.GetFullPath(Path.Combine(_resourcesPath, Path.Combine(path)));
 
-    public string GetProjectPath(params string[] path)
-    {
-        return Path.GetFullPath(Path.Combine(_resourcesPath, "Project", Path.Combine(path)));
-    }
+    public string GetProjectPath(params string[] path) => Path.GetFullPath(Path.Combine(_resourcesPath, "Project", Path.Combine(path)));
 
-    public string GetSolutionPath(params string[] path)
-    {
-        return Path.GetFullPath(Path.Combine(GetProjectPath("Scripts"), Path.Combine(path)));
-    }
+    public string GetScriptsPath(params string[] path) => Path.GetFullPath(Path.Combine(GetProjectPath("Scripts"), Path.Combine(path)));
 
-    public IEnumerable<string> GetAllWithExtension(string extension)
-    {
-        return Directory.EnumerateFiles(GetRootPath(), $"*{extension}", SearchOption.AllDirectories);
-    }
+    public IEnumerable<string> GetAllWithExtension(string extension) => Directory.EnumerateFiles(GetRootPath(), $"*{extension}", SearchOption.AllDirectories);
 
-    public IEnumerable<string> CopyFilesRecursively(string source, string target)
+    public void CopyFilesRecursively(string source, string target)
     {
         foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
         {
@@ -50,9 +41,21 @@ public class ResourceService : IResourceService
         foreach (string newPath in Directory.GetFiles(source, "*.*",SearchOption.AllDirectories))
         {
             File.Copy(newPath, newPath.Replace(source, target), true);
-            yield return newPath;
         }
-    }   
+    }
+
+    public void MoveFilesRecursively(string source, string target)
+    {
+        foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(dirPath.Replace(source, target));
+        }
+        
+        foreach (string newPath in Directory.GetFiles(source, "*.*",SearchOption.AllDirectories))
+        {
+            File.Move(newPath, newPath.Replace(source, target), true);
+        }
+    }
 
     public async Task<T?> TryLoad<T>(string fullPath)
     {

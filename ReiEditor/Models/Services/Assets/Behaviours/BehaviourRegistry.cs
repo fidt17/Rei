@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -22,11 +23,11 @@ public class BehaviourRegistry : IBehaviourRegistry
     private readonly BehaviourRegistrySourceGenerator _behaviourRegistrySourceGenerator;
     private readonly ILogger<BehaviourRegistry> _logger;
 
-    public BehaviourRegistry(IAssetCreator assetCreator, IResourceService resourceService, ILogger<BehaviourRegistry> logger)
+    public BehaviourRegistry(IAssetCreator assetCreator, IResourceService resourceService, ILogger<BehaviourRegistry> logger, IEngineSettingsProvider engineSettingsProvider)
     {
         _assetCreator = assetCreator;
         _logger = logger;
-        _utility = new BehaviourFileUtility(resourceService);
+        _utility = new BehaviourFileUtility(resourceService, engineSettingsProvider);
         _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
     }
 
@@ -48,39 +49,56 @@ public class BehaviourRegistry : IBehaviourRegistry
         _logger.Log($"Total behaviours found: {_behaviours.Count}");
     }
 
-    private async Task RegisterBehaviours(List<ObjectFile<string>> behaviourFiles, List<ObjectFile<AssetMeta>> metaFiles)
+    private async Task RegisterBehaviours(List<BehaviourFileUtility.BehaviourPathData> behaviourFiles, List<ObjectFile<AssetMeta>> metaFiles)
     {
-        var newBehaviours = new List<ObjectFile<string>>();
-        
+        void registerBehaviour(BehaviourFileUtility.BehaviourPathData behaviourFile, string name, BehaviourMeta behaviourMeta)
+        {
+            if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.Path}");
+            
+            var namespaceStr = _utility.GetBehaviourNamespaceFrom(behaviourFile.Content);
+            var properties = _utility.GetSerializedProperties(behaviourFile.Content);
+            RegisterBehaviour(new BehaviourAssetInfo(namespaceStr, name, behaviourMeta.BehaviourId, new ObjectFile<string>(behaviourFile.Content, behaviourFile.Path), properties, behaviourFile.IsEngineBehaviour));
+        }
+
+        var newBehaviours = new List<BehaviourFileUtility.BehaviourPathData>();
+
         foreach (var behaviourFile in behaviourFiles)
         {
-            if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
-
-            var metaFile = metaFiles.Find(x => x.FullPath == behaviourFile.FullPath + FileExtensions.META);
-
-            if (metaFile == null || !metaFile.Object.TryGetData(BehaviourMeta.Key, out BehaviourMeta? behaviourMeta))
+            try
             {
-                newBehaviours.Add(behaviourFile);
-                continue;
+                if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Content, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.Path}");
+
+                var metaFile = metaFiles.Find(x => x.FullPath == behaviourFile.MetaPath);
+
+                if (metaFile == null || !metaFile.Object.TryGetData(BehaviourMeta.Key, out BehaviourMeta? behaviourMeta))
+                {
+                    newBehaviours.Add(behaviourFile);
+                    continue;
+                }
+
+                registerBehaviour(behaviourFile, name, behaviourMeta);
             }
-
-            if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.FullPath}");
-
-            var properties = _utility.GetSerializedProperties(behaviourFile.Object);
-            RegisterBehaviour(new BehaviourAssetInfo(name, behaviourMeta.BehaviourId, behaviourFile, properties));
+            catch (Exception e)
+            {
+                throw new Exception($"Behaviour registration exception. {behaviourFile.Path}.\n{e}");
+            }
         }
         
         foreach (var behaviourFile in newBehaviours)
         {
-            if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Object, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.FullPath}");
+            try
+            {
+                if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Content, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.Path}");
             
-            var behaviourMeta = new BehaviourMeta(_maxBehaviourId + 1);
-            await CreateMetaFile(behaviourFile, behaviourMeta);
-            
-            if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.FullPath}");
-
-            var properties = _utility.GetSerializedProperties(behaviourFile.Object);
-            RegisterBehaviour(new BehaviourAssetInfo(name, behaviourMeta.BehaviourId, behaviourFile, properties));
+                var behaviourMeta = new BehaviourMeta(_maxBehaviourId + 1);
+                await CreateMetaFile(behaviourFile, behaviourMeta);
+                
+                registerBehaviour(behaviourFile, name, behaviourMeta);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Behaviour registration exception. {behaviourFile.Path}.\n{e}");
+            }
         }
     }
 
@@ -95,11 +113,11 @@ public class BehaviourRegistry : IBehaviourRegistry
         _maxBehaviourId = Math.Max(_maxBehaviourId, behaviourId);
     }
 
-    private Task<ObjectFile<AssetMeta>> CreateMetaFile(ObjectFile<string> behaviourFile, BehaviourMeta behaviourMeta)
+    private Task<ObjectFile<AssetMeta>> CreateMetaFile(BehaviourFileUtility.BehaviourPathData behaviourFile, BehaviourMeta behaviourMeta)
     {
         var meta = new AssetMeta(_assetCreator.AllocateAssetId());
         meta.AddData(BehaviourMeta.Key, behaviourMeta);
-        return _assetCreator.CreateMetaFile(meta, behaviourFile.FullPath);
+        return _assetCreator.CreateMetaFile(meta, behaviourFile.MetaPath.Replace(FileExtensions.META, ""));
     }
 
     /*

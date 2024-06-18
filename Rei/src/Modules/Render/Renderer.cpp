@@ -40,7 +40,21 @@ namespace rei::render
     SET_LOG_SCOPE("RENDERER")
 
     std::unique_ptr<BaseRenderScenario> _renderScenario;
-    
+
+    void Renderer::SetCamera(const ecs::RefComponent<Camera>& camera)
+    {
+        _camera = camera;
+        if (_renderScenario != nullptr)
+        {
+            _renderScenario->SetCamera(_camera);
+        }
+    }
+
+    ecs::RefComponent<Camera> Renderer::GetCamera() const
+    {
+        return _camera;
+    }
+
     void Renderer::SetTarget(GLFWwindow* target)
     {
         _target = target;
@@ -55,6 +69,10 @@ namespace rei::render
 
         _renderScenario = CREATE_RENDER_SCENARIO(_target);
         _renderScenario->Setup();
+        if (!_camera.IsNull())
+        {
+            _renderScenario->SetCamera(_camera);
+        }
     }
 
     void Renderer::Render() const

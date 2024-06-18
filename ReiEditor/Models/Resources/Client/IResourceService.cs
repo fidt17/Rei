@@ -5,12 +5,13 @@ namespace ReiEditor.Models.Resources.Client;
 
 public interface IResourceService
 {
-	string GetRootPath();
+	string GetRootPath(params string[] path);
 	string GetProjectPath(params string[] path);
-	string GetSolutionPath(params string[] path);
+	string GetScriptsPath(params string[] path);
 
 	IEnumerable<string> GetAllWithExtension(string extension);
-	IEnumerable<string> CopyFilesRecursively(string source, string target);
+	void CopyFilesRecursively(string source, string target);
+	void MoveFilesRecursively(string source, string target);
 
 	Task<T> Load<T>(string fullPath);
 	Task<T?> TryLoad<T>(string fullPath);

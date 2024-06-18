@@ -8,4 +8,5 @@ public interface IEngineSettingsProvider : IAsyncInitializable
 	string GetEngineReleaseIncludeDir();
 	string GetEngineSourceIncludes();
 	string GetEngineResourcesDir();
+	string GetEngineBehavioursDir();
 }

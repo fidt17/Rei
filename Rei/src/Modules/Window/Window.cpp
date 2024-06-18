@@ -75,6 +75,7 @@ namespace rei::window
     void Window::OnWindowResized(const int width, const int height) const
     {
         glViewport(0, 0, width, height);
+        SizeChangedEvent(width, height);
     }
 
     // https://github.com/glfw/glfw/issues/310

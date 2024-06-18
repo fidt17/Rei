@@ -32,7 +32,7 @@ namespace rei::internal::engine
         std::shared_ptr<window::MainWindowHandler> _mainWindowHandler;
 
         std::shared_ptr<TaskExecutor> _reiMainThread;
-        std::shared_ptr<render::Renderer> _renderer;
+        std::shared_ptr<render::Renderer> _mainRenderer;
         
         std::shared_ptr<App> _app;
         std::shared_ptr<ecs::World> _internalWorld;
