@@ -43,6 +43,9 @@ public class ProjectsListElementViewModel : BaseViewModel
 		ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete Project", DeleteProject));
 
 		OpenProjectCommand = new RelayCommand(() => activeProjectService.OpenProject(Project));
+
+		// TODO: remove
+		OpenProjectCommand.Execute(null);
 	}
 
 	private void RevealInFileExplorer() => _fileExplorerProvider.OpenDirectory(Project.GetDirectoryPath());

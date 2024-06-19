@@ -119,6 +119,10 @@
       <DependentUpon>ContextMenuView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Windows\Editor\Monitor\Drawers\Property\FloatPropertyView.axaml.cs">
+      <DependentUpon>FloatPropertyView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
 
 

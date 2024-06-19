@@ -7,7 +7,7 @@
 
 namespace rei::render
 {
-    i32 Camera::GetFov() const
+    f32 Camera::GetFov() const
     {
         return _fov;
     }
@@ -28,27 +28,27 @@ namespace rei::render
         _outputHeight = height;
     }
 
-    float fovFloat;
     glm::mat4 Camera::GetProjectionMatrix() const
     {
         f32 aspect = _outputWidth / static_cast<float>(_outputHeight);
-        return glm::perspective(glm::radians(float(fovFloat)), aspect, _nearClipPlane + 0.01f, float(_farClipPlane));
+        return glm::perspective(glm::radians(float(_fov)), aspect, _nearClipPlane + 0.01f, float(_farClipPlane));
+    }
+
+    glm::mat4 Camera::GetViewMatrix() const
+    {
+        auto view = glm::mat4(1.0f);
+        view = translate(view, glm::vec3(-_x, -_y, -_z));
+
+        return view;
     }
 
     float dir = 1;
     void Camera::Update()
     {
-        const f32 from = 20;
-        const f32 to = 60;
+        auto time = (float) glfwGetTime();
+        auto step = 2;
 
-        fovFloat += dir * 1.f;
-
-        if (fovFloat > to || fovFloat < from)
-        {
-            dir *= -1;
-
-            if (fovFloat < from) fovFloat = from;
-            else if (fovFloat > to) fovFloat = to;
-        }
+        _x = cos(time) * step;
+        _y = sin(time) * step;
     }
 }

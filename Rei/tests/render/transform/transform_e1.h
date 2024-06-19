@@ -120,14 +120,10 @@ public:
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_MULTISAMPLE);
 
         _shader.SetInt("texture1", 0);
         _shader.SetInt("texture2", 1);
-
-        auto view = glm::mat4(1.0f);
-        view = translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
-        _shader.SetMatrix4f("view", view);
     }
 
     f32 _timeScale = 1.f;
@@ -143,6 +139,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         _shader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _shader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
 
         glActiveTexture(GL_TEXTURE0);
         _firstTexture.Use();
@@ -169,7 +166,7 @@ public:
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i + (time * 100);
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.5f, 0.3f));
             _shader.SetMatrix4f("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);

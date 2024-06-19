@@ -98,6 +98,9 @@
                         <DataTemplate DataType="property1:BooleanPropertyViewModel">
                             <property:BooleanPropertyView Margin="1"/>
                         </DataTemplate>
+                        <DataTemplate DataType="property1:FloatPropertyViewModel">
+                            <property:FloatPropertyView Margin="1"/>
+                        </DataTemplate>
                     </ItemsControl.DataTemplates>
                 </ItemsControl>
             </Border>

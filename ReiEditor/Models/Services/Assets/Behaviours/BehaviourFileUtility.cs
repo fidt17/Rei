@@ -168,6 +168,10 @@ public class BehaviourFileUtility
         {
             return SerializedTypeEnum.Boolean;
         }
+        else if (type is "float" or "f32" or "double")
+        {
+            return SerializedTypeEnum.Float;
+        }
 
         return SerializedTypeEnum.Invalid;
     }
