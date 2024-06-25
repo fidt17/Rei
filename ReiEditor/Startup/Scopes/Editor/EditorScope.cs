@@ -8,7 +8,8 @@ using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Assets.Behaviours;
+using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
 using ReiEditor.Startup.Scopes.Editor.Modules;
@@ -43,6 +44,8 @@ public class EditorScope : BaseLifetimeScope
 		b.RegisterSingleton<AssetsService>().As<IAssetsService>();
 		b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();
 		b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
+		b.RegisterSingleton<SerializableObjectsRegistry>().As<ISerializableObjectsRegistry>();
+		b.RegisterSingleton<SourceFilesUtility>();
 
 		b.RegisterSingleton<SelectionService>().As<ISelectionService>();
 		b.RegisterModule<EditorConsoleModule>();

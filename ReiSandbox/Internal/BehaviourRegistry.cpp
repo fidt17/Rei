@@ -5,18 +5,46 @@
 #include <Modules/EntityManagement/EntityManager.h>
 #include <Modules/Behaviour/Behaviour.h>
 
-#include "../Behaviours/MyBehaviour.h"
+#include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
+
+#include "C:\Repos\Rei Projects\New Project\Project\Scripts\Behaviours\MyBehaviour.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
-    f.RegisterComponent<MyBehaviour>(4);
+    f.RegisterComponent<::MyBehaviour>(4);
+    f.RegisterComponent<rei::render::Camera>(5);
+    f.RegisterComponent<rei::transformation::Transform>(6);
 }
 
-MyBehaviour::MyBehaviour(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+
+rei::math::Vector3::Vector3(const nlohmann::json& data) :
+    X(data.at("X").at("Value")),
+    Y(data.at("Y").at("Value")),
+    Z(data.at("Z").at("Value"))
+{}
+
+
+::MyBehaviour::MyBehaviour(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
     , _flag(data.at("_flag").at("Value"))
     , _counter(data.at("_counter").at("Value"))
     , _msg(data.at("_msg").at("Value"))
+{}
+
+rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+    : Behaviour(id, e)
+    , _fov(data.at("_fov").at("Value"))
+    , _nearClipPlane(data.at("_nearClipPlane").at("Value"))
+    , _farClipPlane(data.at("_farClipPlane").at("Value"))
+{}
+
+rei::transformation::Transform::Transform(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+    : Behaviour(id, e)
+    , _position(data.at("_position").at("Value"))
+    , _scale(data.at("_scale").at("Value"))
+    , _rotation(data.at("_rotation").at("Value"))
 {}
 
 

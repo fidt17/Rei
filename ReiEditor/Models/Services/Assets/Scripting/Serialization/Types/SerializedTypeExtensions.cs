@@ -1,7 +1,7 @@
 ﻿using System;
 using ReiEditor.Utils.Extensions;
 
-namespace ReiEditor.Models.Services.Assets.Behaviours.Types;
+namespace ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 public static class SerializedTypeExtensions
 {
@@ -13,12 +13,13 @@ public static class SerializedTypeExtensions
             SerializedTypeEnum.String => value is string,
             SerializedTypeEnum.Boolean => value is bool,
             SerializedTypeEnum.Float => value != null && value is float || value is double,
+            SerializedTypeEnum.Custom => true,
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }
 
-    public static object GetDefaultValue(this SerializedTypeEnum type)
+    public static object? GetDefaultValue(this SerializedTypeEnum type)
     {
         return type switch
         {
@@ -26,6 +27,7 @@ public static class SerializedTypeExtensions
             SerializedTypeEnum.String => "",
             SerializedTypeEnum.Boolean => false,
             SerializedTypeEnum.Float => 0f,
+            SerializedTypeEnum.Custom => null,
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };

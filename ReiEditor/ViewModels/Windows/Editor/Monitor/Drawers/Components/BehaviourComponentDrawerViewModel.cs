@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using ReiEditor.Models.Services.Assets.Behaviours;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Utils.Common;
@@ -40,7 +40,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
             throw new Exception($"Could not load behaviour {behaviourComponent.Id}");
         }
         
-        Name = behaviourInfo.BehaviourName;
+        Name = behaviourInfo.ObjectName;
         ContextMenu = SetupContextMenu();
         SetupProperties();
     }

@@ -6,34 +6,38 @@
     explicit BEHAVIOUR_NAME(const i32 id, const rei::ecs::Entity entity, const nlohmann::json& data);\
     BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
     private:
-
-#define SERIALIZED
+#include "Ecs/RefComponent.h"
 
 namespace rei
 {
+    namespace transformation
+    {
+        class Transform;
+    }
+
     class Behaviour
     {
     public:
-        virtual ~Behaviour() = default;
 
         Behaviour() = default;
+        REI_API explicit Behaviour(i32 id, ecs::Entity e);
+        
+        virtual ~Behaviour() = default;
 
-        explicit Behaviour(const i32 id, const ecs::Entity e) : _id(id), _entity(e)
-        {
-        }
-
-        virtual void Init() {}
-        virtual void Start() {}
-        virtual void Update() {}
-        virtual void Dispose() {}
+        virtual void Init() { }
+        virtual void Start() { }
+        virtual void Update() { }
+        virtual void Dispose() { }
 
         i32 GetId() const;
         REI_API ecs::Entity GetEntity() const;
+        REI_API transformation::Transform& GetTransform() const;
 
         Behaviour& operator=(const Behaviour& other) = default;
 
     private:
         i32 _id{};
         ecs::Entity _entity{-1, 0};
+        ecs::RefComponent<transformation::Transform> _transform;
     };
 }

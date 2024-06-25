@@ -1,0 +1,60 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
+             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:custom1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.CustomPropertyView"
+             x:DataType="custom:CustomPropertyViewModel">
+
+    <Design.DataContext>
+        <custom:CustomPropertyViewModel />
+    </Design.DataContext>
+
+    <Border Classes="MonitorComponent">
+        <Grid RowDefinitions="Auto, *">
+            <!-- Header -->
+            <Border Height="30" VerticalAlignment="Top"
+                    Background="{StaticResource Dark_4}"
+                    Cursor="Hand"
+                    Padding="0,5,0,5">
+                <Grid ColumnDefinitions="Auto, *">
+                    <!-- Expand Toggle -->
+                    <buttons:HorizontalExpandToggle
+                        Grid.Column="0"
+                        IsVisible="True"
+                        VerticalAlignment="Top"
+                        IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
+
+                    <!-- Name Label -->
+                    <TextBlock
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Text="{Binding PropertyName.Value}"
+                        Classes="h4" />
+
+                    <Button
+                        Classes="Clear"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Command="{Binding SwitchExpandState}" />
+
+                </Grid>
+            </Border>
+
+            <!-- Properties -->
+            <Border
+                Grid.Row="1"
+                IsVisible="{Binding Expanded.Value}"
+                MinHeight="48">
+                <property1:PropertiesDisplayControl Value="{Binding Value}" />
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

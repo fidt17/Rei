@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
-using ReiEditor.Models.Services.Assets.Behaviours.Types;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.ViewModels.Common;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 
@@ -16,6 +17,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.String => new StringPropertyViewModel(property),
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -32,5 +34,15 @@ public static class PropertyViewUtils
         charList[0] = char.ToUpper(charList[0]);
 
         return new string(charList.ToArray());
+    }
+
+    private static BaseViewModel GetPropertyViewModelForCustomType(SerializedProperty property)
+    {
+        if (property.SourceType == "Vector3")
+        {
+            return new Vector3PropertyViewModel(property);
+        }
+
+        return new CustomPropertyViewModel(property);
     }
 }

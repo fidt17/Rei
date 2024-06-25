@@ -1,0 +1,38 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:custom1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.PropertiesDisplayControl"
+             x:DataType="property1:PropertiesDisplayControl">
+    <ItemsControl
+        ItemsSource="{Binding Value, RelativeSource={RelativeSource AncestorType=property1:PropertiesDisplayControl}}"
+        Padding="10">
+        <ItemsControl.DataTemplates>
+            <DataTemplate DataType="property:StringPropertyViewModel">
+                <property1:StringPropertyView Margin="1" />
+            </DataTemplate>
+            <DataTemplate DataType="property:IntegerPropertyViewModel">
+                <property1:IntegerPropertyView Margin="1" />
+            </DataTemplate>
+            <DataTemplate DataType="property:BooleanPropertyViewModel">
+                <property1:BooleanPropertyView Margin="1" />
+            </DataTemplate>
+            <DataTemplate DataType="property:FloatPropertyViewModel">
+                <property1:FloatPropertyView Margin="1" />
+            </DataTemplate>
+
+            <DataTemplate DataType="custom:CustomPropertyViewModel">
+                <custom1:CustomPropertyView Margin="1" />
+            </DataTemplate>
+
+            <DataTemplate DataType="custom:Vector3PropertyViewModel">
+                <custom1:Vector3PropertyView Margin="1" />
+            </DataTemplate>
+        </ItemsControl.DataTemplates>
+    </ItemsControl>
+</UserControl>

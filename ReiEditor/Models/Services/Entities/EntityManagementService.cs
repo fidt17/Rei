@@ -1,4 +1,5 @@
 ﻿using System;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
 
@@ -12,11 +13,13 @@ public class EntityManagementService : IEntityManagementService
 	
     private readonly ILogger<EntityManagementService> _logger;
     private readonly ISceneManagementService _sceneManagement;
+    private readonly IBehaviourComponentsService _behaviourComponentsService;
 
-    public EntityManagementService(ILogger<EntityManagementService> logger, ISceneManagementService sceneManagement)
+    public EntityManagementService(ILogger<EntityManagementService> logger, ISceneManagementService sceneManagement, IBehaviourComponentsService behaviourComponentsService)
     {
         _logger = logger;
         _sceneManagement = sceneManagement;
+        _behaviourComponentsService = behaviourComponentsService;
     }
 
     public GameEntity? CreateEntity(string name)
@@ -27,6 +30,8 @@ public class EntityManagementService : IEntityManagementService
 
             var s = _sceneManagement.CurrentScene.Value;
             var e = new GameEntity(s.AllocateEntityId(), name);
+            _behaviourComponentsService.AddComponent(e, "Transform");
+            
             s.AddEntity(e);
 
             _logger.Log($"Created {e}");

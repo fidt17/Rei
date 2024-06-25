@@ -1,13 +1,16 @@
 ﻿using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 
-namespace ReiEditor.Models.Services.Assets.Behaviours;
+namespace ReiEditor.Models.Services.Assets.Scripting;
 
 public class BehaviourRegistrySourceGenerator
 {
+    private const string INCLUDE_FORMAT = "#include {0}";
+        
     private readonly IResourceService _resourceService;
 
     public BehaviourRegistrySourceGenerator(IResourceService resourceService)
@@ -15,54 +18,43 @@ public class BehaviourRegistrySourceGenerator
         _resourceService = resourceService;
     }
 
-    public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours)
+    public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects)
     {
-        var source = GetSourceText(behaviours);
+        var source = GetSourceText(behaviours, serializableObjects);
         return _resourceService.Write(source, _resourceService.GetProjectPath("Scripts", "Internal", "BehaviourRegistry.cpp"));
     }
 
-    private string GetSourceText(Dictionary<int, BehaviourAssetInfo> behaviours)
+    private string GetSourceText(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects)
     {
+        var serializableObjectInfos = serializableObjects.ToArray();
+        
         var str = new StringBuilder();
 
         str.AppendLine();
         str.AppendLine(GenerateWarning());
         str.AppendLine();
-        str.AppendLine(GenerateIncludes(behaviours));
+        
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
+        str.AppendLine();
+        str.AppendLine(GenerateIncludes(serializableObjectInfos));
+        str.AppendLine(GenerateIncludes(behaviours.Values));
+        
         str.AppendLine(GenerateRegistryMethod(behaviours));
         str.AppendLine();
+        str.AppendLine(GenerateBodyImplementation(serializableObjectInfos));
         str.AppendLine(GenerateBodyImplementation(behaviours));
         
         return str.ToString();
     }
-
-    private string GenerateIncludes(Dictionary<int, BehaviourAssetInfo> behaviours)
+    
+    private string GenerateIncludes(IEnumerable<SerializableObjectInfo> objects)
     {
-        const string INCLUDE_FORMAT = "#include {0}";
-
-        var solutionPath = _resourceService.GetScriptsPath();
         var str = new StringBuilder();
-
-        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
-        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
-        str.AppendLine();
         
-        foreach (var b in behaviours)
+        foreach (var obj in objects)
         {
-            var fullPath = Path.GetFullPath(b.Value.Behaviour.FullPath);
-            if (!b.Value.IsEngineBehaviour)
-            {
-                var headerInclude = fullPath.Replace(solutionPath, "");
-                headerInclude = headerInclude.Replace("\\", "/");
-                str.AppendLine(string.Format(INCLUDE_FORMAT, $"\"..{headerInclude}\""));
-            }
-            else
-            {
-                var headerInclude = fullPath.Replace(solutionPath, "");
-                headerInclude = headerInclude.Replace("\\", "/");
-                headerInclude = headerInclude.Remove(0, headerInclude.IndexOf("rei_behaviours"));
-                str.AppendLine(string.Format(INCLUDE_FORMAT, $"\"{headerInclude}\""));
-            }
+            str.AppendLine(string.Format(INCLUDE_FORMAT, $"\"{obj.IncludePath}\""));
         }
 
         return str.ToString();
@@ -85,7 +77,7 @@ public class BehaviourRegistrySourceGenerator
         foreach (var b in behaviours)
         {
             var behaviourNamespace = b.Value.Namespace;
-            var behaviourName = b.Value.BehaviourName;
+            var behaviourName = b.Value.ObjectName;
             var behaviourId = b.Value.BehaviourId;
 
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId});");
@@ -103,7 +95,7 @@ public class BehaviourRegistrySourceGenerator
         foreach (var b in behaviours)
         {
             var behaviourNamespace = b.Value.Namespace;
-            var behaviourName = b.Value.BehaviourName;
+            var behaviourName = b.Value.ObjectName;
             var serializedProperties = b.Value.SerializedProperties;
 
             str.AppendLine($"{behaviourNamespace}::{behaviourName}::{behaviourName}(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)");
@@ -112,6 +104,31 @@ public class BehaviourRegistrySourceGenerator
             {
                 str.AppendLine($"    , {p.Key}(data.at(\"{p.Key}\").at(\"Value\"))");
             }
+            str.AppendLine("{" + "}");
+            str.AppendLine();
+        }
+        
+        return str.ToString();
+    }
+    
+    private string GenerateBodyImplementation(IEnumerable<SerializableObjectInfo> objects)
+    {
+        var str = new StringBuilder();
+        
+        foreach (var obj in objects)
+        {
+            var objNamespace = obj.Namespace;
+            var objectName = obj.ObjectName;
+            var serializedProperties = obj.SerializedProperties.ToList();
+
+            str.AppendLine($"{objNamespace}::{objectName}::{objectName}(const nlohmann::json& data) :");
+            for (var index = 0; index < serializedProperties.Count; index++)
+            {
+                var p = serializedProperties[index];
+                str.AppendLine($"    {p.Key}(data.at(\"{p.Key}\").at(\"Value\")){(index == serializedProperties.Count - 1 ? "" : ",")}");
+            }
+
+            
             str.AppendLine("{" + "}");
             str.AppendLine();
         }

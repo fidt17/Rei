@@ -44,6 +44,8 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
         _editorSettingsService.ConfigurationSetEvent -= HandleEditorSettingsSetEvent;
     }
 
+    public string GetEnginePath() => _enginePath;
+
     public string GetEngineDebugIncludeDir() => _enginePath + _engineSettings.RelativeDebugIncludeDir;
     public string GetEngineReleaseIncludeDir() => _enginePath + _engineSettings.RelativeReleaseIncludeDir;
     public string GetEngineSourceIncludes()

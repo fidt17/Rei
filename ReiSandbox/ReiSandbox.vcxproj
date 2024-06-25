@@ -105,12 +105,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Behaviours\MyBehaviour.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Behaviours\MyBehaviour.h.meta" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="Internal\BehaviourRegistry.cpp" />
     <ClCompile Include="ReiApp.cpp" />
   </ItemGroup>

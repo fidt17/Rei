@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using DynamicData;
-using ReiEditor.Models.Services.Assets.Behaviours;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -101,7 +101,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         var behaviourSelectionList = new List<BehaviourSelectionData>();
         foreach (var b in behaviourRegistry.Behaviours)
         {
-            behaviourSelectionList.Add(new BehaviourSelectionData(b.Key, b.Value.BehaviourName));
+            behaviourSelectionList.Add(new BehaviourSelectionData(b.Key, b.Value.ObjectName));
         }
         behaviourSelectionList.Sort((a, b) => string.Compare(a.BehaviourName, b.BehaviourName, StringComparison.Ordinal));
 

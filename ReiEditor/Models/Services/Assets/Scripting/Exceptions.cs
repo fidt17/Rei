@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ReiEditor.Models.Services.Assets.Behaviours;
+namespace ReiEditor.Models.Services.Assets.Scripting;
 
 public class UnregisteredBehaviourException : Exception
 {

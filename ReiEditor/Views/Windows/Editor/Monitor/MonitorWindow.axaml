@@ -25,15 +25,17 @@
             <!-- Content -->
             <Border Grid.Row="1" Classes="WindowContent">
 
-                <!-- Drawers -->
-                <ContentControl
-                    Content="{Binding Drawer}">
-                    <ContentControl.ContentTemplate>
-                        <DataTemplate x:DataType="drawers1:EntityMonitorDrawerViewModel">
-                            <drawers:EntityMonitorDrawer />
-                        </DataTemplate>
-                    </ContentControl.ContentTemplate>
-                </ContentControl>
+                <ScrollViewer>
+                    <!-- Drawers -->
+                    <ContentControl
+                        Content="{Binding Drawer}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate x:DataType="drawers1:EntityMonitorDrawerViewModel">
+                                <drawers:EntityMonitorDrawer />
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
+                </ScrollViewer>
 
             </Border>
 

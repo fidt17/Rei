@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Camera.h"
 
+#include "../transformation/Transform.h"
 #include "glfw/glfw3.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/quaternion_common.hpp"
@@ -37,18 +38,9 @@ namespace rei::render
     glm::mat4 Camera::GetViewMatrix() const
     {
         auto view = glm::mat4(1.0f);
-        view = translate(view, glm::vec3(-_x, -_y, -_z));
+        const auto& position = GetTransform().GetPosition();
+        view = translate(view, glm::vec3(-position.X, -position.Y, position.Z));
 
         return view;
-    }
-
-    float dir = 1;
-    void Camera::Update()
-    {
-        auto time = (float) glfwGetTime();
-        auto step = 2;
-
-        _x = cos(time) * step;
-        _y = sin(time) * step;
     }
 }

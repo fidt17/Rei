@@ -1,6 +1,16 @@
 ﻿#include "pch.h"
 #include "Behaviour.h"
 
+#include "../../../resources/rei_behaviours/transformation/Transform.h"
+#include "Engine/Services.h"
+
+rei::Behaviour::Behaviour(const i32 id, const ecs::Entity e):
+    _id(id),
+    _entity(e),
+    _transform(rei::ecs::RefComponent<transformation::Transform>(GetInternalWorld().GetRegistry(), e))
+{
+}
+
 i32 rei::Behaviour::GetId() const
 {
     return _id;
@@ -9,5 +19,10 @@ i32 rei::Behaviour::GetId() const
 rei::ecs::Entity rei::Behaviour::GetEntity() const
 {
     return _entity;
+}
+
+rei::transformation::Transform& rei::Behaviour::GetTransform() const
+{
+    return _transform;
 }
 

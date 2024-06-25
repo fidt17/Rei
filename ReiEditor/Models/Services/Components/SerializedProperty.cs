@@ -1,6 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json;
-using ReiEditor.Models.Services.Assets.Behaviours.Types;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 namespace ReiEditor.Models.Services.Components;
 
@@ -10,6 +10,7 @@ public class SerializedProperty
     
     public string Name { get; }
     public SerializedTypeEnum Type { get; }
+    public string SourceType { get; }
 
     [JsonIgnore]
     public object? Value
@@ -32,10 +33,11 @@ public class SerializedProperty
     [JsonProperty("Value")]
     private object? _value;
 
-    public SerializedProperty(string name, SerializedTypeEnum type, object value)
+    public SerializedProperty(string name, SerializedTypeEnum type, object? value, string sourceType)
     {
         Name = name;
         Type = type;
         Value = value;
+        SourceType = sourceType;
     }
 }

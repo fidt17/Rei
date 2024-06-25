@@ -471,8 +471,10 @@
     <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="external\stb_image.h" />
     <ClInclude Include="resources\rei_behaviours\render\Camera.h" />
+    <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
+    <ClInclude Include="src\Common\Math\Vector3.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
@@ -550,6 +552,7 @@
     <ClCompile Include="external\glad.cpp" />
     <ClCompile Include="external\glm\detail\glm.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\Camera.cpp" />
+    <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">Create</PrecompiledHeader>

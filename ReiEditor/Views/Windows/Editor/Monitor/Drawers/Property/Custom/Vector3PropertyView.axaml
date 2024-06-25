@@ -1,0 +1,68 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.Vector3PropertyView"
+             x:DataType="custom:Vector3PropertyViewModel">
+
+    <Design.DataContext>
+        <custom:Vector3PropertyViewModel />
+    </Design.DataContext>
+
+    <Border
+        Padding="1">
+        <Grid ColumnDefinitions="Auto, *">
+            <TextBlock
+                Grid.Column="0"
+                Width="110"
+                VerticalAlignment="Center"
+                FontSize="14"
+                Foreground="{StaticResource Gray_4}"
+                Text="{Binding PropertyName.Value}" />
+
+            <StackPanel Orientation="Horizontal"
+                        Grid.Column="1">
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock
+                        Margin="0,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="X" />
+                    <textBoxes:ReiTextBox
+                        VerticalAlignment="Center"
+                        Text="{Binding X, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock
+                        Margin="5,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="Y" />
+                    <textBoxes:ReiTextBox
+                        VerticalAlignment="Center"
+                        Text="{Binding Y, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock
+                        Margin="5,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="Z" />
+                    <textBoxes:ReiTextBox
+                        VerticalAlignment="Center"
+                        Text="{Binding Z, Mode=TwoWay}" />
+                </StackPanel>
+
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

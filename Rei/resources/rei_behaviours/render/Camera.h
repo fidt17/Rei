@@ -7,13 +7,9 @@ namespace rei::render
     {
     private:
         BEHAVIOUR_BODY(Camera)
-        SERIALIZED f32 _fov;
-        SERIALIZED i32 _nearClipPlane;
-        SERIALIZED i32 _farClipPlane;
-
-        SERIALIZED f32 _x;
-        SERIALIZED f32 _y;
-        SERIALIZED f32 _z;
+        SERIALIZE f32 _fov;
+        SERIALIZE i32 _nearClipPlane;
+        SERIALIZE i32 _farClipPlane;
 
         i32 _outputWidth;
         i32 _outputHeight;
@@ -27,8 +23,6 @@ namespace rei::render
 
         glm::mat4 GetProjectionMatrix() const;
         glm::mat4 GetViewMatrix() const;
-
-        REI_API void Update() override;
     };
 }
 

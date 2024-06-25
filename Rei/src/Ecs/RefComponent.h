@@ -23,6 +23,13 @@ namespace rei::ecs
             return _ecs->Get<T>(_entity);
         }
 
+        constexpr operator T&() const noexcept
+        {
+            REI_ASSERT(!IsNull(), "Null component reference")
+
+            return _ecs->Get<T>(_entity);
+        }
+
         bool IsNull() const
         {
             if (_ecs == nullptr) return true;
