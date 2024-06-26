@@ -12,9 +12,9 @@ namespace rei::transformation
         SERIALIZE math::Vector3 _rotation;
 
     public:
-        math::Vector3& GetPosition();
-        math::Vector3& GetScale();
-        math::Vector3& GetRotation();
+        REI_API math::Vector3& GetPosition();
+        REI_API math::Vector3& GetScale();
+        REI_API math::Vector3& GetRotation();
     };
 }
 EXPORT_COMPONENT(rei::transformation::Transform)

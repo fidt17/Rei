@@ -32,15 +32,33 @@ namespace rei::render
     glm::mat4 Camera::GetProjectionMatrix() const
     {
         f32 aspect = _outputWidth / static_cast<float>(_outputHeight);
+        
         return glm::perspective(glm::radians(float(_fov)), aspect, _nearClipPlane + 0.01f, float(_farClipPlane));
     }
 
     glm::mat4 Camera::GetViewMatrix() const
     {
-        auto view = glm::mat4(1.0f);
-        const auto& position = GetTransform().GetPosition();
-        view = translate(view, glm::vec3(-position.X, -position.Y, position.Z));
+        glm::vec3 cameraPosition = GetTransform().GetPosition();
+        
+        glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 cameraDirection = glm::normalize(cameraPosition - cameraTarget);
+
+        glm::vec3 up = math::Vector3::Up();
+        glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+
+        glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+
+        glm::mat4 view = glm::lookAt(cameraPosition,
+                                     cameraTarget,
+                                     up);
 
         return view;
+    }
+
+    void Camera::Update()
+    {
+        const float radius = 20.0f;
+        GetTransform().GetPosition().x = sin(glfwGetTime()) * radius;
+        GetTransform().GetPosition().z = cos(glfwGetTime()) * radius;
     }
 }

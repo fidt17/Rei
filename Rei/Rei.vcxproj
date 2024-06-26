@@ -553,6 +553,7 @@
     <ClCompile Include="external\glm\detail\glm.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\Camera.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
+    <ClCompile Include="src\Common\Math\Vector3.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">Create</PrecompiledHeader>
