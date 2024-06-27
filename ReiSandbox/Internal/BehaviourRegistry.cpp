@@ -20,9 +20,9 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 
 
 rei::math::Vector3::Vector3(const nlohmann::json& data) :
-    X(data.at("X").at("Value")),
-    Y(data.at("Y").at("Value")),
-    Z(data.at("Z").at("Value"))
+    x(data.at("x").at("Value")),
+    y(data.at("y").at("Value")),
+    z(data.at("z").at("Value"))
 {}
 
 

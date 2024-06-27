@@ -23,8 +23,6 @@ namespace rei::render
 
         REI_API glm::mat4 GetProjectionMatrix() const;
         REI_API glm::mat4 GetViewMatrix() const;
-
-        REI_API void Update() override;
     };
 }
 

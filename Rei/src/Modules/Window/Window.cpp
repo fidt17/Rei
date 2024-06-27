@@ -19,6 +19,12 @@ namespace rei::window
             static_cast<Window*>(glfwGetWindowUserPointer(w))->OnKeyCallback(key, action, mods);
         });
 
+        glfwSetInputMode(_glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetCursorPosCallback(_glfwWindow, [](GLFWwindow* w, const double xPos, const double yPos)
+        {
+            static_cast<Window*>(glfwGetWindowUserPointer(w))->OnMouseMoveEvent(xPos, yPos);
+        }); 
+
         CenterWindow();
     }
 

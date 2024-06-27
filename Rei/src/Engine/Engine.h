@@ -40,6 +40,7 @@ namespace rei::internal::engine
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<scenes::SceneManager> _sceneManager;
+        std::shared_ptr<input::Input> _input;
 
         void SetupGLFW() const;
         void ConfigureInternalWorld() const;

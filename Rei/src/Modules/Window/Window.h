@@ -11,6 +11,7 @@ namespace rei::window
     public:
         eventpp::CallbackList<void (Window&)> WindowClosedEvent;
         eventpp::CallbackList<void (int key, int action, int mods)> OnKeyEvent;
+        eventpp::CallbackList<void (float x, float y)> OnMouseMoveEvent;
         eventpp::CallbackList<void (int width, int height)> SizeChangedEvent;
         eventpp::CallbackList<void ()> CloseRequestEvent;
         

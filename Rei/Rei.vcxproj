@@ -504,10 +504,12 @@
     <ClInclude Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
+    <ClInclude Include="src\Modules\Input\Input.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\Systems\AssignMainCameraSystem.h" />
+    <ClInclude Include="src\Modules\Render\Systems\FlyCameraSystem.h" />
     <ClInclude Include="src\Modules\Render\Textures\Texture2D.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
@@ -736,6 +738,7 @@
     <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
+    <ClCompile Include="src\Modules\Input\Input.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -815,6 +818,7 @@
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\AssignMainCameraSystem.cpp" />
+    <ClCompile Include="src\Modules\Render\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Textures\Texture2D.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp">

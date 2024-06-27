@@ -15,6 +15,10 @@ namespace rei::transformation
         REI_API math::Vector3& GetPosition();
         REI_API math::Vector3& GetScale();
         REI_API math::Vector3& GetRotation();
+
+        REI_API math::Vector3 GetForward() const;
+        REI_API math::Vector3 GetRight() const;
+        REI_API math::Vector3 GetUp() const;
     };
 }
 EXPORT_COMPONENT(rei::transformation::Transform)

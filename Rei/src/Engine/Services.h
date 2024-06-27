@@ -1,5 +1,10 @@
 #pragma once
 
+namespace rei::input
+{
+    class Input;
+}
+
 namespace rei
 {
     class EntityManager;
@@ -27,6 +32,9 @@ namespace rei
         void SetAssetManager(const std::shared_ptr<assets::AssetManager>& assetManager) { _assetManager = assetManager; }
         REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
 
+        void SetInput(const std::shared_ptr<input::Input>& input) { _input = input; }
+        REI_API static input::Input& Input() { return *(GetInstance()->_input); }
+
         REI_API static Services* GetInstance();
 
     private:
@@ -37,6 +45,7 @@ namespace rei
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<assets::AssetManager> _assetManager;
+        std::shared_ptr<input::Input> _input;
     };
 
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }

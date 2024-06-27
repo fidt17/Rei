@@ -18,6 +18,42 @@ namespace rei::math
         return Vector3(-x, -y, -z);
     }
 
+    Vector3& Vector3::operator+=(const glm::vec<3, float>& vec)
+    {
+        x += vec.x;
+        y += vec.y;
+        z += vec.z;
+        
+        return *this;
+    }
+
+    Vector3& Vector3::operator+=(const Vector3& vec)
+    {
+        x += vec.x;
+        y += vec.y;
+        z += vec.z;
+        
+        return *this;
+    }
+    
+    Vector3& Vector3::operator-=(const glm::vec<3, float>& vec)
+    {
+        x -= vec.x;
+        y -= vec.y;
+        z -= vec.z;
+        
+        return *this;
+    }
+
+    Vector3& Vector3::operator-=(const Vector3& vec)
+    {
+        x -= vec.x;
+        y -= vec.y;
+        z -= vec.z;
+        
+        return *this;
+    }
+
     Vector3 Vector3::Right()
     {
         return Vector3(1, 0, 0);

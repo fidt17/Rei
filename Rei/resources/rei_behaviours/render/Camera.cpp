@@ -2,9 +2,11 @@
 #include "Camera.h"
 
 #include "../transformation/Transform.h"
+#include "Engine/Services.h"
 #include "glfw/glfw3.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/quaternion_common.hpp"
+#include "Modules/Input/Input.h"
 
 namespace rei::render
 {
@@ -48,17 +50,16 @@ namespace rei::render
 
         glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
 
+        glm::vec3 forward = GetTransform().GetForward();
+        
         glm::mat4 view = glm::lookAt(cameraPosition,
-                                     cameraTarget,
+                                     cameraPosition + forward,
                                      up);
 
-        return view;
-    }
 
-    void Camera::Update()
-    {
-        const float radius = 20.0f;
-        GetTransform().GetPosition().x = sin(glfwGetTime()) * radius;
-        GetTransform().GetPosition().z = cos(glfwGetTime()) * radius;
+        
+        
+
+        return view;
     }
 }

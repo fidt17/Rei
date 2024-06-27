@@ -19,6 +19,12 @@ namespace rei::math
         operator std::string() const { return "[" + STRING(x) + ", " + STRING(y) + ", " +STRING(z) + "]"; }
 
         Vector3 operator-() const;
+        
+        Vector3& operator+=(const glm::vec<3, float>& vec);
+        Vector3& operator+=(const Vector3& vec);
+        
+        Vector3& operator-=(const glm::vec<3, float>& vec);
+        Vector3& operator-=(const Vector3& vec);
 
         static Vector3 Right();
         static Vector3 Left();
