@@ -86,12 +86,98 @@ public:
     }
 };
 
+class BoxVertexData
+{
+public:
+    u32 VAO, VBO;
+    glm::mat4 model = glm::mat4(1.0f);
+
+public:
+    BoxVertexData()
+    {
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+
+        float vertices[] = {
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
+
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f,
+
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
+
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,
+
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f
+        };
+
+        glBindVertexArray(VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+        // position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        // normal attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+
+    void SetTransform(glm::vec3 translation, f32 rotation)
+    {
+        model = translate(model, translation);
+        model = rotate(model, rotation, glm::vec3(0.0, 0.0, 1.0));
+        model = scale(model, glm::vec3(1));
+    }
+
+    ~BoxVertexData()
+    {
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+    }
+};
+
 class light_e0 : public BaseRenderScenario
 {
 public:
     explicit light_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _boxShader(rei::GetAssetManager().LoadById<rei::render::Shader>("8c7da4b5-1635-456c-bf99-21917f332928")),
+          _boxShader(rei::GetAssetManager().LoadById<rei::render::Shader>("d4d874cb-7262-41cd-a59c-68bc274bf3c7")),
           _lightSourceShader(rei::GetAssetManager().LoadById<rei::render::Shader>("d887c985-f2da-4c89-b62c-b329654839cb"))
     {
     }
@@ -125,8 +211,8 @@ public:
         glBindVertexArray(_box.VAO);
 
         glm::mat4 model = glm::mat4(1.0f);
-        model = translate(model, glm::vec3(0, 1, 1));
-        model = scale(model, glm::vec3(0.2f));
+        model = translate(model, glm::vec3(0, 0, -1));
+        model = scale(model, glm::vec3(0.02f));
         _lightSourceShader.SetMatrix4f("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -138,13 +224,18 @@ public:
     {
         _boxShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
         _boxShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
-        _boxShader.SetVector3("objectColor", rei::math::Vector3(1.0f, 0.5f, 0.31f));
+        _boxShader.SetVector3("objectColor", rei::math::Vector3(0.3f, 0.34f, 0.39f));
         _boxShader.SetVector3("lightColor", rei::math::Vector3(1.0f, 1.0f, 1.0f));
 
         glBindVertexArray(_box.VAO);
 
-        const glm::mat4 model = glm::mat4(1.0f);
+        auto time = static_cast<float>(glfwGetTime()) * 0.2f;
+        glm::mat4 model = glm::mat4(1.0f);
+        float angle = 20.0f + (time * 100);
+        model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.f, 0.f));
+        
         _boxShader.SetMatrix4f("model", model);
+        _boxShader.SetVector3("lightPos", rei::math::Vector3(0, 0, -1));
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -158,6 +249,7 @@ public:
 private:
     rei::render::Shader _boxShader;
     rei::render::Shader _lightSourceShader;
-    
-    VertexData _box;
+
+    BoxVertexData _box;
+    BoxVertexData _lightSource;
 };

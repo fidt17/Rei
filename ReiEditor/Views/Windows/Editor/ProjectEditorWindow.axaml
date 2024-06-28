@@ -15,6 +15,7 @@
         Background="{StaticResource Dark_0}"
         Title="Rei Engine"
         WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
         Focusable="True">
 
     <Design.DataContext>
