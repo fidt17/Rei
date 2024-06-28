@@ -8,8 +8,8 @@ namespace rei::transformation
         BEHAVIOUR_BODY(Transform)
 
         SERIALIZE math::Vector3 _position;
-        SERIALIZE math::Vector3 _scale;
         SERIALIZE math::Vector3 _rotation;
+        SERIALIZE math::Vector3 _scale;
 
     public:
         REI_API math::Vector3& GetPosition();
@@ -19,6 +19,8 @@ namespace rei::transformation
         REI_API math::Vector3 GetForward() const;
         REI_API math::Vector3 GetRight() const;
         REI_API math::Vector3 GetUp() const;
+
+        operator std::string() const;
     };
 }
 EXPORT_COMPONENT(rei::transformation::Transform)

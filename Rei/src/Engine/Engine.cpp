@@ -84,7 +84,10 @@ namespace rei::internal::engine
         {
             LOG("Main window was closed")
             _mainRenderer->SetTarget(nullptr);
-            Shutdown(MAIN_WINDOW_CLOSED_EXIT_CODE);
+            ExecuteOnMainThread([&]
+            {
+                Shutdown(MAIN_WINDOW_CLOSED_EXIT_CODE);
+            });
         });
 
         mainWindow->SizeChangedEvent.append([&](const int width, const int height)

@@ -1,7 +1,7 @@
 ﻿#include "Renderer.h"
 #include "../../../tests/render/BaseRenderScenario.h"
 
-#define RENDER_SCENARIO_NUM 9
+#define RENDER_SCENARIO_NUM 10 
 
 #if RENDER_SCENARIO_NUM == 0
     #include "../../../tests/render/hello_triangle/hello_triangle.h"
@@ -33,6 +33,9 @@
 #elif RENDER_SCENARIO_NUM == 9
     #include "../../../tests/render/transform/transform_e1.h"
     #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<transform_e1>(TARGET)
+#elif RENDER_SCENARIO_NUM == 10 
+    #include "../../../tests/render/light/light_e0.h"
+    #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<light_e0>(TARGET)
 #endif
 
 namespace rei::render

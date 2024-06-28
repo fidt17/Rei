@@ -26,6 +26,6 @@ public class RefreshProjectOnWindowActivationSystem : IDisposable
     {
         if (!_buildStarter.CanStartBuild.IsTrue.Value) return;
         
-        _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
+        // _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
     }
 }

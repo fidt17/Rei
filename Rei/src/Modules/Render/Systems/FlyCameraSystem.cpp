@@ -19,6 +19,7 @@ float lastFrame = 0.0f; // Time of last frame
 
 float lastX = -1, lastY = -1;
 bool didSetCursorPos;
+int framesToSkip = 60;
 
 void rei::render::FlyCameraSystem::OnUpdate()
 {
@@ -79,9 +80,15 @@ void rei::render::FlyCameraSystem::OnUpdate()
         _input->GetCursorPosition(xpos, ypos);
         if (!didSetCursorPos)
         {
-            didSetCursorPos = true;
-            lastX = xpos;
-            lastY = ypos;
+            if (xpos >= 0 && ypos >= 0)
+            {
+                if (framesToSkip-- <= 0)
+                {
+                    didSetCursorPos = true;
+                    lastX = xpos;
+                    lastY = ypos;
+                }
+            }
         }
         else
         {
@@ -91,6 +98,7 @@ void rei::render::FlyCameraSystem::OnUpdate()
             const float sensitivity = 0.1f;
             xoffset *= sensitivity;
             yoffset *= sensitivity;
+
             lastX = xpos;
             lastY = ypos;
 
@@ -101,6 +109,13 @@ void rei::render::FlyCameraSystem::OnUpdate()
                 transform.GetRotation().y = 89.0f;
             if (transform.GetRotation().y < -89.0f)
                 transform.GetRotation().y = -89.0f;
+
+            if (transform.GetRotation().x > 360.0f)
+                transform.GetRotation().x = 0.0f;
+            if (transform.GetRotation().x < -360.0f)
+                transform.GetRotation().x = -0.0f;
         }
+
+        //LOG(std::string(transform))
     }
 }

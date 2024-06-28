@@ -544,6 +544,7 @@
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_e2.h" />
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_e3.h" />
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_indexed.h" />
+    <ClInclude Include="tests\render\light\light_e0.h" />
     <ClInclude Include="tests\render\shader_ex\shader_e0.h" />
     <ClInclude Include="tests\render\textures\texture_e0.h" />
     <ClInclude Include="tests\render\textures\texture_e1.h" />
@@ -997,10 +998,12 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />
     <Content Include="resources\shaders\test\test_3.rshader" />
     <Content Include="resources\shaders\test\test_4.rshader" />
+    <Content Include="resources\shaders\test\test_5.rshader" />
     <Content Include="resources\shaders\unlit.rshader" />
     <Content Include="resources\textures\circle.png" />
     <Content Include="resources\textures\test_texture.png" />

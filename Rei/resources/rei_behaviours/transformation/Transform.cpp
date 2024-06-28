@@ -47,3 +47,8 @@ rei::math::Vector3 rei::transformation::Transform::GetUp() const
 {
     return math::Vector3(0, 1.0f, 0);
 }
+
+rei::transformation::Transform::operator std::string() const
+{
+    return "P: " + std::string(_position) + "; R: " + std::string(_rotation) + "; S: " + std::string(_scale);
+}

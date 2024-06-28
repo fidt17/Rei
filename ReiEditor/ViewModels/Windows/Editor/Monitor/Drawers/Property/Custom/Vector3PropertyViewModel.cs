@@ -15,7 +15,7 @@ public class Vector3PropertyViewModel : BaseCustomPropertyViewModel
         {
             if (SetField(ref _x, value))
             {
-                var property = GetNestedProperty("X");
+                var property = GetNestedProperty("x");
                 if (property != null)
                 {
                     property.Value = value;
@@ -36,7 +36,7 @@ public class Vector3PropertyViewModel : BaseCustomPropertyViewModel
         {
             if (SetField(ref _y, value))
             {
-                var property = GetNestedProperty("Y");
+                var property = GetNestedProperty("y");
                 if (property != null)
                 {
                     property.Value = value;
@@ -57,7 +57,7 @@ public class Vector3PropertyViewModel : BaseCustomPropertyViewModel
         {
             if (SetField(ref _z, value))
             {
-                var property = GetNestedProperty("Z");
+                var property = GetNestedProperty("z");
                 if (property != null)
                 {
                     property.Value = value;
@@ -74,8 +74,8 @@ public class Vector3PropertyViewModel : BaseCustomPropertyViewModel
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
-        X = Convert.ToSingle(GetNestedProperty("X")?.Value ?? 0);
-        Y = Convert.ToSingle(GetNestedProperty("Y")?.Value ?? 0);
-        Z = Convert.ToSingle(GetNestedProperty("Z")?.Value ?? 0);
+        X = Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0);
+        Y = Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0);
+        Z = Convert.ToSingle(GetNestedProperty("z")?.Value ?? 0);
     }
 }

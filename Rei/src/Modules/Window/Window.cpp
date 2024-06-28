@@ -20,6 +20,7 @@ namespace rei::window
         });
 
         glfwSetInputMode(_glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetCursorPos(_glfwWindow, width / 2., height / 2.);
         glfwSetCursorPosCallback(_glfwWindow, [](GLFWwindow* w, const double xPos, const double yPos)
         {
             static_cast<Window*>(glfwGetWindowUserPointer(w))->OnMouseMoveEvent(xPos, yPos);
