@@ -1,0 +1,48 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.ColorPropertyView"
+             x:DataType="custom:ColorPropertyViewModel">
+
+    <Design.DataContext>
+        <custom:ColorPropertyViewModel />
+    </Design.DataContext>
+
+    <Border
+        Padding="1">
+        <Grid ColumnDefinitions="Auto, *">
+            <TextBlock
+                Grid.Column="0"
+                Width="100"
+                VerticalAlignment="Center"
+                FontSize="14"
+                Foreground="{StaticResource Gray_4}"
+                Text="{Binding PropertyName.Value}" />
+
+            <StackPanel Orientation="Horizontal"
+                        Grid.Column="1" Spacing="2">
+
+                <textBoxes:ReiTextBox
+                    VerticalAlignment="Center"
+                    Text="{Binding R, Mode=TwoWay}" />
+
+                <textBoxes:ReiTextBox
+                    VerticalAlignment="Center"
+                    Text="{Binding G, Mode=TwoWay}" />
+
+                <textBoxes:ReiTextBox
+                    VerticalAlignment="Center"
+                    Text="{Binding B, Mode=TwoWay}" />
+
+                <textBoxes:ReiTextBox
+                    VerticalAlignment="Center"
+                    Text="{Binding A, Mode=TwoWay}" />
+
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

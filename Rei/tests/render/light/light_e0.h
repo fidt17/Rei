@@ -235,22 +235,24 @@ public:
 
         if (f->GetEntitiesCount() == 0) return;
         const rei::render::AmbientLight& ambientLight = GET_REF(*f->begin(), rei::render::AmbientLight);
-        
+
         shader.SetFloat("_AmbientLight.Strength", ambientLight.GetStrength());
-        shader.SetVector3("_AmbientLight.Color", ambientLight.GetColor());
+
+        auto c = ambientLight.GetColor();
+        shader.SetVector3("_AmbientLight.Color", rei::math::Vector3(c.r, c.g, c.b));
     }
-    
+
     void RenderBox()
     {
         ConfigureAmbientLight(_boxShader);
 
         _boxShader.SetFloat("_PointLight.Strength", 1.0f);
-        _boxShader.SetVector3("_PointLight.Color", rei::math::Vector3(1,1,1));
+        _boxShader.SetVector3("_PointLight.Color", rei::math::Vector3(1, 1, 1));
         _boxShader.SetVector3("_PointLight.Position", rei::math::Vector3(0, 0, -1));
 
         _boxShader.SetFloat("_Shininess", 1000.f);
         _boxShader.SetVector3("_Color", rei::math::Vector3(0.3f, 0.34f, 0.39f));
-        
+
         _boxShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
         _boxShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
 
@@ -260,7 +262,7 @@ public:
         glm::mat4 model = glm::mat4(1.0f);
         float angle = 20.0f + (time * 100);
         model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.f, 0.f));
-        
+
         _boxShader.SetMatrix4f("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);

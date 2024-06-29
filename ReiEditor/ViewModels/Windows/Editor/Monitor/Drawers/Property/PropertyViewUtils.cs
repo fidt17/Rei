@@ -42,6 +42,10 @@ public static class PropertyViewUtils
         {
             return new Vector3PropertyViewModel(property);
         }
+        else if (property.SourceType == "Color")
+        {
+            return new ColorPropertyViewModel(property);
+        }
 
         return new CustomPropertyViewModel(property);
     }

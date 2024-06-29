@@ -13,6 +13,11 @@ namespace rei::math
     {
     }
 
+    Vector3::operator std::string() const
+    {
+        return "[" + STRING(x) + ", " + STRING(y) + ", " + STRING(z) + "]";
+    }
+
     Vector3 Vector3::operator-() const
     {
         return Vector3(-x, -y, -z);

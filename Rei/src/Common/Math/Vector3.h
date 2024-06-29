@@ -16,7 +16,7 @@ namespace rei::math
         SERIALIZE f32 z;
 
         constexpr operator glm::vec3() const { return glm::vec3(x, y, z); }
-        operator std::string() const { return "[" + STRING(x) + ", " + STRING(y) + ", " +STRING(z) + "]"; }
+        operator std::string() const;
 
         Vector3 operator-() const;
         

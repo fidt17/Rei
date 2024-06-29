@@ -506,6 +506,7 @@
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
+    <ClInclude Include="src\Modules\Render\Color\Color.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
@@ -742,6 +743,7 @@
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\Input\Input.cpp" />
+    <ClCompile Include="src\Modules\Render\Color\Color.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
