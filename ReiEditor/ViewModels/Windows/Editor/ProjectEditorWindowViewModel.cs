@@ -16,6 +16,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 {
     public SaveProjectCommand SaveProjectCommand { get; }
     public BuildProjectCommand BuildProjectCommand { get; }
+    public ImportEngineResourcesCommand ImportEngineResourcesCommand { get; }
     public OpenSettingsWindowCommand OpenSettingsCommand { get; }
 	
     public PlaymodePanelViewModel PlaymodePanel { get; } = new();
@@ -36,6 +37,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         IFactory<PlaymodePanelViewModel> playmodePanel,
         IFactory<ConsoleEditorWindowViewModel> console,
         IFactory<BuildProjectCommand> buildProjectCommandFactory,
+        IFactory<ImportEngineResourcesCommand> importEngineResourcesCommandFactory,
         IFactory<OpenSettingsWindowCommand> openSettingsCommandFactory,
         IFactory<StatusBarViewModel> statusBarViewModelFactory,
         IFactory<HierarchyWindowViewModel> hierarchyFactory,
@@ -45,6 +47,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         _sceneManagementService = sceneManagementService;
         SaveProjectCommand = saveProjectCommand.CreateInstance();
         BuildProjectCommand = buildProjectCommandFactory.CreateInstance();
+        ImportEngineResourcesCommand = importEngineResourcesCommandFactory.CreateInstance();
         OpenSettingsCommand = openSettingsCommandFactory.CreateInstance();
 		
         PlaymodePanel = playmodePanel.CreateInstance();

@@ -2,6 +2,7 @@
 #include "../BaseRenderScenario.h"
 #include "Engine/Services.h"
 #include "Modules/Render/Shaders/Shader.h"
+#include "Modules/Resources/AssetBuilder.h"
 
 class VertexData
 {
@@ -222,10 +223,18 @@ public:
 
     void RenderBox()
     {
+        _boxShader.SetFloat("_AmbientLight.Strength", 0.5f);
+        _boxShader.SetVector3("_AmbientLight.Color", rei::math::Vector3(1,1,1));
+
+        _boxShader.SetFloat("_PointLight.Strength", 1.0f);
+        _boxShader.SetVector3("_PointLight.Color", rei::math::Vector3(1,1,1));
+        _boxShader.SetVector3("_PointLight.Position", rei::math::Vector3(0, 0, -1));
+
+        _boxShader.SetFloat("_Shininess", 1000.f);
+        _boxShader.SetVector3("_Color", rei::math::Vector3(0.3f, 0.34f, 0.39f));
+        
         _boxShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
         _boxShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
-        _boxShader.SetVector3("objectColor", rei::math::Vector3(0.3f, 0.34f, 0.39f));
-        _boxShader.SetVector3("lightColor", rei::math::Vector3(1.0f, 1.0f, 1.0f));
 
         glBindVertexArray(_box.VAO);
 
@@ -235,7 +244,6 @@ public:
         model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.f, 0.f));
         
         _boxShader.SetMatrix4f("model", model);
-        _boxShader.SetVector3("lightPos", rei::math::Vector3(0, 0, -1));
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 

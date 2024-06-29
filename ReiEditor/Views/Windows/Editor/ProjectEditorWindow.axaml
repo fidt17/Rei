@@ -43,6 +43,11 @@
                         HotKey="Ctrl+B"
                         Command="{Binding BuildProjectCommand}"
                         Content="Build" />
+                    
+                    <Button
+                        HotKey="Ctrl+I"
+                        Command="{Binding ImportEngineResourcesCommand}"
+                        Content="Import" />
                 </StackPanel>
 
                 <Button Grid.Column="2"

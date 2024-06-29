@@ -19,5 +19,6 @@ public class BuildModule : Module
 		builder.RegisterNonLazy<BuildProcedureTracker>();
 		
 		builder.RegisterType<BuildProjectCommand>();
+		builder.RegisterType<ImportEngineResourcesCommand>();
 	}
 }
