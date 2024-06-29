@@ -10,12 +10,14 @@
 #include "C:\Repos\Rei Projects\New Project\Project\Scripts\Behaviours\MyBehaviour.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Light\AmbientLight.h"
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
     f.RegisterComponent<::MyBehaviour>(4);
     f.RegisterComponent<rei::render::Camera>(5);
     f.RegisterComponent<rei::transformation::Transform>(6);
+    f.RegisterComponent<rei::render::AmbientLight>(7);
 }
 
 
@@ -43,8 +45,14 @@ rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohma
 rei::transformation::Transform::Transform(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
     , _position(data.at("_position").at("Value"))
-    , _scale(data.at("_scale").at("Value"))
     , _rotation(data.at("_rotation").at("Value"))
+    , _scale(data.at("_scale").at("Value"))
+{}
+
+rei::render::AmbientLight::AmbientLight(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+    : Behaviour(id, e)
+    , _strength(data.at("_strength").at("Value"))
+    , _color(data.at("_color").at("Value"))
 {}
 
 

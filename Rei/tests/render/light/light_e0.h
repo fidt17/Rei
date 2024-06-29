@@ -1,8 +1,14 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
+#include "../../../resources/rei_behaviours/render/Light/AmbientLight.h"
 #include "Engine/Services.h"
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Resources/AssetBuilder.h"
+
+namespace rei::render
+{
+    class AmbientLight;
+}
 
 class VertexData
 {
@@ -221,10 +227,22 @@ public:
         glBindVertexArray(0);
     }
 
+    void ConfigureAmbientLight(const rei::render::Shader& shader) const
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::AmbientLight>();
+        rei::GetInternalWorld().RefreshAll();
+
+        if (f->GetEntitiesCount() == 0) return;
+        const rei::render::AmbientLight& ambientLight = GET_REF(*f->begin(), rei::render::AmbientLight);
+        
+        shader.SetFloat("_AmbientLight.Strength", ambientLight.GetStrength());
+        shader.SetVector3("_AmbientLight.Color", ambientLight.GetColor());
+    }
+    
     void RenderBox()
     {
-        _boxShader.SetFloat("_AmbientLight.Strength", 0.5f);
-        _boxShader.SetVector3("_AmbientLight.Color", rei::math::Vector3(1,1,1));
+        ConfigureAmbientLight(_boxShader);
 
         _boxShader.SetFloat("_PointLight.Strength", 1.0f);
         _boxShader.SetVector3("_PointLight.Color", rei::math::Vector3(1,1,1));
