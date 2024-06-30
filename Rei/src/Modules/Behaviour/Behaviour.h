@@ -29,7 +29,8 @@ namespace rei
         virtual void Update() { }
         virtual void Dispose() { }
 
-        i32 GetId() const;
+        i32 GetBehaviourId() const;
+        
         REI_API ecs::Entity GetEntity() const;
         REI_API transformation::Transform& GetTransform() const;
 

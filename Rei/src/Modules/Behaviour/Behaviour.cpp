@@ -11,7 +11,7 @@ rei::Behaviour::Behaviour(const i32 id, const ecs::Entity e):
 {
 }
 
-i32 rei::Behaviour::GetId() const
+i32 rei::Behaviour::GetBehaviourId() const
 {
     return _id;
 }

@@ -6,18 +6,21 @@
 #include <Modules/Behaviour/Behaviour.h>
 
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
+#include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
 
-#include "C:\Repos\Rei Projects\New Project\Project\Scripts\Behaviours\MyBehaviour.h"
+#include "C:\Repos\Rei Projects\New Project\Project\Scripts\Behaviours\RadiusMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Light\AmbientLight.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Light\PointLight.h"
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
-    f.RegisterComponent<::MyBehaviour>(4);
+    f.RegisterComponent<::RadiusMovement>(9);
     f.RegisterComponent<rei::render::Camera>(5);
     f.RegisterComponent<rei::transformation::Transform>(6);
     f.RegisterComponent<rei::render::AmbientLight>(7);
+    f.RegisterComponent<rei::behaviour::PointLight>(8);
 }
 
 
@@ -27,12 +30,17 @@ rei::math::Vector3::Vector3(const nlohmann::json& data) :
     z(data.at("z").at("Value"))
 {}
 
+rei::render::Color::Color(const nlohmann::json& data) :
+    r(data.at("r").at("Value")),
+    g(data.at("g").at("Value")),
+    b(data.at("b").at("Value")),
+    a(data.at("a").at("Value"))
+{}
 
-::MyBehaviour::MyBehaviour(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+
+::RadiusMovement::RadiusMovement(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
-    , _flag(data.at("_flag").at("Value"))
-    , _counter(data.at("_counter").at("Value"))
-    , _msg(data.at("_msg").at("Value"))
+    , _offset(data.at("_offset").at("Value"))
 {}
 
 rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
@@ -50,6 +58,12 @@ rei::transformation::Transform::Transform(const i32 id, const rei::ecs::Entity e
 {}
 
 rei::render::AmbientLight::AmbientLight(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+    : Behaviour(id, e)
+    , _strength(data.at("_strength").at("Value"))
+    , _color(data.at("_color").at("Value"))
+{}
+
+rei::behaviour::PointLight::PointLight(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
     , _strength(data.at("_strength").at("Value"))
     , _color(data.at("_color").at("Value"))

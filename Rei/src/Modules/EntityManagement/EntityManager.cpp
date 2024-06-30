@@ -99,5 +99,5 @@ void rei::EntityManager::Destroy(const ecs::Entity e) const
 void rei::EntityManager::InitBehaviour(const ecs::Entity e, Behaviour& b) const
 {
     b.Init();
-    GET(e, StartBehavioursEvent).Behaviours.push_back(b.GetId());
+    GET(e, StartBehavioursEvent).Behaviours.push_back(b.GetBehaviourId());
 }

@@ -50,10 +50,16 @@ namespace rei::render
         glUniform1f(GetLocation(name), value);
     }
 
-    void Shader::SetVector3(const std::string& name, const math::Vector3 value) const
+    void Shader::SetVector3(const std::string& name, const math::Vector3& value) const
     {
         Use();
         glUniform3f(GetLocation(name), value.x, value.y, value.z);
+    }
+
+    void Shader::SetColor(const std::string& name, const Color& value) const
+    {
+        Use();
+        glUniform4f(GetLocation(name), value.r, value.g, value.b, value.a);
     }
 
     void Shader::SetMatrix4f(const std::string& name, glm::mat4 value) const

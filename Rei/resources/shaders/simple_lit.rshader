@@ -1,68 +1,90 @@
-﻿struct AmbientLight
+﻿#define NR_POINT_LIGHTS 4
+
+struct AmbientLight
 {
     float Strength;
-    vec3 Color;
+    vec4 Color;
 };
 
 struct PointLight
 {
     vec3 Position;
     float Strength;
-    vec3 Color;
+    vec4 Color;
 };
 
 #ifdef VERTEX
     layout (location = 0) in vec3 aPos;
     layout (location = 1) in vec3 aNormal;
 
-    uniform PointLight _PointLight;
+    uniform PointLight _PointLights[NR_POINT_LIGHTS];
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
 
     out vec3 FragPos;
     out vec3 Normal;
-    out vec3 LightPos;
+    out vec3 PointLightPositions[NR_POINT_LIGHTS];
 
     void main()
     {
         gl_Position = projection * view * model * vec4(aPos, 1.0);
         FragPos = vec3(view * model * vec4(aPos, 1.0));
         Normal = mat3(transpose(inverse(view * model))) * aNormal;
-        LightPos = vec3(view * vec4(_PointLight.Position, 1.0));
+
+        for (int i = 0; i < NR_POINT_LIGHTS; i++)
+        {
+            vec3 lightPosition = _PointLights[i].Position;
+            PointLightPositions[i] = vec3(view * vec4(lightPosition, 1.0));
+        }
     }
 #endif
 
 #ifdef FRAGMENT
     in vec3 FragPos;
     in vec3 Normal;
-    in vec3 LightPos;
+    in vec3 PointLightPositions[NR_POINT_LIGHTS];
 
     uniform AmbientLight _AmbientLight;
-    uniform PointLight _PointLight;
+    uniform PointLight _PointLights[NR_POINT_LIGHTS];
+
     uniform float _Shininess;
-    uniform vec3 _Color;
+    
+    uniform vec4 _Color;
 
     out vec4 FragColor;
 
-    void main()
+    vec4 CalcPointLight(PointLight light, vec3 lightPosition)
     {
-        // ambient
-        vec3 ambient = _AmbientLight.Strength * _AmbientLight.Color;    
-        
          // diffuse 
         vec3 norm = normalize(Normal);
-        vec3 lightDir = normalize(LightPos - FragPos);
+        vec3 lightDir = normalize(lightPosition - FragPos);
         float diff = max(dot(norm, lightDir), 0.0);
-        vec3 diffuse = diff * _PointLight.Color;
+        vec4 diffuse = diff * light.Color;
         
         // specular
         vec3 viewDir = normalize(-FragPos);
         vec3 reflectDir = reflect(-lightDir, norm);  
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), _Shininess);
-        vec3 specular = _PointLight.Strength * spec * _PointLight.Color; 
+        vec4 specular = light.Strength * spec * light.Color; 
+
+        vec4 result = diffuse + specular;
+        result.a = 1;
+        return result;
+    } 
+
+    void main()
+    {
+        // ambient
+        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;    
+        vec4 pointLight;
         
-        vec3 result = (ambient + diffuse + specular) * _Color;
-        FragColor = vec4(result, 1.0);
+        for (int i = 0; i < NR_POINT_LIGHTS; i++)
+        {
+            pointLight += CalcPointLight(_PointLights[i], PointLightPositions[i]);
+        }
+        
+        vec4 result = (ambient + pointLight) * _Color;
+        FragColor = result;
     }
 #endif
