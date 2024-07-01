@@ -14,6 +14,9 @@ namespace rei::behaviour
     public:
         REI_API f32 GetStrength() const;
         REI_API render::Color GetColor() const;
+
+        REI_API void SetStrength(f32 value);
+        REI_API void SetColor(render::Color value);
     };
 }
 EXPORT_COMPONENT(rei::behaviour::PointLight)

@@ -261,11 +261,12 @@ public:
         }
     }
 
-    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light)
+    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light) const
     {
         if (light.IsNull()) return;
 
         _lightSourceShader.SetColor("_Color", light.Get().GetColor());
+        _lightSourceShader.SetFloat("_Strength", light.Get().GetStrength());
         _lightSourceShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
         _lightSourceShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
 

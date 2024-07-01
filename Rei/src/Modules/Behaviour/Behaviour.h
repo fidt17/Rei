@@ -7,6 +7,7 @@
     BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
     private:
 #include "Ecs/RefComponent.h"
+#include "Engine/Services.h"
 
 namespace rei
 {
@@ -34,6 +35,9 @@ namespace rei
         REI_API ecs::Entity GetEntity() const;
         REI_API transformation::Transform& GetTransform() const;
 
+        template <typename  T>
+        REI_API ecs::RefComponent<T> GetComponent() const;
+
         Behaviour& operator=(const Behaviour& other) = default;
 
     private:
@@ -41,4 +45,11 @@ namespace rei
         ecs::Entity _entity{-1, 0};
         ecs::RefComponent<transformation::Transform> _transform;
     };
+
+    template <typename T>
+    ecs::RefComponent<T> Behaviour::GetComponent() const
+    {
+        ECS_WORLD(GetInternalWorld());
+        return GET_REF(_entity, T);
+    }
 }

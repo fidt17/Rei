@@ -2,7 +2,7 @@
 
 namespace rei::render
 {
-    struct Color
+    struct REI_API Color
     {
         SERIALIZABLE_BODY(Color)
         

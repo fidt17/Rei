@@ -12,12 +12,14 @@
 #endif
 
 #ifdef FRAGMENT
+    uniform float _Strength;
     uniform vec4 _Color;
 
     out vec4 FragColor;
 
     void main()
     {
-        FragColor = _Color;
+        FragColor = _Color * _Strength;
+        FragColor.a = 1;
     }
 #endif

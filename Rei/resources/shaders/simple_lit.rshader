@@ -66,11 +66,11 @@ struct PointLight
         vec3 viewDir = normalize(-FragPos);
         vec3 reflectDir = reflect(-lightDir, norm);  
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), _Shininess);
-        vec4 specular = light.Strength * spec * light.Color; 
+        vec4 specular = spec * light.Color; 
 
         vec4 result = diffuse + specular;
         result.a = 1;
-        return result;
+        return result * light.Strength;
     } 
 
     void main()
