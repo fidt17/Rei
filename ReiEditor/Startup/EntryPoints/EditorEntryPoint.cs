@@ -44,9 +44,6 @@ public class EditorEntryPoint
         _logger.LogWarning("\n--- Editor Entry Point ---\n");
         SetupEditorWindow();
 
-        await _assetImporter.ReimportAll();
-        await _sceneManagementService.InitializeAsync();
-		
         await _projectSetupService.PrepareProject();
         await _buildService.BuildProject(BuildConfigurationEnum.EditorDebug);
     }

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Threading.Tasks;
+using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.ProjectManagement.Template;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -26,12 +29,25 @@ public class BehaviourRegistry : IBehaviourRegistry
     private readonly BehaviourRegistrySourceGenerator _behaviourRegistrySourceGenerator;
     private readonly ILogger<BehaviourRegistry> _logger;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly ISolutionGenerator _solutionGenerator;
+    private readonly IActiveProjectService _activeProjectService;
+    private readonly IResourceService _resourceService;
 
-    public BehaviourRegistry(IAssetCreator assetCreator, IResourceService resourceService, ILogger<BehaviourRegistry> logger, IEngineSettingsProvider engineSettingsProvider, ISerializableObjectsRegistry serializableObjectsRegistry)
+    public BehaviourRegistry(
+        IAssetCreator assetCreator,
+        IResourceService resourceService,
+        ILogger<BehaviourRegistry> logger,
+        IEngineSettingsProvider engineSettingsProvider,
+        ISerializableObjectsRegistry serializableObjectsRegistry,
+        ISolutionGenerator solutionGenerator,
+        IActiveProjectService activeProjectService)
     {
         _assetCreator = assetCreator;
+        _resourceService = resourceService;
         _logger = logger;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _solutionGenerator = solutionGenerator;
+        _activeProjectService = activeProjectService;
         _utility = new BehaviourFileUtility(resourceService, engineSettingsProvider);
         _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
     }
@@ -58,13 +74,13 @@ public class BehaviourRegistry : IBehaviourRegistry
 
         await RegisterBehaviours(behaviourFiles, metaFiles);
         await _behaviourRegistrySourceGenerator.GenerateBehaviourRegistrySourceFile(_behaviours, _serializableObjectsRegistry.GetObjects());
+        await UpdateSolutionFile();
         
         foreach (var behaviourAssetInfo in _behaviours)
         {
             _behavioursByName.Add(behaviourAssetInfo.Value.ObjectName, behaviourAssetInfo.Value);
         }
         
-        //LogBehaviours();
         _logger.Log($"Total behaviours found: {_behaviours.Count}");
     }
 
@@ -128,6 +144,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         {
             throw new Exception($"Behaviour with id {behaviourId} already exists. Existing value: {_behaviours[behaviourId].Source.FullPath}. New value: {behaviourAssetInfo.Source.FullPath}");
         }
+        
         _behaviours.Add(behaviourId, behaviourAssetInfo);
         _maxBehaviourId = Math.Max(_maxBehaviourId, behaviourId);
     }
@@ -139,14 +156,17 @@ public class BehaviourRegistry : IBehaviourRegistry
         return _assetCreator.CreateMetaFile(meta, behaviourFile.MetaPath.Replace(FileExtensions.META, ""));
     }
 
-    /*
-    private void LogBehaviours()
+    private async Task UpdateSolutionFile()
     {
-        foreach (var behaviourAssetInfo in _behaviours.OrderBy(x => x.Value.BehaviourId))
+        var scriptsPath = _resourceService.GetScriptsPath();
+        var compileIncludes = new List<string>();
+        
+        foreach (var file in Directory.EnumerateFiles(scriptsPath, "*.*", SearchOption.AllDirectories))
         {
-            var value = behaviourAssetInfo.Value;
-            _logger.Log($"{value.BehaviourId,-3} {value.BehaviourName}");
+            if (!file.EndsWith(".h") && !file.EndsWith(".cpp")) continue;
+            compileIncludes.Add(file.Replace(scriptsPath, ""));
         }
+
+        await _solutionGenerator.AddClCompile(_activeProjectService.GetActiveProject().ProjectVisualStudioProjectPath, compileIncludes);
     }
-*/
 }

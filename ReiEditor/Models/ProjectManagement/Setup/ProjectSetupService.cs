@@ -18,6 +18,7 @@ public class ProjectSetupService : IProjectSetupService
     private readonly IAssetsService _assetsService;
     private readonly IEditorProceduresService _editorProceduresService;
     private readonly IProjectUpdateService _projectUpdateService;
+    private readonly IAssetImporter _assetImporter;
 
     public ProjectSetupService(
         ILogger<ProjectSetupService> logger, 
@@ -25,7 +26,8 @@ public class ProjectSetupService : IProjectSetupService
         IActiveProjectService activeProjectService, 
         IAssetsService assetsService, 
         IEditorProceduresService editorProceduresService, 
-        IProjectUpdateService projectUpdateService)
+        IProjectUpdateService projectUpdateService, 
+        IAssetImporter assetImporter)
     {
         _logger = logger;
         _sceneManagementService = sceneManagementService;
@@ -33,6 +35,7 @@ public class ProjectSetupService : IProjectSetupService
         _assetsService = assetsService;
         _editorProceduresService = editorProceduresService;
         _projectUpdateService = projectUpdateService;
+        _assetImporter = assetImporter;
     }
 
     public async Task PrepareProject()
@@ -50,6 +53,8 @@ public class ProjectSetupService : IProjectSetupService
         }
         
         await _projectUpdateService.UpdateProject(project);
+        await _assetImporter.ReimportAll();
+        await _sceneManagementService.InitializeAsync();
 		
         await OpenLastScene();
         prepareProjectProcedure.Complete();

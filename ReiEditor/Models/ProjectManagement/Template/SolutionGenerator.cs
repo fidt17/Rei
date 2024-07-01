@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Creation;
 using ReiEditor.Models.Services.Engine.Settings;
@@ -63,32 +65,53 @@ public class SolutionGenerator : ISolutionGenerator
             projectGuid, projectName, 
             _engineSettingsProvider.GetEngineDebugIncludeDir(), 
             _engineSettingsProvider.GetEngineReleaseIncludeDir(), 
-            _engineSettingsProvider.GetEngineSourceIncludes(),
-            GetMainFileName());
+            _engineSettingsProvider.GetEngineSourceIncludes());
 		
         await File.WriteAllTextAsync(projectFilePath, filledTemplate);
     }
 
-    public async Task AddClCompile(string projectFilePath, string includePath)
+    public async Task AddClCompile(string projectFilePath, IEnumerable<string> includes)
     {
-        if (string.IsNullOrWhiteSpace(includePath)) return;
-        
-        if (includePath[0] == '\\' || includePath[0] == '/')
-        {
-            includePath = includePath.Remove(0, 1);
-        }
-
-        includePath = includePath.Replace("\\", "/");
-        
         var projectFile = await File.ReadAllTextAsync(projectFilePath);
         if (projectFile == null) throw new Exception($"Missing project file. Path: {projectFilePath}");
+        
+        var includesList = includes.ToList();
 
-        if (projectFile.Contains(includePath)) return;
+        for (var index = includesList.Count - 1; index >= 0; index--)
+        {
+            var include = includesList[index];
+            if (include == null)
+            {
+                _logger.LogError("Missing include path");
+                includesList.RemoveAt(index);
+                continue;
+            }
+            
+            include = include.Replace("\\", "/");
+
+            if (include[0] == '/')
+            {
+                include = include.Remove(0, 1);
+            }
+
+            if (projectFile.Contains(include))
+            {
+                includesList.RemoveAt(index);
+                continue;
+            }
+
+            includesList[index] = include;
+        }
 
         const string GROUP = "<ItemGroup Label=\"ClCompile\">";
         var groupIdx = projectFile.IndexOf(GROUP, StringComparison.Ordinal) + GROUP.Length;
 
-        projectFile = projectFile.Insert(groupIdx, $"\n   <ClCompile Include=\"{includePath}\" />\n");
+        foreach (var s in includesList)
+        {
+            projectFile = projectFile.Insert(groupIdx, $"\n   <ClCompile Include=\"{s}\" />");
+            _logger.LogWarning($"<ClCompile Include=\"{s}\" />");
+        }
+        
         await File.WriteAllTextAsync(projectFilePath, projectFile);
     }
 
@@ -120,8 +143,7 @@ public class SolutionGenerator : ISolutionGenerator
             FormatGuid(projectGuid), projectName, 
             _engineSettingsProvider.GetEngineDebugIncludeDir(), 
             _engineSettingsProvider.GetEngineReleaseIncludeDir(), 
-            _engineSettingsProvider.GetEngineSourceIncludes(),
-            GetMainFileName());
+            _engineSettingsProvider.GetEngineSourceIncludes());
 		
         var filePath = Path.Combine(projectFolderPath, $"{projectName}{FileExtensions.VS_PROJECT}");
 		
