@@ -167,6 +167,6 @@ public class BehaviourRegistry : IBehaviourRegistry
             compileIncludes.Add(file.Replace(scriptsPath, ""));
         }
 
-        await _solutionGenerator.AddClCompile(_activeProjectService.GetActiveProject().ProjectVisualStudioProjectPath, compileIncludes);
+        await _solutionGenerator.AddSourceFiles(_activeProjectService.GetActiveProject().ProjectVisualStudioProjectPath, compileIncludes);
     }
 }

@@ -8,5 +8,5 @@ public interface ISolutionGenerator
 {
 	Task<SolutionGenerationResult> GenerateSolution(ProjectCreationConfiguration projectCreationConfiguration);
 	Task UpdateProjectFile(string projectFilePath);
-	Task AddClCompile(string projectFilePath, IEnumerable<string> includes);
+	Task AddSourceFiles(string projectFilePath, IEnumerable<string> includes);
 }

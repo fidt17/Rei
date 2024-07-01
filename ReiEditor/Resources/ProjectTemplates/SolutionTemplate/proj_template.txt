@@ -18,6 +18,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  
+  <ItemGroup Label="ClInclude">
+  </ItemGroup>
 
   <ItemGroup Label="ClCompile">
   </ItemGroup>

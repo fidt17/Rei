@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Creation;
 using ReiEditor.Models.Services.Engine.Settings;
@@ -70,7 +71,7 @@ public class SolutionGenerator : ISolutionGenerator
         await File.WriteAllTextAsync(projectFilePath, filledTemplate);
     }
 
-    public async Task AddClCompile(string projectFilePath, IEnumerable<string> includes)
+    public async Task AddSourceFiles(string projectFilePath, IEnumerable<string> includes)
     {
         var projectFile = await File.ReadAllTextAsync(projectFilePath);
         if (projectFile == null) throw new Exception($"Missing project file. Path: {projectFilePath}");
@@ -87,9 +88,9 @@ public class SolutionGenerator : ISolutionGenerator
                 continue;
             }
             
-            include = include.Replace("\\", "/");
+            include = include.Replace("/", "\\");
 
-            if (include[0] == '/')
+            if (include[0] == '\\')
             {
                 include = include.Remove(0, 1);
             }
@@ -103,14 +104,27 @@ public class SolutionGenerator : ISolutionGenerator
             includesList[index] = include;
         }
 
-        const string GROUP = "<ItemGroup Label=\"ClCompile\">";
-        var groupIdx = projectFile.IndexOf(GROUP, StringComparison.Ordinal) + GROUP.Length;
-
+        var compileStr = new StringBuilder();
+        var includeStr = new StringBuilder();
         foreach (var s in includesList)
         {
-            projectFile = projectFile.Insert(groupIdx, $"\n   <ClCompile Include=\"{s}\" />");
-            _logger.LogWarning($"<ClCompile Include=\"{s}\" />");
+            if (s.EndsWith(".cpp"))
+            {
+                compileStr.AppendLine($"   <ClCompile Include=\"{s}\" />");
+            }
+            else if (s.EndsWith(".h"))
+            {
+                includeStr.AppendLine($"   <ClInclude Include=\"{s}\" />");
+            }
         }
+        
+        const string COMPILE_GROUP = "<ItemGroup Label=\"ClCompile\">";
+        var compileGroupIdx = projectFile.IndexOf(COMPILE_GROUP, StringComparison.Ordinal) + COMPILE_GROUP.Length;
+        projectFile = projectFile.Insert(compileGroupIdx, $"\n{compileStr}");
+        
+        const string INCLUDE_GROUP = "<ItemGroup Label=\"ClInclude\">";
+        var includeGroupIdx = projectFile.IndexOf(INCLUDE_GROUP, StringComparison.Ordinal) + INCLUDE_GROUP.Length;
+        projectFile = projectFile.Insert(includeGroupIdx, $"\n{includeStr}");
         
         await File.WriteAllTextAsync(projectFilePath, projectFile);
     }
