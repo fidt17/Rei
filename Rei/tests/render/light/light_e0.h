@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
-#include "../../../resources/rei_behaviours/render/Light/AmbientLight.h"
-#include "../../../resources/rei_behaviours/render/Light/PointLight.h"
+#include "../../../resources/rei_behaviours/render/light/AmbientLight.h"
+#include "../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Services.h"
 #include "Modules/Render/Shaders/Shader.h"

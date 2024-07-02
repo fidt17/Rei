@@ -1,6 +1,6 @@
 #include "RadiusMovement.h"
 
-#include "rei_behaviours/render/Light/PointLight.h"
+#include "rei_behaviours/render/light/PointLight.h"
 
 void RadiusMovement::Update()
 {

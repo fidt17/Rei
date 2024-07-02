@@ -471,8 +471,8 @@
     <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="external\stb_image.h" />
     <ClInclude Include="resources\rei_behaviours\render\Camera.h" />
-    <ClInclude Include="resources\rei_behaviours\render\Light\AmbientLight.h" />
-    <ClInclude Include="resources\rei_behaviours\render\Light\PointLight.h" />
+    <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
+    <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
@@ -558,8 +558,8 @@
     <ClCompile Include="external\glad.cpp" />
     <ClCompile Include="external\glm\detail\glm.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\Camera.cpp" />
-    <ClCompile Include="resources\rei_behaviours\render\Light\AmbientLight.cpp" />
-    <ClCompile Include="resources\rei_behaviours\render\Light\PointLight.cpp" />
+    <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
+    <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
     <ClCompile Include="src\Common\pch.cpp">

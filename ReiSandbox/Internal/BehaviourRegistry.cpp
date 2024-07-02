@@ -11,8 +11,8 @@
 #include "C:\Repos\Rei Projects\New Project\Project\Scripts\Behaviours\RadiusMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
-#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Light\AmbientLight.h"
-#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Light\PointLight.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\light\AmbientLight.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\light\PointLight.h"
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
