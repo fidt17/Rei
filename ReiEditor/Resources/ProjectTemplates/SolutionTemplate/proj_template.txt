@@ -116,7 +116,9 @@
     </PostBuildEvent>
     
     <PreBuildEvent>
-      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"
+xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      </Command>
     </PreBuildEvent>
     
   </ItemDefinitionGroup>
@@ -142,7 +144,9 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"
+xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -171,7 +175,9 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>xcopy /y /d "{3}\Rei.dll" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"
+xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='EditorRelease|x64'">
@@ -200,7 +206,9 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>xcopy /y /d "{3}\Rei.dll" "$(TargetDir)"</Command>
+      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"
+xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
