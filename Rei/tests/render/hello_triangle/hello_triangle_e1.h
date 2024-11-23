@@ -12,7 +12,7 @@ public:
     {
     }
 
-    ~hello_triangle_e1() override
+    void Dispose() override
     {
         glDeleteVertexArrays(1, &_vertexAttributes);
         glDeleteBuffers(1, &_vertexBuffer);

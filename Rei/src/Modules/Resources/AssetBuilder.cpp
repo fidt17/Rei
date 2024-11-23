@@ -110,9 +110,13 @@ namespace rei::resources
         LOG("Number of channels: " + STRING(nrChannels))
 
         if (mode == GL_RGB)
-            LOG("Format: RGB")
+        {
+            LOG("Format: RGB");
+        }
         else
-            LOG("Format: RGBA")
+        {
+            LOG("Format: RGBA");
+        }
 
         LOG("Length: " + STRING(length))
     }

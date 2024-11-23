@@ -8,12 +8,16 @@ public class BuildAssetMap
 	public struct AssetBuildInfo
 	{
 		public string Id { get; }
+		public string Name { get; }
+		public string AssetPath { get; }
 		public string Path { get; }
 		public long Offset { get; }
 
-		public AssetBuildInfo(string id, string path, long offset)
+		public AssetBuildInfo(string id, string name, string assetPath, string path, long offset)
 		{
 			Id = id;
+			Name = name;
+			AssetPath = assetPath;
 			Path = path;
 			Offset = offset;
 		}

@@ -1,10 +1,8 @@
 ﻿using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.ProjectManagement.Setup;
-using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor;
 using ProjectEditorWindow = ReiEditor.Views.Windows.Editor.ProjectEditorWindow;
@@ -17,26 +15,20 @@ public class EditorEntryPoint
     private readonly IMainWindowService _mainWindowService;
     private readonly IFactory<ProjectEditorWindowViewModel> _projectEditorWindowViewModelFactory;
     private readonly IProjectSetupService _projectSetupService;
-    private readonly IAssetImporter _assetImporter;
     private readonly IBuildService _buildService;
-    private readonly ISceneManagementService _sceneManagementService;
 
     public EditorEntryPoint(
         ILogger<EditorEntryPoint> logger, 
         IMainWindowService mainWindowService, 
         IFactory<ProjectEditorWindowViewModel> projectEditorWindowViewModelFactory,
         IProjectSetupService projectSetupService, 
-        IBuildService buildService, 
-        ISceneManagementService sceneManagementService, 
-        IAssetImporter assetImporter)
+        IBuildService buildService)
     {
         _logger = logger;
         _mainWindowService = mainWindowService;
         _projectEditorWindowViewModelFactory = projectEditorWindowViewModelFactory;
         _projectSetupService = projectSetupService;
         _buildService = buildService;
-        _sceneManagementService = sceneManagementService;
-        _assetImporter = assetImporter;
     }
 
     public async Task Start()

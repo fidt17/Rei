@@ -12,6 +12,8 @@ public:
     {
     }
 
+    void Dispose() override { }
+
     template <size_t N>
     u32 CreateTriangle(std::array<float, N> vertices)
     {

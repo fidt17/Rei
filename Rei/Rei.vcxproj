@@ -599,12 +599,15 @@
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
     <ClInclude Include="src\Modules\Render\Color\Color.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\Mesh.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\Vertex.h" />
+    <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\Systems\AssignMainCameraSystem.h" />
     <ClInclude Include="src\Modules\Render\Systems\FlyCameraSystem.h" />
-    <ClInclude Include="src\Modules\Render\Textures\Texture2D.h" />
+    <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
@@ -639,7 +642,7 @@
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_e3.h" />
     <ClInclude Include="tests\render\hello_triangle\hello_triangle_indexed.h" />
     <ClInclude Include="tests\render\light\light_e0.h" />
-    <ClInclude Include="tests\render\shader_ex\shader_e0.h" />
+    <ClInclude Include="tests\render\model\model_e0.h" />
     <ClInclude Include="tests\render\textures\texture_e0.h" />
     <ClInclude Include="tests\render\textures\texture_e1.h" />
     <ClInclude Include="tests\render\transform\transform_e0.h" />
@@ -837,6 +840,8 @@
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\Input\Input.cpp" />
     <ClCompile Include="src\Modules\Render\Color\Color.cpp" />
+    <ClCompile Include="src\Modules\Render\Mesh\Mesh.cpp" />
+    <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -917,7 +922,7 @@
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\AssignMainCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\FlyCameraSystem.cpp" />
-    <ClCompile Include="src\Modules\Render\Textures\Texture2D.cpp" />
+    <ClCompile Include="src\Modules\Render\Textures\Texture.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
@@ -1095,11 +1100,8 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="external\asimp\.editorconfig" />
-    <Content Include="external\asimp\assimp-vc143-mt.dll" />
-    <Content Include="external\asimp\assimp-vc143-mt.lib" />
-    <Content Include="external\asimp\config.h.in" />
     <Content Include="resources\shaders\light_source.rshader" />
+    <Content Include="resources\shaders\lit.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />
@@ -1186,9 +1188,11 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
-xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
 xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.lib" "$(TargetDir)"
-xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"</Command>
+xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"
+
+xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
+xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">
@@ -1212,9 +1216,11 @@ xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"</C
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
-xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
 xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.lib" "$(TargetDir)"
-xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"</Command>
+xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"
+
+xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
+xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -1244,9 +1250,11 @@ xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"</C
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
-xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
 xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.lib" "$(TargetDir)"
-xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"</Command>
+xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"
+
+xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
+xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

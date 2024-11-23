@@ -7,7 +7,7 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtx/vector_angle.inl"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Textures/Texture2D.h"
+#include "Modules/Render/Textures/Texture.h"
 
 class VertexData
 {
@@ -20,7 +20,7 @@ public:
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &VEB);
-        
+
         float vertices[] = {
             // positions          // texture coords           
             0.5f, 0.5f, 0.0f, 2.0f, 2.0f, // top right
@@ -28,20 +28,20 @@ public:
             -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, // bottom left
             -0.5f, 0.5f, 0.0f, 0.0f, 2.0f // top left 
         };
-        
+
         unsigned int indices[] = {
             0, 1, 3, // first triangle
             1, 2, 3 // second triangle
         };
-        
+
         glBindVertexArray(VAO);
-        
+
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VEB);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,GL_STATIC_DRAW);
-        
+
         // position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
@@ -49,7 +49,7 @@ public:
         // texture coord attribute
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
-        
+
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
     }
@@ -67,9 +67,9 @@ class transform_e0 : public BaseRenderScenario
 public:
     explicit transform_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("cbf2e27a-bcd6-4a91-be47-e9985b46ac7d")),
-          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("702e3f65-78ed-46e7-a611-b640a387b10d")),
-          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("0d3c40b8-e7bd-4c79-8662-0489c8203c23"))
+          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("e2eb13b1-fb8f-4969-9fbe-dc1884572416")), // test_2.rshader
+          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")), // test_texture.png
+          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("8ba7a9d6-df0a-4951-9743-62732f786d01")) // ring.png
     {
     }
 
@@ -98,6 +98,7 @@ public:
     }
 
     f32 speedMultiplier = 1;
+
     void Render() override
     {
         auto time = static_cast<float>(glfwGetTime()) * speedMultiplier;
@@ -118,17 +119,17 @@ public:
         glBindVertexArray(_object0.VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
-        
+
         SetTransform(glm::vec3(-sinTime), time);
         glBindVertexArray(_object1.VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
-        
+
         SetTransform(glm::vec3(sinTime, -sinTime, 0), time);
         glBindVertexArray(_object2.VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
-        
+
         SetTransform(glm::vec3(-sinTime, sinTime, 0), time);
         glBindVertexArray(_object3.VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -139,8 +140,8 @@ public:
 
 private:
     rei::render::Shader _shader;
-    rei::render::Texture2D _firstTexture;
-    rei::render::Texture2D _secondTexture;
+    rei::render::Texture _firstTexture;
+    rei::render::Texture _secondTexture;
 
     VertexData _object0;
     VertexData _object1;

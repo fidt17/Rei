@@ -1,17 +1,13 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
-#include "../../../resources/rei_behaviours/render/Camera.h"
-#include "../../../src/Ecs/RefComponent.h"
-#include "Engine/Engine.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 #include "glm/fwd.hpp"
-#include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtx/vector_angle.inl"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Textures/Texture2D.h"
+#include "Modules/Render/Textures/Texture.h"
 
 class VertexData
 {
@@ -105,9 +101,9 @@ class transform_e1 : public BaseRenderScenario
 public:
     explicit transform_e1(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("ea898740-84a0-4a87-809a-fdb57717e812")),
-          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")),
-          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("a00be948-8be9-49d1-98af-f013a594156e"))
+          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("ea898740-84a0-4a87-809a-fdb57717e812")), // test_4.rshader
+          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")), // test_texture.png
+          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("8ba7a9d6-df0a-4951-9743-62732f786d01")) // ring.png
     {
     }
 
@@ -179,8 +175,8 @@ public:
 
 private:
     rei::render::Shader _shader;
-    rei::render::Texture2D _firstTexture;
-    rei::render::Texture2D _secondTexture;
+    rei::render::Texture _firstTexture;
+    rei::render::Texture _secondTexture;
 
     VertexData _object0;
 };

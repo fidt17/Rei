@@ -1,16 +1,18 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
 #include "Engine/Services.h"
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Textures/Texture2D.h"
+#include "Modules/Render/Textures/Texture.h"
 
 class texture_e0 : public BaseRenderScenario
 {
 public:
     explicit texture_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("9742d141-aea6-45ce-b256-845d4bd9f0aa")),
-          _texture(rei::GetAssetManager().LoadById<rei::render::Texture2D>("702e3f65-78ed-46e7-a611-b640a387b10d"))
+          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("23a4d09f-3987-466c-ba2f-1e51db162259")), // unlit.rshader
+          _texture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")) // test_texture.png
     {
     }
 
@@ -73,6 +75,13 @@ public:
         glClear(GL_COLOR_BUFFER_BIT);
 
         _shader.Use();
+        _shader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _shader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        auto model = glm::mat4(1.0f);
+        model = translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model = scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // it's a bit too big for our scene, so scale it down
+        _shader.SetMatrix4f("model", model);
+        
         _texture.Use();
         glBindVertexArray(_vertexArray);
         
@@ -85,6 +94,6 @@ public:
 
 private:
     rei::render::Shader _shader;
-    rei::render::Texture2D _texture;
+    rei::render::Texture _texture;
     unsigned int _vertexBuffer, _vertexArray, _elementBuffer;
 };
