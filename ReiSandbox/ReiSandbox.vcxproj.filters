@@ -3,8 +3,9 @@
   <ItemGroup>
     <ClCompile Include="Internal\BehaviourRegistry.cpp" />
     <ClCompile Include="ReiApp.cpp" />
+    <ClCompile Include="Behaviours\RadiusMovement.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Behaviours\MyBehaviour.h" />
+    <ClInclude Include="Behaviours\RadiusMovement.h" />
   </ItemGroup>
 </Project>

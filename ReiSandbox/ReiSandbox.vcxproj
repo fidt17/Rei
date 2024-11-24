@@ -85,6 +85,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei\external;$(SolutionDir)Rei\resources;</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>false</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

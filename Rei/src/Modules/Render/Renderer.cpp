@@ -30,12 +30,12 @@
 #elif RENDER_SCENARIO_NUM == 8
     #include "../../../tests/render/transform/transform_e1.h"
     #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<transform_e1>(TARGET)
-#elif RENDER_SCENARIO_NUM == 9 
+#elif RENDER_SCENARIO_NUM == 9
     #include "../../../tests/render/light/light_e0.h"
     #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<light_e0>(TARGET)
-#elif RENDER_SCENARIO_NUM == 10 
-    #include "../../../tests/render/model/model_e0.h"
-    #define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<model_e0>(TARGET)
+#elif RENDER_SCENARIO_NUM == 10
+#include "../../../tests/render/model/model_e0.h"
+#define CREATE_RENDER_SCENARIO(TARGET) std::make_unique<model_e0>(TARGET)
 #endif
 
 namespace rei::render
@@ -50,6 +50,14 @@ namespace rei::render
         if (_renderScenario != nullptr)
         {
             _renderScenario->SetCamera(_camera);
+        }
+
+        if (_target)
+        {
+            int windowWidth;
+            int windowHeight;
+            glfwGetWindowSize(_target, &windowWidth, &windowHeight);
+            camera.Get().SetOutputSize(windowWidth, windowHeight);
         }
     }
 

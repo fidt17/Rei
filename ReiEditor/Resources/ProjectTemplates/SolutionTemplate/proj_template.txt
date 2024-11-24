@@ -175,8 +175,8 @@ xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"
-xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      <Command>xcopy /y /d "{3}\Rei.dll" "$(TargetDir)"
+xcopy /y /d "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -206,8 +206,8 @@ xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>xcopy /y /d "{2}\Rei.dll" "$(TargetDir)"
-xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      <Command>xcopy /y /d "{3}\Rei.dll" "$(TargetDir)"
+xcopy /y /d "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
