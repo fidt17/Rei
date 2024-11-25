@@ -10,8 +10,10 @@ namespace rei::render
     public:
         Model(const char* path)
         {
-                LoadModel(path);
+            LoadModel(path);
         }
+
+        Model(resources::BinaryReader& reader);
 
         void Draw(const Shader& shader) const;
 

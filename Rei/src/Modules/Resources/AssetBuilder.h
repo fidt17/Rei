@@ -15,7 +15,5 @@ namespace rei::resources
         std::string ReadAllText(const std::filesystem::path& path) const;
 
         void BuildDataAsset(const std::filesystem::path& assetPath, BinaryWriter& writer) const;
-
-        void BuildTextureAsset(const std::filesystem::path& assetPath, BinaryWriter& writer) const;
     };
 }

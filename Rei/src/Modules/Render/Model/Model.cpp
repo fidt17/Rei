@@ -4,11 +4,20 @@
 #include "stb_image.h"
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
-#include "Modules/Resources/AssetBuilder.h"
 #include "Startup/AppEntryPoint.h"
 
 namespace rei::render
 {
+    Model::Model(resources::BinaryReader& reader)
+    {
+        i32 meshCount = reader.GetI32();
+        for (int i = 0; i < meshCount; i++)
+        {
+            Mesh mesh(reader);
+            _meshes.push_back(mesh);
+        }
+    }
+
     void Model::Draw(const Shader& shader) const
     {
         for (const auto& mesh : _meshes)

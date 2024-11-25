@@ -32,16 +32,16 @@ namespace rei::resources
         {
             return T(*this);
         }
-
-    private:
-        std::ifstream _stream;
-
+        
         template <typename T>
-        T GetByType()
+        REI_API T GetByType()
         {
             T value;
             _stream.read(reinterpret_cast<char*>(&value), sizeof value);
             return value;
         }
+
+    private:
+        std::ifstream _stream;
     };
 }

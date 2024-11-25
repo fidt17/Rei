@@ -32,23 +32,23 @@ namespace rei::resources
         return _stream.tellp();
     }
 
-    void BinaryWriter::WriteU8(const u8 value) { WriteByType(value); }
+    void BinaryWriter::WriteU8(const u8 value) { Write(value); }
 
-    void BinaryWriter::WriteU16(const u16 value) { WriteByType(value); }
+    void BinaryWriter::WriteU16(const u16 value) { Write(value); }
 
-    void BinaryWriter::WriteU32(const u32 value) { WriteByType(value); }
+    void BinaryWriter::WriteU32(const u32 value) { Write(value); }
 
-    void BinaryWriter::WriteU64(const u64 value) { WriteByType(value); }
+    void BinaryWriter::WriteU64(const u64 value) { Write(value); }
 
-    void BinaryWriter::WriteI8(const i8 value) { WriteByType(value); }
+    void BinaryWriter::WriteI8(const i8 value) { Write(value); }
 
-    void BinaryWriter::WriteI16(const i16 value) { WriteByType(value); }
+    void BinaryWriter::WriteI16(const i16 value) { Write(value); }
 
-    void BinaryWriter::WriteI32(const i32 value) { WriteByType(value); }
+    void BinaryWriter::WriteI32(const i32 value) { Write(value); }
 
-    void BinaryWriter::WriteI64(const i64 value) { WriteByType(value); }
+    void BinaryWriter::WriteI64(const i64 value) { Write(value); }
 
-    void BinaryWriter::WriteF32(const f32 value) { WriteByType(value); }
+    void BinaryWriter::WriteF32(const f32 value) { Write(value); }
 
     void BinaryWriter::WriteStr(const std::string& value)
     {

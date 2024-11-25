@@ -100,9 +100,11 @@ class model_e0 : public BaseRenderScenario
 public:
     explicit model_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/lit.rshader")),
+          //_shader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/lit.rshader")),
+          _shader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/default.rshader")),
           _lightSourceShader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader")),
-          _model("C:/Repos/Rei/TMP/backpack/backpack.obj")
+          _model(rei::GetAssetManager().LoadFrom<rei::render::Model>("C:/Repos/Rei/TMP/backpack/backpack.obj"))
+          //_model("C:/Repos/Rei/TMP/backpack/backpack.obj")
     {
     }
 
@@ -124,7 +126,7 @@ public:
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        RenderModel(glm::vec3(0,sin(glfwGetTime()),0));
+        RenderModel(glm::vec3(0,0,0), -glfwGetTime() / 5);
 
         for (auto& light : _lights)
         {
@@ -134,7 +136,7 @@ public:
         glfwSwapBuffers(_target);
     }
 
-    void RenderModel(glm::vec3 offset)
+    void RenderModel(glm::vec3 offset, f32 rotation)
     {
         SetAmbientLight(_shader);
         SetPointLights(_shader);
@@ -146,7 +148,7 @@ public:
 
         auto model = glm::mat4(1.0f);
         model = translate(model, offset);
-        model = rotate(model, 180.0f, glm::vec3(0,1,0));
+        model = rotate(model, rotation, glm::vec3(0,1,0));
         model = scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
         _shader.SetMatrix4f("model", model);
 

@@ -564,6 +564,7 @@
     <ClInclude Include="resources\rei_behaviours\render\Camera.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
+    <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
@@ -609,6 +610,8 @@
     <ClInclude Include="src\Modules\Render\Systems\FlyCameraSystem.h" />
     <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
+    <ClInclude Include="src\Modules\Resources\Builders\MeshBuilder.h" />
+    <ClInclude Include="src\Modules\Resources\Builders\TextureBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryWriter.h" />
     <ClInclude Include="src\Modules\Scenes\BuildScenesConfig.h" />
@@ -654,6 +657,7 @@
     <ClCompile Include="resources\rei_behaviours\render\Camera.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
+    <ClCompile Include="resources\rei_behaviours\render\MeshRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
@@ -699,6 +703,8 @@
     <ClCompile Include="src\Modules\Render\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Textures\Texture.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
+    <ClCompile Include="src\Modules\Resources\Builders\MeshBuilder.cpp" />
+    <ClCompile Include="src\Modules\Resources\Builders\TextureBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryWriter.cpp" />
     <ClCompile Include="src\Modules\Scenes\BuildScenesConfig.cpp" />
@@ -724,6 +730,7 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\shaders\default.rshader" />
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />

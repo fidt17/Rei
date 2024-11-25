@@ -6,9 +6,8 @@
 
 #include "Serialization/BinaryWriter.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#include "glad/glad.h"
+#include "Builders/MeshBuilder.h"
+#include "Builders/TextureBuilder.h"
 
 namespace rei::resources
 {
@@ -46,13 +45,20 @@ namespace rei::resources
         LOG("Path: " + filePath.string())
         LOG("File name: " + filePath.filename().string())
 
-        if (filePath.extension() == ".png")
+        #define ADD_TO_MAP(x, y) map[x] = [&](const std::filesystem::path& p, BinaryWriter& w) { y(p, w); };
+        std::map<std::string, std::function<void(const std::filesystem::path&, BinaryWriter&)>> map;
+        ADD_TO_MAP(".png", TextureBuilder().BuildTextureAsset)
+        ADD_TO_MAP(".obj", MeshBuilder().BuildMeshAsset)
+        ADD_TO_MAP(".fbx", MeshBuilder().BuildMeshAsset)
+
+        const auto extension = filePath.extension().string();
+        if (map.find(extension) == map.end())
         {
-            BuildTextureAsset(filePath, writer);
+            BuildDataAsset(filePath, writer);
         }
         else
         {
-            BuildDataAsset(filePath, writer);
+            map[extension](filePath, writer);
         }
 
         const i64 bytesWritten = writer.GetPosition() - offset;
@@ -86,38 +92,5 @@ namespace rei::resources
     {
         const std::string str = ReadAllText(assetPath);
         writer.WriteStr(str);
-    }
-
-    void AssetBuilder::BuildTextureAsset(const std::filesystem::path& assetPath, BinaryWriter& writer) const
-    {
-        auto extension = assetPath.extension();
-
-        i32 width, height, nrChannels;
-        unsigned char* data = stbi_load(assetPath.string().c_str(), &width, &height, &nrChannels, 0);
-        i32 mode = nrChannels == 4 ? GL_RGBA : GL_RGB;
-
-        writer.WriteI32(width);
-        writer.WriteI32(height);
-        writer.WriteI32(mode);
-
-        const i32 length = width * height * nrChannels;
-        writer.WriteBytes(data, length);
-
-        stbi_image_free(data);
-
-        LOG("Width: " + STRING(width))
-        LOG("Height: " + STRING(height))
-        LOG("Number of channels: " + STRING(nrChannels))
-
-        if (mode == GL_RGB)
-        {
-            LOG("Format: RGB");
-        }
-        else
-        {
-            LOG("Format: RGBA");
-        }
-
-        LOG("Length: " + STRING(length))
     }
 }

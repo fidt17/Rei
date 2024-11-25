@@ -29,13 +29,13 @@ namespace rei::resources
 
         REI_API void WriteStr(const std::string&);
 
-    private:
-        std::ofstream _stream;
-        
         template <typename T>
-        void WriteByType(T value)
+        void Write(T value)
         {
             _stream.write(reinterpret_cast<char*>(&value), sizeof value);
         }
+        
+    private:
+        std::ofstream _stream;
     };
 }
