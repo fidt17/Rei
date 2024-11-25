@@ -150,6 +150,7 @@ namespace rei::internal::engine
         _app->OnShutdown();
         _mainRenderer->Dispose();
         glfwTerminate();
+        Services::GetInstance()->GetAssetManager().DeleteTmpFiles();
 
         LOG("Shutdown complete")
         ShutdownEvent(_exitCode);

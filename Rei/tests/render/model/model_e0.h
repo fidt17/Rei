@@ -100,8 +100,8 @@ class model_e0 : public BaseRenderScenario
 public:
     explicit model_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("30429fc8-e274-4503-811a-441099a29e66")), // lit.rshader
-          _lightSourceShader(rei::GetAssetManager().LoadById<rei::render::Shader>("d887c985-f2da-4c89-b62c-b329654839cb")), // light_source.rshader
+          _shader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/lit.rshader")),
+          _lightSourceShader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader")),
           _model("C:/Repos/Rei/TMP/backpack/backpack.obj")
     {
     }
