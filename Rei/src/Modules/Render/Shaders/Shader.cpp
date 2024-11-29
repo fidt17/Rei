@@ -16,6 +16,11 @@ namespace rei::render
         const std::string fragmentShader = version + "#define FRAGMENT;\n" + content;
 
         _id = ShaderUtility().CreateShaderProgram(vertexShader.c_str(), fragmentShader.c_str());
+
+#if DEBUG
+        _vertexShader = vertexShader;
+        _fragmentShader = fragmentShader;
+#endif
     }
 
     Shader::Shader(const char* vertexSource, const char* fragmentSource)
@@ -23,14 +28,14 @@ namespace rei::render
         _id = ShaderUtility().CreateShaderProgram(vertexSource, fragmentSource);
     }
 
-    Shader::~Shader()
-    {
-        glDeleteProgram(_id);
-    }
-
     void Shader::Use() const
     {
         glUseProgram(_id);
+    }
+
+    void Shader::Delete() const
+    {
+        glDeleteProgram(_id);
     }
 
     i32 Shader::GetLocation(const std::string& name) const

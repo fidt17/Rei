@@ -3,6 +3,7 @@
 #define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
     public:\
     BEHAVIOUR_NAME() = default;\
+    explicit BEHAVIOUR_NAME(const i32 id, const rei::ecs::Entity entity) : Behaviour(id, entity) {} ;\
     explicit BEHAVIOUR_NAME(const i32 id, const rei::ecs::Entity entity, const nlohmann::json& data);\
     BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
     private:

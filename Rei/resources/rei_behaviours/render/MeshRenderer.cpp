@@ -5,7 +5,7 @@ namespace rei::render
 {
     void MeshRenderer::Render() const
     {
-        _mesh.Render(_shader);
+        _mesh.Render(_material->GetShader());
     }
 
     void MeshRenderer::SetMesh(const Mesh& mesh)
@@ -13,8 +13,18 @@ namespace rei::render
         _mesh = mesh;
     }
 
-    void MeshRenderer::SetShader(const Shader& shader)
+    void MeshRenderer::SetMaterial(std::shared_ptr<Material> material)
     {
-        _shader = shader;
+        _material = material;
+    }
+
+    const Material& MeshRenderer::GetMaterial() const
+    {
+        return *_material;
+    }
+
+    const Shader& MeshRenderer::GetShader() const
+    {
+        return _material->GetShader();
     }
 }

@@ -600,6 +600,7 @@
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
     <ClInclude Include="src\Modules\Render\Color\Color.h" />
+    <ClInclude Include="src\Modules\Render\Material\Material.h" />
     <ClInclude Include="src\Modules\Render\Mesh\Mesh.h" />
     <ClInclude Include="src\Modules\Render\Mesh\Vertex.h" />
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
@@ -694,6 +695,7 @@
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\Input\Input.cpp" />
     <ClCompile Include="src\Modules\Render\Color\Color.cpp" />
+    <ClCompile Include="src\Modules\Render\Material\Material.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\Mesh.cpp" />
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />

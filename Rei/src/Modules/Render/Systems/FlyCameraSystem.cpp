@@ -31,7 +31,7 @@ void rei::render::FlyCameraSystem::OnUpdate()
     {
         auto& transform = GET(e, transformation::Transform);
 
-        const float cameraSpeed = 30.0f * deltaTime; // adjust accordingly
+        const float cameraSpeed = 3.0f * deltaTime; // adjust accordingly
 
         glm::vec3 cameraRight = transform.GetRight();
         glm::vec3 cameraFront = transform.GetForward();

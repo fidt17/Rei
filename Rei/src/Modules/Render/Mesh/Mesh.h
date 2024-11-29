@@ -12,6 +12,7 @@ namespace rei::render
         std::vector<u32> Indices;
         std::vector<Texture> Textures;
 
+        REI_API Mesh() = default;
         Mesh(resources::BinaryReader& reader);
         Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Texture>& textures);
                 

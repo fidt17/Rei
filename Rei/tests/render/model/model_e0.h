@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
+#include "../../../resources/rei_behaviours/render/MeshRenderer.h"
 #include "glfw/glfw3.h"
-#include "glm/ext/matrix_transform.hpp"
 #include "Modules/Render/Model/Model.h"
 #include "../../../resources/rei_behaviours/render/light/AmbientLight.h"
 #include "../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
+#include "Engine/Engine.h"
 
 #define POINT_LIGHTS_COUNT 4
 
@@ -100,11 +101,7 @@ class model_e0 : public BaseRenderScenario
 public:
     explicit model_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          //_shader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/lit.rshader")),
-          _shader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/default.rshader")),
-          _lightSourceShader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader")),
-          _model(rei::GetAssetManager().LoadFrom<rei::render::Model>("C:/Repos/Rei/TMP/backpack/backpack.obj"))
-          //_model("C:/Repos/Rei/TMP/backpack/backpack.obj")
+          _lightSourceShader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader"))
     {
     }
 
@@ -119,6 +116,26 @@ public:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glEnable(GL_MULTISAMPLE);
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+        const auto model = rei::GetAssetManager().LoadFrom<rei::render::Model>("C:/Repos/Rei/TMP/backpack/backpack.obj");
+        const auto shader = rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/default.rshader");
+        auto material = std::make_shared<rei::render::Material>(shader);
+
+        material->GetShader().SetFloat("_Shininess", 1);
+
+        for (const auto& mesh : model.GetMeshes())
+        {
+            ECS_WORLD(rei::GetInternalWorld());
+            auto e = NEW_ENTITY();
+
+            ADD_BEHAVIOUR(e, rei::transformation::Transform);
+            
+            auto& meshRenderer = ADD_BEHAVIOUR(e, rei::render::MeshRenderer);
+            meshRenderer.SetMesh(mesh);
+            meshRenderer.SetMaterial(material);
+
+            _meshRenderers.push_back(GET_REF(e, rei::render::MeshRenderer));
+        }
     }
 
     void Render() override
@@ -126,33 +143,43 @@ public:
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        RenderModel(glm::vec3(0,0,0), -glfwGetTime() / 5);
+        _projectionMatrix = _camera.Get().GetProjectionMatrix();
+        _viewMatrix = _camera.Get().GetViewMatrix();
 
-        for (auto& light : _lights)
+        FindAmbientLights();
+        FindPointLights();
+
+        RenderMeshRenderers();
+
+        for (auto& light : _pointLights)
         {
             RenderPointLight(light);
         }
 
+        Move();
+
         glfwSwapBuffers(_target);
     }
 
-    void RenderModel(glm::vec3 offset, f32 rotation)
+    void RenderMeshRenderers()
     {
-        SetAmbientLight(_shader);
-        SetPointLights(_shader);
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::MeshRenderer>();
+        rei::GetInternalWorld().RefreshAll();
 
-        _shader.SetFloat("_Shininess", 1);
+        FOR(e, f)
+        {
+            auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+            auto& shader = meshRenderer.GetShader();
+            SetAmbientLight(shader);
+            SetPointLights(shader);
 
-        _shader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _shader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+            shader.SetMatrix4f("projection", _projectionMatrix);
+            shader.SetMatrix4f("view", _viewMatrix);
+            shader.SetMatrix4f("model", meshRenderer.GetTransform().CalculateModelMatrix());
 
-        auto model = glm::mat4(1.0f);
-        model = translate(model, offset);
-        model = rotate(model, rotation, glm::vec3(0,1,0));
-        model = scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        _shader.SetMatrix4f("model", model);
-
-        _model.Draw(_shader);
+            meshRenderer.Render();
+        }
     }
 
     void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light) const
@@ -179,52 +206,70 @@ public:
 
     void SetAmbientLight(const rei::render::Shader& shader) const
     {
-        ECS_WORLD(rei::GetInternalWorld());
-        auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::AmbientLight>();
-        rei::GetInternalWorld().RefreshAll();
+        if (_ambientLight.IsNull())
+        {
+            shader.SetFloat("_AmbientLight.Strength", 0);
 
-        if (f->GetEntitiesCount() == 0) return;
-        const rei::render::AmbientLight& ambientLight = GET_REF(*f->begin(), rei::render::AmbientLight);
+            auto c = _ambientLight.Get().GetColor();
+            shader.SetColor("_AmbientLight.Color", rei::render::Color(0, 0, 0, 1));
+            return;
+        }
 
-        shader.SetFloat("_AmbientLight.Strength", ambientLight.GetStrength());
+        shader.SetFloat("_AmbientLight.Strength", _ambientLight.Get().GetStrength());
 
-        auto c = ambientLight.GetColor();
+        auto c = _ambientLight.Get().GetColor();
         shader.SetColor("_AmbientLight.Color", c);
     }
 
-    void SetPointLights(const rei::render::Shader& shader)
+    void SetPointLights(const rei::render::Shader& shader) const
+    {
+        for (int i = 0; i < _pointLights.size(); i++)
+        {
+            auto& light = _pointLights[i];
+            if (light.IsNull()) continue;
+
+            shader.SetVector3("_PointLights[" + std::to_string(i) + "].Position", light.Get().GetTransform().GetPosition());
+            shader.SetFloat("_PointLights[" + std::to_string(i) + "].Strength", light.Get().GetStrength());
+            shader.SetColor("_PointLights[" + std::to_string(i) + "].Color", light.Get().GetColor());
+        }
+    }
+
+    void FindAmbientLights()
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::AmbientLight>();
+        rei::GetInternalWorld().RefreshAll();
+
+        if (f->GetEntitiesCount() == 0) return;
+        _ambientLight = GET_REF(*f->begin(), rei::render::AmbientLight);
+    }
+
+    void FindPointLights()
     {
         ECS_WORLD(rei::GetInternalWorld());
         const auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::behaviour::PointLight>();
         rei::GetInternalWorld().RefreshAll();
 
-        _lights.clear();
+        _pointLights.clear();
         i32 lightsCount = 0;
         FOR(e, f)
         {
-            _lights.emplace_back(GET_REF(e, rei::behaviour::PointLight));
+            _pointLights.emplace_back(GET_REF(e, rei::behaviour::PointLight));
             lightsCount++;
             if (lightsCount >= POINT_LIGHTS_COUNT) break;
-        }
-
-        i32 idx = 0;
-        for (auto& light : _lights)
-        {
-            if (light.IsNull()) continue;
-
-            shader.SetVector3("_PointLights[" + std::to_string(idx) + "].Position", light.Get().GetTransform().GetPosition());
-            shader.SetFloat("_PointLights[" + std::to_string(idx) + "].Strength", light.Get().GetStrength());
-            shader.SetColor("_PointLights[" + std::to_string(idx) + "].Color", light.Get().GetColor());
-
-            idx += 1;
         }
     }
 
 private:
-    rei::render::Shader _shader;
+    glm::mat4 _projectionMatrix;
+    glm::mat4 _viewMatrix;
+
     rei::render::Shader _lightSourceShader;
-    rei::render::Model _model;
+
+    std::vector<rei::ecs::RefComponent<rei::render::MeshRenderer>> _meshRenderers;
 
     BoxVertexData _lightBox;
-    std::vector<rei::ecs::RefComponent<rei::behaviour::PointLight>> _lights;
+
+    rei::ecs::RefComponent<rei::render::AmbientLight> _ambientLight;
+    std::vector<rei::ecs::RefComponent<rei::behaviour::PointLight>> _pointLights;
 };

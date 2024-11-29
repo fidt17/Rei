@@ -17,6 +17,8 @@
 #include "Common/Assert.h"
 #include "Common/ExitCodes.h"
 
+#include "glm/ext/matrix_transform.hpp"
+
 #include "Ecs/Ecs.h"
 
 #include "Modules/Assets/AssetManager.h"

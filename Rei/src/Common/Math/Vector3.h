@@ -8,8 +8,8 @@ namespace rei::math
     {
         SERIALIZABLE_BODY(Vector3)
 
-        explicit Vector3(f32 x, f32 y = 0, f32 z = 0);
-        explicit Vector3(glm::vec3 vec3);
+        REI_API explicit Vector3(f32 x, f32 y = 0, f32 z = 0);
+        REI_API explicit Vector3(glm::vec3 vec3);
 
         SERIALIZE f32 x;
         SERIALIZE f32 y;

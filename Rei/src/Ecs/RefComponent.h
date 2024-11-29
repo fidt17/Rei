@@ -14,6 +14,7 @@ namespace rei::ecs
 
         RefComponent(const std::shared_ptr<EcsRegistry>& w, const Entity e) : _ecs(w), _entity(e)
         {
+            w->Get<T>(e);
         }
 
         T& Get() const

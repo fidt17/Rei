@@ -19,6 +19,18 @@ rei::math::Vector3& rei::transformation::Transform::GetRotation()
     return _rotation;
 }
 
+glm::mat4 rei::transformation::Transform::CalculateModelMatrix() const
+{
+    auto model = glm::mat4(1.0f);
+    model = translate(model, glm::vec3(_position));
+    model = rotate(model, _rotation.x, glm::vec3(1,0,0));
+    model = rotate(model, _rotation.y, glm::vec3(0,1,0));
+    model = rotate(model, _rotation.z, glm::vec3(0,0,1));
+    model = scale(model, glm::vec3(_scale));
+
+    return model;
+}
+
 rei::math::Vector3 rei::transformation::Transform::GetForward() const
 {
     glm::vec3 forward;
@@ -39,7 +51,7 @@ rei::math::Vector3 rei::transformation::Transform::GetRight() const
 {
     const glm::vec3 forward = GetForward();
     const glm::vec3 up = GetUp();
-    
+
     return math::Vector3(glm::normalize(glm::cross(forward, up)));
 }
 
