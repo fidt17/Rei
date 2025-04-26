@@ -89,6 +89,12 @@ namespace rei::render
     void Renderer::Render() const
     {
         if (_target == nullptr) return;
+        if (!_renderScenario->IsCameraSet())
+        {
+            LOG("No active camera found...")
+            _renderScenario->Clear();
+            return;
+        }
 
         _renderScenario->Render();
     }

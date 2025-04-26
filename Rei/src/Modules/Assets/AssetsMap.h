@@ -1,5 +1,10 @@
 ﻿#pragma once
 
+namespace rei::resources
+{
+    class BinaryReader;
+}
+
 namespace rei::assets
 {
     struct BuildAssetInfo

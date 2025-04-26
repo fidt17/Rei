@@ -44,6 +44,10 @@ public class ProjectSetupService : IProjectSetupService
         _editorProceduresService.TrackProcedure(prepareProjectProcedure);
 
         var project = _activeProjectService.GetActiveProject();
+        
+        await _assetImporter.ReimportAll();
+        await _sceneManagementService.InitializeAsync();
+        await _projectUpdateService.UpdateProject(project);
 		
         if (!project.HasBeenSetup)
         {
@@ -51,10 +55,6 @@ public class ProjectSetupService : IProjectSetupService
             project.SetHasBeenSetup(true);
             await _assetsService.SaveProject();
         }
-        
-        await _projectUpdateService.UpdateProject(project);
-        await _assetImporter.ReimportAll();
-        await _sceneManagementService.InitializeAsync();
 		
         await OpenLastScene();
         prepareProjectProcedure.Complete();

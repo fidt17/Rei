@@ -101,9 +101,9 @@ class transform_e1 : public BaseRenderScenario
 public:
     explicit transform_e1(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("ea898740-84a0-4a87-809a-fdb57717e812")), // test_4.rshader
-          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")), // test_texture.png
-          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("8ba7a9d6-df0a-4951-9743-62732f786d01")) // ring.png
+          _shader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/test/test_4.rshader")),
+          _firstTexture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/test_texture.png")),
+          _secondTexture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/ring.png"))
     {
     }
 
@@ -118,8 +118,8 @@ public:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glEnable(GL_MULTISAMPLE);
 
-        _shader.SetInt("texture1", 0);
-        _shader.SetInt("texture2", 1);
+        _shader->SetInt("texture1", 0);
+        _shader->SetInt("texture2", 1);
     }
 
     f32 _timeScale = 1.f;
@@ -134,13 +134,13 @@ public:
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        _shader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _shader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        _shader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _shader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
 
         glActiveTexture(GL_TEXTURE0);
-        _firstTexture.Use();
+        _firstTexture->Use();
         glActiveTexture(GL_TEXTURE1);
-        _secondTexture.Use();
+        _secondTexture->Use();
 
         glm::vec3 cubePositions[] = {
             glm::vec3(0.0f, 0.0f, 0.0f),
@@ -163,7 +163,7 @@ public:
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i + (time * 100);
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.5f, 0.3f));
-            _shader.SetMatrix4f("model", model);
+            _shader->SetMatrix4f("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
@@ -174,9 +174,9 @@ public:
     }
 
 private:
-    rei::render::Shader _shader;
-    rei::render::Texture _firstTexture;
-    rei::render::Texture _secondTexture;
+    rei::assets::AssetRef<rei::render::Shader> _shader;
+    rei::assets::AssetRef<rei::render::Texture> _firstTexture;
+    rei::assets::AssetRef<rei::render::Texture> _secondTexture;
 
     VertexData _object0;
 };

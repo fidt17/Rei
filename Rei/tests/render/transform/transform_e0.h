@@ -67,9 +67,9 @@ class transform_e0 : public BaseRenderScenario
 public:
     explicit transform_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("e2eb13b1-fb8f-4969-9fbe-dc1884572416")), // test_2.rshader
-          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")), // test_texture.png
-          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("8ba7a9d6-df0a-4951-9743-62732f786d01")) // ring.png
+          _shader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/test/test_3.rshader")),
+          _firstTexture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/test_texture.png")),
+          _secondTexture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/ring.png"))
     {
     }
 
@@ -82,9 +82,9 @@ public:
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        _shader.Use();
-        _shader.SetInt("texture1", 0);
-        _shader.SetInt("texture2", 1);
+        _shader->Use();
+        _shader->SetInt("texture1", 0);
+        _shader->SetInt("texture2", 1);
     }
 
     void SetTransform(glm::vec3 translation, f32 rotation)
@@ -94,7 +94,7 @@ public:
         trans = rotate(trans, rotation, glm::vec3(0.0, 0.0, 1.0));
         trans = scale(trans, glm::vec3(1));
 
-        _shader.SetMatrix4f("transform", trans);
+        _shader->SetMatrix4f("transform", trans);
     }
 
     f32 speedMultiplier = 1;
@@ -108,12 +108,12 @@ public:
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        _shader.Use();
+        _shader->Use();
 
         glActiveTexture(GL_TEXTURE0);
-        _firstTexture.Use();
+        _firstTexture->Use();
         glActiveTexture(GL_TEXTURE1);
-        _secondTexture.Use();
+        _secondTexture->Use();
 
         SetTransform(glm::vec3(sinTime), time);
         glBindVertexArray(_object0.VAO);
@@ -139,9 +139,9 @@ public:
     }
 
 private:
-    rei::render::Shader _shader;
-    rei::render::Texture _firstTexture;
-    rei::render::Texture _secondTexture;
+    rei::assets::AssetRef<rei::render::Shader> _shader;
+    rei::assets::AssetRef<rei::render::Texture> _firstTexture;
+    rei::assets::AssetRef<rei::render::Texture> _secondTexture;
 
     VertexData _object0;
     VertexData _object1;

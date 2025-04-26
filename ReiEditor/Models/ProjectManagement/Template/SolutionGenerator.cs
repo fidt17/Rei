@@ -52,7 +52,7 @@ public class SolutionGenerator : ISolutionGenerator
 
     public async Task UpdateProjectFile(string projectFilePath)
     {
-        _logger.Log("Updating VS project file");
+        _logger.Log("Updating Visual Studio project file");
 
         var projectFile = await File.ReadAllTextAsync(projectFilePath);
         if (projectFile == null) throw new Exception($"Missing project file. Path: {projectFilePath}");

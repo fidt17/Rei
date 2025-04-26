@@ -1,9 +1,11 @@
 ﻿#pragma once
 #include "../BaseRenderScenario.h"
+#include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "Modules/Render/Shaders/Shader.h"
+#include "Modules/Render/Shaders/ShaderUtility.h"
 #include "Modules/Render/Textures/Texture.h"
 
 class texture_e0 : public BaseRenderScenario
@@ -11,8 +13,8 @@ class texture_e0 : public BaseRenderScenario
 public:
     explicit texture_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("23a4d09f-3987-466c-ba2f-1e51db162259")), // unlit.rshader
-          _texture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")) // test_texture.png
+          _shader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/unlit.rshader")),
+          _texture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/ring.png"))
     {
     }
 
@@ -34,10 +36,10 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
         float vertices[] = {
             // positions          // colors           // texture coords
-            0.5f, 0.5f, 0.0f,     1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-            0.5f, -0.5f, 0.0f,    0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-            -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-            -0.5f, 0.5f, 0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 1.0f // top left 
+            0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
+            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
+            -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f // top left 
         };
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
@@ -66,6 +68,9 @@ public:
 
     void Setup() override
     {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
         ConfigureVertexData();
     }
 
@@ -74,26 +79,30 @@ public:
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        _shader.Use();
-        _shader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _shader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        _shader->Use();
+
+        _shader->Use();
+        _shader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _shader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
         auto model = glm::mat4(1.0f);
         model = translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
         model = scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // it's a bit too big for our scene, so scale it down
-        _shader.SetMatrix4f("model", model);
-        
-        _texture.Use();
+        _shader->SetMatrix4f("model", model);
+
+        _texture->Use();
+
         glBindVertexArray(_vertexArray);
-        
+
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        
+
         glBindVertexArray(0);
 
         glfwSwapBuffers(_target);
     }
 
 private:
-    rei::render::Shader _shader;
-    rei::render::Texture _texture;
+    rei::assets::AssetRef<rei::render::Shader> _shader;
+    rei::assets::AssetRef<rei::render::Texture> _texture;
+
     unsigned int _vertexBuffer, _vertexArray, _elementBuffer;
 };

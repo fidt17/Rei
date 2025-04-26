@@ -27,7 +27,7 @@ namespace rei::internal::engine
         _mainRenderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<ecs::World>()),
-        _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\bin\Resources)")), // todo: from configuration ?
+        _assetManager(std::make_shared<assets::AssetManager>(R"(C:\Repos\Rei Projects\New Project\New Project\bin\Resources)")), // todo: from configuration ?
         _entityManager(std::make_shared<EntityManager>(_internalWorld)),
         _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager)),
         _input(std::make_shared<input::Input>())

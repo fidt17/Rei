@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Scene.h"
 #include "Modules/Assets/AssetRef.h"
 
 namespace rei::scenes
@@ -8,9 +9,9 @@ namespace rei::scenes
         explicit BuildScenesConfig(resources::BinaryReader& reader);
 
         bool Has(u32 id) const;
-        assets::AssetRef& GetScene(u32 id);
+        assets::AssetRef<Scene>& GetScene(u32 id);
 
     private:
-        std::unordered_map<u32, assets::AssetRef> _buildScenes;
+        std::unordered_map<u32, assets::AssetRef<Scene>> _buildScenes;
     };
 }

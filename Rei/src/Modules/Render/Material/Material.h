@@ -8,13 +8,13 @@ namespace rei::render
     public:
         REI_API Material() = default;
         REI_API Material(const Material&);
-        REI_API explicit Material(const Shader& shader);
+        REI_API explicit Material(assets::AssetRef<Shader> shader);
 
         REI_API ~Material();
 
         REI_API const Shader& GetShader() const;
 
     private:
-        Shader _shader;
+        assets::AssetRef<Shader> _shader;
     };
 }

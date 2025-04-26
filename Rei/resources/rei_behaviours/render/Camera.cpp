@@ -56,10 +56,6 @@ namespace rei::render
                                      cameraPosition + forward,
                                      up);
 
-
-        
-        
-
         return view;
     }
 }

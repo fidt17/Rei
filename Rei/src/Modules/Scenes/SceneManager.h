@@ -13,10 +13,10 @@ namespace rei::scenes
         void LoadScene(int id);
         
     private:
-        BuildScenesConfig _buildScenesConfig;
+        assets::AssetRef<BuildScenesConfig> _buildScenesConfig;
 
         std::shared_ptr<assets::AssetManager> _assetManager;
-        std::shared_ptr<Scene> _activeScene;
+        assets::AssetRef<Scene> _activeScene;
         std::shared_ptr<EntityManager> _entityManager;
     };
 }

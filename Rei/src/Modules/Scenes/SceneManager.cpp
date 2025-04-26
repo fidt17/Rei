@@ -11,7 +11,7 @@ namespace rei::scenes
     class Scene;
 
     SceneManager::SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager)
-        : _buildScenesConfig(assetManager->LoadById<BuildScenesConfig>("0")),
+        : _buildScenesConfig(assetManager->GetById<BuildScenesConfig>("0")),
           _assetManager(assetManager),
           _entityManager(entityManager)
     {
@@ -19,12 +19,10 @@ namespace rei::scenes
 
     void SceneManager::LoadScene(const int id)
     {
-        REI_THROW_IF(_activeScene, "Another scene is active")
-        REI_THROW_IF(!_buildScenesConfig.Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
+        REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
 
-        const auto& sceneRef = _buildScenesConfig.GetScene(id);
-
-        _activeScene = std::make_shared<Scene>(_assetManager->Load<Scene>(sceneRef));
+        _activeScene = _buildScenesConfig->GetScene(id);
+        _assetManager->Load(_activeScene);
 
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {

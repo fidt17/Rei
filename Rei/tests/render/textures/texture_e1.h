@@ -11,9 +11,9 @@ class texture_e1 : public BaseRenderScenario
 public:
     explicit texture_e1(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _shader(rei::GetAssetManager().LoadById<rei::render::Shader>("58e480d1-7143-40ab-b2c6-1dd24c3a7142")), // test_2.rshader
-          _firstTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("6750146c-8a5e-4fcd-80d1-18fbb37e950d")), // test_texture.png
-          _secondTexture(rei::GetAssetManager().LoadById<rei::render::Texture>("8ba7a9d6-df0a-4951-9743-62732f786d01")) // ring.png
+          _shader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/test/test_2.rshader")),
+          _firstTexture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/test_texture.png")),
+          _secondTexture(rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/Rei/resources/textures/ring.png")) // ring.png
     {
     }
 
@@ -72,9 +72,9 @@ public:
         
         ConfigureVertexData();
 
-        _shader.Use();
-        _shader.SetInt("texture1", 0);
-        _shader.SetInt("texture2", 1);
+        _shader->Use();
+        _shader->SetInt("texture1", 0);
+        _shader->SetInt("texture2", 1);
     }
 
     void Render() override
@@ -82,13 +82,12 @@ public:
         glClearColor(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
-
         glActiveTexture(GL_TEXTURE0);
-        _firstTexture.Use();
+        _firstTexture->Use();
         glActiveTexture(GL_TEXTURE1);
-        _secondTexture.Use();
+        _secondTexture->Use();
         
-        _shader.Use();
+        _shader->Use();
         
         glBindVertexArray(_vertexArray);
 
@@ -100,8 +99,8 @@ public:
     }
 
 private:
-    rei::render::Shader _shader;
-    rei::render::Texture _firstTexture;
-    rei::render::Texture _secondTexture;
+    rei::assets::AssetRef<rei::render::Shader> _shader;
+    rei::assets::AssetRef<rei::render::Texture> _firstTexture;
+    rei::assets::AssetRef<rei::render::Texture> _secondTexture;
     unsigned int _vertexBuffer, _vertexArray, _elementBuffer;
 };

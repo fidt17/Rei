@@ -24,6 +24,8 @@ public class EngineResourcesImporter : IEngineResourcesImporter
 
     public Task Import()
     {
+        _logger.Log($"Importing engine resources");
+        
         var targetDir = _resourceService.GetProjectPath("Engine Resources");
         CopyResources(targetDir);
 
@@ -36,8 +38,7 @@ public class EngineResourcesImporter : IEngineResourcesImporter
     {
         var from = _engineSettingsProvider.GetEngineResourcesDir();
         
-        _logger.LogWarning($"Importing engine resources");
-        _logger.Log($"From {from}. To {to}");
+        _logger.Log($"From {from} to {to}");
         
         var fromPaths = new List<string>
         {

@@ -112,14 +112,29 @@ public class SourceFilesUtility
             var substring = text.Substring(serializedIndex, endIdx - serializedIndex);
             var words = substring.Split().ToList();
             words.RemoveAll(string.IsNullOrWhiteSpace);
-            
-            var variableType = words[^2];
-            var serializedType = GetSerializedTypeForVariableType(variableType);
-            if (serializedType == SerializedTypeEnum.Invalid) continue;
 
-            var variableName = words[^1];
-            var variableTypeWithoutNamespace = variableType.Split("::").Last();
-            result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace));
+            if (words.Contains("="))
+            {
+                var equalsIdx = words.IndexOf("=");
+                
+                var variableType = words[equalsIdx - 2];
+                var serializedType = GetSerializedTypeForVariableType(variableType);
+                if (serializedType == SerializedTypeEnum.Invalid) continue;
+
+                var variableName = words[equalsIdx - 1];
+                var variableTypeWithoutNamespace = variableType.Split("::").Last();
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace));
+            }
+            else
+            {
+                var variableType = words[^2];
+                var serializedType = GetSerializedTypeForVariableType(variableType);
+                if (serializedType == SerializedTypeEnum.Invalid) continue;
+
+                var variableName = words[^1];
+                var variableTypeWithoutNamespace = variableType.Split("::").Last();
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace));
+            }
         }
 
         return result;

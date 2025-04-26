@@ -188,8 +188,8 @@ class light_e0 : public BaseRenderScenario
 public:
     explicit light_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _boxShader(rei::GetAssetManager().LoadById<rei::render::Shader>("d4d874cb-7262-41cd-a59c-68bc274bf3c7")),
-          _lightSourceShader(rei::GetAssetManager().LoadById<rei::render::Shader>("d887c985-f2da-4c89-b62c-b329654839cb"))
+          _boxShader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader")),
+          _lightSourceShader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader"))
     {
     }
 
@@ -261,21 +261,21 @@ public:
         }
     }
 
-    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light) const
+    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light)
     {
         if (light.IsNull()) return;
 
-        _lightSourceShader.SetColor("_Color", light.Get().GetColor());
-        _lightSourceShader.SetFloat("_Strength", light.Get().GetStrength());
-        _lightSourceShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _lightSourceShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        _lightSourceShader->SetColor("_Color", light.Get().GetColor());
+        _lightSourceShader->SetFloat("_Strength", light.Get().GetStrength());
+        _lightSourceShader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _lightSourceShader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
 
         glBindVertexArray(_box.VAO);
 
         glm::mat4 model = glm::mat4(1.0f);
         model = translate(model, glm::vec3(light.Get().GetTransform().GetPosition()));
         model = scale(model, glm::vec3(0.02f));
-        _lightSourceShader.SetMatrix4f("model", model);
+        _lightSourceShader->SetMatrix4f("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -284,19 +284,19 @@ public:
 
     void RenderBox()
     {
-        ConfigureAmbientLight(_boxShader);
-        ConfigurePointLights(_boxShader);
+        ConfigureAmbientLight(*_boxShader.Asset);
+        ConfigurePointLights(*_boxShader.Asset);
 
-        _boxShader.SetFloat("_Shininess", 1000.f);
-        _boxShader.SetColor("_Color", rei::render::Color(0.3f, 0.34f, 0.39f, 1.f));
+        _boxShader->SetFloat("_Shininess", 1000.f);
+        _boxShader->SetColor("_Color", rei::render::Color(0.3f, 0.34f, 0.39f, 1.f));
 
-        _boxShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _boxShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        _boxShader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _boxShader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
 
         glm::mat4 model = glm::mat4(1.0f);
         model = translate(model, glm::vec3(0,-1,0));
         model = scale(model, glm::vec3(1000, 0.1f, 1000));
-        _boxShader.SetMatrix4f("model", model);
+        _boxShader->SetMatrix4f("model", model);
 
         glBindVertexArray(_box.VAO);
         
@@ -310,8 +310,8 @@ public:
     }
 
 private:
-    rei::render::Shader _boxShader;
-    rei::render::Shader _lightSourceShader;
+    rei::assets::AssetRef<rei::render::Shader> _boxShader;
+    rei::assets::AssetRef<rei::render::Shader> _lightSourceShader;
 
     BoxVertexData _box;
     BoxVertexData _lightSource;

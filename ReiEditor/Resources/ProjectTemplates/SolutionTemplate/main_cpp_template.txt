@@ -5,17 +5,14 @@ class ProjectApplication final : public rei::App
 public:
     void OnStart() override
     {
-        LOG("APP START")
     }
 
     void OnUpdate() override
     {
-        LOG("APP UPDATE")
     }
 
     void OnShutdown() override
     {
-        LOG("APP SHUTDOWN")
     }
 };
 

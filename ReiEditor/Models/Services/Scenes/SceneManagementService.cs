@@ -30,14 +30,17 @@ public class SceneManagementService : ISceneManagementService
 
 	public async Task InitializeAsync()
 	{
-		const string assetName = "Build Scenes Configuration";
-		const string projectPath = $"Settings/Build/{assetName}{FileExtensions.ASSET}";
-		_buildScenesConfiguration = await _assets.LoadFrom<BuildScenesConfiguration>(projectPath);
+		const string ASSET_NAME = "Build Scenes Configuration";
+		const string PROJECT_PATH = $"Settings/Build/{ASSET_NAME}{FileExtensions.ASSET}";
+		
+		_logger.Log("Initialize");
+		
+		_buildScenesConfiguration = await _assets.LoadFrom<BuildScenesConfiguration>(PROJECT_PATH);
 		
 		if (_buildScenesConfiguration == null)
 		{
 			_buildScenesConfiguration = new BuildScenesConfiguration();
-			await _assetCreator.Create(_buildScenesConfiguration, SpecialAssetIds.BUILD_SCENES_CONFIGURATION, projectPath);
+			await _assetCreator.Create(_buildScenesConfiguration, SpecialAssetIds.BUILD_SCENES_CONFIGURATION, PROJECT_PATH);
 		}
 	}
 

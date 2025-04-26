@@ -33,14 +33,17 @@ public class ResourceService : IResourceService
 
     public void CopyFilesRecursively(string source, string target)
     {
+        Directory.CreateDirectory(target);
+        
         foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
         {
-            Directory.CreateDirectory(dirPath.Replace(source, target));
+            var targetPath = dirPath.Replace(source, target);
+            Directory.CreateDirectory(targetPath);
         }
 
-        foreach (string newPath in Directory.GetFiles(source, "*.*",SearchOption.AllDirectories))
+        foreach (string sourcePath in Directory.GetFiles(source, "*.*",SearchOption.AllDirectories))
         {
-            File.Copy(newPath, newPath.Replace(source, target), true);
+            File.Copy(sourcePath, sourcePath.Replace(source, target), true);
         }
     }
 

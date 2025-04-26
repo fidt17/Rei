@@ -586,7 +586,6 @@
     <ClInclude Include="src\Ecs\TypeId.h" />
     <ClInclude Include="src\Ecs\World.h" />
     <ClInclude Include="src\Engine\Services.h" />
-    <ClInclude Include="src\Modules\Assets\AssetId.h" />
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
@@ -685,9 +684,7 @@
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
     <ClCompile Include="src\Engine\Services.cpp" />
-    <ClCompile Include="src\Modules\Assets\AssetId.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
-    <ClCompile Include="src\Modules\Assets\AssetRef.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />

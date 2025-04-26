@@ -20,6 +20,8 @@ public static class ProjectCreationUtils
 
 	private static string GetDefaultProjectParentDirectory(IStorageProvider storageProvider)
 	{
+		return "C:\\Repos\\Rei Projects\\New Project"; // TODO: remove
+		
 		var documentsDirectory = storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents).Result;
 		return documentsDirectory == null ? "" : HttpUtility.UrlDecode(documentsDirectory.Path.AbsolutePath);
 	}

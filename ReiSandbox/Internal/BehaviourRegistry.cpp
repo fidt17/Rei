@@ -8,7 +8,6 @@
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
 
-#include "C:\Repos\Rei Projects\New Project\Project\Scripts\Behaviours\RadiusMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\MeshRenderer.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
@@ -17,12 +16,11 @@
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
-    f.RegisterComponent<::RadiusMovement>(9);
-    f.RegisterComponent<rei::render::Camera>(5);
-    f.RegisterComponent<rei::render::MeshRenderer>(10);
-    f.RegisterComponent<rei::transformation::Transform>(6);
-    f.RegisterComponent<rei::render::AmbientLight>(7);
-    f.RegisterComponent<rei::behaviour::PointLight>(8);
+    f.RegisterComponent<rei::render::Camera>(0);
+    f.RegisterComponent<rei::render::MeshRenderer>(1);
+    f.RegisterComponent<rei::transformation::Transform>(2);
+    f.RegisterComponent<rei::render::AmbientLight>(3);
+    f.RegisterComponent<rei::behaviour::PointLight>(4);
 }
 
 
@@ -40,11 +38,6 @@ rei::render::Color::Color(const nlohmann::json& data) :
 {}
 
 
-::RadiusMovement::RadiusMovement(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _offset(data.at("_offset").at("Value"))
-{}
-
 rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
     , _fov(data.at("_fov").at("Value"))
@@ -58,7 +51,7 @@ rei::render::MeshRenderer::MeshRenderer(const i32 id, const rei::ecs::Entity e, 
 
 rei::transformation::Transform::Transform(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
-    , _position( data.at("_position").at("Value"))
+    , _position(data.at("_position").at("Value"))
     , _rotation(data.at("_rotation").at("Value"))
     , _scale(data.at("_scale").at("Value"))
 {}

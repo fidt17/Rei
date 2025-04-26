@@ -101,7 +101,7 @@ class model_e0 : public BaseRenderScenario
 public:
     explicit model_e0(GLFWwindow* target)
         : BaseRenderScenario(target),
-          _lightSourceShader(rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader"))
+          _lightSourceShader(rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader"))
     {
     }
 
@@ -117,19 +117,26 @@ public:
         glEnable(GL_MULTISAMPLE);
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        const auto model = rei::GetAssetManager().LoadFrom<rei::render::Model>("C:/Repos/Rei/TMP/backpack/backpack.obj");
-        const auto shader = rei::GetAssetManager().LoadFrom<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/default.rshader");
+        CreateModel(rei::math::Vector3(i, 0, 0));
+    }
+
+    void CreateModel(rei::math::Vector3 position)
+    {
+        auto model = rei::GetAssetManager().GetByPath<rei::render::Model>("C:/Repos/Rei/TMP/backpack/backpack.obj");
+        auto shader = rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader");
         auto material = std::make_shared<rei::render::Material>(shader);
 
         material->GetShader().SetFloat("_Shininess", 1);
+        material->GetShader().SetColor("_Color", rei::render::Color(1,1,1,1));
 
-        for (const auto& mesh : model.GetMeshes())
+        for (const auto& mesh : model->GetMeshes())
         {
             ECS_WORLD(rei::GetInternalWorld());
             auto e = NEW_ENTITY();
 
-            ADD_BEHAVIOUR(e, rei::transformation::Transform);
-            
+            auto& transform = ADD_BEHAVIOUR(e, rei::transformation::Transform);
+            transform.GetPosition() = position;
+
             auto& meshRenderer = ADD_BEHAVIOUR(e, rei::render::MeshRenderer);
             meshRenderer.SetMesh(mesh);
             meshRenderer.SetMaterial(material);
@@ -137,6 +144,8 @@ public:
             _meshRenderers.push_back(GET_REF(e, rei::render::MeshRenderer));
         }
     }
+
+    int i = 0;
 
     void Render() override
     {
@@ -155,8 +164,6 @@ public:
         {
             RenderPointLight(light);
         }
-
-        Move();
 
         glfwSwapBuffers(_target);
     }
@@ -182,22 +189,22 @@ public:
         }
     }
 
-    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light) const
+    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light)
     {
         if (light.IsNull()) return;
 
-        _lightSourceShader.SetColor("_Color", light.Get().GetColor());
-        _lightSourceShader.SetFloat("_Strength", light.Get().GetStrength());
+        _lightSourceShader->SetColor("_Color", light.Get().GetColor());
+        _lightSourceShader->SetFloat("_Strength", light.Get().GetStrength());
 
-        _lightSourceShader.SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _lightSourceShader.SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        _lightSourceShader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
+        _lightSourceShader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
 
         glBindVertexArray(_lightBox.VAO);
 
         glm::mat4 model = glm::mat4(1.0f);
         model = translate(model, glm::vec3(light.Get().GetTransform().GetPosition()));
         model = scale(model, glm::vec3(0.02f));
-        _lightSourceShader.SetMatrix4f("model", model);
+        _lightSourceShader->SetMatrix4f("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -209,8 +216,6 @@ public:
         if (_ambientLight.IsNull())
         {
             shader.SetFloat("_AmbientLight.Strength", 0);
-
-            auto c = _ambientLight.Get().GetColor();
             shader.SetColor("_AmbientLight.Color", rei::render::Color(0, 0, 0, 1));
             return;
         }
@@ -264,7 +269,7 @@ private:
     glm::mat4 _projectionMatrix;
     glm::mat4 _viewMatrix;
 
-    rei::render::Shader _lightSourceShader;
+    rei::assets::AssetRef<rei::render::Shader> _lightSourceShader;
 
     std::vector<rei::ecs::RefComponent<rei::render::MeshRenderer>> _meshRenderers;
 
