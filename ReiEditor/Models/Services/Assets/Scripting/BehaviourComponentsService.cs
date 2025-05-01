@@ -46,6 +46,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             component.AddProperty(CreateSerializedProperty(sp.Key, sp.Value));
         }
         
+        SetupCustomBehaviourValues(component);
+        
         e.AddBehaviour(component);
         
         return true;
@@ -112,7 +114,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private SerializedProperty CreateSerializedProperty(string name, SerializableObjectInfo.SerializedPropertyData propertyData)
     {
-        var property = new SerializedProperty(name, propertyData.Type, propertyData.Type.GetDefaultValue(), propertyData.SourceType);
+        var propertyValue = propertyData.Type.ParseDefaultValue(propertyData.DefaultValue);
+        var property = new SerializedProperty(name, propertyData.Type, propertyValue, propertyData.SourceType);
         if (property.Type != SerializedTypeEnum.Custom) return property;
         
         var nestedPropertyData = _serializableObjectsRegistry.GetObject(property.SourceType);
@@ -182,5 +185,21 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         }
 
         property.Value = parsedValue;
+    }
+
+    private void SetupCustomBehaviourValues(BehaviourComponent component)
+    {
+        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursUtility.TRANSFORM))
+        {
+            if (component.GetProperty(EngineBehavioursUtility.TRANSFORM_SCALE).Value is not Dictionary<string, SerializedProperty> scaleValue)
+            {
+                _logger.LogError("Could not find scale property on transform component");
+                return;
+            }
+            
+            scaleValue["x"].Value = 1;
+            scaleValue["y"].Value = 1;
+            scaleValue["z"].Value = 1;
+        }
     }
 }

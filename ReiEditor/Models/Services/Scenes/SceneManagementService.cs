@@ -64,6 +64,8 @@ public class SceneManagementService : ISceneManagementService
 
 	public Task LoadScene(Scene scene)
 	{
+		if (_currentScene.Value == scene) return Task.CompletedTask;
+		
 		_logger.Log($"Loading scene [{scene.Name}]");
 		
 		_projectService.GetActiveProject().SetLastScene(scene.AssetId);

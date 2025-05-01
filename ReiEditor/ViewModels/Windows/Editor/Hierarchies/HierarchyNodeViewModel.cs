@@ -34,17 +34,19 @@ public class HierarchyNodeViewModel : BaseViewModel, ISelectable
     public HierarchyNode<GameEntity> Node { get; }
     
     private readonly IEntityManagementService _entityManagementService;
+    private readonly ISelectionService _selectionService;
 
 #pragma warning disable CS8618
     public HierarchyNodeViewModel() { }
 #pragma warning restore CS8618
 
-    public HierarchyNodeViewModel(HierarchyNode<GameEntity> node, IEntityManagementService entityManagementService)
+    public HierarchyNodeViewModel(HierarchyNode<GameEntity> node, IEntityManagementService entityManagementService, ISelectionService selectionService)
     {
         Node = node;
         Node.Content.NameChangedEvent += HandleNameChangedEvent;
         _entityManagementService = entityManagementService;
-		
+        _selectionService = selectionService;
+
         Name.Value = node.Content.Name;
 
         SelectCommand = ReactiveCommand.Create(Select);
@@ -85,7 +87,17 @@ public class HierarchyNodeViewModel : BaseViewModel, ISelectable
 
     public void Select() => Selected.Value = true;
     public void Deselect() => Selected.Value = false;
-    private void Delete() => _entityManagementService.DeleteEntity(Node.Content);
+    
+    private void Delete()
+    {
+        if (Selected.Value)
+        {
+            Deselect();
+            _selectionService.ResetSelection();
+        }
+        
+        _entityManagementService.DeleteEntity(Node.Content);
+    }
 
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;
     private void StartRename() => RenameValue.Value = Name.Value;

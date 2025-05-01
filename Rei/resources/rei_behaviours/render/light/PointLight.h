@@ -8,7 +8,7 @@ namespace rei::behaviour
     private:
         BEHAVIOUR_BODY(PointLight)
 
-        SERIALIZE f32 _strength;
+        SERIALIZE f32 _strength = 1;
         SERIALIZE render::Color _color;
 
     public:

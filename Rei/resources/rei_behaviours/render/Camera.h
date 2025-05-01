@@ -7,9 +7,9 @@ namespace rei::render
     {
     private:
         BEHAVIOUR_BODY(Camera)
-        SERIALIZE f32 _fov;
-        SERIALIZE i32 _nearClipPlane;
-        SERIALIZE i32 _farClipPlane;
+        SERIALIZE f32 _fov = 45;
+        SERIALIZE i32 _nearClipPlane = 0;
+        SERIALIZE i32 _farClipPlane = 1000;
 
         i32 _outputWidth;
         i32 _outputHeight;

@@ -8,9 +8,9 @@ namespace rei::transformation
     private:
         BEHAVIOUR_BODY(Transform)
 
-        SERIALIZE math::Vector3 _position = math::Vector3(0,0,0);
-        SERIALIZE math::Vector3 _rotation = math::Vector3(0, 0, 0);
-        SERIALIZE math::Vector3 _scale = math::Vector3(1, 1, 1);
+        SERIALIZE math::Vector3 _position;
+        SERIALIZE math::Vector3 _rotation;
+        SERIALIZE math::Vector3 _scale;
 
     public:
         REI_API math::Vector3& GetPosition();

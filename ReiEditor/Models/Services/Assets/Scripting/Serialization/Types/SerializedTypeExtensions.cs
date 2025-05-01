@@ -12,11 +12,34 @@ public static class SerializedTypeExtensions
             SerializedTypeEnum.Integer => value != null && value.GetType().IsInteger(),
             SerializedTypeEnum.String => value is string,
             SerializedTypeEnum.Boolean => value is bool,
-            SerializedTypeEnum.Float => value != null && value is float || value is double,
+            SerializedTypeEnum.Float => value is int or float or double or long,
             SerializedTypeEnum.Custom => true,
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
+    }
+
+    public static object? ParseDefaultValue(this SerializedTypeEnum type, string? value)
+    {
+        try
+        {
+            if (value == null) return type.GetDefaultValue();
+            
+            return type switch
+            {
+                SerializedTypeEnum.Integer => int.Parse(value),
+                SerializedTypeEnum.String => value,
+                SerializedTypeEnum.Boolean => bool.Parse(value),
+                SerializedTypeEnum.Float => float.Parse(value.Replace('f', '0')),
+                SerializedTypeEnum.Custom => null,
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return type.GetDefaultValue();
+        }
     }
 
     public static object? GetDefaultValue(this SerializedTypeEnum type)

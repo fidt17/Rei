@@ -7,7 +7,7 @@ namespace rei::render
     {
     private:
         BEHAVIOUR_BODY(AmbientLight)
-        SERIALIZE f32 _strength;
+        SERIALIZE f32 _strength = 1;
         SERIALIZE Color _color;
 
     public:

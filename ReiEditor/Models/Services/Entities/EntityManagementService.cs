@@ -34,7 +34,6 @@ public class EntityManagementService : IEntityManagementService
             
             s.AddEntity(e);
 
-            _logger.Log($"Created {e}");
             EntityCreatedEvent?.Invoke(e);
             return e;
         }
@@ -84,7 +83,6 @@ public class EntityManagementService : IEntityManagementService
             var s = _sceneManagement.CurrentScene.Value;
             s.DeleteEntity(e);
 
-            _logger.Log($"Deleted {e}");
             EntityDeletedEvent?.Invoke(e);
         }
         catch (Exception exception)

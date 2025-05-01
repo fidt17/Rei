@@ -10,11 +10,13 @@ public class SerializableObjectInfo
     {
         public SerializedTypeEnum Type { get; }
         public string SourceType { get; }
+        public string? DefaultValue { get; }
 
-        public SerializedPropertyData(SerializedTypeEnum type, string sourceType)
+        public SerializedPropertyData(SerializedTypeEnum type, string sourceType, string? defaultValue)
         {
             Type = type;
             SourceType = sourceType;
+            DefaultValue = defaultValue;
         }
     }
     

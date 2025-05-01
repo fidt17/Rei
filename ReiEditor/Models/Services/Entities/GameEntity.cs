@@ -57,6 +57,8 @@ public class GameEntity
         BehaviourDeletedEvent?.Invoke(this, behaviour);
     }
 
+    public BehaviourComponent? GetBehaviour(int? id) => id == null ? null : _behaviours.Find(x => x.Id == id);
+
     public bool Equals(GameEntity other) => Id == other.Id;
 	
     public override string ToString()

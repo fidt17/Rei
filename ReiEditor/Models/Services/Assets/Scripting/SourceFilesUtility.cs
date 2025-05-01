@@ -123,7 +123,10 @@ public class SourceFilesUtility
 
                 var variableName = words[equalsIdx - 1];
                 var variableTypeWithoutNamespace = variableType.Split("::").Last();
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace));
+
+                var defaultValue = words[equalsIdx + 1];
+                
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, defaultValue));
             }
             else
             {
@@ -133,7 +136,7 @@ public class SourceFilesUtility
 
                 var variableName = words[^1];
                 var variableTypeWithoutNamespace = variableType.Split("::").Last();
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace));
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, null));
             }
         }
 

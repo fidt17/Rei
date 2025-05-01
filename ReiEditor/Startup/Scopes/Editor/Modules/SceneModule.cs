@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Scenes.Templates;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Commands.Entities;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
@@ -15,6 +16,8 @@ public class SceneModule : Module
 		b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
 
 		b.RegisterType<CreateSceneEntityCommand>();
+
+		b.RegisterType<DefaultSceneTemplate>();
 		
 		ConfigureViewModels(b);
 	}

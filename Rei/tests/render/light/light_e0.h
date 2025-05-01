@@ -230,7 +230,7 @@ public:
         shader.SetFloat("_AmbientLight.Strength", ambientLight.GetStrength());
 
         auto c = ambientLight.GetColor();
-        shader.SetVector3("_AmbientLight.Color", rei::math::Vector3(c.r, c.g, c.b));
+        shader.SetColor("_AmbientLight.Color", ambientLight.GetColor());
     }
 
     void ConfigurePointLights(const rei::render::Shader& shader)

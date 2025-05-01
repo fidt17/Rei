@@ -6,6 +6,7 @@ using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Scenes.Templates;
 using ReiEditor.Utils.Common.Procedures;
 
 namespace ReiEditor.Models.ProjectManagement.Setup;
@@ -19,6 +20,7 @@ public class ProjectSetupService : IProjectSetupService
     private readonly IEditorProceduresService _editorProceduresService;
     private readonly IProjectUpdateService _projectUpdateService;
     private readonly IAssetImporter _assetImporter;
+    private readonly DefaultSceneTemplate _defaultSceneTemplate;
 
     public ProjectSetupService(
         ILogger<ProjectSetupService> logger, 
@@ -27,7 +29,8 @@ public class ProjectSetupService : IProjectSetupService
         IAssetsService assetsService, 
         IEditorProceduresService editorProceduresService, 
         IProjectUpdateService projectUpdateService, 
-        IAssetImporter assetImporter)
+        IAssetImporter assetImporter, 
+        DefaultSceneTemplate defaultSceneTemplate)
     {
         _logger = logger;
         _sceneManagementService = sceneManagementService;
@@ -36,6 +39,7 @@ public class ProjectSetupService : IProjectSetupService
         _editorProceduresService = editorProceduresService;
         _projectUpdateService = projectUpdateService;
         _assetImporter = assetImporter;
+        _defaultSceneTemplate = defaultSceneTemplate;
     }
 
     public async Task PrepareProject()
@@ -55,8 +59,11 @@ public class ProjectSetupService : IProjectSetupService
             project.SetHasBeenSetup(true);
             await _assetsService.SaveProject();
         }
+        else
+        {
+            await OpenLastScene();
+        }
 		
-        await OpenLastScene();
         prepareProjectProcedure.Complete();
     }
 	
@@ -92,6 +99,11 @@ public class ProjectSetupService : IProjectSetupService
         if (scene == null)
         {
             _logger.LogError("Default scene creation failed");
+        }
+        else
+        {
+            await _sceneManagementService.LoadScene(scene);
+            _defaultSceneTemplate.SetupScene();
         }
 
         return scene;
