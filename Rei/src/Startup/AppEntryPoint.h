@@ -16,11 +16,20 @@ extern void ConfigureComponentsFactory(rei::BehaviourRegistry& factory);
 
 namespace rei::external
 {
-    REI_EXTERN_API inline internal::engine::Engine* CreateEngine()
+    REI_EXTERN_API inline internal::engine::Engine* CreateEngine(const char* resourcesDir)
     {
-        auto engine = new internal::engine::Engine(CreateApp());
-        ConfigureComponentsFactory(GetEntityManager().GetBehaviourRegistry());
-        return engine;
+        try
+        {
+            std::filesystem::current_path(resourcesDir);
+            auto engine = new internal::engine::Engine(CreateApp());
+            ConfigureComponentsFactory(GetEntityManager().GetBehaviourRegistry());
+            return engine;
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("Exception", e.what())
+            return nullptr;
+        }
     }
 
     REI_EXTERN_API inline void Start(internal::engine::Engine* engine)
@@ -44,7 +53,7 @@ int main()
 {
     try
     {
-        const auto engine = rei::external::CreateEngine();
+        const auto engine = rei::external::CreateEngine(std::filesystem::current_path().string().c_str());
         engine->CreateMainWindow();
         rei::external::Start(engine);
         return engine->GetExitCode();

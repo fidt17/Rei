@@ -110,7 +110,10 @@
     <ClCompile Include="ReiApp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Behaviours\" />
+    <ClInclude Include="Scripts\TestMovement.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Scripts\TestMovement.h.meta" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

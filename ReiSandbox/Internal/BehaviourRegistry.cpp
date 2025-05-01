@@ -8,6 +8,7 @@
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
 
+#include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\TestMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\MeshRenderer.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
@@ -16,6 +17,7 @@
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
+    f.RegisterComponent<::TestMovement>(5);
     f.RegisterComponent<rei::render::Camera>(0);
     f.RegisterComponent<rei::render::MeshRenderer>(1);
     f.RegisterComponent<rei::transformation::Transform>(2);
@@ -37,6 +39,12 @@ rei::render::Color::Color(const nlohmann::json& data) :
     a(data.at("a").at("Value"))
 {}
 
+
+::TestMovement::TestMovement(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
+    : Behaviour(id, e)
+    , _radius(data.at("_radius").at("Value"))
+    , _speed(data.at("_speed").at("Value"))
+{}
 
 rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)

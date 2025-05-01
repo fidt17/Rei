@@ -733,6 +733,7 @@
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />
+    <Content Include="resources\shaders\test\plane_lit_fade.rshader" />
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />
     <Content Include="resources\shaders\test\test_3.rshader" />

@@ -274,7 +274,7 @@ public:
 
         glm::mat4 model = glm::mat4(1.0f);
         model = translate(model, glm::vec3(light.Get().GetTransform().GetPosition()));
-        model = scale(model, glm::vec3(0.02f));
+        model = scale(model, glm::vec3(0.02f * light.Get().GetStrength()));
         _lightSourceShader->SetMatrix4f("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);

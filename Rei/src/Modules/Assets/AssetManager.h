@@ -9,7 +9,7 @@ namespace rei::assets
     class AssetManager
     {
     public:
-        explicit AssetManager(const std::string& resourcesPath);
+        explicit AssetManager();
 
         template <typename T>
         REI_API AssetRef<T> GetById(const std::string& id)

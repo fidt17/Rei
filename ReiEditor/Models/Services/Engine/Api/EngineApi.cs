@@ -26,8 +26,14 @@ public class EngineApi : IEngineApi
         _dllPtr = dllPtr;
     }
 
-    private delegate IntPtr CreateEngineDelegate();
-    public IntPtr CreateEngine() => Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine");
+    private delegate IntPtr CreateEngineDelegate(string resourcesDir);
+    public IntPtr CreateEngine(string resourcesDir)
+    {
+        var ptr = Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine", resourcesDir);
+        if (ptr == IntPtr.Zero) throw new Exception("Could not create engine");
+        
+        return ptr;
+    }
 
     private delegate void StartEngineDelegate(IntPtr enginePtr);
     public void Start(IntPtr enginePtr) => Invoke(typeof(StartEngineDelegate), "Start", enginePtr);

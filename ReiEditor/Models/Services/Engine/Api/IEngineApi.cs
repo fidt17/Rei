@@ -9,7 +9,7 @@ public interface IEngineApi
 	
 	void SetDllPtr(IntPtr ptr);
 
-	IntPtr CreateEngine();
+	IntPtr CreateEngine(string resourcesDir);
 	void Start(IntPtr enginePtr);
 	void Shutdown(IntPtr enginePtr, int exitCode);
 	

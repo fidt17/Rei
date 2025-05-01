@@ -21,7 +21,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
         _clientDllManager = clientDllManager;
         _playmodeRunner = playmodeRunner;
         
-        _playmodeRunner.PlaymodeFailedEvent += StopPlaymode;
+        _playmodeRunner.PlaymodeFailedEvent += HandlePlaymodeFailedEvent;
         _playmodeRunner.PlaymodeExitedEvent += HandlePlaymodeExitedEvent;
     }
 
@@ -32,7 +32,7 @@ public class PlaymodeService : IPlaymodeService, IDisposable
             StopPlaymode();
         }
         
-        _playmodeRunner.PlaymodeFailedEvent -= StopPlaymode;
+        _playmodeRunner.PlaymodeFailedEvent -= HandlePlaymodeFailedEvent;
         _playmodeRunner.PlaymodeExitedEvent -= HandlePlaymodeExitedEvent;
     }
 
@@ -97,6 +97,20 @@ public class PlaymodeService : IPlaymodeService, IDisposable
                 _logger.LogException(e);
             }
         });
+    }
+
+    private void HandlePlaymodeFailedEvent()
+    {
+        StopPlaymode();
+        try
+        {
+            _isPlaymodeActive.Value = false;
+            _clientDllManager.UnloadDll();
+        }
+        catch (Exception e)
+        {
+            _logger.LogException(e);
+        }
     }
 
     private void HandlePlaymodeExitedEvent()
