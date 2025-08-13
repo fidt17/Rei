@@ -19,7 +19,8 @@ public:
         
         auto& position = GetTransform().GetPosition();
         position.x = cos(time);
-        position.y = sin(time);
-        position.z = position.x + position.y;
+        position.z = sin(time);
+        //position.y = sin(time);
+        //position.z = position.x + position.y;
     }
 };

@@ -7,15 +7,27 @@
 
 void rei::resources::TextureBuilder::BuildTextureAsset(const std::filesystem::path& assetPath, BinaryWriter& writer) const
 {
-    auto extension = assetPath.extension();
-
+    stbi_set_flip_vertically_on_load(true);
+    
     i32 width, height, nrChannels;
     unsigned char* data = stbi_load(assetPath.string().c_str(), &width, &height, &nrChannels, 0);
-    i32 mode = nrChannels == 4 ? GL_RGBA : GL_RGB;
+    GLenum format;
+    if (nrChannels == 1)
+    {
+        format = GL_RED;
+    }
+    else if (nrChannels == 3)
+    {
+        format = GL_RGB;
+    }
+    else if (nrChannels == 4)
+    {
+        format = GL_RGBA;
+    }
 
     writer.WriteI32(width);
     writer.WriteI32(height);
-    writer.WriteI32(mode);
+    writer.WriteI32(format);
 
     const i32 length = width * height * nrChannels;
     writer.WriteBytes(data, length);
@@ -26,7 +38,7 @@ void rei::resources::TextureBuilder::BuildTextureAsset(const std::filesystem::pa
     LOG("Height: " + STRING(height))
     LOG("Number of channels: " + STRING(nrChannels))
 
-    if (mode == GL_RGB)
+    if (format == GL_RGB)
     {
         LOG("Format: RGB");
     }

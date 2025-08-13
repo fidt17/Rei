@@ -45,7 +45,7 @@ namespace rei::assets
             resources::AssetBuilder builder;
             i32 _ = builder.BuildAsset(path, dest, 0);
 
-            LOG_WARNING("Created temp file at " + dest);
+            LOG_WARNING("Created temp file at " + dest + "\n");
 
             ref.Asset = new T(Load<T>(dest, 0));
             ref.IsLoaded = true;

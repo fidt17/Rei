@@ -15,3 +15,9 @@ const rei::render::Shader& rei::render::Material::GetShader() const
 {
     return *_shader.Asset;
 }
+
+std::vector<rei::assets::AssetRef<rei::render::Texture>>& rei::render::Material::GetTextures()
+{
+    return _textures;
+}
+

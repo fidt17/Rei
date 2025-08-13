@@ -13,6 +13,8 @@ namespace rei::transformation
         SERIALIZE math::Vector3 _scale;
 
     public:
+        REI_API void Reset();
+        
         REI_API math::Vector3& GetPosition();
         REI_API math::Vector3& GetScale();
         REI_API math::Vector3& GetRotation();

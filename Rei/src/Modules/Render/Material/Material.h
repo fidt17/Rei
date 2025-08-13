@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Modules/Render/Shaders/Shader.h"
+#include "Modules/Render/Textures/Texture.h"
 
 namespace rei::render
 {
@@ -13,8 +14,10 @@ namespace rei::render
         REI_API ~Material();
 
         REI_API const Shader& GetShader() const;
+        REI_API std::vector<assets::AssetRef<Texture>>& GetTextures();
 
     private:
         assets::AssetRef<Shader> _shader;
+        std::vector<assets::AssetRef<Texture>> _textures = {};
     };
 }

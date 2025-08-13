@@ -12,7 +12,7 @@ namespace rei::render
         void Render() const;
 
         void SetMesh(const Mesh& mesh);
-        void SetMaterial(std::shared_ptr<Material> material);
+        void SetMaterial(const std::shared_ptr<Material>& material);
 
         const Material& GetMaterial() const;
         const Shader& GetShader() const;

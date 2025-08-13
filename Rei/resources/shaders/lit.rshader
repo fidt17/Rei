@@ -82,7 +82,8 @@ struct PointLight
     void main()
     {    
         // ambient
-        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;    
+        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;
+        ambient.a = 1;
 
         // point light
         vec4 pointLight;
@@ -95,6 +96,5 @@ struct PointLight
         vec4 specularColor = texture(texture_specular1, TexCoords);
 
         FragColor = (ambient + pointLight * specularColor) * texColor;
-        FragColor.a = 1;
     }
 #endif

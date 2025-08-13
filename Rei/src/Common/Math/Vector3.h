@@ -11,9 +11,9 @@ namespace rei::math
         REI_API explicit Vector3(f32 x, f32 y = 0, f32 z = 0);
         REI_API explicit Vector3(glm::vec3 vec3);
 
-        SERIALIZE f32 x;
-        SERIALIZE f32 y;
-        SERIALIZE f32 z;
+        SERIALIZE f32 x = 0;
+        SERIALIZE f32 y = 0;
+        SERIALIZE f32 z = 0;
 
         constexpr operator glm::vec3() const { return glm::vec3(x, y, z); }
         operator std::string() const;
@@ -25,6 +25,9 @@ namespace rei::math
         
         Vector3& operator-=(const glm::vec<3, float>& vec);
         Vector3& operator-=(const Vector3& vec);
+        
+        Vector3& operator*=(float value);
+        Vector3& operator/=(float value);
 
         static Vector3 Right();
         static Vector3 Left();

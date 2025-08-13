@@ -38,7 +38,7 @@ rei::render::Mesh MeshBuilder::ProcessMesh(const aiMesh* mesh) const
         }
     }
 
-    return rei::render::Mesh(vertices, indices, std::vector<rei::render::Texture>());
+    return rei::render::Mesh(vertices, indices);
 }
 
 void MeshBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vector<rei::render::Mesh>& meshes) const

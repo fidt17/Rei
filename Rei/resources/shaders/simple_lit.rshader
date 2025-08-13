@@ -56,7 +56,7 @@ struct PointLight
 
     vec4 CalcPointLight(PointLight light, vec3 lightPosition)
     {
-         // diffuse 
+        // diffuse 
         vec3 norm = normalize(Normal);
         vec3 lightDir = normalize(lightPosition - FragPos);
         float diff = max(dot(norm, lightDir), 0.0);
@@ -76,7 +76,10 @@ struct PointLight
     void main()
     {
         // ambient
-        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;    
+        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;
+        ambient.a = 1;
+
+        FragColor = _Color;          
 
         // point light
         vec4 pointLight;

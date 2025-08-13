@@ -59,6 +59,24 @@ namespace rei::math
         return *this;
     }
 
+    Vector3& Vector3::operator*=(const float value)
+    {
+        x *= value;
+        y *= value;
+        z *= value;
+
+        return *this;
+    }
+
+    Vector3& Vector3::operator/=(const float value)
+    {
+        x /= value;
+        y /= value;
+        z /= value;
+
+        return *this;
+    }
+
     Vector3 Vector3::Right()
     {
         return Vector3(1, 0, 0);

@@ -117,17 +117,25 @@ public:
         glEnable(GL_MULTISAMPLE);
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        CreateModel(rei::math::Vector3(i, 0, 0));
+        CreateModel(rei::math::Vector3(0, 0, 0));
     }
 
     void CreateModel(rei::math::Vector3 position)
     {
         auto model = rei::GetAssetManager().GetByPath<rei::render::Model>("C:/Repos/Rei/TMP/backpack/backpack.obj");
-        auto shader = rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader");
+        auto shader = rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/lit.rshader");
+        auto diffuseTexture = rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/TMP/backpack/diffuse.jpg");
+        diffuseTexture->SetType(rei::render::Diffuse);
+        auto specularTexture = rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/TMP/backpack/specular.jpg");
+        specularTexture->SetType(rei::render::Specular);
+        
         auto material = std::make_shared<rei::render::Material>(shader);
 
-        material->GetShader().SetFloat("_Shininess", 1);
+        material->GetShader().SetFloat("_Shininess", 3);
         material->GetShader().SetColor("_Color", rei::render::Color(1,1,1,1));
+
+        material->GetTextures().push_back(diffuseTexture);
+        material->GetTextures().push_back(specularTexture);
 
         for (const auto& mesh : model->GetMeshes())
         {
@@ -135,17 +143,15 @@ public:
             auto e = NEW_ENTITY();
 
             auto& transform = ADD_BEHAVIOUR(e, rei::transformation::Transform);
+            transform.Reset();
+            
             transform.GetPosition() = position;
 
             auto& meshRenderer = ADD_BEHAVIOUR(e, rei::render::MeshRenderer);
             meshRenderer.SetMesh(mesh);
             meshRenderer.SetMaterial(material);
-
-            _meshRenderers.push_back(GET_REF(e, rei::render::MeshRenderer));
         }
     }
-
-    int i = 0;
 
     void Render() override
     {
@@ -196,8 +202,8 @@ public:
         _lightSourceShader->SetColor("_Color", light.Get().GetColor());
         _lightSourceShader->SetFloat("_Strength", light.Get().GetStrength());
 
-        _lightSourceShader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
-        _lightSourceShader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
+        _lightSourceShader->SetMatrix4f("projection", _projectionMatrix);
+        _lightSourceShader->SetMatrix4f("view", _viewMatrix);
 
         glBindVertexArray(_lightBox.VAO);
 
@@ -270,8 +276,6 @@ private:
     glm::mat4 _viewMatrix;
 
     rei::assets::AssetRef<rei::render::Shader> _lightSourceShader;
-
-    std::vector<rei::ecs::RefComponent<rei::render::MeshRenderer>> _meshRenderers;
 
     BoxVertexData _lightBox;
 

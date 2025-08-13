@@ -1,7 +1,7 @@
 ﻿#include "Renderer.h"
 #include "../../../tests/render/BaseRenderScenario.h"
 
-#define RENDER_SCENARIO_NUM 9
+#define RENDER_SCENARIO_NUM 10
 
 #if RENDER_SCENARIO_NUM == 0
     #include "../../../tests/render/hello_triangle/hello_triangle.h"

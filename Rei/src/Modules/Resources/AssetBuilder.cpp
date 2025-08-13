@@ -48,6 +48,7 @@ namespace rei::resources
         #define ADD_TO_MAP(x, y) map[x] = [&](const std::filesystem::path& p, BinaryWriter& w) { y(p, w); };
         std::map<std::string, std::function<void(const std::filesystem::path&, BinaryWriter&)>> map;
         ADD_TO_MAP(".png", TextureBuilder().BuildTextureAsset)
+        ADD_TO_MAP(".jpg", TextureBuilder().BuildTextureAsset)
         ADD_TO_MAP(".obj", MeshBuilder().BuildMeshAsset)
         ADD_TO_MAP(".fbx", MeshBuilder().BuildMeshAsset)
 

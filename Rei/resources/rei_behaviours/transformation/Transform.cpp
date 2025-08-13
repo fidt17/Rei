@@ -4,6 +4,13 @@
 #include "glm/trigonometric.hpp"
 #include "glm/ext/quaternion_geometric.hpp"
 
+void rei::transformation::Transform::Reset()
+{
+    _position = math::Vector3(0,0,0);
+    _rotation = math::Vector3(0, 0, 0);
+    _scale = math::Vector3(1, 1, 1);
+}
+
 rei::math::Vector3& rei::transformation::Transform::GetPosition()
 {
     return _position;
