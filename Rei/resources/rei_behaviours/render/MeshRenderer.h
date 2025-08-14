@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Modules/Render/Material/Material.h"
-#include "Modules/Render/Mesh/Mesh.h"
+#include "Modules/Render/Model/Model.h"
 
 namespace rei::render
 {
@@ -9,17 +9,20 @@ namespace rei::render
         BEHAVIOUR_BODY(MeshRenderer)
 
     public:
+        void RenderMesh(const std::vector<Mesh>::value_type& mesh) const;
         void Render() const;
 
-        void SetMesh(const Mesh& mesh);
-        void SetMaterial(const std::shared_ptr<Material>& material);
+        void SetModel(const assets::AssetRef<Model>& model);
+        void SetMaterial(const assets::AssetRef<Material>& material);
 
-        const Material& GetMaterial() const;
-        const Shader& GetShader() const;
+        assets::AssetRef<Model>& GetModel();
+        assets::AssetRef<Material>& GetMaterial();
 
     private:
-        Mesh _mesh;
-        std::shared_ptr<Material> _material;
+        assets::AssetRef<Model> _model;
+        assets::AssetRef<Material> _material;
+        
+        void BindTextures() const;
     };
 }
 

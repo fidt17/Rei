@@ -72,4 +72,11 @@ namespace rei::render
         Use();
         glUniformMatrix4fv(GetLocation(name), 1, GL_FALSE, value_ptr(value));
     }
+
+    void Shader::SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const
+    {
+        glUniformMatrix4fv(GetLocation("projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+        glUniformMatrix4fv(GetLocation("view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+        glUniformMatrix4fv(GetLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    }
 }

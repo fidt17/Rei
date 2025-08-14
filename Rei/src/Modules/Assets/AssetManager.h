@@ -22,7 +22,7 @@ namespace rei::assets
         }
 
         template <typename T>
-        AssetRef<T> GetByPath(const std::string& path)
+        REI_API AssetRef<T> GetByPath(const std::string& path)
         {
             AssetRef<T> ref(path);
 
@@ -55,6 +55,19 @@ namespace rei::assets
             return ref;
         }
 
+        template <typename T, typename... Args>
+        REI_API AssetRef<T> CreateAsset(Args... args)
+        {
+            AssetId id("runtime_asset_" + _runtimeAssetCounter++);
+            AssetRef<T>* asset = new AssetRef<T>(id);
+
+            asset->Asset = new T(args...);
+            asset->IsLoaded = true;
+            _loadedAssets[asset->Id] = asset;
+
+            return *asset;
+        }
+        
         template <typename T>
         REI_API void Load(AssetRef<T>& ref)
         {
@@ -70,6 +83,7 @@ namespace rei::assets
             for (auto loadedAsset : _loadedAssets)
             {
                 LOG("Delete: " + loadedAsset.first)
+                loadedAsset.second->UnloadAsset();
                 delete loadedAsset.second;
             }
         }
@@ -86,6 +100,8 @@ namespace rei::assets
     private:
         std::unique_ptr<AssetsMap> _map;
         std::unordered_map<AssetId, IAssetRef*> _loadedAssets;
+
+        u32 _runtimeAssetCounter = 0;
 
         std::vector<std::string> _tmpFiles;
 

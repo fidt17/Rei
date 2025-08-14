@@ -129,7 +129,7 @@ public:
         auto specularTexture = rei::GetAssetManager().GetByPath<rei::render::Texture>("C:/Repos/Rei/TMP/backpack/specular.jpg");
         specularTexture->SetType(rei::render::Specular);
         
-        auto material = std::make_shared<rei::render::Material>(shader);
+        auto material = rei::GetAssetManager().CreateAsset<rei::render::Material>(shader);
 
         material->GetShader().SetFloat("_Shininess", 3);
         material->GetShader().SetColor("_Color", rei::render::Color(1,1,1,1));
@@ -137,20 +137,17 @@ public:
         material->GetTextures().push_back(diffuseTexture);
         material->GetTextures().push_back(specularTexture);
 
-        for (const auto& mesh : model->GetMeshes())
-        {
-            ECS_WORLD(rei::GetInternalWorld());
-            auto e = NEW_ENTITY();
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto e = NEW_ENTITY();
 
-            auto& transform = ADD_BEHAVIOUR(e, rei::transformation::Transform);
-            transform.Reset();
-            
-            transform.GetPosition() = position;
+        auto& transform = ADD_BEHAVIOUR(e, rei::transformation::Transform);
+        transform.Reset();
+        
+        transform.GetPosition() = position;
 
-            auto& meshRenderer = ADD_BEHAVIOUR(e, rei::render::MeshRenderer);
-            meshRenderer.SetMesh(mesh);
-            meshRenderer.SetMaterial(material);
-        }
+        auto& meshRenderer = ADD_BEHAVIOUR(e, rei::render::MeshRenderer);
+        meshRenderer.SetModel(model);
+        meshRenderer.SetMaterial(material);
     }
 
     void Render() override
@@ -183,14 +180,11 @@ public:
         FOR(e, f)
         {
             auto& meshRenderer = GET(e, rei::render::MeshRenderer);
-            auto& shader = meshRenderer.GetShader();
+            auto& shader = meshRenderer.GetMaterial()->GetShader();
             SetAmbientLight(shader);
             SetPointLights(shader);
 
-            shader.SetMatrix4f("projection", _projectionMatrix);
-            shader.SetMatrix4f("view", _viewMatrix);
-            shader.SetMatrix4f("model", meshRenderer.GetTransform().CalculateModelMatrix());
-
+            shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
             meshRenderer.Render();
         }
     }
@@ -202,18 +196,10 @@ public:
         _lightSourceShader->SetColor("_Color", light.Get().GetColor());
         _lightSourceShader->SetFloat("_Strength", light.Get().GetStrength());
 
-        _lightSourceShader->SetMatrix4f("projection", _projectionMatrix);
-        _lightSourceShader->SetMatrix4f("view", _viewMatrix);
+        _lightSourceShader->SetViewMatrices(_projectionMatrix, _viewMatrix, light.Get().GetTransform().CalculateModelMatrix());
 
         glBindVertexArray(_lightBox.VAO);
-
-        glm::mat4 model = glm::mat4(1.0f);
-        model = translate(model, glm::vec3(light.Get().GetTransform().GetPosition()));
-        model = scale(model, glm::vec3(0.02f));
-        _lightSourceShader->SetMatrix4f("model", model);
-
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
         glBindVertexArray(0);
     }
 

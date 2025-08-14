@@ -5,16 +5,21 @@
 
 namespace rei::render
 {
-    void MeshRenderer::Render() const
+    void MeshRenderer::RenderMesh(const std::vector<Mesh>::value_type& mesh) const
     {
-        _material->GetShader().Use();
+        glBindVertexArray(mesh.VAO);
+        glDrawElements(GL_TRIANGLES, mesh.Indices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+    }
 
+    void MeshRenderer::BindTextures() const
+    {
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
         unsigned int normalNr = 1;
         unsigned int heightNr = 1;
 
-        std::vector<assets::AssetRef<Texture>>& textures = _material->GetTextures();
+        const std::vector<assets::AssetRef<Texture>>& textures = _material.Asset->GetTextures();
         for (unsigned int i = 0; i < textures.size(); i++)
         {
             if (!textures[i].IsLoaded)
@@ -22,11 +27,10 @@ namespace rei::render
                 LOG_ERROR("Texture " + textures[i].Id + " is not loaded")
                 continue;
             }
-            auto texturePtr = textures[i].Asset;
+            const auto texturePtr = textures[i].Asset;
 
             glActiveTexture(GL_TEXTURE0 + i); // activate proper texture unit before binding
 
-            // retrieve texture number (the N in diffuse_textureN)
             std::string number;
             std::string textureName;
             switch (const TextureType textureType = texturePtr->GetType())
@@ -52,34 +56,52 @@ namespace rei::render
                 continue;
             }
 
-            _material->GetShader().SetInt(textureName + number, i);
+            _material.Asset->GetShader().SetInt(textureName + number, i);
             glBindTexture(GL_TEXTURE_2D, texturePtr->GetId());
         }
         glActiveTexture(GL_TEXTURE0);
-
-        // draw mesh
-        glBindVertexArray(_mesh.VAO);
-        glDrawElements(GL_TRIANGLES, _mesh.Indices.size(), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
     }
 
-    void MeshRenderer::SetMesh(const Mesh& mesh)
+    void MeshRenderer::Render() const
     {
-        _mesh = mesh;
+        if (!_material.IsLoaded)
+        {
+            LOG_ERROR("Material " + _material.Id + " is not loaded. Cannot render mesh.");
+            return;
+        }
+
+        if (!_model.IsLoaded)
+        {
+            LOG_ERROR("Model " + _model.Id + " is not loaded. Cannot render mesh.");
+            return;
+        }
+
+        _material.Asset->GetShader().Use();
+        BindTextures();
+        
+        for (const auto& mesh : _model.Asset->GetMeshes())
+        {
+            RenderMesh(mesh);
+        }
     }
 
-    void MeshRenderer::SetMaterial(const std::shared_ptr<Material>& material)
+    void MeshRenderer::SetModel(const assets::AssetRef<Model>& model)
+    {
+        _model = model;
+    }
+
+    void MeshRenderer::SetMaterial(const assets::AssetRef<Material>& material)
     {
         _material = material;
     }
 
-    const Material& MeshRenderer::GetMaterial() const
+    assets::AssetRef<Model>& MeshRenderer::GetModel()
     {
-        return *_material;
+        return _model;
     }
 
-    const Shader& MeshRenderer::GetShader() const
+    assets::AssetRef<Material>& MeshRenderer::GetMaterial()
     {
-        return _material->GetShader();
+        return _material;
     }
 }

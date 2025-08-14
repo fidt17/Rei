@@ -8,6 +8,8 @@ namespace rei::assets
     {
     public:
         virtual ~IAssetRef() = default;
+
+        virtual void UnloadAsset() = 0;
     };
     
     template <typename T>
@@ -43,6 +45,12 @@ namespace rei::assets
             REI_ASSERT(IsLoaded, "Asset" + Id + " is not loaded")
             
             return Asset;
+        }
+
+        void UnloadAsset() override
+        {
+            delete Asset;
+            IsLoaded = false;
         }
     };
 }
