@@ -1,6 +1,11 @@
 ﻿#include "pch.h"
 #include "Material.h"
 
+rei::render::Material::Material(resources::BinaryReader& reader)
+{
+    // todo 
+}
+
 rei::render::Material::Material(assets::AssetRef<Shader> shader)
     :_shader(shader)
 {

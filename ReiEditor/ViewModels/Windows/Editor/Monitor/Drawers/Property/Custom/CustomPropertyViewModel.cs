@@ -45,6 +45,12 @@ public class CustomPropertyViewModel : BaseViewModel
 
     private void HandlePropertyValueChangedEvent(object? value)
     {
+        if (value is null)
+        {
+            Value.ClearAndDispose();
+            return;
+        }
+        
         if (value is Dictionary<string, SerializedProperty> subProperties)
         {
             Value.ClearAndDispose();

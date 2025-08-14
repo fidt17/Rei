@@ -17,7 +17,7 @@ rei::assets::AssetsMap::AssetsMap(resources::BinaryReader& reader)
 
 rei::assets::BuildAssetInfo rei::assets::AssetsMap::GetAssetInfo(const std::string& id) const
 {
-    REI_ASSERT(_assets.count(id) != 0, "Missing asset with id: " + id)
+    REI_THROW_IF(_assets.count(id) == 0, "Missing asset with id: " + id)
 
     return _assets.at(id);
 }

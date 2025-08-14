@@ -33,4 +33,9 @@ namespace rei::window
     {
         return _window;
     }
+
+    bool MainWindowHandler::IsSet() const
+    {
+        return _window != nullptr;
+    }
 }

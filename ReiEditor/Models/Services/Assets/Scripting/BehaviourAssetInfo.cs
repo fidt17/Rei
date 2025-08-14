@@ -14,7 +14,7 @@ public class BehaviourAssetInfo : SerializableObjectInfo
         ObjectFile<string> source,
         Dictionary<string, SerializedPropertyData> serializedProperties,
         string includePath) 
-        : base(behaviourNamespace, objectName, source, serializedProperties, includePath)
+        : base(behaviourNamespace, objectName, false, source, serializedProperties, includePath)
     {
         BehaviourId = behaviourId;
     }

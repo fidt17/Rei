@@ -11,6 +11,8 @@
 
 namespace rei::resources
 {
+    SET_LOG_SCOPE("Asset Builder")
+    
     i64 AssetBuilder::BuildAsset(const std::string& file, const std::string& dest, const i64 offset) const
     {
         try
@@ -42,8 +44,7 @@ namespace rei::resources
     {
         const i64 offset = writer.GetPosition();
 
-        LOG("Path: " + filePath.string())
-        LOG("File name: " + filePath.filename().string())
+        LOG("Building asset: " + filePath.string())
 
         #define ADD_TO_MAP(x, y) map[x] = [&](const std::filesystem::path& p, BinaryWriter& w) { y(p, w); };
         std::map<std::string, std::function<void(const std::filesystem::path&, BinaryWriter&)>> map;
@@ -53,6 +54,7 @@ namespace rei::resources
         ADD_TO_MAP(".fbx", MeshBuilder().BuildMeshAsset)
 
         const auto extension = filePath.extension().string();
+        
         if (map.find(extension) == map.end())
         {
             BuildDataAsset(filePath, writer);
@@ -63,7 +65,7 @@ namespace rei::resources
         }
 
         const i64 bytesWritten = writer.GetPosition() - offset;
-        LOG("Total Size: " + STRING(bytesWritten) + " bytes\n")
+        LOG("Total Size: " + STRING(bytesWritten) + " bytes")
 
         return writer.GetPosition();
     }

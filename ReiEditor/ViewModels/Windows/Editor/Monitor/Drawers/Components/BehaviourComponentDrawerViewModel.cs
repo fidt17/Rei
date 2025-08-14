@@ -28,7 +28,11 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     public BehaviourComponentDrawerViewModel() { }
 #pragma warning restore CS8618
 
-    public BehaviourComponentDrawerViewModel(GameEntity entity, BehaviourComponent behaviourComponent, IBehaviourComponentsService behaviourComponentsService, IBehaviourRegistry behaviourRegistry)
+    public BehaviourComponentDrawerViewModel(
+        GameEntity entity,
+        BehaviourComponent behaviourComponent,
+        IBehaviourComponentsService behaviourComponentsService,
+        IBehaviourRegistry behaviourRegistry)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;

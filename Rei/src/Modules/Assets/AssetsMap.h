@@ -24,7 +24,7 @@ namespace rei::assets
     public:
         explicit AssetsMap(resources::BinaryReader& reader);
 
-        BuildAssetInfo GetAssetInfo(const std::string& id) const;
+        REI_API BuildAssetInfo GetAssetInfo(const std::string& id) const;
 
     private:
         std::unordered_map<std::string, BuildAssetInfo> _assets;

@@ -24,16 +24,18 @@ public class SerializableObjectInfo
     public string ObjectName { get; }
     public ObjectFile<string> Source { get; }
     public string IncludePath { get; }
+    public bool IsTemplate { get; }
     
     public IReadOnlyDictionary<string, SerializedPropertyData> SerializedProperties => _serializedProperties;
     
     private readonly Dictionary<string, SerializedPropertyData> _serializedProperties;
 
-    public SerializableObjectInfo(string ns, string objectName, ObjectFile<string> source, Dictionary<string, SerializedPropertyData> serializedProperties, string includePath)
+    public SerializableObjectInfo(string ns, string objectName, bool isTemplate, ObjectFile<string> source, Dictionary<string, SerializedPropertyData> serializedProperties, string includePath)
     {
         Namespace = ns;
         ObjectName = objectName;
         Source = source;
+        IsTemplate = isTemplate;
         _serializedProperties = serializedProperties;
         IncludePath = includePath;
     }

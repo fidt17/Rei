@@ -12,6 +12,8 @@ namespace rei::window
 
         std::shared_ptr<Window> GetMainWindow();
 
+        bool IsSet() const;
+
     private:
         std::shared_ptr<Window> _window;
     };

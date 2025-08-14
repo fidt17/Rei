@@ -118,6 +118,13 @@ public:
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         CreateModel(rei::math::Vector3(0, 0, 0));
+        CreateErrorMaterial();
+    }
+
+    void CreateErrorMaterial()
+    {
+        auto shader = rei::GetAssetManager().GetByPath<rei::render::Shader>("C:/Repos/Rei/Rei/resources/shaders/error.rshader");
+        _errorMaterial = rei::GetAssetManager().CreateAsset<rei::render::Material>(shader);
     }
 
     void CreateModel(rei::math::Vector3 position)
@@ -180,6 +187,16 @@ public:
         FOR(e, f)
         {
             auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+
+#if DEBUG
+            if (!meshRenderer.GetModel().VerifyIsLoaded()) continue;
+            if (!meshRenderer.GetMaterial().VerifyIsLoaded())
+            {
+                meshRenderer.SetMaterial(_errorMaterial);
+                continue;
+            }
+#endif
+            
             auto& shader = meshRenderer.GetMaterial()->GetShader();
             SetAmbientLight(shader);
             SetPointLights(shader);
@@ -262,6 +279,7 @@ private:
     glm::mat4 _viewMatrix;
 
     rei::assets::AssetRef<rei::render::Shader> _lightSourceShader;
+    rei::assets::AssetRef<rei::render::Material> _errorMaterial;
 
     BoxVertexData _lightBox;
 

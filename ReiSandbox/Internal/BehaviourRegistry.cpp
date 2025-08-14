@@ -6,6 +6,7 @@
 #include <Modules/Behaviour/Behaviour.h>
 
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
+#include "C:\Repos\Rei\Rei\src\Modules\Assets\AssetRef.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
 
 #include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\TestMovement.h"
@@ -32,6 +33,11 @@ rei::math::Vector3::Vector3(const nlohmann::json& data) :
     z(data.at("z").at("Value"))
 {}
 
+template <typename T>
+rei::assets::AssetRef<T>::AssetRef(const nlohmann::json& data) :
+    Id(data.at("Id").at("Value"))
+{}
+
 rei::render::Color::Color(const nlohmann::json& data) :
     r(data.at("r").at("Value")),
     g(data.at("g").at("Value")),
@@ -55,6 +61,8 @@ rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohma
 
 rei::render::MeshRenderer::MeshRenderer(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
+    , _model(data.at("_model").at("Value"))
+    , _material(data.at("_material").at("Value"))
 {}
 
 rei::transformation::Transform::Transform(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)

@@ -121,7 +121,15 @@ public class BehaviourRegistrySourceGenerator
             var objectName = obj.ObjectName;
             var serializedProperties = obj.SerializedProperties.ToList();
 
-            str.AppendLine($"{objNamespace}::{objectName}::{objectName}(const nlohmann::json& data) :");
+            if (obj.IsTemplate)
+            {
+                str.AppendLine("template <typename T>");
+                str.AppendLine($"{objNamespace}::{objectName}<T>::{objectName}(const nlohmann::json& data) :");
+            }
+            else
+            {
+                str.AppendLine($"{objNamespace}::{objectName}::{objectName}(const nlohmann::json& data) :");
+            }
             for (var index = 0; index < serializedProperties.Count; index++)
             {
                 var p = serializedProperties[index];

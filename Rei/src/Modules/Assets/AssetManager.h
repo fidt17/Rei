@@ -6,6 +6,8 @@
 
 namespace rei::assets
 {
+    SET_LOG_SCOPE("Asset Manager")
+
     class AssetManager
     {
     public:
@@ -14,10 +16,10 @@ namespace rei::assets
         template <typename T>
         REI_API AssetRef<T> GetById(const std::string& id)
         {
-            auto asset = AssetRef<T>(AssetId(id));
+            auto asset = AssetRef<T>(id);
 
             Load(asset);
-            
+
             return asset;
         }
 
@@ -33,7 +35,7 @@ namespace rei::assets
                 ref.IsLoaded = true;
                 return ref;
             }
-            
+
             const auto base_filename = path.substr(path.find_last_of("/\\") + 1);
             const auto dirPath = std::filesystem::temp_directory_path().string() + "Rei Engine\\";
             const auto dest = dirPath + base_filename + "_" + std::to_string(_tmpFiles.size()) + ".data";
@@ -43,14 +45,20 @@ namespace rei::assets
             remove(dest.c_str());
 
             resources::AssetBuilder builder;
+
+            std::cout << "\n";
+            LOG("Created temp file at " + dest);
+
             i32 _ = builder.BuildAsset(path, dest, 0);
 
-            LOG_WARNING("Created temp file at " + dest + "\n");
-
-            ref.Asset = new T(Load<T>(dest, 0));
+            i32 assetSize;
+            ref.Asset = new T(Load<T>(dest, 0, assetSize));
             ref.IsLoaded = true;
+            ref.AssetSize = assetSize;
+            _loadedAssetsSize += assetSize;
 
             _loadedAssets[ref.Id] = new AssetRef<T>(ref);
+            LOG("Loaded asset id=" + ref.Id + ", size=" + STRING(assetSize / 1024 / 1024.0) + " Mb, total=" + STRING(_loadedAssetsSize / 1024 / 1024.0) + " Mb")
 
             return ref;
         }
@@ -58,7 +66,7 @@ namespace rei::assets
         template <typename T, typename... Args>
         REI_API AssetRef<T> CreateAsset(Args... args)
         {
-            AssetId id("runtime_asset_" + _runtimeAssetCounter++);
+            std::string id("runtime_asset_" + _runtimeAssetCounter++);
             AssetRef<T>* asset = new AssetRef<T>(id);
 
             asset->Asset = new T(args...);
@@ -67,22 +75,43 @@ namespace rei::assets
 
             return *asset;
         }
-        
-        template <typename T>
-        REI_API void Load(AssetRef<T>& ref)
-        {
-            if (ref.IsLoaded) return;
-            
-            const auto assetInfo = _map->GetAssetInfo(ref.Id);
 
-            Load(ref, assetInfo.Path, assetInfo.Offset);
+        template <typename T>
+        REI_API bool Load(AssetRef<T>& ref)
+        {
+            if (ref.Id == "") return false;
+            if (ref.IsLoaded) return true;
+
+            try
+            {
+                // if an absolute path to the asset is used instead
+                if (ref.Id.rfind("@", 0) == 0)
+                {
+                    ref = GetByPath<T>(ref.Id.substr(1, ref.Id.size() - 1));
+                    return true;
+                }
+
+                const auto assetInfo = _map->GetAssetInfo(ref.Id);
+
+                Load(ref, assetInfo.Path, assetInfo.Offset);
+                return true;
+            }
+            catch (std::exception e)
+            {
+                LOG_ERROR("Cought exception while trying to load asset id=" + ref.Id + "\n Exception: " + e.what())
+                ref.IsLoaded = false;
+            }
+
+            return false;
         }
 
         REI_API void UnloadAllAssets()
         {
             for (auto loadedAsset : _loadedAssets)
             {
-                LOG("Delete: " + loadedAsset.first)
+                LOG("Delete asset id=" + loadedAsset.first)
+                _loadedAssetsSize -= loadedAsset.second->GetAssetSize();
+
                 loadedAsset.second->UnloadAsset();
                 delete loadedAsset.second;
             }
@@ -99,17 +128,28 @@ namespace rei::assets
 
     private:
         std::unique_ptr<AssetsMap> _map;
-        std::unordered_map<AssetId, IAssetRef*> _loadedAssets;
 
         u32 _runtimeAssetCounter = 0;
+        i64 _loadedAssetsSize = 0;
+        std::unordered_map<std::string, IAssetRef*> _loadedAssets;
 
         std::vector<std::string> _tmpFiles;
 
         template <typename T>
         T Load(const std::string& path, const i32 offset)
         {
+            i32 size;
+            return Load<T>(path, offset, size);
+        }
+
+        template <typename T>
+        T Load(const std::string& path, const i32 offset, i32& size)
+        {
             auto reader = resources::BinaryReader(path, offset);
             auto asset = reader.Get<T>();
+
+            size = reader.GetPosition() - offset;
+
             reader.Close();
 
             return asset;
@@ -125,13 +165,18 @@ namespace rei::assets
                 ref.IsLoaded = true;
                 return;
             }
-            
-            auto asset = Load<T>(path, offset);
+
+            i32 assetSize;
+            auto asset = Load<T>(path, offset, assetSize);
 
             _loadedAssets[ref.Id] = new AssetRef<T>(ref);
-            
             ref.Asset = new T(asset);
             ref.IsLoaded = true;
+            ref.AssetSize = assetSize;
+
+            _loadedAssetsSize += assetSize;
+
+            LOG("Loaded asset id=" + ref.Id + ", size=" + STRING(assetSize) + " b, total=" + STRING(_loadedAssetsSize / 1024 / 1024.0) + " Mb")
         }
     };
 }

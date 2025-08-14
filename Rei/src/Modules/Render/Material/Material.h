@@ -8,7 +8,7 @@ namespace rei::render
     {
     public:
         REI_API Material() = default;
-        REI_API Material(const Material&);
+        REI_API Material(resources::BinaryReader& reader);
         REI_API explicit Material(assets::AssetRef<Shader> shader);
 
         REI_API ~Material();

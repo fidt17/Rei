@@ -108,8 +108,12 @@ namespace rei::internal::engine
     {
         try
         {
+            while (!_mainWindowHandler->IsSet())
+            {
+                _reiMainThread->CompleteTasks();
+            }
+            
             _runEngine = true;
-
             _sceneManager->LoadScene(0);
             _app->OnStart();
         }

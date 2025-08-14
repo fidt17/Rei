@@ -15,6 +15,11 @@ namespace rei::resources
         _stream.seekg(position);
     }
 
+    i64 BinaryReader::GetPosition()
+    {
+        return _stream.tellg();
+    }
+
     void BinaryReader::Close()
     {
         _stream.close();

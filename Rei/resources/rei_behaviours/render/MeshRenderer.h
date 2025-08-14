@@ -7,9 +7,17 @@ namespace rei::render
     class MeshRenderer : public Behaviour
     {
         BEHAVIOUR_BODY(MeshRenderer)
+    private:
+        SERIALIZE assets::AssetRef<Model> _model;
+        SERIALIZE assets::AssetRef<Material> _material;
 
     public:
-        void RenderMesh(const std::vector<Mesh>::value_type& mesh) const;
+        void LoadAssets(assets::AssetManager& assetManager) override
+        {
+            assetManager.Load(_model);
+            assetManager.Load(_material);
+        }
+
         void Render() const;
 
         void SetModel(const assets::AssetRef<Model>& model);
@@ -19,10 +27,8 @@ namespace rei::render
         assets::AssetRef<Material>& GetMaterial();
 
     private:
-        assets::AssetRef<Model> _model;
-        assets::AssetRef<Material> _material;
-        
         void BindTextures() const;
+        void RenderMesh(const std::vector<Mesh>::value_type& mesh) const;
     };
 }
 

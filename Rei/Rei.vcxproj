@@ -730,6 +730,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\shaders\default.rshader" />
+    <Content Include="resources\shaders\error.rshader" />
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />

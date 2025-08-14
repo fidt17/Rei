@@ -42,12 +42,12 @@ public class SourceFilesUtility
             foreach (var path in Directory.EnumerateFiles(rootDir, $"*{FileExtensions.H}", SearchOption.AllDirectories))
             {
                 var fileContents = File.ReadAllText(path);
-                var isSerializable = TryGetSerializableObjectNameFrom(fileContents, out var name);
+                var isSerializable = TryGetSerializableObjectNameFrom(fileContents, out var name, out var isTemplate);
                 if (!isSerializable) continue;
 
                 var namespaceStr = GetObjectNamespaceFrom(fileContents);
                 var properties = GetSerializedProperties(fileContents);
-                var serializableObject = new SerializableObjectInfo(namespaceStr, name, new ObjectFile<string>(fileContents, path), properties, path);
+                var serializableObject = new SerializableObjectInfo(namespaceStr, name, isTemplate, new ObjectFile<string>(fileContents, path), properties, path);
 
                 if (result.Exists(x => x.ObjectName == serializableObject.ObjectName))
                 {
@@ -63,10 +63,13 @@ public class SourceFilesUtility
         return result;
     }
     
-    public bool TryGetSerializableObjectNameFrom(string text, out string name)
+    public bool TryGetSerializableObjectNameFrom(string text, out string name, out bool isTemplate)
     {
         name = "";
+        isTemplate = text.AllIndexesOf("template <typename").Count > 0 || text.AllIndexesOf("template<typename").Count > 0;
+        
         var regex = new Regex($".*{BehaviourMacrosConstants.SERIALIZABLE_BODY}\\((.*)\\).*");
+        
         if (!regex.IsMatch(text)) return false;
             
         name = regex.Match(text).Groups[1].Value;

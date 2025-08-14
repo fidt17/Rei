@@ -15,11 +15,11 @@ public:
 
     void Update() override
     {
-        time += _speed;
+        time += _speed * 1e-02;
         
         auto& position = GetTransform().GetPosition();
-        position.x = cos(time);
-        position.z = sin(time);
+        position.x = cos(time) * _radius;
+        position.z = sin(time) * _radius;
         //position.y = sin(time);
         //position.z = position.x + position.y;
     }

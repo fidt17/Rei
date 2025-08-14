@@ -18,14 +18,21 @@ public class SerializedProperty
         get => _value;
         set
         {
-            if (Type.IsValidValue(value))
+            try
             {
-                _value = value;
-                ValueChangedEvent?.Invoke(_value);
+                if (Type.IsValidValue(value))
+                {
+                    _value = value;
+                    ValueChangedEvent?.Invoke(_value);
+                }
+                else
+                {
+                    throw new Exception($"Cannot assign value of type {value?.GetType()} to property {Type}");
+                }
             }
-            else
+            catch (Exception e)
             {
-                throw new Exception($"Cannot assign value of type {value?.GetType()} to property {Type}");
+                Console.WriteLine(e);
             }
         }
     }

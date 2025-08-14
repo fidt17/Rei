@@ -9,6 +9,7 @@ namespace rei::resources
         REI_API explicit BinaryReader(const std::string& path, i64 pos = 0);
 
         REI_API void SetPosition(i64 position);
+        REI_API i64 GetPosition();
         REI_API void Close();
 
         REI_API unsigned char* GetBytes(i32& length);

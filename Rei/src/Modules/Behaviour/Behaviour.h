@@ -26,6 +26,7 @@ namespace rei
         
         virtual ~Behaviour() = default;
 
+        virtual void LoadAssets(assets::AssetManager& assetManager) { }
         virtual void Init() { }
         virtual void Start() { }
         virtual void Update() { }

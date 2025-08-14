@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "assimp/scene.h"
 #include "Modules/Render/Mesh/Mesh.h"
 
 namespace rei::render
@@ -7,7 +6,7 @@ namespace rei::render
     class Model
     {
     public:
-        Model(resources::BinaryReader& reader);
+        REI_API Model(resources::BinaryReader& reader);
 
         const std::vector<Mesh>& GetMeshes() const;
 

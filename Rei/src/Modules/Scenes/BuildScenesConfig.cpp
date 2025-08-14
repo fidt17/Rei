@@ -18,7 +18,7 @@ namespace rei::scenes
         for (const auto& [key, val] : m)
         {
             auto idx = std::stoi(key);
-            _buildScenes.insert({idx, assets::AssetRef<Scene>(assets::AssetId(val))});
+            _buildScenes.insert({idx, assets::AssetRef<Scene>(val)});
         }
     }
 
