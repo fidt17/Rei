@@ -35,6 +35,7 @@
                         Text="X" />
                     <textBoxes:ReiTextBox
                         VerticalAlignment="Center"
+                        MaxWidth="64"
                         Text="{Binding X, Mode=TwoWay}" />
                 </StackPanel>
 
@@ -47,6 +48,7 @@
                         Text="Y" />
                     <textBoxes:ReiTextBox
                         VerticalAlignment="Center"
+                        MaxWidth="64"
                         Text="{Binding Y, Mode=TwoWay}" />
                 </StackPanel>
 
@@ -59,6 +61,7 @@
                         Text="Z" />
                     <textBoxes:ReiTextBox
                         VerticalAlignment="Center"
+                        MaxWidth="64"
                         Text="{Binding Z, Mode=TwoWay}" />
                 </StackPanel>
 

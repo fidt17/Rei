@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -44,6 +47,22 @@ public class EngineApi : IEngineApi
     public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
+    
+    private delegate void GetSceneEntityStateDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
+    public EntityStateResponse? GetSceneEntityState(int sceneEntityId)
+    {
+        try
+        {
+            var outputBuffer = new StringBuilder(1024);
+            Invoke(typeof(GetSceneEntityStateDelegate), "GetSceneEntityState", sceneEntityId, outputBuffer, outputBuffer.Capacity);
+
+            return JsonConvert.DeserializeObject<EntityStateResponse>(outputBuffer.ToString());
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
@@ -72,9 +91,9 @@ public class EngineApi : IEngineApi
             var d = Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType);
             d.DynamicInvoke(args);
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogError($"Dll invoke error [{methodName}]");
+            _logger.LogError($"Dll invoke error [{methodName}]. Exception: {e}");
             throw;
         }
     }
@@ -89,9 +108,9 @@ public class EngineApi : IEngineApi
             }
             return (T?) Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType).DynamicInvoke(args) ?? throw new InvalidOperationException(methodName);
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogError($"Dll invoke error [{methodName}]");
+            _logger.LogError($"Dll invoke error [{methodName}]. Exception: {e}");
             throw;
         }
     }

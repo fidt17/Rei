@@ -1,12 +1,5 @@
 ﻿#pragma once
 
-#define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
-    public:\
-    BEHAVIOUR_NAME() = default;\
-    explicit BEHAVIOUR_NAME(const i32 id, const rei::ecs::Entity entity) : Behaviour(id, entity) {} ;\
-    explicit BEHAVIOUR_NAME(const i32 id, const rei::ecs::Entity entity, const nlohmann::json& data);\
-    BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
-    private:
 #include "Ecs/RefComponent.h"
 #include "Engine/Services.h"
 
@@ -32,7 +25,7 @@ namespace rei
         virtual void Update() { }
         virtual void Dispose() { }
 
-        i32 GetBehaviourId() const;
+        REI_API i32 GetBehaviourId() const;
         
         REI_API ecs::Entity GetEntity() const;
         REI_API transformation::Transform& GetTransform() const;

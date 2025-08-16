@@ -18,14 +18,15 @@
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
-    f.RegisterComponent<::TestMovement>(5);
-    f.RegisterComponent<rei::render::Camera>(0);
-    f.RegisterComponent<rei::render::MeshRenderer>(1);
-    f.RegisterComponent<rei::transformation::Transform>(2);
-    f.RegisterComponent<rei::render::AmbientLight>(3);
-    f.RegisterComponent<rei::behaviour::PointLight>(4);
+    f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_GET(); });
+    f.RegisterComponent<rei::render::Camera>(0, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_GET(); });
+    f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_GET(); });
+    f.RegisterComponent<rei::transformation::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e).REI_GET(); });
+    f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e).REI_GET(); });
+    f.RegisterComponent<rei::behaviour::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::behaviour::PointLight>(e).REI_GET(); });
 }
 
+// --- SERIALIZABLE OBJECT CONSTRUCTORS ---
 
 rei::math::Vector3::Vector3(const nlohmann::json& data) :
     x(data.at("x").at("Value")),
@@ -45,6 +46,8 @@ rei::render::Color::Color(const nlohmann::json& data) :
     a(data.at("a").at("Value"))
 {}
 
+
+// --- BEHAVIOUR CONSTRUCTORS ---
 
 ::TestMovement::TestMovement(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
     : Behaviour(id, e)
@@ -83,5 +86,94 @@ rei::behaviour::PointLight::PointLight(const i32 id, const rei::ecs::Entity e, c
     , _strength(data.at("_strength").at("Value"))
     , _color(data.at("_color").at("Value"))
 {}
+
+
+// --- REI_GET METHODS ---
+
+nlohmann::json rei::math::Vector3::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Vector3"},
+        {"x", x},
+        {"y", y},
+        {"z", z},
+    };
+}
+
+template <typename T>
+nlohmann::json rei::assets::AssetRef<T>::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "AssetRef"},
+        {"Id", Id},
+    };
+}
+
+nlohmann::json rei::render::Color::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Color"},
+        {"r", r},
+        {"g", g},
+        {"b", b},
+        {"a", a},
+    };
+}
+
+nlohmann::json TestMovement::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "TestMovement"},
+        {"_radius", _radius},
+        {"_speed", _speed},
+    };
+}
+
+nlohmann::json rei::render::Camera::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Camera"},
+        {"_fov", _fov},
+        {"_nearClipPlane", _nearClipPlane},
+        {"_farClipPlane", _farClipPlane},
+    };
+}
+
+nlohmann::json rei::render::MeshRenderer::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "MeshRenderer"},
+        {"_model", _model.REI_GET()},
+        {"_material", _material.REI_GET()},
+    };
+}
+
+nlohmann::json rei::transformation::Transform::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Transform"},
+        {"_position", _position.REI_GET()},
+        {"_rotation", _rotation.REI_GET()},
+        {"_scale", _scale.REI_GET()},
+    };
+}
+
+nlohmann::json rei::render::AmbientLight::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "AmbientLight"},
+        {"_strength", _strength},
+        {"_color", _color.REI_GET()},
+    };
+}
+
+nlohmann::json rei::behaviour::PointLight::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "PointLight"},
+        {"_strength", _strength},
+        {"_color", _color.REI_GET()},
+    };
+}
 
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -41,9 +42,13 @@ public class BehaviourRegistrySourceGenerator
         str.AppendLine(GenerateIncludes(behaviours.Values));
         
         str.AppendLine(GenerateRegistryMethod(behaviours));
-        str.AppendLine();
         str.AppendLine(GenerateBodyImplementation(serializableObjectInfos));
         str.AppendLine(GenerateBodyImplementation(behaviours));
+
+        var serializableObjectsAndBehaviours = new List<SerializableObjectInfo>();
+        serializableObjectsAndBehaviours.AddRange(serializableObjectInfos);
+        serializableObjectsAndBehaviours.AddRange(behaviours.Values);
+        str.AppendLine(GenerateSerializationImplementation(serializableObjectsAndBehaviours));
         
         return str.ToString();
     }
@@ -80,7 +85,8 @@ public class BehaviourRegistrySourceGenerator
             var behaviourName = b.Value.ObjectName;
             var behaviourId = b.Value.BehaviourId;
 
-            str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId});");
+            str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
+                           $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{" + $"return rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e).REI_GET();" + " });");
         }
         
         str.AppendLine("}");
@@ -91,6 +97,8 @@ public class BehaviourRegistrySourceGenerator
     private string GenerateBodyImplementation(Dictionary<int, BehaviourAssetInfo> behaviours)
     {
         var str = new StringBuilder();
+        
+        str.AppendLine("// --- BEHAVIOUR CONSTRUCTORS ---\n");
         
         foreach (var b in behaviours)
         {
@@ -115,6 +123,8 @@ public class BehaviourRegistrySourceGenerator
     {
         var str = new StringBuilder();
         
+        str.AppendLine("// --- SERIALIZABLE OBJECT CONSTRUCTORS ---\n");
+        
         foreach (var obj in objects)
         {
             var objNamespace = obj.Namespace;
@@ -138,6 +148,79 @@ public class BehaviourRegistrySourceGenerator
 
             
             str.AppendLine("{" + "}");
+            str.AppendLine();
+        }
+        
+        return str.ToString();
+    }
+    
+    private string GenerateSerializationImplementation(IEnumerable<SerializableObjectInfo> objects)
+    {
+        var str = new StringBuilder();
+
+        str.AppendLine("// --- REI_GET METHODS ---\n");
+        
+        var list = objects.ToList();
+        
+        foreach (var obj in list)
+        {
+            var objNamespace = obj.Namespace;
+            var objectName = obj.ObjectName;
+            
+            var nameAndNamespace = objectName;
+            if (!string.IsNullOrWhiteSpace(objNamespace)) nameAndNamespace = $"{objNamespace}::{objectName}";
+            
+            var serializedProperties = obj.SerializedProperties.ToList();
+
+            if (obj.IsTemplate)
+            {
+                str.AppendLine("template <typename T>");
+                str.AppendLine($"nlohmann::json {nameAndNamespace}<T>::REI_GET() const");
+            }
+            else
+            {
+                str.AppendLine($"nlohmann::json {nameAndNamespace}::REI_GET() const");
+            }
+
+            str.AppendLine("{");
+            str.AppendLine("    return {");
+
+            str.AppendLine("        {" + $"\"REI_TYPE\", \"{objectName}\"" + "},");
+            
+            for (var index = 0; index < serializedProperties.Count; index++)
+            {
+                var p = serializedProperties[index];
+                
+                var propertyType = p.Value.SourceType;
+                var indexOfTemplateStart = propertyType.IndexOf('<');
+                if (indexOfTemplateStart != -1)
+                {
+                    propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
+                }
+
+                if (list.Exists(x =>
+                    {
+                        var objName = x.ObjectName;
+                        indexOfTemplateStart = objName.IndexOf('<');
+                        if (indexOfTemplateStart != -1)
+                        {
+                            objName = objName.Remove(indexOfTemplateStart, objName.Length - indexOfTemplateStart);
+                        }
+
+                        return objName == propertyType;
+                    }))
+                {
+                    str.AppendLine("        {" + $"\"{p.Key}\", {p.Key}.REI_GET()" + "},");
+                }
+                else
+                {
+                    str.AppendLine("        {" + $"\"{p.Key}\", {p.Key}" + "},");
+                }
+            }
+
+            str.AppendLine("    };");
+            str.AppendLine("}");
+
             str.AppendLine();
         }
         

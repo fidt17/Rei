@@ -14,4 +14,6 @@ public interface IEntityManagementService
     void SetParent(GameEntity e, GameEntity? parent, int idx);
 	
     void DeleteEntity(GameEntity e);
+
+    void UpdateEntityStateFromEngine(GameEntity e);
 }

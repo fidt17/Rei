@@ -101,6 +101,11 @@ namespace rei::ecs
         return true;
     }
 
+    const std::vector<BitMask::mask>& BitMask::GetFlags() const
+    {
+        return _flags;
+    }
+
     u32 BitMask::GetLayerIdx(const mask idx) const
     {
         return static_cast<u32>(idx / (sizeof(mask) * 8));

@@ -2,6 +2,7 @@
 #include <typeindex>
 
 #include "Engine/Services.h"
+#include "Modules/Components/EntityInfo.h"
 #include "Modules/Scenes/SceneEntity.h"
 
 namespace rei
@@ -10,7 +11,7 @@ namespace rei
     {
     public:
         template <typename T>
-        void RegisterComponent(i32 id)
+        void RegisterComponent(i32 id, std::function<nlohmann::json(ecs::Entity)> getJsonFunc)
         {
             _addMethods.insert({
                 id, [=](const ecs::Entity e, const nlohmann::json& data) -> T& {
@@ -26,6 +27,8 @@ namespace rei
                         t = T(id, e, data);
                     }
 
+                    GET(e, EntityInfo).Behaviours.push_back(id);
+
                     return t;
                 }
             });
@@ -35,6 +38,10 @@ namespace rei
                     ECS_WORLD(GetInternalWorld());
                     return GET(e, T);
                 }
+            });
+
+            _getJsonMethods.insert({
+                id, getJsonFunc
             });
 
             _behaviourIdMap[std::type_index(typeid(T))] = id;
@@ -55,6 +62,14 @@ namespace rei
 
             return _getMethods.at(id)(e);
         }
+        
+        nlohmann::json GetBehaviourData(const ecs::Entity e, const i32 id) const
+        {
+            if (_getJsonMethods.count(id) == 0)
+                REI_THROW("Missing component factory. Component ID: " + STRING(id))
+
+            return _getJsonMethods.at(id)(e);
+        }
 
         template <typename R>
         i32 GetId()
@@ -65,6 +80,7 @@ namespace rei
     private:
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity, const nlohmann::json&)>> _addMethods{};
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _getMethods{};
+        std::unordered_map<i32, std::function<nlohmann::json(ecs::Entity)>> _getJsonMethods{};
         std::map<std::type_index, i32> _behaviourIdMap;
     };
 

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 namespace ReiEditor.Models.Services.Components;
@@ -22,8 +24,22 @@ public class SerializedProperty
             {
                 if (Type.IsValidValue(value))
                 {
-                    _value = value;
-                    ValueChangedEvent?.Invoke(_value);
+                    if (value is Dictionary<string, object?> valueDict)
+                    {
+                        var nestedProperties = Value as Dictionary<string, SerializedProperty>;
+                        foreach (var (k, v) in valueDict)
+                        {
+                            if (nestedProperties.TryGetValue(k, out var property))
+                            {
+                                property.Value = v;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _value = value;
+                        ValueChangedEvent?.Invoke(_value);
+                    }
                 }
                 else
                 {

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using ReiEditor.Models.Services.Engine.Api.DTO;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -16,6 +17,8 @@ public interface IEngineApi
 	void AddLogCallback(IntPtr ptr);
 	void AddShutdownCallback(IntPtr callback);
 
+	EntityStateResponse? GetSceneEntityState(int sceneEntityId);
+	
 	long BuildAsset(string assetPath, string destinationFile, long offset);
 
 	Task<IntPtr> CreatePlaymodeWindow();

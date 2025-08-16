@@ -1,5 +1,8 @@
-﻿using ReiEditor.Models.EditorApp.Refresh;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
@@ -25,6 +28,11 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IEditorRefreshService _editorRefreshService;
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
 
+    private readonly IEntityManagementService _entityManagementService;
+    private readonly IPlaymodeService _playmodeService;
+
+    private CancellationTokenSource _entityUpdateStateCTS;
+
 #pragma warning disable CS8618
     public MonitorWindowViewModel() { }
 #pragma warning restore CS8618
@@ -32,21 +40,30 @@ public class MonitorWindowViewModel : BaseViewModel
     public MonitorWindowViewModel(
         ISelectionService selectionService,
         IEditorRefreshService editorRefreshService,
-        IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory)
+        IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
+        IEntityManagementService entityManagementService,
+        IPlaymodeService playmodeService)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
+        _entityManagementService = entityManagementService;
+        _playmodeService = playmodeService;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
         _editorRefreshService.RefreshedEvent += HandleRefreshedEvent;
+        
+        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChangedEvent);
     }
 
     public override void Dispose()
     {
         base.Dispose();
+        
         _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
         _editorRefreshService.RefreshedEvent -= HandleRefreshedEvent;
+        
+        _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChangedEvent);
     }
 
     private void HandleActiveSelectionChangedEvent(ISelectable? obj)
@@ -69,8 +86,33 @@ public class MonitorWindowViewModel : BaseViewModel
         
         if (obj is HierarchyNodeViewModel hNode)
         {
-            GameEntity e = hNode.Node.Content;
-            Drawer = _entityMonitorFactory.CreateInstance(e);
+            var e = hNode.Node.Content;
+            var entityMonitor = _entityMonitorFactory.CreateInstance(e);
+            Drawer = entityMonitor;
+
+            RunEntityUpdateStateTask(e);
         }
+    }
+
+    private void HandleIsPlaymodeActiveValueChangedEvent(bool _)
+    {
+        UpdateDrawer(_selectionService.ActiveSelection.Value);
+    }
+
+    private void RunEntityUpdateStateTask(GameEntity e)
+    {
+        _entityUpdateStateCTS?.Cancel();
+        _entityUpdateStateCTS = new CancellationTokenSource();
+
+        if (!_playmodeService.IsPlaymodeActive.Value) return;
+        
+        Task.Run(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(32);
+                _entityManagementService.UpdateEntityStateFromEngine(e);
+            }
+        }, _entityUpdateStateCTS.Token);
     }
 }

@@ -9,16 +9,18 @@ namespace rei::ecs
 
         REI_API void Set(mask flagIdx, bool resizeIfNeeded = false);
         REI_API void Remove(mask flagIdx);
-        void Resize(size_t size);
-        void Clear();
+        REI_API void Resize(size_t size);
+        REI_API void Clear();
 
-        bool All(const BitMask& other) const;
-        bool Any(const BitMask& other) const;
+        REI_API bool All(const BitMask& other) const;
+        REI_API bool Any(const BitMask& other) const;
 
-        size_t Size() const;
-        std::string ToString() const;
+        REI_API size_t Size() const;
+        REI_API std::string ToString() const;
 
         REI_API bool operator==(const BitMask& other) const;
+
+        REI_API const std::vector<mask>& GetFlags() const;
 
     private:
         std::vector<mask> _flags{0};

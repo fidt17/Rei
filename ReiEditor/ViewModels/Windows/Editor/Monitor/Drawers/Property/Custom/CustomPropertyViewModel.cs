@@ -62,7 +62,7 @@ public class CustomPropertyViewModel : BaseViewModel
         }
         else
         {
-            throw new Exception($"Not supported value type: {value}");
+            throw new Exception($"Not supported value type: {value.GetType()} {value}");
         }
     }
 }
