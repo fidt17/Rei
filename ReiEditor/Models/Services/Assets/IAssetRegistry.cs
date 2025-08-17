@@ -15,4 +15,5 @@ public interface IAssetRegistry
     IEnumerable<AssetInfo> GetAllAssets();
     
     void AddToLoadedAssets(AssetInfo assetInfo, Asset asset);
+    void RemoveFromLoadedAssets(AssetInfo assetInfo);
 }

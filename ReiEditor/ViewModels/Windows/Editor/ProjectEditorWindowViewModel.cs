@@ -1,4 +1,5 @@
-﻿using ReiEditor.Models.Services.Entities;
+﻿using Avalonia.Threading;
+using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Factory;
@@ -74,6 +75,9 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     
     private void HandleCurrentSceneChangedEvent(Scene? scene)
     {
-        Hierarchy.SetHierarchy(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
+        Dispatcher.UIThread.Invoke(() =>
+        {
+            Hierarchy.SetHierarchy(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
+        });
     }
 }

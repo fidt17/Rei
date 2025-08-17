@@ -10,6 +10,7 @@ public interface ISceneManagementService : IAsyncInitializable
 
 	Task<Scene?> CreateScene(string name, string projectPath);
 	Task LoadScene(Scene scene);
+	Task ReloadCurrentScene();
 	
 	BuildScenesConfiguration GetBuildConfiguration();
 	void SetBuildSceneId(Scene scene, int id);

@@ -50,4 +50,9 @@ public class AssetRegistry : IAssetRegistry
         _loadedAssets[assetInfo.Meta.AssetId] = asset;
         _idToAssetInfoMap[assetInfo.Meta.AssetId] = assetInfo;
     }
+
+    public void RemoveFromLoadedAssets(AssetInfo assetInfo)
+    {
+        _loadedAssets.Remove(assetInfo.Meta.AssetId);
+    }
 }

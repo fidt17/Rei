@@ -79,6 +79,13 @@ public class AssetsService : IAssetsService
         return asset;
     }
 
+    public void Unload(string assetId)
+    {
+        if (!_assetRegistry.TryGetById(assetId, out var assetInfo)) return;
+
+        _assetRegistry.RemoveFromLoadedAssets(assetInfo);
+    }
+
     public async Task SaveProject()
     {
         if (_saveInProcess) return;
