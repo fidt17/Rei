@@ -58,10 +58,26 @@ public class EngineApi : IEngineApi
 
             return JsonConvert.DeserializeObject<EntityStateResponse>(outputBuffer.ToString());
         }
-        catch (Exception)
+        catch (Exception e)
         {
             return null;
         }
+    }
+
+    private delegate void RenameEntityDelegate(int sceneEntityId, string newName);
+    public bool RenameEntity(int sceneEntityId, string newName)
+    {
+        try
+        {
+            Invoke(typeof(RenameEntityDelegate), "RenameEntity", sceneEntityId, newName);
+            return true;
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+
+        return false;
     }
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);

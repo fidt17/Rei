@@ -69,7 +69,16 @@ public class EntityManagementService : IEntityManagementService
         try
         {
             if (string.IsNullOrEmpty(name)) throw new Exception($"Invalid entity name [{name}]");
-            e.SetName(name);
+
+            if (_playmodeService.IsPlaymodeActive.Value)
+            {
+                _engineApi.RenameEntity(e.Id, name);
+                UpdateEntityStateFromEngine(e);
+            }
+            else
+            {
+                e.SetName(name);
+            }
         }
         catch (Exception exception)
         {
@@ -109,7 +118,7 @@ public class EntityManagementService : IEntityManagementService
             _logger.LogException(exception);
         }
     }
-
+    
     public void UpdateEntityStateFromEngine(GameEntity e)
     {
         if (!_playmodeService.IsPlaymodeActive.Value) return;

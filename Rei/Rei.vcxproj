@@ -566,6 +566,7 @@
     <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
+    <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
     <ClInclude Include="src\Common\Math\Vector3.h" />
