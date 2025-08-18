@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Threading;
 using ReactiveUI;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
@@ -49,7 +51,7 @@ public class HierarchyWindowViewModel : BaseViewModel
         SetHierarchy(hierarchy);
 
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
-        RootContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("New Entity", () => _createSceneEntityCommand.Execute(null)));
+        RootContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("New Entity", ExecuteCreateNewEntityContextMenu));
     }
 
     public override void Dispose()
@@ -196,5 +198,24 @@ public class HierarchyWindowViewModel : BaseViewModel
             var parent = _nodeMap[node.Parent];
             parent.ChildNodes.Insert(newOrder, nodeVm);
         }
+    }
+
+    private void ExecuteCreateNewEntityContextMenu()
+    {
+        var e = _createSceneEntityCommand.CreateEntity();
+        if (e == null) return;
+
+        var node = GetAllNodes().FirstOrDefault(x => x.Node.Content == e);
+        if (node == null) return;
+        
+        node.Select();
+        
+        Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            const int DELAY = 300;
+            await Task.Delay(DELAY);
+                    
+            node.StartRenameCommand.Execute(null);
+        });
     }
 }

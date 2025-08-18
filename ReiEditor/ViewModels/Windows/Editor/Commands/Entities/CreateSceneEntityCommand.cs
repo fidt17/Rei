@@ -29,5 +29,12 @@ public class CreateSceneEntityCommand : ICommand, IDisposable
 
 	public bool CanExecute(object? parameter) => _sceneManagement.CurrentScene.Value != null;
 
-	public void Execute(object? parameter) => _entityManagementService.CreateEntity("New Entity");
+	public void Execute(object? parameter) => CreateEntity();
+
+	public GameEntity? CreateEntity(string? entityName = null)
+	{
+		var e = _entityManagementService.CreateEntity(entityName ?? "New Entity");
+
+		return e;
+	}
 }

@@ -43,7 +43,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         _behaviourComponentsService = behaviourComponentsService;
         _playmodeService = playmodeService;
         
-        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChanged);
+        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChanged, invoke: false);
     }
 
     public void Dispose()
