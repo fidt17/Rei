@@ -2,7 +2,7 @@
 #include <typeindex>
 
 #include "Engine/Services.h"
-#include "Modules/Components/EntityInfo.h"
+#include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Scenes/SceneEntity.h"
 
 namespace rei
@@ -11,11 +11,18 @@ namespace rei
     {
     public:
         template <typename T>
-        void RegisterComponent(i32 id, std::function<nlohmann::json(ecs::Entity)> getJsonFunc, std::function<void(ecs::Entity, const nlohmann::json&)> setFromJsonFunc)
+        void RegisterComponent(i32 id, std::function<nlohmann::json(ecs::Entity)> getJsonFunc,
+                               std::function<void(ecs::Entity, const nlohmann::json&)> setFromJsonFunc)
         {
             _addMethods.insert({
                 id, [=](const ecs::Entity e, const nlohmann::json& data) -> T& {
                     ECS_WORLD(GetInternalWorld());
+
+                    if (HAS(e, T))
+                    {
+                        REI_THROW("Entity " + e.ToString() + " already has a component " + STRING(id))
+                    }
+
                     T& t = GET(e, T);
 
                     t = T(id, e);
@@ -25,9 +32,22 @@ namespace rei
                         setFromJsonFunc(e, data);
                     }
 
-                    GET(e, EntityInfo).Behaviours.push_back(id);
+                    GET(e, BehaviourCollection).Behaviours.push_back(id);
 
                     return t;
+                }
+            });
+
+            _deleteMethods.insert({
+                id, [=](const ecs::Entity e)
+                {
+                    ECS_WORLD(GetInternalWorld());
+                    DEL(e, T);
+
+                    auto& behavioursCollection = GET(e, BehaviourCollection);
+                    behavioursCollection.Behaviours.erase(
+                        std::remove(behavioursCollection.Behaviours.begin(), behavioursCollection.Behaviours.end(), id),
+                        behavioursCollection.Behaviours.end());
                 }
             });
 
@@ -64,7 +84,15 @@ namespace rei
 
             return _getMethods.at(id)(e);
         }
-        
+
+        void DeleteBehaviour(const ecs::Entity e, const i32 id) const
+        {
+            if (_deleteMethods.count(id) == 0)
+                REI_THROW("Missing delete behaviour method. Component ID: " + STRING(id))
+
+            return _deleteMethods.at(id)(e);
+        }
+
         nlohmann::json GetBehaviourData(const ecs::Entity e, const i32 id) const
         {
             if (_getJsonMethods.count(id) == 0)
@@ -72,7 +100,7 @@ namespace rei
 
             return _getJsonMethods.at(id)(e);
         }
-        
+
         void SetBehaviourData(const ecs::Entity e, const i32 id, const nlohmann::json& data) const
         {
             if (_setFromJsonMethods.count(id) == 0)
@@ -89,6 +117,7 @@ namespace rei
 
     private:
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity, const nlohmann::json&)>> _addMethods{};
+        std::unordered_map<i32, std::function<void(ecs::Entity)>> _deleteMethods{};
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _getMethods{};
         std::unordered_map<i32, std::function<nlohmann::json(ecs::Entity)>> _getJsonMethods{};
         std::unordered_map<i32, std::function<void(ecs::Entity, const nlohmann::json&)>> _setFromJsonMethods{};
@@ -104,15 +133,17 @@ namespace rei
 
         REI_API void Create(const SceneEntity& sceneEntity) const;
 
-        REI_API Behaviour& GetComponent(ecs::Entity e, i32 componentId) const;
-        REI_API Behaviour& AddComponent(ecs::Entity e, i32 componentId, const nlohmann::json& data, bool init = true) const;
+        REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 behaviourId) const;
+        REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 behaviourId, const nlohmann::json& data, bool init = true) const;
 
         template <typename T>
-        REI_API T& AddComponent(ecs::Entity e)
+        REI_API T& AddBehaviour(ecs::Entity e)
         {
             const i32 id = _behaviourRegistry.GetId<T>();
-            return static_cast<T&>(AddComponent(e, id, nlohmann::json()));
+            return static_cast<T&>(AddBehaviour(e, id, nlohmann::json()));
         }
+
+        REI_API void DeleteBehaviour(ecs::Entity e, i32 behaviourId);
 
         REI_API void Destroy(ecs::Entity e) const;
 
@@ -128,4 +159,4 @@ namespace rei
     };
 }
 
-#define ADD_BEHAVIOUR(e, T) rei::GetEntityManager().AddComponent<T>(e)
+#define ADD_BEHAVIOUR(e, T) rei::GetEntityManager().AddBehaviour<T>(e)

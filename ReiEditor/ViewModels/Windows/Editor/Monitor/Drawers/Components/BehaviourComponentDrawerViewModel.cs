@@ -21,8 +21,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     public ObservableCollection<BaseViewModel> Properties { get; } = new();
 
     private readonly GameEntity _entity;
-    private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
+    private readonly IEntityManagementService _entityManagementService;
 
 #pragma warning disable CS8618
     public BehaviourComponentDrawerViewModel() { }
@@ -31,13 +31,13 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     public BehaviourComponentDrawerViewModel(
         GameEntity entity,
         BehaviourComponent behaviourComponent,
-        IBehaviourComponentsService behaviourComponentsService,
-        IBehaviourRegistry behaviourRegistry)
+        IBehaviourRegistry behaviourRegistry, 
+        IEntityManagementService entityManagementService)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
-        _behaviourComponentsService = behaviourComponentsService;
         _behaviourRegistry = behaviourRegistry;
+        _entityManagementService = entityManagementService;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
         {
@@ -59,7 +59,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
 
     public void SwitchExpandState() => Expanded.Value = !Expanded.Value;
 
-    private void DeleteComponent() => _behaviourComponentsService.DeleteComponent(_entity, BehaviourComponent);
+    private void DeleteComponent() => _entityManagementService.DeleteBehaviour(_entity, BehaviourComponent.Id);
 
     private ContextMenuViewModel SetupContextMenu()
     {

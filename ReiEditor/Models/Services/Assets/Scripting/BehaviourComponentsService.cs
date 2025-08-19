@@ -59,14 +59,6 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         return true;
     }
 
-    public void AddComponent(GameEntity e, string name)
-    {
-        var id = _behaviourRegistry.GetIdByName(name);
-        if (id == null) throw new Exception($"Could not find behaviour with name {name}");
-
-        AddComponent(e, id.Value);
-    }
-
     public bool DeleteComponent(GameEntity e, BehaviourComponent component)
     {
         if (!e.HasBehaviour(component))

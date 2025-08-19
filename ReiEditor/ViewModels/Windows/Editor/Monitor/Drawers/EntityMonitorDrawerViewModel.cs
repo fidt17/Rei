@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using DynamicData;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
-using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Utils;
@@ -32,8 +32,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     private readonly GameEntity _entity;
     private readonly IFactory<BehaviourComponentDrawerViewModel> _behaviourComponentDrawerFactory;
-    private readonly IBehaviourComponentsService _behaviourComponentsService;
-    private readonly ILogger<EntityMonitorDrawerViewModel> _logger;
+    private readonly IEntityManagementService _entityManagementService;
 
 #pragma warning disable CS8618
     public EntityMonitorDrawerViewModel() { }
@@ -43,14 +42,12 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         GameEntity entity, 
         IFactory<EntityInfoComponentDrawerViewModel> entityInfoComponentDrawerFactory,
         IFactory<BehaviourComponentDrawerViewModel> behaviourComponentDrawerFactory,
-        IBehaviourComponentsService behaviourComponentsService,
         IBehaviourRegistry behaviourRegistry,
-        ILogger<EntityMonitorDrawerViewModel> logger)
+        IEntityManagementService entityManagementService)
     {
         _entity = entity;
         _behaviourComponentDrawerFactory = behaviourComponentDrawerFactory;
-        _behaviourComponentsService = behaviourComponentsService;
-        _logger = logger;
+        _entityManagementService = entityManagementService;
 
         _entity.BehaviourAddedEvent += HandleEntityBehaviourAddedEvent;
         _entity.BehaviourDeletedEvent += HandleEntityBehaviourDeletedEvent;
@@ -74,9 +71,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     public void AddBehaviour(BehaviourSelectionData data)
     {
-        if (_behaviourComponentsService.AddComponent(_entity, data.BehaviourId)) return;
-        
-        _logger.LogError($"Failed at adding component {data.BehaviourId}:{data.BehaviourName}");
+        _entityManagementService.AddBehaviour(_entity, data.BehaviourId);
     }
 
     private void HandleEntityBehaviourAddedEvent(GameEntity e, BehaviourComponent component)
@@ -101,6 +96,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         var behaviourSelectionList = new List<BehaviourSelectionData>();
         foreach (var b in behaviourRegistry.Behaviours)
         {
+            if (_entity.Behaviours.FirstOrDefault(x => x.Id == b.Value.BehaviourId) != null) continue;
             behaviourSelectionList.Add(new BehaviourSelectionData(b.Key, b.Value.ObjectName));
         }
         behaviourSelectionList.Sort((a, b) => string.Compare(a.BehaviourName, b.BehaviourName, StringComparison.Ordinal));

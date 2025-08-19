@@ -8,13 +8,11 @@ namespace ReiEditor.Models.Services.Scenes.Templates;
 public class DefaultSceneTemplate : ISceneTemplate
 {
     private readonly IEntityManagementService _entityManagementService;
-    private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
 
-    public DefaultSceneTemplate(IEntityManagementService entityManagementService, IBehaviourComponentsService behaviourComponentsService, IBehaviourRegistry behaviourRegistry)
+    public DefaultSceneTemplate(IEntityManagementService entityManagementService, IBehaviourRegistry behaviourRegistry)
     {
         _entityManagementService = entityManagementService;
-        _behaviourComponentsService = behaviourComponentsService;
         _behaviourRegistry = behaviourRegistry;
     }
 
@@ -23,8 +21,8 @@ public class DefaultSceneTemplate : ISceneTemplate
         var mainCamera = _entityManagementService.CreateEntity("Main Camera");
         if (mainCamera != null)
         {
-            _behaviourComponentsService.AddComponent(mainCamera, EngineBehavioursUtility.CAMERA);
-            _behaviourComponentsService.AddComponent(mainCamera, EngineBehavioursUtility.AMBIENT_LIGHT);
+            _entityManagementService.AddBehaviour(mainCamera, _behaviourRegistry.GetIdByName(EngineBehavioursUtility.CAMERA)!.Value);
+            _entityManagementService.AddBehaviour(mainCamera, _behaviourRegistry.GetIdByName(EngineBehavioursUtility.AMBIENT_LIGHT)!.Value);
 
             var transform = mainCamera.GetBehaviour(_behaviourRegistry.GetIdByName(EngineBehavioursUtility.TRANSFORM));
             if (transform != null)
@@ -48,7 +46,7 @@ public class DefaultSceneTemplate : ISceneTemplate
         var pointLight = _entityManagementService.CreateEntity("Point Light");
         if (pointLight != null)
         {
-            _behaviourComponentsService.AddComponent(pointLight, EngineBehavioursUtility.POINT_LIGHT);
+            _entityManagementService.AddBehaviour(pointLight, _behaviourRegistry.GetIdByName(EngineBehavioursUtility.POINT_LIGHT)!.Value);
         }
     }
 }

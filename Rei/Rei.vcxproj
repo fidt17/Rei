@@ -624,7 +624,7 @@
     <ClInclude Include="src\Modules\Window\Window.h" />
     <ClInclude Include="src\Modules\Window\WindowManager.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\Api\EditorApi.h" />
+    <ClInclude Include="src\Api\EngineApi.h" />
     <ClInclude Include="src\Common\Primitives.h" />
     <ClInclude Include="src\Engine\Engine.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />

@@ -12,6 +12,9 @@ public interface IEntityManagementService
 
     void RenameEntity(GameEntity e, string name);
     void SetParent(GameEntity e, GameEntity? parent, int idx);
+    
+    void AddBehaviour(GameEntity e, int behaviourId);
+    void DeleteBehaviour(GameEntity e, int behaviourId);
 	
     void DeleteEntity(GameEntity e);
 

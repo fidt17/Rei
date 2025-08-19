@@ -20,9 +20,10 @@ namespace rei::behaviour
     {
         FOR(e, _f)
         {
-            for (const auto behavioursToInit : GET(e, BehaviourCollection).Behaviours)
+            const auto behaviours = GET(e, BehaviourCollection).Behaviours; // here we make a copy for cases when new behaviours would be added during update loop
+            for (const auto behavioursToUpdate : behaviours)
             {
-                _entityManager->GetComponent(e, behavioursToInit).Update();
+                _entityManager->GetBehaviour(e, behavioursToUpdate).Update();
             }
         }
     }

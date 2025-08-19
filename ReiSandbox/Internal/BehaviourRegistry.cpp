@@ -8,7 +8,8 @@
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Assets\AssetRef.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
-#include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\TestMovement.h"
+#include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\ColorLerp.h"
+#include "C:\Repos\Rei\ReiSandbox\Scripts\TestMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\MeshRenderer.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
@@ -17,6 +18,7 @@
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
+    f.RegisterComponent<::ColorLerp>(6, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::ColorLerp>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<::ColorLerp>(e).REI_SET(json); });
     f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_SET(json); });
     f.RegisterComponent<rei::render::Camera>(0, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_SET(json); });
     f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_SET(json); });
@@ -54,6 +56,17 @@ nlohmann::json rei::render::Color::REI_GET() const
         {"g", g},
         {"b", b},
         {"a", a},
+    };
+}
+
+nlohmann::json ColorLerp::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "ColorLerp"},
+        {"_targetLightId", _targetLightId},
+        {"_from", _from.REI_GET()},
+        {"_to", _to.REI_GET()},
+        {"_speed", _speed},
     };
 }
 
@@ -136,6 +149,14 @@ void rei::render::Color::REI_SET(const nlohmann::json& data)
     if (data.contains("g")) g = data.at("g").at("Value");
     if (data.contains("b")) b = data.at("b").at("Value");
     if (data.contains("a")) a = data.at("a").at("Value");
+}
+
+void ColorLerp::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_targetLightId")) _targetLightId = data.at("_targetLightId").at("Value");
+    if (data.contains("_from")) _from.REI_SET(data.at("_from").at("Value"));
+    if (data.contains("_to")) _to.REI_SET(data.at("_to").at("Value"));
+    if (data.contains("_speed")) _speed = data.at("_speed").at("Value");
 }
 
 void TestMovement::REI_SET(const nlohmann::json& data)

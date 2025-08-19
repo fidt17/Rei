@@ -8,7 +8,9 @@ namespace rei::ecs
     class ComponentSet : public IComponentSet
     {
     public:
-        explicit ComponentSet(const size_t id) : _id(id) { }
+        explicit ComponentSet(const size_t id) : _id(id)
+        {
+        }
 
         size_t Id() const override
         {
@@ -40,9 +42,17 @@ namespace rei::ecs
         {
             if (!Has(e)) return false;
 
-            _values[_indexes[e.Id]] = _values[_indexes.back()];
-            _indexes.back() = _indexes[e.Id];
-            _indexes[e.Id] = MISSING;
+            const auto backIdx = _indexes.back();
+            if (backIdx <= -1)
+            {
+                _indexes[e.Id] = MISSING;
+            }
+            else
+            {
+                _values[_indexes[e.Id]] = _values[backIdx];
+                _indexes.back() = _indexes[e.Id];
+                _indexes[e.Id] = MISSING;
+            }
 
             return true;
         }

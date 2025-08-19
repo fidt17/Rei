@@ -12,7 +12,7 @@ public class EngineApi : IEngineApi
     
     public bool IsEngineRunning { get; private set; }
     
-    private IntPtr _dllPtr;
+    private IntPtr? _dllPtr;
 
     private readonly bool _logInvokingMethods;
     private readonly ILogger<EngineApi> _logger;
@@ -63,7 +63,6 @@ public class EngineApi : IEngineApi
     public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
-    
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
@@ -85,11 +84,13 @@ public class EngineApi : IEngineApi
     {
         try
         {
+            if (_dllPtr == null) throw new Exception("Missing dll pointer");
+            
             if (_logInvokingMethods)
             {
                 _logger.Log($"Invoke [{methodName}]");
             }
-            var d = Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType);
+            var d = Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr.Value, methodName), delegateType);
             d.DynamicInvoke(args);
         }
         catch (Exception e)
@@ -103,11 +104,13 @@ public class EngineApi : IEngineApi
     {
         try
         {
+            if (_dllPtr == null) throw new Exception("Missing dll pointer");
+            
             if (_logInvokingMethods)
             {
                 _logger.Log($"Invoke [{methodName}]");
             }
-            return (T?) Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr, methodName), delegateType).DynamicInvoke(args) ?? throw new InvalidOperationException(methodName);
+            return (T?) Marshal.GetDelegateForFunctionPointer(GetProcAddress(_dllPtr.Value, methodName), delegateType).DynamicInvoke(args) ?? throw new InvalidOperationException(methodName);
         }
         catch (Exception e)
         {

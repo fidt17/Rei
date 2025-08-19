@@ -15,7 +15,7 @@ public class EntityApi : IEntityApi
     }
 
     private delegate void GetEntityDataDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
-    public GetEntityDataResponse? GetEntityData(int sceneEntityId)
+    public GetEntityDataResponse? GetData(int sceneEntityId)
     {
         if (!_engineApi.IsEngineRunning) return null;
         
@@ -33,39 +33,63 @@ public class EntityApi : IEntityApi
     }
 
     private delegate void RenameEntityDelegate(int sceneEntityId, string newName);
-    public bool RenameEntity(int sceneEntityId, string newName)
+    public void Rename(int sceneEntityId, string newName)
     {
-        if (!_engineApi.IsEngineRunning) return false;
+        if (!_engineApi.IsEngineRunning) return;
         
         try
         {
             _engineApi.Invoke(typeof(RenameEntityDelegate), "RenameEntity", sceneEntityId, newName);
-            return true;
         }
         catch (Exception)
         {
             // ignore
         }
-
-        return false;
     }
     
     private delegate void SetEntityDataDelegate(string json);
-    public bool SetEntityData(SetEntityDataRequest request)
+    public void SetData(SetEntityDataRequest request)
     {
-        if (!_engineApi.IsEngineRunning) return false;
+        if (!_engineApi.IsEngineRunning) return;
         
         try
         {
             // ReSharper disable once RedundantArgumentDefaultValue
             _engineApi.Invoke(typeof(SetEntityDataDelegate), "SetEntityData", JsonConvert.SerializeObject(request));
-            return true;
         }
         catch (Exception)
         {
             // ignore
         }
+    }
 
-        return false;
+    private delegate void AddBehaviourDelegate(int sceneEntityId, int behaviourId);
+    public void AddBehaviour(int sceneEntityId, int behaviourId)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+        
+        try
+        {
+            _engineApi.Invoke(typeof(AddBehaviourDelegate), "AddBehaviour", sceneEntityId, behaviourId);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
+    
+    private delegate void DeleteBehaviourDelegate(int sceneEntityId, int behaviourId);
+    public void DeleteBehaviour(int sceneEntityId, int behaviourId)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+        
+        try
+        {
+            _engineApi.Invoke(typeof(DeleteBehaviourDelegate), "DeleteBehaviour", sceneEntityId, behaviourId);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
     }
 }

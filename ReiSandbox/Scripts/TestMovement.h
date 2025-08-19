@@ -7,6 +7,7 @@ private:
     BEHAVIOUR_BODY(TestMovement)
     SERIALIZE f32 _radius = 10;
     SERIALIZE f32 _speed = 0.01f;
+    SERIALIZE bool _actionFlag;
 
     f32 time = 0;
 
@@ -21,29 +22,16 @@ public:
 
         GetTransform().GetRotation().z = time * 10;
 
-        Test();
+        if (_actionFlag)
+        {
+            _actionFlag = false;
+            TriggerAction();
+        }
     }
 
-    void Test()
+private:
+    void TriggerAction()
     {
-        const auto& e = GetEntity();
-        if (e == rei::ecs::NULL_ENTITY) return;
-
-        nlohmann::json data;
-        data["EntityId"] = e.Id;
-        data["EntityGeneration"] = e.Generation;
-
-        ECS_WORLD(rei::GetInternalWorld());
-        const auto& entityInfo = GET(e, EntityInfo);
-        data["SceneId"] = entityInfo.Id;
-        data["Name"] = entityInfo.Name;
-        data["Behaviours"] = nlohmann::json::array();
-
-        for (const auto behaviour : entityInfo.Behaviours)
-        {
-            data["Behaviours"].push_back(rei::GetEntityManager().GetBehaviourRegistry().GetBehaviourData(e, behaviour));
-        }
-
-        std::cout << data.dump(4) << std::endl;
+        _speed *= 2;
     }
 };

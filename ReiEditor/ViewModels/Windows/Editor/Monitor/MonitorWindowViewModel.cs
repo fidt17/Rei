@@ -97,7 +97,11 @@ public class MonitorWindowViewModel : BaseViewModel
 
     private void HandleIsPlaymodeActiveValueChangedEvent(bool _)
     {
-        UpdateDrawer(_selectionService.ActiveSelection.Value);
+        Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            await Task.Delay(1000);
+            UpdateDrawer(_selectionService.ActiveSelection.Value);
+        });
     }
 
     private void RunEntityUpdateStateTask(GameEntity e)

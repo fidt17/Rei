@@ -52,7 +52,7 @@ void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
                 serializedData = behaviourData.at(SERIALIZE_DATA);
             }
 
-            AddComponent(e, behaviourId, serializedData, false);
+            AddBehaviour(e, behaviourId, serializedData, false);
             behavioursToInit.push_back({e, behaviourId});
         }
     }
@@ -63,21 +63,19 @@ void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
 
     for (const auto& [Entity, BehaviourId] : behavioursToInit)
     {
-        auto& b = GetComponent(Entity, BehaviourId);
+        auto& b = GetBehaviour(Entity, BehaviourId);
         InitBehaviour(Entity, b);
     }
 }
 
-rei::Behaviour& rei::EntityManager::GetComponent(const ecs::Entity e, const i32 componentId) const
+rei::Behaviour& rei::EntityManager::GetBehaviour(const ecs::Entity e, const i32 behaviourId) const
 {
-    return _behaviourRegistry.GetBehaviour(e, componentId);
+    return _behaviourRegistry.GetBehaviour(e, behaviourId);
 }
 
-rei::Behaviour& rei::EntityManager::AddComponent(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
+rei::Behaviour& rei::EntityManager::AddBehaviour(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
 {
     auto& b = _behaviourRegistry.AddBehaviour(e, componentId, data);
-
-    GET(e, BehaviourCollection).Behaviours.push_back(componentId);
 
     if (init)
     {
@@ -87,11 +85,17 @@ rei::Behaviour& rei::EntityManager::AddComponent(const ecs::Entity e, const i32 
     return b;
 }
 
+void rei::EntityManager::DeleteBehaviour(ecs::Entity e, i32 behaviourId)
+{
+    GetBehaviourRegistry().GetBehaviour(e, behaviourId).Dispose();
+    GetBehaviourRegistry().DeleteBehaviour(e, behaviourId);
+}
+
 void rei::EntityManager::Destroy(const ecs::Entity e) const
 {
     for (const auto behaviour : GET(e, BehaviourCollection).Behaviours)
     {
-        GetComponent(e, behaviour).Dispose();
+        GetBehaviour(e, behaviour).Dispose();
     }
     DESTROY_ENTITY(e);
 }

@@ -62,7 +62,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
 
             var s = _sceneManagement.CurrentScene.Value;
             var e = new GameEntity(s.AllocateEntityId(), name);
-            _behaviourComponentsService.AddComponent(e, "Transform");
+            AddBehaviour(e, _behaviourRegistry.GetIdByName("Transform")!.Value);
             
             s.AddEntity(e);
 
@@ -86,7 +86,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
 
             if (_playmodeService.IsPlaymodeActive.Value)
             {
-                _entityApi.RenameEntity(e.Id, name);
+                _entityApi.Rename(e.Id, name);
                 UpdateEntityStateFromEngine(e);
             }
             else
@@ -116,6 +116,47 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         }
     }
 
+    public void AddBehaviour(GameEntity e, int behaviourId)
+    {
+        try
+        {
+            if (_playmodeService.IsPlaymodeActive.Value)
+            {
+                _entityApi.AddBehaviour(e.Id, behaviourId);
+            }
+            else
+            {
+                _behaviourComponentsService.AddComponent(e, behaviourId);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+        }
+    }
+
+    public void DeleteBehaviour(GameEntity e, int behaviourId)
+    {
+        try
+        {
+            var behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
+            if (behaviour == null) throw new Exception($"Entity {e} does not have a behaviour with id={behaviourId}");
+            
+            if (_playmodeService.IsPlaymodeActive.Value)
+            {
+                _entityApi.DeleteBehaviour(e.Id, behaviourId);
+            }
+            else
+            {
+                _behaviourComponentsService.DeleteComponent(e, behaviour);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+        }
+    }
+
     public void DeleteEntity(GameEntity e)
     {
         try
@@ -137,13 +178,14 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         if (!_playmodeService.IsPlaymodeActive.Value) return;
         
-        var state =_entityApi.GetEntityData(e.Id);
+        var state =_entityApi.GetData(e.Id);
         //_logger.LogWarning($"State: {JsonConvert.SerializeObject(state, Formatting.Indented)}");
         if (state == null) return;
         
         _ignorePropertyChanges = true;
         
         e.SetName(state.Name);
+        var behaviourIds = new List<int>();
         foreach (var behaviourState in state.Behaviours)
         {
             try
@@ -151,10 +193,21 @@ public class EntityManagementService : IEntityManagementService, IDisposable
                 var reiType = (string)behaviourState["REI_TYPE"];
                 var behaviourId = _behaviourRegistry.GetIdByName(reiType);
                 if (behaviourId == null) throw new Exception($"Could not find behaviour by REI_TYPE: {reiType}");
-
-                var behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
-                if (behaviour == null) throw new Exception($"Entity is missing a behaviour with id={behaviourId}");
+                behaviourIds.Add(behaviourId.Value);
                 
+                // try to add new behaviour
+                var behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
+                if (behaviour == null)
+                {
+                    _behaviourComponentsService.AddComponent(e, behaviourId.Value);
+                    behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
+                    if (behaviour == null)
+                    {
+                        throw new Exception($"Entity is missing a behaviour with id={behaviourId}");
+                    }
+                }
+                
+                // update behaviour properties
                 foreach (var (propertyName, value) in behaviourState)
                 {
                     try
@@ -177,6 +230,13 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             {
                 _logger.LogError($"Exception while parsing behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
             }
+        }
+        
+        // delete behaviours that no longer exist on this entity
+        foreach (var b in e.Behaviours.ToList())
+        {
+            if (behaviourIds.Contains(b.Id)) continue;
+            _behaviourComponentsService.DeleteComponent(e, b);
         }
         
         _ignorePropertyChanges = false;
@@ -239,7 +299,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             
             if (request.Behaviours.Count == 0) return;
 
-            _entityApi.SetEntityData(request);
+            _entityApi.SetData(request);
             //_logger.LogWarning($"Request: {JsonConvert.SerializeObject(request, Formatting.Indented)}");
         }
         catch (Exception e)

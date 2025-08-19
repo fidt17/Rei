@@ -19,9 +19,10 @@ namespace rei::behaviour
     {
         FOR(e, _f)
         {
-            for (const auto behavioursToInit : GET(e, StartBehavioursEvent).Behaviours)
+            const auto behaviours = GET(e, StartBehavioursEvent).Behaviours; // here we make a copy for cases when new behaviours would be added during start loop
+            for (const auto behaviourToStart : behaviours)
             {
-                _entityManager->GetComponent(e, behavioursToInit).Start();
+                _entityManager->GetBehaviour(e, behaviourToStart).Start();
             }
         }
     }

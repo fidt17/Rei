@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -24,7 +23,7 @@ public interface IEngineApi
     void ResizeWindow(IntPtr windowPtr, int width, int height);
 
     void SetDllPtr(IntPtr ptr);
-    void Invoke(Type delegateType, [CallerMemberName] string methodName = "", params object?[]? args);
+    void Invoke(Type delegateType, string methodName = "", params object?[]? args);
     T Invoke<T>(Type delegateType, string methodName, params object?[]? args);
     Task<T> InvokeAsync<T>(Type delegateType, string methodName, params object?[]? args);
 }
