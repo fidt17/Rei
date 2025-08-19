@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Channels;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
@@ -34,7 +32,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IEntityManagementService _entityManagementService;
     private readonly IPlaymodeService _playmodeService;
 
-    private CancellationTokenSource _entityUpdateStateCTS;
+    private CancellationTokenSource? _entityUpdateStateCTS;
 
 #pragma warning disable CS8618
     public MonitorWindowViewModel() { }
@@ -122,6 +120,7 @@ public class MonitorWindowViewModel : BaseViewModel
                     _entityManagementService.UpdateEntityStateFromEngine(e);
                 });
             }
+            // ReSharper disable once FunctionNeverReturns
         }, _entityUpdateStateCTS.Token);
     }
 }

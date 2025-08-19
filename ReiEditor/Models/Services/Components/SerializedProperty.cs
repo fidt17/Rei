@@ -31,7 +31,7 @@ public class SerializedProperty
                         var nestedProperties = Value as Dictionary<string, SerializedProperty>;
                         foreach (var (k, v) in valueDict)
                         {
-                            if (nestedProperties.TryGetValue(k, out var property))
+                            if (nestedProperties!.TryGetValue(k, out var property))
                             {
                                 property.Value = v;
                             }

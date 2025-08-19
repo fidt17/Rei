@@ -50,7 +50,7 @@
                     Background="white">
                     <Border.RenderTransformOrigin>0, 0</Border.RenderTransformOrigin>
                     <Border.RenderTransform>
-                        <ScaleTransform ScaleX="{Binding A}" ScaleY="1"></ScaleTransform>
+                        <ScaleTransform ScaleX="{Binding A}" ScaleY="1" />
                     </Border.RenderTransform>
                 </Border>
             </Grid>

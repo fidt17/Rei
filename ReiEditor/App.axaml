@@ -10,6 +10,6 @@
     
     <Application.Styles>
         <FluentTheme/>
-        <StyleInclude Source="Views/Resources/Styles.axaml"></StyleInclude>
+        <StyleInclude Source="Views/Resources/Styles.axaml" />
     </Application.Styles>
 </Application>

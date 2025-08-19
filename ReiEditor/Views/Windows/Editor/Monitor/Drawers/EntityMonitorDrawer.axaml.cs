@@ -12,7 +12,8 @@ public partial class EntityMonitorDrawer : UserControl
         InitializeComponent();
     }
 
-    private void AddBehaviourButtonClicked(object? sender, RoutedEventArgs e)
+    // ReSharper disable once UnusedParameter.Local
+    private void AddBehaviourButtonClicked(object? sender, RoutedEventArgs _)
     {
         ShowBehaviourComboBox();
     }
@@ -32,17 +33,19 @@ public partial class EntityMonitorDrawer : UserControl
         BehaviourSelectionComboBox.IsDropDownOpen = true;
     }
 
-    private void BehaviourComboboxLostFocus(object? sender, RoutedEventArgs e)
+    // ReSharper disable once UnusedParameter.Local
+    private void BehaviourComboboxLostFocus(object? sender, RoutedEventArgs _)
     {
         ShowAddBehaviourButton();
     }
 
-    private void BehaviourComboboxClosed(object? sender, EventArgs e)
+    // ReSharper disable once UnusedParameter.Local
+    private void BehaviourComboboxClosed(object? sender, EventArgs _)
     {
         ShowAddBehaviourButton();
     }
 
-    private void BehaviourComboboxSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void BehaviourComboboxSelectionChanged(object? _, SelectionChangedEventArgs e)
     {
         if (!BehaviourSelectionComboBox.IsVisible) return;
         if (e.AddedItems.Count != 1) return;

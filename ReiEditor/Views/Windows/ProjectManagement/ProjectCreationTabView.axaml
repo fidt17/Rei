@@ -31,7 +31,7 @@
 
                         <!-- Project Name -->
                         <StackPanel Spacing="5">
-                            <TextBlock Text="Project name" Classes="h4"></TextBlock>
+                            <TextBlock Text="Project name" Classes="h4" />
                             <TextBox Name="ProjectNameTextBox"
                                      Classes.valid="{Binding Notifications.ProjectNameValid}"
                                      Text="{Binding ProjectName}">
@@ -45,7 +45,7 @@
 
                         <!-- Location -->
                         <StackPanel Spacing="5">
-                            <TextBlock Text="Location" Classes="h4"></TextBlock>
+                            <TextBlock Text="Location" Classes="h4" />
                             <Button Command="{Binding SelectProjectLocationCommand}"
                                     Classes.valid="{Binding Notifications.ProjectPathValid}"
                                     HorizontalAlignment="Stretch">

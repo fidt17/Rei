@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -30,7 +28,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     private readonly IBehaviourComponentsService _behaviourComponentsService;
 
     private readonly IPlaymodeService _playmodeService;
-    private readonly IEngineApi _engineApi;
+    private readonly IEntityApi _entityApi;
     private readonly IBehaviourRegistry _behaviourRegistry;
 
     public EntityManagementService(
@@ -38,14 +36,14 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         ISceneManagementService sceneManagement,
         IBehaviourComponentsService behaviourComponentsService,
         IPlaymodeService playmodeService,
-        IEngineApi engineApi, 
+        IEntityApi entityApi, 
         IBehaviourRegistry behaviourRegistry)
     {
         _logger = logger;
         _sceneManagement = sceneManagement;
         _behaviourComponentsService = behaviourComponentsService;
         _playmodeService = playmodeService;
-        _engineApi = engineApi;
+        _entityApi = entityApi;
         _behaviourRegistry = behaviourRegistry;
         
         _behaviourComponentsService.BehaviourPropertyChangedEvent += HandleEntityBehaviourPropertyChangedEvent;
@@ -88,7 +86,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
 
             if (_playmodeService.IsPlaymodeActive.Value)
             {
-                _engineApi.RenameEntity(e.Id, name);
+                _entityApi.RenameEntity(e.Id, name);
                 UpdateEntityStateFromEngine(e);
             }
             else
@@ -139,7 +137,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         if (!_playmodeService.IsPlaymodeActive.Value) return;
         
-        var state =_engineApi.GetEntityData(e.Id);
+        var state =_entityApi.GetEntityData(e.Id);
         //_logger.LogWarning($"State: {JsonConvert.SerializeObject(state, Formatting.Indented)}");
         if (state == null) return;
         
@@ -206,7 +204,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
                     { 
                         "Value", new Dictionary<string, object?>
                         {
-                            {pair.Value.Key, pair.Value.Value}
+                            {pair!.Value.Key, pair.Value.Value}
                         }
                     }
                 });
@@ -241,7 +239,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             
             if (request.Behaviours.Count == 0) return;
 
-            _engineApi.SetEntityData(request);
+            _entityApi.SetEntityData(request);
             //_logger.LogWarning($"Request: {JsonConvert.SerializeObject(request, Formatting.Indented)}");
         }
         catch (Exception e)

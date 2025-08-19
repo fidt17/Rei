@@ -33,15 +33,15 @@
                             Spacing="5">
 
                     <ToggleButton IsChecked="{Binding ConsoleFilter.InfoEnabled}" Height="25">
-                        <Ellipse Fill="{StaticResource Info}" Width="10" Height="10"></Ellipse>
+                        <Ellipse Fill="{StaticResource Info}" Width="10" Height="10" />
                     </ToggleButton>
 
                     <ToggleButton IsChecked="{Binding ConsoleFilter.WarningEnabled}" Height="25">
-                        <Ellipse Fill="{StaticResource Warning}" Width="10" Height="10"></Ellipse>
+                        <Ellipse Fill="{StaticResource Warning}" Width="10" Height="10" />
                     </ToggleButton>
 
                     <ToggleButton IsChecked="{Binding ConsoleFilter.ErrorEnabled}" Height="25">
-                        <Ellipse Fill="{StaticResource Error}" Width="10" Height="10"></Ellipse>
+                        <Ellipse Fill="{StaticResource Error}" Width="10" Height="10" />
                     </ToggleButton>
 
                     <!-- Clear Button -->

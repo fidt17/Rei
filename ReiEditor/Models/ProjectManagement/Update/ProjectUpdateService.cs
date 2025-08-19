@@ -2,7 +2,6 @@
 using ReiEditor.Models.ProjectManagement.Template;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.ProjectManagement.Update;
 
@@ -13,7 +12,6 @@ public class ProjectUpdateService : IProjectUpdateService
     private readonly IAssetImporter _assetImporter;
 
     public ProjectUpdateService(
-        ILogger<ProjectUpdateService> logger, 
         ISolutionGenerator solutionGenerator, 
         IEngineResourcesImporter engineResourcesImporter, 
         IAssetImporter assetImporter)

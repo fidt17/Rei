@@ -28,7 +28,7 @@
                 
                 <!-- MsBuild Location -->
                 <StackPanel Spacing="5">
-                    <TextBlock Text="MsBuild Location" Classes="h4"></TextBlock>
+                    <TextBlock Text="MsBuild Location" Classes="h4" />
                     <Button
                         Command="{Binding SetMsBuildLocationCommand}"
                         Classes.valid="{Binding Validation.IsMsBuildPathValid}"

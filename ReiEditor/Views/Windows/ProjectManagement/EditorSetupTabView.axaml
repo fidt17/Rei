@@ -25,7 +25,7 @@
                 
                 <!-- Engine Path -->
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Engine Location" Classes="h4"></TextBlock>
+                    <TextBlock Text="Engine Location" Classes="h4" />
                     <Button
                         Command="{Binding SetEngineLocationCommand}"
                         Classes.valid="{Binding Validation.IsEnginePathValid}"
@@ -43,7 +43,7 @@
                 
                 <!-- MsBuild Path -->
                 <StackPanel Spacing="5">
-                    <TextBlock Text="MsBuild Location" Classes="h4"></TextBlock>
+                    <TextBlock Text="MsBuild Location" Classes="h4" />
                     <Button
                         Command="{Binding SetMsBuildLocationCommand}"
                         Classes.valid="{Binding Validation.IsMsBuildPathValid}"

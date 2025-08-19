@@ -50,6 +50,7 @@ public partial class HierarchyNode : UserControl
         NameTextBox.SelectAll();
     }
 
+    // ReSharper disable once UnusedParameter.Local
     private void RootBorder_OnKeyDown(object? obj, KeyEventArgs e)
     {
         if (_vm == null) return;
@@ -59,7 +60,8 @@ public partial class HierarchyNode : UserControl
         _vm.DeleteCommand.Execute(null);
     }
 
-    private void InputElement_OnTapped(object? obj, TappedEventArgs args)
+    // ReSharper disable once UnusedParameter.Local
+    private void InputElement_OnTapped(object? obj, TappedEventArgs _)
     {
         if (_vm == null) return;
         if (!_vm.Selected.Value) return;
@@ -74,6 +76,7 @@ public partial class HierarchyNode : UserControl
         });
     }
 
+    // ReSharper disable once UnusedParameter.Local
     private void NameTextBox_OnKeyDown(object? obj, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)

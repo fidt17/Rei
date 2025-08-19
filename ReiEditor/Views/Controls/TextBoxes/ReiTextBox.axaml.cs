@@ -60,5 +60,6 @@ public partial class ReiTextBox : UserControl
         }
     }
 
-    private void InputElement_OnLostFocus(object? sender, RoutedEventArgs e) => ApplyValue();
+    // ReSharper disable once UnusedParameter.Local
+    private void InputElement_OnLostFocus(object? sender, RoutedEventArgs _) => ApplyValue();
 }

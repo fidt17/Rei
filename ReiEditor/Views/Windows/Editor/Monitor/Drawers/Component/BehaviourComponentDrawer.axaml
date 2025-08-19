@@ -6,9 +6,6 @@
              xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
              xmlns:property="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
-             xmlns:property1="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
-             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
-             xmlns:custom1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom"
              mc:Ignorable="d" d:DesignWidth="300"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component.BehaviourComponentDrawer"
              x:DataType="components:BehaviourComponentDrawerViewModel">

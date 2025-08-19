@@ -2,11 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
              xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
              xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
              xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
-             xmlns:custom1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.CustomPropertyView"
              x:DataType="custom:CustomPropertyViewModel">

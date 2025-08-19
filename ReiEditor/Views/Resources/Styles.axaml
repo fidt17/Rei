@@ -161,7 +161,7 @@
     <!-- Flyout Styles -->
     <Style Selector="FlyoutPresenter.Clear">
         <Setter Property="Padding" Value="0" />
-        <Setter Property="BorderThickness" Value="0"></Setter>
+        <Setter Property="BorderThickness" Value="0" />
     </Style>
     <!-- END Flyout Styles -->
 

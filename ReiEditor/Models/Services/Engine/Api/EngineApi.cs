@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -13,9 +10,10 @@ public class EngineApi : IEngineApi
 {
     private delegate IntPtr ActionDelegate();
     
-    private IntPtr _dllPtr;
-    private bool _isEngineRunning;
+    public bool IsEngineRunning { get; private set; }
     
+    private IntPtr _dllPtr;
+
     private readonly bool _logInvokingMethods;
     private readonly ILogger<EngineApi> _logger;
 
@@ -45,12 +43,12 @@ public class EngineApi : IEngineApi
     {
         try
         {
-            _isEngineRunning = true;
+            IsEngineRunning = true;
             Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            _isEngineRunning = false;
+            IsEngineRunning = false;
             throw;
         }
     }
@@ -58,7 +56,7 @@ public class EngineApi : IEngineApi
     private delegate int ShutdownEngineDelegate(IntPtr enginePtr, int exitCode);
     public void Shutdown(IntPtr enginePtr, int exitCode)
     {
-        _isEngineRunning = false;
+        IsEngineRunning = false;
         Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
     }
 
@@ -66,55 +64,6 @@ public class EngineApi : IEngineApi
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
     
-    private delegate void GetEntityDataDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
-    public GetEntityDataResponse? GetEntityData(int sceneEntityId)
-    {
-        try
-        {
-            if (!_isEngineRunning) return null;
-            
-            var outputBuffer = new StringBuilder(1024);
-            Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, outputBuffer, outputBuffer.Capacity);
-
-            return JsonConvert.DeserializeObject<GetEntityDataResponse>(outputBuffer.ToString());
-        }
-        catch (Exception e)
-        {
-            return null;
-        }
-    }
-
-    private delegate void RenameEntityDelegate(int sceneEntityId, string newName);
-    public bool RenameEntity(int sceneEntityId, string newName)
-    {
-        try
-        {
-            Invoke(typeof(RenameEntityDelegate), "RenameEntity", sceneEntityId, newName);
-            return true;
-        }
-        catch (Exception)
-        {
-            // ignore
-        }
-
-        return false;
-    }
-    
-    private delegate void SetEntityDataDelegate(string json);
-    public bool SetEntityData(SetEntityDataRequest request)
-    {
-        try
-        {
-            Invoke(typeof(SetEntityDataDelegate), "SetEntityData", JsonConvert.SerializeObject(request));
-            return true;
-        }
-        catch (Exception)
-        {
-            // ignore
-        }
-
-        return false;
-    }
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
@@ -132,7 +81,7 @@ public class EngineApi : IEngineApi
     [DllImport("Kernel32.dll")]
     private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
 	
-    private void Invoke(Type delegateType, [CallerMemberName] string methodName = "", params object?[]? args)
+    public void Invoke(Type delegateType, [CallerMemberName] string methodName = "", params object?[]? args)
     {
         try
         {
@@ -150,7 +99,7 @@ public class EngineApi : IEngineApi
         }
     }
 
-    private T Invoke<T>(Type delegateType, string methodName, params object?[]? args)
+    public T Invoke<T>(Type delegateType, string methodName, params object?[]? args)
     {
         try
         {
@@ -167,7 +116,7 @@ public class EngineApi : IEngineApi
         }
     }
 
-    private Task<T> InvokeAsync<T>(Type delegateType, string methodName, params object?[]? args)
+    public Task<T> InvokeAsync<T>(Type delegateType, string methodName, params object?[]? args)
     {
         return Task.Run(() => Invoke<T>(delegateType, methodName, args));
     }

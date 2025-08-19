@@ -1,5 +1,4 @@
-﻿using System.Web;
-using Avalonia.Platform.Storage;
+﻿using Avalonia.Platform.Storage;
 
 namespace ReiEditor.Models.ProjectManagement.Creation;
 
@@ -18,11 +17,13 @@ public static class ProjectCreationUtils
 		return configuration;
 	}
 
-	private static string GetDefaultProjectParentDirectory(IStorageProvider storageProvider)
+	private static string GetDefaultProjectParentDirectory(IStorageProvider _)
 	{
 		return "C:\\Repos\\Rei Projects\\New Project"; // TODO: remove
 		
+		/*
 		var documentsDirectory = storageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents).Result;
 		return documentsDirectory == null ? "" : HttpUtility.UrlDecode(documentsDirectory.Path.AbsolutePath);
+	*/
 	}
 }

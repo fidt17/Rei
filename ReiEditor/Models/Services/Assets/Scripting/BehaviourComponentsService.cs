@@ -147,9 +147,9 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private SerializedProperty ParseSerializedProperty(string name, JToken jObject, SerializedProperty? parentProperty)
     {
-        var type = jObject[nameof(SerializedProperty.Type)].ToObject<SerializedTypeEnum>();
-        var value = jObject[nameof(SerializedProperty.Value)].ToObject<object>();
-        var sourceType = jObject[nameof(SerializedProperty.SourceType)].ToObject<string>();
+        var type = jObject[nameof(SerializedProperty.Type)]!.ToObject<SerializedTypeEnum>();
+        var value = jObject[nameof(SerializedProperty.Value)]!.ToObject<object>();
+        var sourceType = jObject[nameof(SerializedProperty.SourceType)]!.ToObject<string>() ?? "";
         var property = new SerializedProperty(name, type, value, sourceType, parentProperty);
         
         ParseNestedProperties(property);
@@ -167,13 +167,13 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         {
             foreach (var keyValuePair in jObject)
             {
-                childObjects.Add((keyValuePair.Key, keyValuePair.Value));
+                childObjects.Add((keyValuePair.Key, keyValuePair.Value)!);
             }
         }
 
         if (childObjects.Count == 0) return;
 
-        var requiredProperties = _serializableObjectsRegistry.GetObject(property.SourceType).SerializedProperties;
+        var requiredProperties = _serializableObjectsRegistry.GetObject(property.SourceType)!.SerializedProperties;
 
         var parsedValue = new Dictionary<string, SerializedProperty>();
         foreach (var token in childObjects)
@@ -210,12 +210,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         }
         else
         {
-            property.ValueChangedEvent += o => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs
-            {
-                Entity = entity,
-                Component = component,
-                Property = property,
-            });
+            property.ValueChangedEvent += _ => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs(entity, component, property));
         }
     }
 

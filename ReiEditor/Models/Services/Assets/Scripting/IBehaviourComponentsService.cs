@@ -9,6 +9,13 @@ public class EntityBehaviourPropertyChangeEventArgs
     public GameEntity Entity { get; set; }
     public BehaviourComponent Component { get; set; }
     public SerializedProperty Property { get; set; }
+    
+    public EntityBehaviourPropertyChangeEventArgs(GameEntity entity, BehaviourComponent component, SerializedProperty property)
+    {
+        Entity = entity;
+        Component = component;
+        Property = property;
+    }
 }
 
 public interface IBehaviourComponentsService
