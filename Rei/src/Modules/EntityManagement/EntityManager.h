@@ -11,20 +11,18 @@ namespace rei
     {
     public:
         template <typename T>
-        void RegisterComponent(i32 id, std::function<nlohmann::json(ecs::Entity)> getJsonFunc)
+        void RegisterComponent(i32 id, std::function<nlohmann::json(ecs::Entity)> getJsonFunc, std::function<void(ecs::Entity, const nlohmann::json&)> setFromJsonFunc)
         {
             _addMethods.insert({
                 id, [=](const ecs::Entity e, const nlohmann::json& data) -> T& {
                     ECS_WORLD(GetInternalWorld());
                     T& t = GET(e, T);
 
-                    if (data.empty())
+                    t = T(id, e);
+
+                    if (!data.empty())
                     {
-                        t = T(id, e);
-                    }
-                    else
-                    {
-                        t = T(id, e, data);
+                        setFromJsonFunc(e, data);
                     }
 
                     GET(e, EntityInfo).Behaviours.push_back(id);
@@ -44,13 +42,17 @@ namespace rei
                 id, getJsonFunc
             });
 
+            _setFromJsonMethods.insert({
+                id, setFromJsonFunc
+            });
+
             _behaviourIdMap[std::type_index(typeid(T))] = id;
         }
 
         Behaviour& AddBehaviour(const ecs::Entity e, const i32 id, const nlohmann::json& data) const
         {
             if (_addMethods.count(id) == 0)
-                REI_THROW("Missing component factory. Component ID: " + STRING(id))
+                REI_THROW("Missing add behaviour method. Component ID: " + STRING(id))
 
             return _addMethods.at(id)(e, data);
         }
@@ -58,7 +60,7 @@ namespace rei
         Behaviour& GetBehaviour(const ecs::Entity e, const i32 id) const
         {
             if (_getMethods.count(id) == 0)
-                REI_THROW("Missing component factory. Component ID: " + STRING(id))
+                REI_THROW("Missing get behaviour method. Component ID: " + STRING(id))
 
             return _getMethods.at(id)(e);
         }
@@ -66,9 +68,17 @@ namespace rei
         nlohmann::json GetBehaviourData(const ecs::Entity e, const i32 id) const
         {
             if (_getJsonMethods.count(id) == 0)
-                REI_THROW("Missing component factory. Component ID: " + STRING(id))
+                REI_THROW("Missing get behaviour data method. Component ID: " + STRING(id))
 
             return _getJsonMethods.at(id)(e);
+        }
+        
+        void SetBehaviourData(const ecs::Entity e, const i32 id, const nlohmann::json& data) const
+        {
+            if (_setFromJsonMethods.count(id) == 0)
+                REI_THROW("Missing set behaviour data method. Component ID: " + STRING(id))
+
+            return _setFromJsonMethods.at(id)(e, data);
         }
 
         template <typename R>
@@ -81,6 +91,7 @@ namespace rei
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity, const nlohmann::json&)>> _addMethods{};
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _getMethods{};
         std::unordered_map<i32, std::function<nlohmann::json(ecs::Entity)>> _getJsonMethods{};
+        std::unordered_map<i32, std::function<void(ecs::Entity, const nlohmann::json&)>> _setFromJsonMethods{};
         std::map<std::type_index, i32> _behaviourIdMap;
     };
 

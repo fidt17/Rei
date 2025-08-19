@@ -1,5 +1,8 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -87,10 +90,10 @@ public class MonitorWindowViewModel : BaseViewModel
         if (obj is HierarchyNodeViewModel hNode)
         {
             var e = hNode.Node.Content;
+            RunEntityUpdateStateTask(e);
+            
             var entityMonitor = _entityMonitorFactory.CreateInstance(e);
             Drawer = entityMonitor;
-
-            RunEntityUpdateStateTask(e);
         }
     }
 
@@ -106,12 +109,18 @@ public class MonitorWindowViewModel : BaseViewModel
 
         if (!_playmodeService.IsPlaymodeActive.Value) return;
         
+        _entityManagementService.UpdateEntityStateFromEngine(e);
+        
         Task.Run(async () =>
         {
             while (true)
             {
                 await Task.Delay(32);
-                _entityManagementService.UpdateEntityStateFromEngine(e);
+
+                Dispatcher.UIThread.Invoke(() =>
+                {
+                    _entityManagementService.UpdateEntityStateFromEngine(e);
+                });
             }
         }, _entityUpdateStateCTS.Token);
     }

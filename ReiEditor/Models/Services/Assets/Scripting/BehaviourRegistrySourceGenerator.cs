@@ -29,6 +29,10 @@ public class BehaviourRegistrySourceGenerator
     {
         var serializableObjectInfos = serializableObjects.ToArray();
         
+        var serializableObjectsAndBehaviours = new List<SerializableObjectInfo>();
+        serializableObjectsAndBehaviours.AddRange(serializableObjectInfos);
+        serializableObjectsAndBehaviours.AddRange(behaviours.Values);
+        
         var str = new StringBuilder();
 
         str.AppendLine();
@@ -38,17 +42,12 @@ public class BehaviourRegistrySourceGenerator
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
         str.AppendLine();
-        str.AppendLine(GenerateIncludes(serializableObjectInfos));
-        str.AppendLine(GenerateIncludes(behaviours.Values));
+        str.AppendLine(GenerateIncludes(serializableObjectsAndBehaviours));
         
         str.AppendLine(GenerateRegistryMethod(behaviours));
-        str.AppendLine(GenerateBodyImplementation(serializableObjectInfos));
-        str.AppendLine(GenerateBodyImplementation(behaviours));
 
-        var serializableObjectsAndBehaviours = new List<SerializableObjectInfo>();
-        serializableObjectsAndBehaviours.AddRange(serializableObjectInfos);
-        serializableObjectsAndBehaviours.AddRange(behaviours.Values);
         str.AppendLine(GenerateSerializationImplementation(serializableObjectsAndBehaviours));
+        str.AppendLine(GenerateDeserializationImplementation(serializableObjectsAndBehaviours));
         
         return str.ToString();
     }
@@ -86,7 +85,8 @@ public class BehaviourRegistrySourceGenerator
             var behaviourId = b.Value.BehaviourId;
 
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
-                           $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{" + $"return rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e).REI_GET();" + " });");
+                           $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{" + $"return rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e).REI_GET();" + " }, " +
+                           $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{" + $"rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e).REI_SET(json); }});");
         }
         
         str.AppendLine("}");
@@ -94,60 +94,69 @@ public class BehaviourRegistrySourceGenerator
         return str.ToString();
     }
 
-    private string GenerateBodyImplementation(Dictionary<int, BehaviourAssetInfo> behaviours)
+    private string GenerateDeserializationImplementation(IEnumerable<SerializableObjectInfo> objects)
     {
+        var list = objects.ToList();
+        
         var str = new StringBuilder();
         
-        str.AppendLine("// --- BEHAVIOUR CONSTRUCTORS ---\n");
+        str.AppendLine("// --- REI_SET METHODS ---\n");
         
-        foreach (var b in behaviours)
-        {
-            var behaviourNamespace = b.Value.Namespace;
-            var behaviourName = b.Value.ObjectName;
-            var serializedProperties = b.Value.SerializedProperties;
-
-            str.AppendLine($"{behaviourNamespace}::{behaviourName}::{behaviourName}(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)");
-            str.AppendLine($"    : Behaviour(id, e)");
-            foreach (var p in serializedProperties)
-            {
-                str.AppendLine($"    , {p.Key}(data.at(\"{p.Key}\").at(\"Value\"))");
-            }
-            str.AppendLine("{" + "}");
-            str.AppendLine();
-        }
-        
-        return str.ToString();
-    }
-    
-    private string GenerateBodyImplementation(IEnumerable<SerializableObjectInfo> objects)
-    {
-        var str = new StringBuilder();
-        
-        str.AppendLine("// --- SERIALIZABLE OBJECT CONSTRUCTORS ---\n");
-        
-        foreach (var obj in objects)
+        foreach (var obj in list)
         {
             var objNamespace = obj.Namespace;
             var objectName = obj.ObjectName;
+            
+            var nameAndNamespace = objectName;
+            if (!string.IsNullOrWhiteSpace(objNamespace)) nameAndNamespace = $"{objNamespace}::{objectName}";
+            
             var serializedProperties = obj.SerializedProperties.ToList();
 
             if (obj.IsTemplate)
             {
                 str.AppendLine("template <typename T>");
-                str.AppendLine($"{objNamespace}::{objectName}<T>::{objectName}(const nlohmann::json& data) :");
+                str.AppendLine($"void {nameAndNamespace}<T>::REI_SET(const nlohmann::json& data)");
             }
             else
             {
-                str.AppendLine($"{objNamespace}::{objectName}::{objectName}(const nlohmann::json& data) :");
+                str.AppendLine($"void {nameAndNamespace}::REI_SET(const nlohmann::json& data)");
             }
+            
+            str.AppendLine("{");
+            
             for (var index = 0; index < serializedProperties.Count; index++)
             {
                 var p = serializedProperties[index];
-                str.AppendLine($"    {p.Key}(data.at(\"{p.Key}\").at(\"Value\")){(index == serializedProperties.Count - 1 ? "" : ",")}");
-            }
+                
+                var propertyType = p.Value.SourceType;
+                var indexOfTemplateStart = propertyType.IndexOf('<');
+                if (indexOfTemplateStart != -1)
+                {
+                    propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
+                }
 
+                if (list.Exists(x =>
+                    {
+                        var objName = x.ObjectName;
+                        indexOfTemplateStart = objName.IndexOf('<');
+                        if (indexOfTemplateStart != -1)
+                        {
+                            objName = objName.Remove(indexOfTemplateStart, objName.Length - indexOfTemplateStart);
+                        }
+
+                        return objName == propertyType;
+                    }))
+                {
+                    str.AppendLine($"    if (data.contains(\"{p.Key}\")) {p.Key}.REI_SET(data.at(\"{p.Key}\").at(\"Value\"));");
+                }
+                else
+                {
+                    str.AppendLine($"    if (data.contains(\"{p.Key}\")) {p.Key} = data.at(\"{p.Key}\").at(\"Value\");");
+                }
+            }
             
-            str.AppendLine("{" + "}");
+            str.AppendLine("}");
+            
             str.AppendLine();
         }
         

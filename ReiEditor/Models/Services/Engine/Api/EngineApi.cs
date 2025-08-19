@@ -14,6 +14,8 @@ public class EngineApi : IEngineApi
     private delegate IntPtr ActionDelegate();
     
     private IntPtr _dllPtr;
+    private bool _isEngineRunning;
+    
     private readonly bool _logInvokingMethods;
     private readonly ILogger<EngineApi> _logger;
 
@@ -39,24 +41,42 @@ public class EngineApi : IEngineApi
     }
 
     private delegate void StartEngineDelegate(IntPtr enginePtr);
-    public void Start(IntPtr enginePtr) => Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
-	
+    public void Start(IntPtr enginePtr)
+    {
+        try
+        {
+            _isEngineRunning = true;
+            Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
+        }
+        catch (Exception e)
+        {
+            _isEngineRunning = false;
+            throw;
+        }
+    }
+
     private delegate int ShutdownEngineDelegate(IntPtr enginePtr, int exitCode);
-    public void Shutdown(IntPtr enginePtr, int exitCode) => Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
+    public void Shutdown(IntPtr enginePtr, int exitCode)
+    {
+        _isEngineRunning = false;
+        Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
+    }
 
     public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
     
-    private delegate void GetSceneEntityStateDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
-    public EntityStateResponse? GetSceneEntityState(int sceneEntityId)
+    private delegate void GetEntityDataDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
+    public GetEntityDataResponse? GetEntityData(int sceneEntityId)
     {
         try
         {
+            if (!_isEngineRunning) return null;
+            
             var outputBuffer = new StringBuilder(1024);
-            Invoke(typeof(GetSceneEntityStateDelegate), "GetSceneEntityState", sceneEntityId, outputBuffer, outputBuffer.Capacity);
+            Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, outputBuffer, outputBuffer.Capacity);
 
-            return JsonConvert.DeserializeObject<EntityStateResponse>(outputBuffer.ToString());
+            return JsonConvert.DeserializeObject<GetEntityDataResponse>(outputBuffer.ToString());
         }
         catch (Exception e)
         {
@@ -70,6 +90,22 @@ public class EngineApi : IEngineApi
         try
         {
             Invoke(typeof(RenameEntityDelegate), "RenameEntity", sceneEntityId, newName);
+            return true;
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+
+        return false;
+    }
+    
+    private delegate void SetEntityDataDelegate(string json);
+    public bool SetEntityData(SetEntityDataRequest request)
+    {
+        try
+        {
+            Invoke(typeof(SetEntityDataDelegate), "SetEntityData", JsonConvert.SerializeObject(request));
             return true;
         }
         catch (Exception)

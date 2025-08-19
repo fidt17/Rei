@@ -12,6 +12,10 @@ namespace ReiEditor.Models.Services.Assets.Scripting;
 
 public class BehaviourComponentsService : IBehaviourComponentsService
 {
+    public event Action<EntityBehaviourPropertyChangeEventArgs>? BehaviourPropertyChangedEvent;
+
+    private readonly HashSet<SerializedProperty> _subscribedProperties = new();
+    
     private readonly ILogger<BehaviourComponentsService> _logger;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
@@ -43,7 +47,9 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         var component = new BehaviourComponent(behaviourId);
         foreach (var sp in componentInfo.SerializedProperties)
         {
-            component.AddProperty(CreateSerializedProperty(sp.Key, sp.Value));
+            var p = CreateSerializedProperty(sp.Key, sp.Value, null);
+            component.AddProperty(p);
+            SubscribeToPropertyChange(e, component, p);
         }
         
         SetupCustomBehaviourValues(component);
@@ -91,10 +97,12 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             {
                 if (!component.HasProperty(sp.Key))
                 {
-                    component.AddProperty(CreateSerializedProperty(sp.Key, sp.Value));
+                    component.AddProperty(CreateSerializedProperty(sp.Key, sp.Value, null));
                 }
 
-                ParseNestedProperties(component.GetProperty(sp.Key));
+                var p = component.GetProperty(sp.Key);
+                ParseNestedProperties(p);
+                SubscribeToPropertyChange(e, component, p);
             }
 
             // UPDATE PROPERTIES WITH NEW TYPES
@@ -106,16 +114,18 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                 if (sp.Value.Type != propertyType.Type || sp.Value.SourceType != propertyType.SourceType)
                 {
                     component.RemoveProperty(sp.Key);
-                    component.AddProperty(CreateSerializedProperty(sp.Key, propertyType));
+                    var p = CreateSerializedProperty(sp.Key, propertyType, null);
+                    component.AddProperty(p);
+                    SubscribeToPropertyChange(e, component, p);
                 }
             }
         }
     }
 
-    private SerializedProperty CreateSerializedProperty(string name, SerializableObjectInfo.SerializedPropertyData propertyData)
+    private SerializedProperty CreateSerializedProperty(string name, SerializableObjectInfo.SerializedPropertyData propertyData, SerializedProperty? parentProperty)
     {
         var propertyValue = propertyData.Type.ParseDefaultValue(propertyData.DefaultValue);
-        var property = new SerializedProperty(name, propertyData.Type, propertyValue, propertyData.SourceType);
+        var property = new SerializedProperty(name, propertyData.Type, propertyValue, propertyData.SourceType, parentProperty);
         if (property.Type != SerializedTypeEnum.Custom) return property;
         
         var nestedPropertyData = _serializableObjectsRegistry.GetObject(property.SourceType);
@@ -128,19 +138,19 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         var nestedData = new Dictionary<string, SerializedProperty>();
         foreach (var serializedPropertyData in nestedPropertyData.SerializedProperties)
         {
-            nestedData.Add(serializedPropertyData.Key, CreateSerializedProperty(serializedPropertyData.Key, serializedPropertyData.Value));
+            nestedData.Add(serializedPropertyData.Key, CreateSerializedProperty(serializedPropertyData.Key, serializedPropertyData.Value, property));
         }
         property.Value = nestedData;
 
         return property;
     }
 
-    private SerializedProperty ParseSerializedProperty(string name, JToken jObject)
+    private SerializedProperty ParseSerializedProperty(string name, JToken jObject, SerializedProperty? parentProperty)
     {
         var type = jObject[nameof(SerializedProperty.Type)].ToObject<SerializedTypeEnum>();
         var value = jObject[nameof(SerializedProperty.Value)].ToObject<object>();
         var sourceType = jObject[nameof(SerializedProperty.SourceType)].ToObject<string>();
-        var property = new SerializedProperty(name, type, value, sourceType);
+        var property = new SerializedProperty(name, type, value, sourceType, parentProperty);
         
         ParseNestedProperties(property);
         
@@ -168,7 +178,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         var parsedValue = new Dictionary<string, SerializedProperty>();
         foreach (var token in childObjects)
         {
-            parsedValue.Add(token.Item1, ParseSerializedProperty(token.Item1, token.Item2));
+            parsedValue.Add(token.Item1, ParseSerializedProperty(token.Item1, token.Item2, property));
         }
             
         foreach (var requiredProperty in requiredProperties)
@@ -180,11 +190,33 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                 {
                     parsedValue.Remove(targetProperty.Name);
                 }
-                parsedValue.Add(requiredProperty.Key, CreateSerializedProperty(requiredProperty.Key, requiredProperty.Value));
+                parsedValue.Add(requiredProperty.Key, CreateSerializedProperty(requiredProperty.Key, requiredProperty.Value, property));
             }
         }
 
         property.Value = parsedValue;
+    }
+
+    private void SubscribeToPropertyChange(GameEntity entity, BehaviourComponent component, SerializedProperty property)
+    {
+        if (!_subscribedProperties.Add(property)) return;
+
+        if (property.Value is Dictionary<string, SerializedProperty> sp)
+        {
+            foreach (var nested in sp.Values)
+            {
+                SubscribeToPropertyChange(entity, component, nested);
+            }
+        }
+        else
+        {
+            property.ValueChangedEvent += o => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs
+            {
+                Entity = entity,
+                Component = component,
+                Property = property,
+            });
+        }
     }
 
     private void SetupCustomBehaviourValues(BehaviourComponent component)

@@ -8,7 +8,6 @@
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Assets\AssetRef.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
-
 #include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\TestMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\MeshRenderer.h"
@@ -18,75 +17,13 @@
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
-    f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_GET(); });
-    f.RegisterComponent<rei::render::Camera>(0, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_GET(); });
-    f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_GET(); });
-    f.RegisterComponent<rei::transformation::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e).REI_GET(); });
-    f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e).REI_GET(); });
-    f.RegisterComponent<rei::behaviour::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::behaviour::PointLight>(e).REI_GET(); });
+    f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_SET(json); });
+    f.RegisterComponent<rei::render::Camera>(0, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_SET(json); });
+    f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_SET(json); });
+    f.RegisterComponent<rei::transformation::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e).REI_SET(json); });
+    f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e).REI_SET(json); });
+    f.RegisterComponent<rei::behaviour::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::behaviour::PointLight>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::behaviour::PointLight>(e).REI_SET(json); });
 }
-
-// --- SERIALIZABLE OBJECT CONSTRUCTORS ---
-
-rei::math::Vector3::Vector3(const nlohmann::json& data) :
-    x(data.at("x").at("Value")),
-    y(data.at("y").at("Value")),
-    z(data.at("z").at("Value"))
-{}
-
-template <typename T>
-rei::assets::AssetRef<T>::AssetRef(const nlohmann::json& data) :
-    Id(data.at("Id").at("Value"))
-{}
-
-rei::render::Color::Color(const nlohmann::json& data) :
-    r(data.at("r").at("Value")),
-    g(data.at("g").at("Value")),
-    b(data.at("b").at("Value")),
-    a(data.at("a").at("Value"))
-{}
-
-
-// --- BEHAVIOUR CONSTRUCTORS ---
-
-::TestMovement::TestMovement(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _radius(data.at("_radius").at("Value"))
-    , _speed(data.at("_speed").at("Value"))
-{}
-
-rei::render::Camera::Camera(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _fov(data.at("_fov").at("Value"))
-    , _nearClipPlane(data.at("_nearClipPlane").at("Value"))
-    , _farClipPlane(data.at("_farClipPlane").at("Value"))
-{}
-
-rei::render::MeshRenderer::MeshRenderer(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _model(data.at("_model").at("Value"))
-    , _material(data.at("_material").at("Value"))
-{}
-
-rei::transformation::Transform::Transform(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _position(data.at("_position").at("Value"))
-    , _rotation(data.at("_rotation").at("Value"))
-    , _scale(data.at("_scale").at("Value"))
-{}
-
-rei::render::AmbientLight::AmbientLight(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _strength(data.at("_strength").at("Value"))
-    , _color(data.at("_color").at("Value"))
-{}
-
-rei::behaviour::PointLight::PointLight(const i32 id, const rei::ecs::Entity e, const nlohmann::json& data)
-    : Behaviour(id, e)
-    , _strength(data.at("_strength").at("Value"))
-    , _color(data.at("_color").at("Value"))
-{}
-
 
 // --- REI_GET METHODS ---
 
@@ -126,6 +63,7 @@ nlohmann::json TestMovement::REI_GET() const
         {"REI_TYPE", "TestMovement"},
         {"_radius", _radius},
         {"_speed", _speed},
+        {"_actionFlag", _actionFlag},
     };
 }
 
@@ -174,6 +112,69 @@ nlohmann::json rei::behaviour::PointLight::REI_GET() const
         {"_strength", _strength},
         {"_color", _color.REI_GET()},
     };
+}
+
+
+// --- REI_SET METHODS ---
+
+void rei::math::Vector3::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("x")) x = data.at("x").at("Value");
+    if (data.contains("y")) y = data.at("y").at("Value");
+    if (data.contains("z")) z = data.at("z").at("Value");
+}
+
+template <typename T>
+void rei::assets::AssetRef<T>::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("Id")) Id = data.at("Id").at("Value");
+}
+
+void rei::render::Color::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("r")) r = data.at("r").at("Value");
+    if (data.contains("g")) g = data.at("g").at("Value");
+    if (data.contains("b")) b = data.at("b").at("Value");
+    if (data.contains("a")) a = data.at("a").at("Value");
+}
+
+void TestMovement::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_radius")) _radius = data.at("_radius").at("Value");
+    if (data.contains("_speed")) _speed = data.at("_speed").at("Value");
+    if (data.contains("_actionFlag")) _actionFlag = data.at("_actionFlag").at("Value");
+}
+
+void rei::render::Camera::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_fov")) _fov = data.at("_fov").at("Value");
+    if (data.contains("_nearClipPlane")) _nearClipPlane = data.at("_nearClipPlane").at("Value");
+    if (data.contains("_farClipPlane")) _farClipPlane = data.at("_farClipPlane").at("Value");
+}
+
+void rei::render::MeshRenderer::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_model")) _model.REI_SET(data.at("_model").at("Value"));
+    if (data.contains("_material")) _material.REI_SET(data.at("_material").at("Value"));
+}
+
+void rei::transformation::Transform::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_position")) _position.REI_SET(data.at("_position").at("Value"));
+    if (data.contains("_rotation")) _rotation.REI_SET(data.at("_rotation").at("Value"));
+    if (data.contains("_scale")) _scale.REI_SET(data.at("_scale").at("Value"));
+}
+
+void rei::render::AmbientLight::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_strength")) _strength = data.at("_strength").at("Value");
+    if (data.contains("_color")) _color.REI_SET(data.at("_color").at("Value"));
+}
+
+void rei::behaviour::PointLight::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_strength")) _strength = data.at("_strength").at("Value");
+    if (data.contains("_color")) _color.REI_SET(data.at("_color").at("Value"));
 }
 
 

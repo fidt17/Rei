@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Modules/EntityManagement/EntityManager.h"
 
-REI_EXTERN_API inline void GetSceneEntityState(const i32 sceneEntityId, char* outputBuffer, const int bufferSize)
+REI_EXTERN_API inline void GetEntityData(const i32 sceneEntityId, char* outputBuffer, const int bufferSize)
 {
     const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
     if (e == rei::ecs::NULL_ENTITY) return;
@@ -31,4 +31,19 @@ REI_EXTERN_API inline void RenameEntity(const i32 sceneEntityId, const char* new
 
     ECS_WORLD(rei::GetInternalWorld());
     GET(e, EntityInfo).Name = newName;
+}
+
+REI_EXTERN_API inline void SetEntityData(const char* json)
+{
+    nlohmann::json data = nlohmann::json::parse(json);
+
+    const i32 sceneEntityId = data.at("SceneId");
+    const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+    if (e == rei::ecs::NULL_ENTITY) return;
+
+    for (auto b : data.at("Behaviours"))
+    {
+        const i32 behaviourId = b.at("REI_BEHAVIOUR_ID");
+        rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
+    }
 }

@@ -17,8 +17,9 @@ public interface IEngineApi
 	void AddLogCallback(IntPtr ptr);
 	void AddShutdownCallback(IntPtr callback);
 
-	EntityStateResponse? GetSceneEntityState(int sceneEntityId);
+	GetEntityDataResponse? GetEntityData(int sceneEntityId);
 	bool RenameEntity(int sceneEntityId, string newName);
+	bool SetEntityData(SetEntityDataRequest request);
 	
 	long BuildAsset(string assetPath, string destinationFile, long offset);
 

@@ -1,10 +1,20 @@
+using System;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 
 namespace ReiEditor.Models.Services.Assets.Scripting;
 
+public class EntityBehaviourPropertyChangeEventArgs
+{
+    public GameEntity Entity { get; set; }
+    public BehaviourComponent Component { get; set; }
+    public SerializedProperty Property { get; set; }
+}
+
 public interface IBehaviourComponentsService
 {
+    event Action<EntityBehaviourPropertyChangeEventArgs>? BehaviourPropertyChangedEvent;
+    
     bool AddComponent(GameEntity e, int behaviourId);
     void AddComponent(GameEntity e, string name);
     bool DeleteComponent(GameEntity e, BehaviourComponent component);

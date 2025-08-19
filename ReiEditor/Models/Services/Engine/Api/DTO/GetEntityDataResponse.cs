@@ -2,7 +2,7 @@
 
 namespace ReiEditor.Models.Services.Engine.Api.DTO;
 
-public class EntityStateResponse
+public class GetEntityDataResponse
 {
     public int SceneId { get; set; }
     
