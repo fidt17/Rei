@@ -140,6 +140,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         if (!_playmodeService.IsPlaymodeActive.Value) return;
         
         var state =_engineApi.GetEntityData(e.Id);
+        //_logger.LogWarning($"State: {JsonConvert.SerializeObject(state, Formatting.Indented)}");
         if (state == null) return;
         
         _ignorePropertyChanges = true;
