@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -17,11 +19,8 @@ namespace ReiEditor.Models.Services.Entities;
 
 public class EntityManagementService : IEntityManagementService, IDisposable
 {
-    public event Action<GameEntity>? EntityCreatedEvent;
-    public event Action<GameEntity>? EntityMovedEvent;
-    public event Action<GameEntity>? EntityDeletedEvent;
-	
     private bool _ignorePropertyChanges;
+    private CancellationTokenSource? _sceneUpdateTaskCTS;
     
     private readonly ILogger<EntityManagementService> _logger;
     private readonly ISceneManagementService _sceneManagement;
@@ -47,27 +46,35 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         _behaviourRegistry = behaviourRegistry;
         
         _behaviourComponentsService.BehaviourPropertyChangedEvent += HandleEntityBehaviourPropertyChangedEvent;
+        
+        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChangedEvent, invoke: false);
     }
 
     public void Dispose()
     {
         _behaviourComponentsService.BehaviourPropertyChangedEvent -= HandleEntityBehaviourPropertyChangedEvent;
+        _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChangedEvent);
     }
 
     public GameEntity? CreateEntity(string name)
     {
         try
         {
-            if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
-
-            var s = _sceneManagement.CurrentScene.Value;
-            var e = new GameEntity(s.AllocateEntityId(), name);
-            AddBehaviour(e, _behaviourRegistry.GetIdByName("Transform")!.Value);
+            if (_playmodeService.IsPlaymodeActive.Value)
+            {
+                _entityApi.CreateNewEntity(name);
+            }
+            else
+            {
+                if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
             
-            s.AddEntity(e);
-
-            EntityCreatedEvent?.Invoke(e);
-            return e;
+                var s = _sceneManagement.CurrentScene.Value;
+                var e = new GameEntity(s.AllocateEntityId(), name);
+                AddBehaviour(e, _behaviourRegistry.GetIdByName("Transform")!.Value);
+            
+                s.AddEntity(e);
+                return e;
+            }
         }
         catch (Exception exception)
         {
@@ -107,8 +114,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         
         try
         {
-            if (!scene.MoveEntity(e, parent, idx)) return;
-            EntityMovedEvent?.Invoke(e);
+            scene.MoveEntity(e, parent, idx);
         }
         catch (Exception exception)
         {
@@ -157,16 +163,21 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         }
     }
 
-    public void DeleteEntity(GameEntity e)
+    public void DestroyEntity(GameEntity e)
     {
         try
         {
-            if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
+            if (_playmodeService.IsPlaymodeActive.Value)
+            {
+                _entityApi.DestroyEntity(e.Id);
+            }
+            else
+            {
+                if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
 
-            var s = _sceneManagement.CurrentScene.Value;
-            s.DeleteEntity(e);
-
-            EntityDeletedEvent?.Invoke(e);
+                var s = _sceneManagement.CurrentScene.Value;
+                s.DeleteEntity(e);
+            }
         }
         catch (Exception exception)
         {
@@ -178,7 +189,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         if (!_playmodeService.IsPlaymodeActive.Value) return;
         
-        var state =_entityApi.GetData(e.Id);
+        var state =_entityApi.GetEntityData(e.Id);
         //_logger.LogWarning($"State: {JsonConvert.SerializeObject(state, Formatting.Indented)}");
         if (state == null) return;
         
@@ -305,6 +316,68 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         catch (Exception e)
         {
             _logger.LogError(e.ToString());
+        }
+    }
+    
+    private void HandleIsPlaymodeActiveValueChangedEvent(bool isActive)
+    {
+        if (isActive)
+        {
+            _sceneUpdateTaskCTS?.Cancel();
+            _sceneUpdateTaskCTS = new CancellationTokenSource();
+
+            var token = _sceneUpdateTaskCTS.Token;
+            Task.Run(async () =>
+            {
+                while (_playmodeService.IsPlaymodeActive.Value && !token.IsCancellationRequested)
+                {
+                    await Task.Delay(100, token);
+
+                    UpdateSceneEntitiesFromEngine();
+                }
+                // ReSharper disable once FunctionNeverReturns
+            }, token);
+        }
+        else
+        {
+            _sceneUpdateTaskCTS?.Cancel();
+        }
+    }
+    
+    private void UpdateSceneEntitiesFromEngine()
+    {
+        try
+        {
+            var entities = _entityApi.GetSceneEntities();
+            if (entities == null) return;
+
+            var scene = _sceneManagement.CurrentScene.Value;
+            if (scene == null) throw new Exception("Current scene is missing");
+
+            var currentSceneEntities = scene.Entities.ToList();
+            
+            // Create missing entities
+            foreach (var entityId in entities.Entities)
+            {
+                if (!currentSceneEntities.Exists(x => x.Id == entityId))
+                {
+                    var newEntity = new GameEntity(entityId, $"Entity {entityId}");
+                    scene.AddEntity(newEntity);
+                    UpdateEntityStateFromEngine(newEntity);
+                    //_logger.LogWarning($"Add new entity: {entityId}");
+                }
+            }
+            
+            // Delete invalid entities
+            foreach (var gameEntity in currentSceneEntities.Where(x => !entities.Entities.Contains(x.Id)))
+            {
+                scene.DeleteEntity(gameEntity);
+                //_logger.LogWarning($"Delete invalid entity: {gameEntity.Name}");
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogException(e);
         }
     }
 }

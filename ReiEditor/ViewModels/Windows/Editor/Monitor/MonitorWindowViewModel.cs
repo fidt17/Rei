@@ -65,6 +65,8 @@ public class MonitorWindowViewModel : BaseViewModel
         _editorRefreshService.RefreshedEvent -= HandleRefreshedEvent;
         
         _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChangedEvent);
+        
+        _entityUpdateStateCTS?.Cancel();
     }
 
     private void HandleActiveSelectionChangedEvent(ISelectable? obj)
@@ -112,12 +114,13 @@ public class MonitorWindowViewModel : BaseViewModel
         if (!_playmodeService.IsPlaymodeActive.Value) return;
         
         _entityManagementService.UpdateEntityStateFromEngine(e);
-        
+
+        var token = _entityUpdateStateCTS.Token;
         Task.Run(async () =>
         {
-            while (true)
+            while (_playmodeService.IsPlaymodeActive.Value && !token.IsCancellationRequested)
             {
-                await Task.Delay(32);
+                await Task.Delay(32, token);
 
                 Dispatcher.UIThread.Invoke(() =>
                 {
@@ -125,6 +128,6 @@ public class MonitorWindowViewModel : BaseViewModel
                 });
             }
             // ReSharper disable once FunctionNeverReturns
-        }, _entityUpdateStateCTS.Token);
+        }, token);
     }
 }

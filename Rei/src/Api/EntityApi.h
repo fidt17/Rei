@@ -3,6 +3,46 @@
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
+REI_EXTERN_API inline void CreateNewEntity(const char* name)
+{
+    std::string nameStr = name;
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        rei::GetEntityManager().CreateNewEntity(nameStr);
+    });
+}
+
+REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId)
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+
+        const auto e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+        if (IS_DEAD(e)) return;
+
+        rei::GetEntityManager().Destroy(e);
+    });
+}
+
+REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const int bufferSize)
+{
+    ECS_WORLD(rei::GetInternalWorld());
+
+    const auto& filter = rei::GetInternalWorld().GetFiltersRegistry()->Get<EntityInfo>();
+
+    nlohmann::json data;
+    data["Entities"] = nlohmann::json::array();
+
+    FOR(e, filter)
+    {
+        const auto& info = GET(e, EntityInfo);
+        data["Entities"].push_back(info.Id);
+    }
+
+    strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);
+}
+
 REI_EXTERN_API inline void GetEntityData(const i32 sceneEntityId, char* outputBuffer, const int bufferSize)
 {
     ECS_WORLD(rei::GetInternalWorld());
@@ -22,7 +62,8 @@ REI_EXTERN_API inline void GetEntityData(const i32 sceneEntityId, char* outputBu
 
     for (const auto behaviour : behaviourCollection.Behaviours)
     {
-        data["Behaviours"].push_back(rei::GetEntityManager().GetBehaviourRegistry().GetBehaviourData(e, behaviour));
+        const auto& behaviourData = rei::GetEntityManager().GetBehaviourRegistry().GetBehaviourData(e, behaviour);
+        data["Behaviours"].push_back(behaviourData);
     }
 
     strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);
@@ -55,7 +96,7 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
 
 REI_EXTERN_API inline void AddBehaviour(const i32 sceneEntityId, const i32 behaviourId)
 {
-    rei::GetEngine().ExecuteOnMainThread([=]()
+    rei::GetEngine().ExecuteOnMainThread([=]
     {
         ECS_WORLD(rei::GetInternalWorld());
 
@@ -68,7 +109,7 @@ REI_EXTERN_API inline void AddBehaviour(const i32 sceneEntityId, const i32 behav
 
 REI_EXTERN_API inline void DeleteBehaviour(const i32 sceneEntityId, const i32 behaviourId)
 {
-    rei::GetEngine().ExecuteOnMainThread([=]()
+    rei::GetEngine().ExecuteOnMainThread([=]
     {
         ECS_WORLD(rei::GetInternalWorld());
 

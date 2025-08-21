@@ -4,7 +4,12 @@ namespace ReiEditor.Models.Services.Engine.Api;
 
 public interface IEntityApi
 {
-    GetEntityDataResponse? GetData(int sceneEntityId);
+    GetSceneEntitiesResponse? GetSceneEntities();
+    
+    GetEntityDataResponse? GetEntityData(int sceneEntityId);
+
+    void CreateNewEntity(string name);
+    void DestroyEntity(int sceneEntityId);
     
     void Rename(int sceneEntityId, string newName);
     void SetData(SetEntityDataRequest request);

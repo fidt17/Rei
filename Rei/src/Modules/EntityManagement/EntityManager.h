@@ -131,13 +131,14 @@ namespace rei
 
         REI_API ecs::Entity GetBySceneId(i32 id) const;
 
+        REI_API rei::ecs::Entity CreateNewEntity(const std::string& name);
         REI_API void Create(const SceneEntity& sceneEntity) const;
 
         REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 behaviourId) const;
         REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 behaviourId, const nlohmann::json& data, bool init = true) const;
 
         template <typename T>
-        REI_API T& AddBehaviour(ecs::Entity e)
+        REI_API T& AddBehaviour(const ecs::Entity e)
         {
             const i32 id = _behaviourRegistry.GetId<T>();
             return static_cast<T&>(AddBehaviour(e, id, nlohmann::json()));
@@ -156,6 +157,8 @@ namespace rei
 
         std::shared_ptr<ecs::EcsRegistry> _ecs;
         std::shared_ptr<ecs::Filter> _entityInfoFilter;
+
+        i32 GenerateNewSceneEntityId() const;
     };
 }
 

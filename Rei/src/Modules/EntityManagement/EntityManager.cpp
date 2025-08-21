@@ -1,9 +1,11 @@
 ﻿#include "pch.h"
 #include "EntityManager.h"
 
+#include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/Scenes/SceneManager.h"
 
 rei::EntityManager::EntityManager(const std::shared_ptr<ecs::World>& world)
     : _ecs(world->GetRegistry()),
@@ -22,6 +24,19 @@ rei::ecs::Entity rei::EntityManager::GetBySceneId(const i32 id) const
     }
 
     return ecs::NULL_ENTITY;
+}
+
+rei::ecs::Entity rei::EntityManager::CreateNewEntity(const std::string& name)
+{
+    ECS_WORLD(GetInternalWorld());
+
+    const auto e = NEW_ENTITY();
+    GET(e, EntityInfo) = {GenerateNewSceneEntityId(), name};
+    LOG_WARNING("CREATE NEW ENTITY: " + name)
+
+    AddBehaviour<transformation::Transform>(e).Reset();
+
+    return e;
 }
 
 void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
@@ -104,6 +119,21 @@ void rei::EntityManager::InitBehaviour(const ecs::Entity e, Behaviour& b) const
 {
     b.LoadAssets(GetAssetManager());
     b.Init();
-    
+
     GET(e, StartBehavioursEvent).Behaviours.push_back(b.GetBehaviourId());
+}
+
+i32 rei::EntityManager::GenerateNewSceneEntityId() const
+{
+    i32 maxId = -1;
+    FOR(e, _entityInfoFilter)
+    {
+        const i32 id = GET(e, EntityInfo).Id;
+        if (id > maxId)
+        {
+            maxId = id;
+        }
+    }
+
+    return maxId + 1;
 }

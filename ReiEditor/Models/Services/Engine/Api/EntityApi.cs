@@ -14,17 +14,16 @@ public class EntityApi : IEntityApi
         _engineApi = engineApi;
     }
 
-    private delegate void GetEntityDataDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
-    public GetEntityDataResponse? GetData(int sceneEntityId)
+    private delegate void GetSceneEntitiesDelegate(StringBuilder outputBuffer, int bufferSize);
+    public GetSceneEntitiesResponse? GetSceneEntities()
     {
-        if (!_engineApi.IsEngineRunning) return null;
         
         try
         {
-            var outputBuffer = new StringBuilder(1024);
-            _engineApi.Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, outputBuffer, outputBuffer.Capacity);
+            var buffer = new StringBuilder(2048);
+            _engineApi.Invoke(typeof(GetSceneEntitiesDelegate), "GetSceneEntitiesList", buffer, buffer.Capacity);
 
-            return JsonConvert.DeserializeObject<GetEntityDataResponse>(outputBuffer.ToString());
+            return JsonConvert.DeserializeObject<GetSceneEntitiesResponse>(buffer.ToString());
         }
         catch (Exception)
         {
@@ -32,6 +31,54 @@ public class EntityApi : IEntityApi
         }
     }
 
+    private delegate void GetEntityDataDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
+    public GetEntityDataResponse? GetEntityData(int sceneEntityId)
+    {
+        if (!_engineApi.IsEngineRunning) return null;
+        
+        try
+        {
+            var buffer = new StringBuilder(2048);
+            _engineApi.Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, buffer, buffer.Capacity);
+
+            return JsonConvert.DeserializeObject<GetEntityDataResponse>(buffer.ToString());
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private delegate void CreateNewEntityDelegate(string name);
+    public void CreateNewEntity(string name)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+        
+        try
+        {
+            _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
+
+    private delegate void DestroyEntityDelegate(int sceneEntityId);
+    public void DestroyEntity(int sceneEntityId)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+        
+        try
+        {
+            _engineApi.Invoke(typeof(DestroyEntityDelegate), "DestroyEntity", sceneEntityId);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
+    
     private delegate void RenameEntityDelegate(int sceneEntityId, string newName);
     public void Rename(int sceneEntityId, string newName)
     {

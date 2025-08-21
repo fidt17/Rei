@@ -96,7 +96,7 @@ public class HierarchyNodeViewModel : BaseViewModel, ISelectable
             _selectionService.ResetSelection();
         }
         
-        _entityManagementService.DeleteEntity(Node.Content);
+        _entityManagementService.DestroyEntity(Node.Content);
     }
 
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;

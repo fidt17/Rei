@@ -33,6 +33,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly GameEntity _entity;
     private readonly IFactory<BehaviourComponentDrawerViewModel> _behaviourComponentDrawerFactory;
     private readonly IEntityManagementService _entityManagementService;
+    private readonly IBehaviourRegistry _behaviourRegistry;
 
 #pragma warning disable CS8618
     public EntityMonitorDrawerViewModel() { }
@@ -48,6 +49,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         _entity = entity;
         _behaviourComponentDrawerFactory = behaviourComponentDrawerFactory;
         _entityManagementService = entityManagementService;
+        _behaviourRegistry = behaviourRegistry;
 
         _entity.BehaviourAddedEvent += HandleEntityBehaviourAddedEvent;
         _entity.BehaviourDeletedEvent += HandleEntityBehaviourDeletedEvent;
@@ -58,7 +60,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
             Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(_entity, b));
         }
 
-        ConfigureBehaviourSelectionList(behaviourRegistry);
+        UpdateBehaviourSelectionList();
     }
 
     public override void Dispose()
@@ -66,7 +68,9 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         base.Dispose();
         
         Elements.ClearAndDispose();
+        
         _entity.BehaviourAddedEvent -= HandleEntityBehaviourAddedEvent;
+        _entity.BehaviourDeletedEvent -= HandleEntityBehaviourDeletedEvent;
     }
 
     public void AddBehaviour(BehaviourSelectionData data)
@@ -77,6 +81,8 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
     private void HandleEntityBehaviourAddedEvent(GameEntity e, BehaviourComponent component)
     {
         Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(e, component));
+        
+        UpdateBehaviourSelectionList();
     }
 
     private void HandleEntityBehaviourDeletedEvent(GameEntity e, BehaviourComponent component)
@@ -87,14 +93,18 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
             if (bvm.BehaviourComponent != component) continue;
             bvm.Dispose();
             Elements.Remove(bvm);
-            return;
+            break;
         }
+        
+        UpdateBehaviourSelectionList();
     }
 
-    private void ConfigureBehaviourSelectionList(IBehaviourRegistry behaviourRegistry)
+    private void UpdateBehaviourSelectionList()
     {
+        BehaviourSelection.ClearAndDispose();
+        
         var behaviourSelectionList = new List<BehaviourSelectionData>();
-        foreach (var b in behaviourRegistry.Behaviours)
+        foreach (var b in _behaviourRegistry.Behaviours)
         {
             if (_entity.Behaviours.FirstOrDefault(x => x.Id == b.Value.BehaviourId) != null) continue;
             behaviourSelectionList.Add(new BehaviourSelectionData(b.Key, b.Value.ObjectName));
