@@ -77,9 +77,9 @@ namespace rei::internal::engine
         _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
     }
 
-    std::shared_ptr<window::Window> Engine::CreateMainWindow()
+    std::shared_ptr<window::Window> Engine::CreateMainWindow(const i32 width, const i32 height, const bool hideByDefault)
     {
-        auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager);
+        auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager, width, height, hideByDefault);
         _mainWindowHandler->MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")

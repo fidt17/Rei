@@ -21,7 +21,7 @@ namespace rei::internal::engine
 
         REI_API int GetExitCode() const;
 
-        REI_API std::shared_ptr<window::Window> CreateMainWindow();
+        REI_API std::shared_ptr<window::Window> CreateMainWindow(i32 width, i32 height, bool hideByDefault);
         REI_API std::shared_ptr<Task> ExecuteOnMainThread(std::function<void()>) const;
 
     private:

@@ -15,7 +15,7 @@ namespace rei::window
         eventpp::CallbackList<void (int width, int height)> SizeChangedEvent;
         eventpp::CallbackList<void ()> CloseRequestEvent;
         
-        Window(const std::string& name, int width, int height);
+        Window(const std::string& name, int width, int height, bool hideWindowByDefault);
 
         friend bool operator==(const Window& lhs, const Window& rhs)
         {

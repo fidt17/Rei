@@ -54,7 +54,7 @@ int main()
     try
     {
         const auto engine = rei::external::CreateEngine(std::filesystem::current_path().string().c_str());
-        engine->CreateMainWindow();
+        engine->CreateMainWindow(1080, 720, false);
         rei::external::Start(engine);
         return engine->GetExitCode();
     }

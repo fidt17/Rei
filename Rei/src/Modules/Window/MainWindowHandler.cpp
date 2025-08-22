@@ -3,11 +3,11 @@
 
 namespace rei::window
 {
-    std::shared_ptr<Window> MainWindowHandler::CreateMainWindow(WindowManager& windowManager)
+    std::shared_ptr<Window> MainWindowHandler::CreateMainWindow(WindowManager& windowManager, const i32 width, const i32 height, const bool hideByDefault)
     {
         REI_ASSERT_S(_window == nullptr)
 
-        _window = windowManager.NewWindow("Main Window", 900, 900);
+        _window = windowManager.NewWindow("Main Window", width, height, hideByDefault);
 
         _window->OnKeyEvent.append([&](const int key, const int, const int)
         {

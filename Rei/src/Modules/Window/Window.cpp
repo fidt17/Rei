@@ -3,8 +3,17 @@
 
 namespace rei::window
 {
-    Window::Window(const std::string& name, const int width, const int height)
+    Window::Window(const std::string& name, const int width, const int height, const bool hideWindowByDefault)
     {
+        if (hideWindowByDefault)
+        {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        }
+        else
+        {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+        }
+        
         _glfwWindow = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
         REI_THROW_IF(!_glfwWindow, "Window creation failed")
 
@@ -24,7 +33,7 @@ namespace rei::window
         glfwSetCursorPosCallback(_glfwWindow, [](GLFWwindow* w, const double xPos, const double yPos)
         {
             static_cast<Window*>(glfwGetWindowUserPointer(w))->OnMouseMoveEvent(xPos, yPos);
-        }); 
+        });
 
         CenterWindow();
     }

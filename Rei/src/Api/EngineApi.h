@@ -32,7 +32,7 @@ REI_EXTERN_API inline rei::window::Window* CreatePlaymodeWindow()
 
     rei::GetEngine().ExecuteOnMainThread([&]
     {
-        window = rei::GetEngine().CreateMainWindow();
+        window = rei::GetEngine().CreateMainWindow(1080, 720, true);
         window->DisableStyle();
     })->WaitForCompletion();
 
