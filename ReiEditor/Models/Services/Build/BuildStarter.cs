@@ -15,20 +15,20 @@ public class BuildStarter : IBuildStarter, IDisposable
 	
 	private readonly IBuildService _buildService;
 	private readonly IClientDllManager _dllManager;
-	private readonly IPlaymodeService _playmodeService;
 	private readonly IAssetsService _assetsService;
+	private readonly IEngineRunner _engineRunner;
 
-	public BuildStarter(IBuildService buildService, IClientDllManager dllManager, IPlaymodeService playmodeService, IAssetsService assetsService)
+	public BuildStarter(IBuildService buildService, IClientDllManager dllManager, IAssetsService assetsService, IEngineRunner engineRunner)
 	{
 		_buildService = buildService;
 		_dllManager = dllManager;
-		_playmodeService = playmodeService;
 		_assetsService = assetsService;
+		_engineRunner = engineRunner;
 
 		_canStartBuildCondition = new ConditionGroup(
 			new Condition(_buildService.BuildInProgress, target: false),
 			new Condition(_dllManager.DllLoaded, target: false),
-			new Condition(_playmodeService.IsPlaymodeActive, target: false),
+			new Condition(_engineRunner.IsPlaymodeActive, target: false),
 			new Condition(_assetsService.SaveInProcess, target: false));
 	}
 

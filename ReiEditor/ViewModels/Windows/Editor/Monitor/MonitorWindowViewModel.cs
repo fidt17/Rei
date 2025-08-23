@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
-using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
@@ -30,7 +29,6 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
 
     private readonly IEntityManagementService _entityManagementService;
-    private readonly IPlaymodeService _playmodeService;
 
     private CancellationTokenSource? _entityUpdateStateCTS;
 
@@ -42,19 +40,15 @@ public class MonitorWindowViewModel : BaseViewModel
         ISelectionService selectionService,
         IEditorRefreshService editorRefreshService,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
-        IEntityManagementService entityManagementService,
-        IPlaymodeService playmodeService)
+        IEntityManagementService entityManagementService)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
         _entityManagementService = entityManagementService;
-        _playmodeService = playmodeService;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
         _editorRefreshService.RefreshedEvent += HandleRefreshedEvent;
-        
-        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChangedEvent);
     }
 
     public override void Dispose()
@@ -63,8 +57,6 @@ public class MonitorWindowViewModel : BaseViewModel
         
         _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
         _editorRefreshService.RefreshedEvent -= HandleRefreshedEvent;
-        
-        _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChangedEvent);
         
         _entityUpdateStateCTS?.Cancel();
     }
@@ -97,34 +89,23 @@ public class MonitorWindowViewModel : BaseViewModel
         }
     }
 
-    private void HandleIsPlaymodeActiveValueChangedEvent(bool _)
-    {
-        Dispatcher.UIThread.InvokeAsync(async () =>
-        {
-            await Task.Delay(1000);
-            UpdateDrawer(_selectionService.ActiveSelection.Value);
-        });
-    }
-
     private void RunEntityUpdateStateTask(GameEntity e)
     {
         _entityUpdateStateCTS?.Cancel();
         _entityUpdateStateCTS = new CancellationTokenSource();
 
-        if (!_playmodeService.IsPlaymodeActive.Value) return;
-        
-        _entityManagementService.UpdateEntityStateFromEngine(e);
+        _entityManagementService.UpdateEntityState(e);
 
         var token = _entityUpdateStateCTS.Token;
         Task.Run(async () =>
         {
-            while (_playmodeService.IsPlaymodeActive.Value && !token.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
                 await Task.Delay(32, token);
 
                 Dispatcher.UIThread.Invoke(() =>
                 {
-                    _entityManagementService.UpdateEntityStateFromEngine(e);
+                    _entityManagementService.UpdateEntityState(e);
                 });
             }
             // ReSharper disable once FunctionNeverReturns

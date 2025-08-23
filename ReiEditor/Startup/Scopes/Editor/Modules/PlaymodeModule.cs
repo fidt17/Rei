@@ -12,9 +12,8 @@ public class PlaymodeModule : Module
     protected override void Load(ContainerBuilder builder)
     {
         builder.RegisterSingleton<PlaymodeStarter>().As<IPlaymodeStarter>();
-        builder.RegisterSingleton<PlaymodeService>().As<IPlaymodeService>();
-        builder.RegisterSingleton<PlaymodeRunner>().As<IPlaymodeRunner>();
-        builder.RegisterSingleton<PlaymodeWindowController>().As<IPlaymodeWindowController>();
+        builder.RegisterSingleton<EngineRunner>().As<IEngineRunner>();
+        builder.RegisterSingleton<EngineWindowController>().As<IEngineWindowController>();
 		
         ConfigureViews(builder);
     }

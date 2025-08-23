@@ -11,13 +11,11 @@ public class StartPlaymodeCommand : ICommand, IDisposable
 	public event EventHandler? CanExecuteChanged;
 
 	private readonly IPlaymodeStarter _playmodeStarter;
-	private readonly ILogger<StartPlaymodeCommand> _logger;
 
-	public StartPlaymodeCommand(IPlaymodeStarter playmodeStarter, ILogger<StartPlaymodeCommand> logger)
+	public StartPlaymodeCommand(IPlaymodeStarter playmodeStarter)
 	{
 		_playmodeStarter = playmodeStarter;
-		_logger = logger;
-		
+
 		_playmodeStarter.CanStartPlaymode.IsTrue.Subscribe(HandleCanStartPlaymodeValueChangedEvent);
 	}
 
@@ -28,17 +26,7 @@ public class StartPlaymodeCommand : ICommand, IDisposable
 
 	public bool CanExecute(object? parameter) => _playmodeStarter.CanStartPlaymode.IsTrue.Value;
 
-	public void Execute(object? parameter)
-	{
-		try
-		{
-			_playmodeStarter.StartPlaymode();
-		}
-		catch (Exception e)
-		{
-			_logger.LogException(e);
-		}
-	}
+	public void Execute(object? parameter) => _playmodeStarter.StartPlaymode();
 
 	private void HandleCanStartPlaymodeValueChangedEvent(bool isActive)
 	{

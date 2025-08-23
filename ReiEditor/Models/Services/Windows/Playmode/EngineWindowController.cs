@@ -6,16 +6,16 @@ using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Windows.Playmode;
 
-public class PlaymodeWindowController : IPlaymodeWindowController
+public class EngineWindowController : IEngineWindowController
 {
     public Utils.Common.IObservable<IntPtr?> WindowPointer => _windowPointer;
 
     private readonly Observable<IntPtr?> _windowPointer = new(null);
     
     private readonly IEngineApi _engineApi;
-    private readonly ILogger<PlaymodeWindowController> _logger;
+    private readonly ILogger<EngineWindowController> _logger;
 
-    public PlaymodeWindowController(IEngineApi engineApi, ILogger<PlaymodeWindowController> logger)
+    public EngineWindowController(IEngineApi engineApi, ILogger<EngineWindowController> logger)
     {
         _engineApi = engineApi;
         _logger = logger;

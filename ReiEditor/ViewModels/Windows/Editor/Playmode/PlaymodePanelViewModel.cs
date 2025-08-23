@@ -37,8 +37,8 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #endregion
 	
-    private readonly IPlaymodeService _playmodeService;
-    private readonly IPlaymodeWindowController _playmodeWindowController;
+    private readonly IEngineRunner _engineRunner;
+    private readonly IEngineWindowController _engineWindow;
     private readonly IEngineApi _engineApi;
 
 #pragma warning disable CS8618
@@ -49,29 +49,28 @@ public class PlaymodePanelViewModel : BaseViewModel
 #pragma warning restore CS8618
 
     public PlaymodePanelViewModel(
-        IPlaymodeService playmodeService, 
         IFactory<StartPlaymodeCommand> startPlaymodeCommand, 
         IFactory<StopPlaymodeCommand> stopPlaymodeCommand,
-        IPlaymodeWindowController playmodeWindowController,
-        IEngineApi engineApi)
+        IEngineWindowController engineWindow,
+        IEngineApi engineApi, IEngineRunner engineRunner)
     {
         _windowProvider = null;
-        _playmodeService = playmodeService;
-        _playmodeWindowController = playmodeWindowController;
+        _engineWindow = engineWindow;
         _engineApi = engineApi;
+        _engineRunner = engineRunner;
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 
-        _playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
-        _playmodeWindowController.WindowPointer.Subscribe(HandleWindowPointerChangedEvent);
+        _engineRunner.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
+        _engineWindow.WindowPointer.Subscribe(HandleWindowPointerChangedEvent);
     }
 
     public override void Dispose()
     {
         base.Dispose();
         
-        _playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
-        _playmodeWindowController.WindowPointer.Unsubscribe(HandleWindowPointerChangedEvent);
+        _engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
+        _engineWindow.WindowPointer.Unsubscribe(HandleWindowPointerChangedEvent);
 		
         StartPlaymodeCommand.Dispose();
         StopPlaymodeCommand.Dispose();

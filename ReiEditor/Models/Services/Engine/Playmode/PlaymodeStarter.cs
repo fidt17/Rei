@@ -13,19 +13,19 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
     private ConditionGroup _canStartPlaymodeCondition { get; }
 	
     private readonly IBuildService _buildService;
-    private readonly IPlaymodeService _playmodeService;
     private readonly ILogger<PlaymodeStarter> _logger;
     private readonly IBuildStarter _buildStarter;
+    private readonly IEngineRunner _engineRunner;
 
-    public PlaymodeStarter(IBuildService buildService, IPlaymodeService playmodeService, ILogger<PlaymodeStarter> logger, IBuildStarter buildStarter)
+    public PlaymodeStarter(IBuildService buildService, ILogger<PlaymodeStarter> logger, IBuildStarter buildStarter, IEngineRunner engineRunner)
     {
         _buildService = buildService;
-        _playmodeService = playmodeService;
         _logger = logger;
         _buildStarter = buildStarter;
+        _engineRunner = engineRunner;
 
         _canStartPlaymodeCondition = new ConditionGroup(
-            new Condition(_playmodeService.IsPlaymodeActive, target: false),
+            new Condition(_engineRunner.IsPlaymodeActive, target: false),
             new Condition(_buildService.IsBuildReady, target: true));
     }
 
@@ -48,6 +48,6 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
         }
 
         await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
-        _playmodeService.StartPlaymode();
+        _engineRunner.StartEngine(EngineRunMode.PlayMode);
     }
 }

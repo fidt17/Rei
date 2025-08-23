@@ -7,5 +7,5 @@ public interface IClientDllManager
 	bool DllExists();
 	IObservable<bool> DllLoaded { get; }
 	void LoadDll();
-	void UnloadDll();
+	bool UnloadDll();
 }

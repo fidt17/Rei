@@ -12,5 +12,5 @@ public interface IEntityManagementService
 	
     void DestroyEntity(GameEntity e);
 
-    void UpdateEntityStateFromEngine(GameEntity e);
+    void UpdateEntityState(GameEntity e);
 }

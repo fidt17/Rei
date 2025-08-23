@@ -12,29 +12,29 @@ public class SaveProjectCommand : ICommand, IDisposable
     public event EventHandler? CanExecuteChanged;
     
     private readonly IAssetsService _assetsService;
-    private readonly IPlaymodeService _playmodeService;
+    private readonly IEngineRunner _engineRunner;
     private readonly IBuildService _buildService;
 
-    public SaveProjectCommand(IAssetsService assetsService, IPlaymodeService playmodeService, IBuildService buildService)
+    public SaveProjectCommand(IAssetsService assetsService, IBuildService buildService, IEngineRunner engineRunner)
     {
         _assetsService = assetsService;
-        _playmodeService = playmodeService;
         _buildService = buildService;
-        
-        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChanged, invoke: false);
+        _engineRunner = engineRunner;
+
+        _engineRunner.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChanged, invoke: false);
         _buildService.BuildInProgress.Subscribe(HandleBuildInProgressChanged, invoke: false);
     }
 
     public void Dispose()
     {
-        _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChanged);
+        _engineRunner.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChanged);
         _buildService.BuildInProgress.Unsubscribe(HandleBuildInProgressChanged);
     }
 
     public bool CanExecute(object? parameter)
     {
         if (_assetsService.SaveInProcess.Value) return false;
-        if (_playmodeService.IsPlaymodeActive.Value) return false;
+        if (_engineRunner.IsPlaymodeActive.Value) return false;
         if (_buildService.BuildInProgress.Value) return false;
 
         return true;

@@ -2,7 +2,7 @@ using System;
 
 namespace ReiEditor.Models.Services.Windows.Playmode;
 
-public interface IPlaymodeWindowController
+public interface IEngineWindowController
 {
     Utils.Common.IObservable<IntPtr?> WindowPointer { get; }
     

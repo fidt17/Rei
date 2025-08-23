@@ -24,7 +24,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
     private readonly IActiveProjectService _projectService;
     private readonly ISelectionService _selectionService;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
-    private readonly IPlaymodeService _playmodeService;
+    private readonly IEngineRunner _engineRunner;
 
     public SceneManagementService(
         ILogger<SceneManagementService> logger,
@@ -33,7 +33,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         IAssetCreator assetCreator,
         ISelectionService selectionService, 
         IBehaviourComponentsService behaviourComponentsService, 
-        IPlaymodeService playmodeService)
+        IEngineRunner engineRunner)
     {
         _logger = logger;
         _assets = assets;
@@ -41,14 +41,14 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         _assetCreator = assetCreator;
         _selectionService = selectionService;
         _behaviourComponentsService = behaviourComponentsService;
-        _playmodeService = playmodeService;
-        
-        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChanged, invoke: false);
+        _engineRunner = engineRunner;
+
+        _engineRunner.IsActive.Subscribe(HandleEngineIsRunningValueChangedEvent, invoke: false);
     }
 
     public void Dispose()
     {
-        _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChanged);
+        _engineRunner.IsActive.Unsubscribe(HandleEngineIsRunningValueChangedEvent);
     }
 
     public async Task InitializeAsync()
@@ -132,9 +132,9 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         GetBuildConfiguration().Scenes[id] = scene.AssetId;
     }
 
-    private void HandleIsPlaymodeActiveValueChanged(bool isActive)
+    private void HandleEngineIsRunningValueChangedEvent(bool isRunning)
     {
-        if (isActive) return;
+        if (isRunning) return;
 
         Task.Run(ReloadCurrentScene);
     }

@@ -26,7 +26,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     private readonly ISceneManagementService _sceneManagement;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
 
-    private readonly IPlaymodeService _playmodeService;
+    private readonly IEngineRunner _engineRunner;
     private readonly IEntityApi _entityApi;
     private readonly IBehaviourRegistry _behaviourRegistry;
 
@@ -34,33 +34,33 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         ILogger<EntityManagementService> logger,
         ISceneManagementService sceneManagement,
         IBehaviourComponentsService behaviourComponentsService,
-        IPlaymodeService playmodeService,
         IEntityApi entityApi, 
-        IBehaviourRegistry behaviourRegistry)
+        IBehaviourRegistry behaviourRegistry, 
+        IEngineRunner engineRunner)
     {
         _logger = logger;
         _sceneManagement = sceneManagement;
         _behaviourComponentsService = behaviourComponentsService;
-        _playmodeService = playmodeService;
         _entityApi = entityApi;
         _behaviourRegistry = behaviourRegistry;
-        
+        _engineRunner = engineRunner;
+
         _behaviourComponentsService.BehaviourPropertyChangedEvent += HandleEntityBehaviourPropertyChangedEvent;
         
-        _playmodeService.IsPlaymodeActive.Subscribe(HandleIsPlaymodeActiveValueChangedEvent, invoke: false);
+        _engineRunner.IsActive.Subscribe(HandleEngineRunningValueChangedEvent, invoke: false);
     }
 
     public void Dispose()
     {
         _behaviourComponentsService.BehaviourPropertyChangedEvent -= HandleEntityBehaviourPropertyChangedEvent;
-        _playmodeService.IsPlaymodeActive.Unsubscribe(HandleIsPlaymodeActiveValueChangedEvent);
+        _engineRunner.IsActive.Unsubscribe(HandleEngineRunningValueChangedEvent);
     }
 
     public GameEntity? CreateEntity(string name)
     {
         try
         {
-            if (_playmodeService.IsPlaymodeActive.Value)
+            if (_engineRunner.IsActive.Value)
             {
                 _entityApi.CreateNewEntity(name);
             }
@@ -91,10 +91,10 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             if (string.IsNullOrEmpty(name)) throw new Exception($"Invalid entity name [{name}]");
             if (e.Name == name) return;
 
-            if (_playmodeService.IsPlaymodeActive.Value)
+            if (_engineRunner.IsActive.Value)
             {
                 _entityApi.Rename(e.Id, name);
-                UpdateEntityStateFromEngine(e);
+                UpdateEntityState(e);
             }
             else
             {
@@ -126,7 +126,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         try
         {
-            if (_playmodeService.IsPlaymodeActive.Value)
+            if (_engineRunner.IsActive.Value)
             {
                 _entityApi.AddBehaviour(e.Id, behaviourId);
             }
@@ -148,7 +148,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             var behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
             if (behaviour == null) throw new Exception($"Entity {e} does not have a behaviour with id={behaviourId}");
             
-            if (_playmodeService.IsPlaymodeActive.Value)
+            if (_engineRunner.IsActive.Value)
             {
                 _entityApi.DeleteBehaviour(e.Id, behaviourId);
             }
@@ -167,7 +167,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         try
         {
-            if (_playmodeService.IsPlaymodeActive.Value)
+            if (_engineRunner.IsActive.Value)
             {
                 _entityApi.DestroyEntity(e.Id);
             }
@@ -185,9 +185,9 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         }
     }
     
-    public void UpdateEntityStateFromEngine(GameEntity e)
+    public void UpdateEntityState(GameEntity e)
     {
-        if (!_playmodeService.IsPlaymodeActive.Value) return;
+        if (!_engineRunner.IsActive.Value) return;
         
         var state =_entityApi.GetEntityData(e.Id);
         //_logger.LogWarning($"State: {JsonConvert.SerializeObject(state, Formatting.Indented)}");
@@ -255,7 +255,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     
     private void HandleEntityBehaviourPropertyChangedEvent(EntityBehaviourPropertyChangeEventArgs args)
     {
-        if (!_playmodeService.IsPlaymodeActive.Value) return;
+        if (!_engineRunner.IsActive.Value) return;
         
         if (_ignorePropertyChanges) return;
 
@@ -319,9 +319,9 @@ public class EntityManagementService : IEntityManagementService, IDisposable
         }
     }
     
-    private void HandleIsPlaymodeActiveValueChangedEvent(bool isActive)
+    private void HandleEngineRunningValueChangedEvent(bool isRunning)
     {
-        if (isActive)
+        if (isRunning)
         {
             _sceneUpdateTaskCTS?.Cancel();
             _sceneUpdateTaskCTS = new CancellationTokenSource();
@@ -329,7 +329,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             var token = _sceneUpdateTaskCTS.Token;
             Task.Run(async () =>
             {
-                while (_playmodeService.IsPlaymodeActive.Value && !token.IsCancellationRequested)
+                while (_engineRunner.IsActive.Value && !token.IsCancellationRequested)
                 {
                     await Task.Delay(100, token);
 
@@ -348,6 +348,8 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         try
         {
+            if (!_engineRunner.IsActive.Value) return;
+            
             var entities = _entityApi.GetSceneEntities();
             if (entities == null) return;
 
@@ -363,7 +365,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
                 {
                     var newEntity = new GameEntity(entityId, $"Entity {entityId}");
                     scene.AddEntity(newEntity);
-                    UpdateEntityStateFromEngine(newEntity);
+                    UpdateEntityState(newEntity);
                     //_logger.LogWarning($"Add new entity: {entityId}");
                 }
             }

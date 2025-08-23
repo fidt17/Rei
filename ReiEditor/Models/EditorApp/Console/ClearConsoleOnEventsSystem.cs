@@ -8,22 +8,22 @@ public class ClearConsoleOnEventsSystem : IDisposable
 {
 	private readonly IEditorConsoleService _editorConsoleService;
 	private readonly IBuildService _buildService;
-	private readonly IPlaymodeService _playmodeService;
+	private readonly IEngineRunner _engineRunner;
 
-	public ClearConsoleOnEventsSystem(IBuildService buildService, IEditorConsoleService editorConsoleService, IPlaymodeService playmodeService)
+	public ClearConsoleOnEventsSystem(IBuildService buildService, IEditorConsoleService editorConsoleService, IEngineRunner engineRunner)
 	{
 		_buildService = buildService;
 		_editorConsoleService = editorConsoleService;
-		_playmodeService = playmodeService;
+		_engineRunner = engineRunner;
 
 		_buildService.BuildInProgress.Subscribe(HandleBuildInProgressValueChangedEvent);
-		_playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
+		_engineRunner.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
 		_buildService.BuildInProgress.Unsubscribe(HandleBuildInProgressValueChangedEvent);
-		_playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
+		_engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
 	private void HandleBuildInProgressValueChangedEvent(bool isBuildInProgress)

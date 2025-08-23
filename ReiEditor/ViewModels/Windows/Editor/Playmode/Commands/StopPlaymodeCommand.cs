@@ -9,23 +9,23 @@ public class StopPlaymodeCommand : ICommand, IDisposable
 {
 	public event EventHandler? CanExecuteChanged;
 
-	private readonly IPlaymodeService _playmodeService;
+	private readonly IEngineRunner _engineRunner;
 
-	public StopPlaymodeCommand(IPlaymodeService playmodeService)
+	public StopPlaymodeCommand(IEngineRunner engineRunner)
 	{
-		_playmodeService = playmodeService;
+		_engineRunner = engineRunner;
 
-		_playmodeService.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
+		_engineRunner.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_playmodeService.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
+		_engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _playmodeService.IsPlaymodeActive.Value;
+	public bool CanExecute(object? parameter) => _engineRunner.IsPlaymodeActive.Value;
 
-	public void Execute(object? parameter) => _playmodeService.StopPlaymode();
+	public void Execute(object? parameter) => _engineRunner.StopEngine();
 
 	private void HandlePlaymodeActiveValueChangedEvent(bool isActive)
 	{
