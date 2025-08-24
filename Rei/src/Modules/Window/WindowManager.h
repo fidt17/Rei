@@ -8,7 +8,7 @@ namespace rei::window
     public:
         void OnUpdate();
 
-        std::shared_ptr<Window> NewWindow(const std::string& name, int width, int height, bool hideByDefault);
+        std::shared_ptr<Window> NewWindow(const WindowCreationSettings& settings);
 
         void CloseWindow(Window& w);
         void CloseAll();

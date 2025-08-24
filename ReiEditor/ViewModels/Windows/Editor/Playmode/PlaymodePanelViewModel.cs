@@ -37,6 +37,17 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #endregion
 	
+    #region EditorModeActive
+
+    private bool _editorModeActive;
+    public bool EditorModeActive
+    {
+        get => _editorModeActive;
+        private set => SetField(ref _editorModeActive, value);
+    }
+
+    #endregion
+    
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineWindowController _engineWindow;
     private readonly IEngineApi _engineApi;
@@ -62,6 +73,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 
         _engineRunner.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
+        _engineRunner.IsEditorActive.Subscribe(HandleIsEditorActiveValueChangedEvent);
         _engineWindow.WindowPointer.Subscribe(HandleWindowPointerChangedEvent);
     }
 
@@ -70,6 +82,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         base.Dispose();
         
         _engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
+        _engineRunner.IsEditorActive.Unsubscribe(HandleIsEditorActiveValueChangedEvent);
         _engineWindow.WindowPointer.Unsubscribe(HandleWindowPointerChangedEvent);
 		
         StartPlaymodeCommand.Dispose();
@@ -94,5 +107,10 @@ public class PlaymodePanelViewModel : BaseViewModel
     private void HandlePlaymodeActiveValueChangedEvent(bool isActive)
     {
         PlayModeActive = isActive;
+    }
+
+    private void HandleIsEditorActiveValueChangedEvent(bool isActive)
+    {
+        EditorModeActive = isActive;
     }
 }

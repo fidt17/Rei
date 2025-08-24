@@ -20,7 +20,8 @@ namespace rei::internal::engine
 {
     SET_LOG_SCOPE("ENGINE")
 
-    Engine::Engine(std::shared_ptr<App> app) :
+    Engine::Engine(std::shared_ptr<App> app, const EngineMode mode) :
+        _mode(mode),
         _windowManager(std::make_shared<window::WindowManager>()),
         _mainWindowHandler(std::make_shared<window::MainWindowHandler>()),
         _reiMainThread(std::make_shared<TaskExecutor>()),
@@ -64,22 +65,27 @@ namespace rei::internal::engine
     {
         _internalWorld->AddSystem([&] { _windowManager->OnUpdate(); });
 
-        _internalWorld->AddSystem<behaviour::StartBehavioursSystem>(_entityManager);
-        _internalWorld->AddSystem<ecs::DeleteHere<StartBehavioursEvent>>();
-        _internalWorld->AddSystem<behaviour::UpdateBehavioursSystem>(_entityManager);
-
-        _internalWorld->AddSystem<render::FlyCameraSystem>(_input);
-        _internalWorld->AddSystem([&] { _app->OnUpdate(); });
+        if (IsPlaymode())
+        {
+            _internalWorld->AddSystem<behaviour::StartBehavioursSystem>(_entityManager);
+            _internalWorld->AddSystem<ecs::DeleteHere<StartBehavioursEvent>>();
+            
+            _internalWorld->AddSystem<behaviour::UpdateBehavioursSystem>(_entityManager);
+            _internalWorld->AddSystem([&] { _app->OnUpdate(); });
+            
+            _internalWorld->AddSystem<render::FlyCameraSystem>(_input);
+        }
 
         _internalWorld->AddSystem<render::AssignMainCameraSystem>(_mainRenderer);
+        
         _internalWorld->AddSystem([&] { _mainRenderer->Render(); });
 
         _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
     }
 
-    std::shared_ptr<window::Window> Engine::CreateMainWindow(const i32 width, const i32 height, const bool hideByDefault)
+    std::shared_ptr<window::Window> Engine::CreateMainWindow(const WindowCreationSettings& settings)
     {
-        auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager, width, height, hideByDefault);
+        auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager, settings);
         _mainWindowHandler->MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")
@@ -112,7 +118,7 @@ namespace rei::internal::engine
             {
                 _reiMainThread->CompleteTasks();
             }
-            
+
             _runEngine = true;
             _sceneManager->LoadScene(0);
             _app->OnStart();
@@ -158,6 +164,16 @@ namespace rei::internal::engine
 
         LOG("Shutdown complete")
         ShutdownEvent(_exitCode);
+    }
+
+    bool Engine::IsPlaymode() const
+    {
+        return _mode == PlayMode;
+    }
+
+    bool Engine::IsEditor() const
+    {
+        return _mode == EditorMode;
     }
 
     int Engine::GetExitCode() const

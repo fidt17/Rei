@@ -25,7 +25,7 @@ public class EngineWindowController : IEngineWindowController
     {
         try
         {
-            Task.Run(_engineApi.CreatePlaymodeWindow).ContinueWith(task =>
+            Task.Run(_engineApi.CreateEngineWindow).ContinueWith(task =>
             {
                 _windowPointer.Value = task.Result;
             });

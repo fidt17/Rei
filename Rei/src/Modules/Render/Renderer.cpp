@@ -78,8 +78,10 @@ namespace rei::render
             REI_THROW("GLAD Initialization failed")
         }
 
+        LoadErrorMaterial();
         _renderScenario = CREATE_RENDER_SCENARIO(_target);
         _renderScenario->Setup();
+        
         if (!_camera.IsNull())
         {
             _renderScenario->SetCamera(_camera);
@@ -103,5 +105,12 @@ namespace rei::render
     {
         SetTarget(nullptr);
         _renderScenario->Dispose();
+    }
+
+    void Renderer::LoadErrorMaterial() const
+    {
+        // todo: put in engine resources
+        const auto shader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/error.rshader");
+        GetAssetManager().CreateAssetWithId<Material>(REI_ERROR_MATERIAL_ID,shader);
     }
 }

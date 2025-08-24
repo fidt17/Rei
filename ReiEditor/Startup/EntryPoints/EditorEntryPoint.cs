@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.ProjectManagement.Setup;
-using ReiEditor.Models.Services.Build;
+using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor;
@@ -15,20 +15,20 @@ public class EditorEntryPoint
     private readonly IMainWindowService _mainWindowService;
     private readonly IFactory<ProjectEditorWindowViewModel> _projectEditorWindowViewModelFactory;
     private readonly IProjectSetupService _projectSetupService;
-    private readonly IBuildService _buildService;
+    private readonly IEditorModeStarter _editorModeStarter;
 
     public EditorEntryPoint(
         ILogger<EditorEntryPoint> logger, 
         IMainWindowService mainWindowService, 
         IFactory<ProjectEditorWindowViewModel> projectEditorWindowViewModelFactory,
         IProjectSetupService projectSetupService, 
-        IBuildService buildService)
+        IEditorModeStarter editorModeStarter)
     {
         _logger = logger;
         _mainWindowService = mainWindowService;
         _projectEditorWindowViewModelFactory = projectEditorWindowViewModelFactory;
         _projectSetupService = projectSetupService;
-        _buildService = buildService;
+        _editorModeStarter = editorModeStarter;
     }
 
     public async Task Start()
@@ -37,7 +37,7 @@ public class EditorEntryPoint
         SetupEditorWindow();
 
         await _projectSetupService.PrepareProject();
-        await _buildService.BuildProject(BuildConfigurationEnum.EditorDebug);
+        _editorModeStarter.Start();
     }
 
     private void SetupEditorWindow()

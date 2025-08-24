@@ -15,9 +15,9 @@ namespace rei::window
         }
     }
 
-    std::shared_ptr<Window> WindowManager::NewWindow(const std::string& name, const int width, const int height, const bool hideByDefault)
+    std::shared_ptr<Window> WindowManager::NewWindow(const WindowCreationSettings& settings)
     {
-        _windows.emplace_back(std::make_shared<Window>(name, width, height, hideByDefault));
+        _windows.emplace_back(std::make_shared<Window>(settings));
 
         return _windows.back();
     }

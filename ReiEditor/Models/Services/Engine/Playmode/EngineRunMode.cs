@@ -2,6 +2,6 @@
 
 public enum EngineRunMode
 {
-    EditorMode,
-    PlayMode
+    EditorMode = 0,
+    PlayMode = 1
 }

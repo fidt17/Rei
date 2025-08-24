@@ -14,14 +14,33 @@
     </Design.DataContext>
 
     <Border Classes="Window">
-        <ContentControl
-            Content="{Binding WindowProvider}">
-            <ContentControl.DataTemplates>
-                <DataTemplate DataType="{x:Type rendering:EngineWindowProviderViewModel}">
-                    <engineWindow:WindowEngineControl />
-                </DataTemplate>
-            </ContentControl.DataTemplates>
-        </ContentControl>
+        <Grid RowDefinitions="Auto, *">
+            
+            <!-- Header -->
+            <Grid Grid.Row="0">
+                <TextBlock
+                    IsVisible="{Binding EditorModeActive}"
+                    HorizontalAlignment="Right"
+                    FontSize="14"
+                    Text="EDITOR MODE" />
+
+                <TextBlock
+                    IsVisible="{Binding PlayModeActive}"
+                    HorizontalAlignment="Right"
+                    FontSize="14"
+                    Text="PLAY MODE" />
+            </Grid>
+
+            <ContentControl
+                Grid.Row="1"
+                Content="{Binding WindowProvider}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="{x:Type rendering:EngineWindowProviderViewModel}">
+                        <engineWindow:WindowEngineControl />
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Grid>
     </Border>
 
 </UserControl>

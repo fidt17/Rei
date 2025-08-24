@@ -29,6 +29,8 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
 
     public async Task Build(BuildConfigurationEnum configuration)
     {
+        _logger.Log($"Building solution. Configuration: {configuration}");
+        
         var msBuildPath = _editorPreferencesService.GetMsBuildPath();
         if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
 		
@@ -49,6 +51,8 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
         msBuildProcess.Start();
         string output = await msBuildProcess.StandardOutput.ReadToEndAsync();
         await msBuildProcess.WaitForExitAsync();
+        
+        _logger.Log($"Solution build finished");
 
         ParseMsBuildOutput(output);
     }

@@ -13,17 +13,17 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public class EngineRunner : IEngineRunner, IDisposable
 {
-    public event Action? EngineShutdownEvent;
-
     public Utils.Common.IObservable<bool> IsActive => _isActive;
     public Utils.Common.IObservable<bool> IsPlaymodeActive => _isPlaymodeActive;
-    
+    public Utils.Common.IObservable<bool> IsEditorActive => _isEditormodeActive;
+
     public EngineRunMode ActiveMode { get; private set; }
 
     private IntPtr? _enginePtr;
     
     private readonly Observable<bool> _isActive = new(false);
     private readonly Observable<bool> _isPlaymodeActive = new(false);
+    private readonly Observable<bool> _isEditormodeActive = new(false);
 	
     private readonly IEngineApi _engineApi;
     private readonly ILogger<EngineRunner> _logger;
@@ -51,8 +51,6 @@ public class EngineRunner : IEngineRunner, IDisposable
         _clientDllManager = clientDllManager;
 
         _shutdownListener.EngineShutdownEvent += HandleEngineShutdownEvent;
-        
-        _isPlaymodeActive.Subscribe(x => _logger.LogWarning($"playmode active: {x}"), false);
     }
     
     public void Dispose()
@@ -76,7 +74,7 @@ public class EngineRunner : IEngineRunner, IDisposable
             {
                 ActiveMode = mode;
                 
-                _enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), "bin", "Resources"));
+                _enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), "bin", "Resources"), mode);
 
                 _engineLogger.SubscribeToClient();
                 _shutdownListener.SubscribeToClient();
@@ -84,6 +82,7 @@ public class EngineRunner : IEngineRunner, IDisposable
                 
                 _isActive.Value = true;
                 _isPlaymodeActive.Value = ActiveMode == EngineRunMode.PlayMode;
+                _isEditormodeActive.Value = ActiveMode == EngineRunMode.EditorMode;
                 
                 _engineApi.Start(_enginePtr.Value);
             }
@@ -98,15 +97,14 @@ public class EngineRunner : IEngineRunner, IDisposable
         return true;
     }
 
-    public void StopEngine()
+    public async Task StopEngine()
     {
+        if (!_isActive.Value) return;
+        
         try
         {
             if (_enginePtr == null) return;
             
-            _isActive.Value = false;
-            _isPlaymodeActive.Value = false;
-
             _engineApi?.Shutdown(_enginePtr.Value, 1);
             _clientDllManager.UnloadDll();
         }
@@ -115,17 +113,21 @@ public class EngineRunner : IEngineRunner, IDisposable
             _logger.LogError("Could not stop engine");
             _logger.LogException(e);
         }
+
+        while (_isActive.Value)
+        {
+            await Task.Delay(100);
+        }
     }
 
     private void HandleEngineShutdownEvent(int obj)
     {
-        _isActive.Value = false;
-        _isPlaymodeActive.Value = false;
-        
         _engineWindowController.DestroyWindow();
         _enginePtr = null;
         
-        EngineShutdownEvent?.Invoke();
+        _isActive.Value = false;
+        _isPlaymodeActive.Value = false;
+        _isEditormodeActive.Value = false;
     }
 
     private bool LoadClientDll()

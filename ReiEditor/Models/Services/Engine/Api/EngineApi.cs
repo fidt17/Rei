@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -29,10 +30,10 @@ public class EngineApi : IEngineApi
         _dllPtr = dllPtr;
     }
 
-    private delegate IntPtr CreateEngineDelegate(string resourcesDir);
-    public IntPtr CreateEngine(string resourcesDir)
+    private delegate IntPtr CreateEngineDelegate(string resourcesDir, int mode);
+    public IntPtr CreateEngine(string resourcesDir, EngineRunMode mode)
     {
-        var ptr = Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine", resourcesDir);
+        var ptr = Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine", resourcesDir, mode);
         if (ptr == IntPtr.Zero) throw new Exception("Could not create engine");
         
         return ptr;
@@ -67,7 +68,7 @@ public class EngineApi : IEngineApi
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 
-    public Task<IntPtr> CreatePlaymodeWindow() => InvokeAsync<IntPtr>(typeof(ActionDelegate), "CreatePlaymodeWindow");
+    public Task<IntPtr> CreateEngineWindow() => InvokeAsync<IntPtr>(typeof(ActionDelegate), "CreateEngineWindow");
 
     private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);
     public IntPtr GetWindowHandle(IntPtr windowPtr) => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle", windowPtr);

@@ -17,6 +17,7 @@ public class EntityApi : IEntityApi
     private delegate void GetSceneEntitiesDelegate(StringBuilder outputBuffer, int bufferSize);
     public GetSceneEntitiesResponse? GetSceneEntities()
     {
+        if (!_engineApi.IsEngineRunning) return null;
         
         try
         {
@@ -38,9 +39,9 @@ public class EntityApi : IEntityApi
         
         try
         {
-            var buffer = new StringBuilder(2048);
+            var buffer = new StringBuilder(8096);
             _engineApi.Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, buffer, buffer.Capacity);
-
+            
             return JsonConvert.DeserializeObject<GetEntityDataResponse>(buffer.ToString());
         }
         catch (Exception)

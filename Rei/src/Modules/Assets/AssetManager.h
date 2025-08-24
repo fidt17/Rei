@@ -36,7 +36,13 @@ namespace rei::assets
                 return ref;
             }
 
-            const auto base_filename = path.substr(path.find_last_of("/\\") + 1);
+            std::string filePath = path;
+            if (filePath.rfind("@", 0) == 0)
+            {
+                filePath = filePath.substr(1, filePath.size() - 1);
+            }
+
+            const auto base_filename = filePath.substr(filePath.find_last_of("/\\") + 1);
             const auto dirPath = std::filesystem::temp_directory_path().string() + "Rei Engine\\";
             const auto dest = dirPath + base_filename + "_" + std::to_string(_tmpFiles.size()) + ".data";
             _tmpFiles.push_back(dest);
@@ -44,12 +50,10 @@ namespace rei::assets
             std::filesystem::create_directory(dirPath);
             remove(dest.c_str());
 
-            resources::AssetBuilder builder;
-
             std::cout << "\n";
             LOG("Created temp file at " + dest);
 
-            i32 _ = builder.BuildAsset(path, dest, 0);
+            i32 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
             i32 assetSize;
             ref.Asset = new T(Load<T>(dest, 0, assetSize));
@@ -64,9 +68,8 @@ namespace rei::assets
         }
 
         template <typename T, typename... Args>
-        REI_API AssetRef<T> CreateAsset(Args... args)
+        REI_API AssetRef<T> CreateAssetWithId(std::string id, Args... args)
         {
-            std::string id("runtime_asset_" + _runtimeAssetCounter++);
             AssetRef<T>* asset = new AssetRef<T>(id);
 
             asset->Asset = new T(args...);
@@ -74,6 +77,13 @@ namespace rei::assets
             _loadedAssets[asset->Id] = asset;
 
             return *asset;
+        }
+
+        template <typename T, typename... Args>
+        REI_API AssetRef<T> CreateAsset(Args... args)
+        {
+            std::string id("runtime_asset_" + STRING(_runtimeAssetCounter++));
+            return CreateAssetWithId<T>(id, args...);
         }
 
         template <typename T>
@@ -84,10 +94,18 @@ namespace rei::assets
 
             try
             {
+                auto loadedAsset = _loadedAssets.find(ref.Id);
+                if (loadedAsset != _loadedAssets.end())
+                {
+                    ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
+                    ref.IsLoaded = true;
+                    return true;
+                }
+
                 // if an absolute path to the asset is used instead
                 if (ref.Id.rfind("@", 0) == 0)
                 {
-                    ref = GetByPath<T>(ref.Id.substr(1, ref.Id.size() - 1));
+                    ref = GetByPath<T>(ref.Id);
                     return true;
                 }
 
@@ -131,7 +149,7 @@ namespace rei::assets
 
         u32 _runtimeAssetCounter = 0;
         i64 _loadedAssetsSize = 0;
-        std::unordered_map<std::string, IAssetRef*> _loadedAssets;
+        std::unordered_map<std::string, IAssetRef*> _loadedAssets{};
 
         std::vector<std::string> _tmpFiles;
 

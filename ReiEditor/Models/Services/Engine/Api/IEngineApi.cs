@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using ReiEditor.Models.Services.Engine.Playmode;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -9,7 +10,7 @@ public interface IEngineApi
 	
     bool IsEngineRunning { get; }
 
-    IntPtr CreateEngine(string resourcesDir);
+    IntPtr CreateEngine(string resourcesDir, EngineRunMode mode);
     void Start(IntPtr enginePtr);
     void Shutdown(IntPtr enginePtr, int exitCode);
 	
@@ -18,7 +19,7 @@ public interface IEngineApi
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 
-    Task<IntPtr> CreatePlaymodeWindow();
+    Task<IntPtr> CreateEngineWindow();
     IntPtr GetWindowHandle(IntPtr windowPtr);
     void ResizeWindow(IntPtr windowPtr, int width, int height);
 

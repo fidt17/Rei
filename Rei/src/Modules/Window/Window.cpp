@@ -3,18 +3,11 @@
 
 namespace rei::window
 {
-    Window::Window(const std::string& name, const int width, const int height, const bool hideWindowByDefault)
+    Window::Window(const WindowCreationSettings& settings)
     {
-        if (hideWindowByDefault)
-        {
-            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        }
-        else
-        {
-            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-        }
-        
-        _glfwWindow = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
+        settings.HideOnCreation ? glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE) : glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+
+        _glfwWindow = glfwCreateWindow(settings.Width, settings.Height, settings.Name.c_str(), nullptr, nullptr);
         REI_THROW_IF(!_glfwWindow, "Window creation failed")
 
         glfwSetWindowUserPointer(_glfwWindow, this);
@@ -28,8 +21,13 @@ namespace rei::window
             static_cast<Window*>(glfwGetWindowUserPointer(w))->OnKeyCallback(key, action, mods);
         });
 
-        glfwSetInputMode(_glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        glfwSetCursorPos(_glfwWindow, width / 2., height / 2.);
+        settings.HideCursor ? glfwSetInputMode(_glfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED) : glfwSetInputMode(_glfwWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        if (settings.CenterCursor)
+        {
+            glfwSetCursorPos(_glfwWindow, settings.Width / 2., settings.Height / 2.);
+        }
+        
         glfwSetCursorPosCallback(_glfwWindow, [](GLFWwindow* w, const double xPos, const double yPos)
         {
             static_cast<Window*>(glfwGetWindowUserPointer(w))->OnMouseMoveEvent(xPos, yPos);

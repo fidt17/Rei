@@ -18,13 +18,15 @@ namespace rei::render
         ecs::RefComponent<Camera> GetCamera() const;
 
         void SetTarget(GLFWwindow* target);
-        
+
         void Render() const;
 
         void Dispose();
-        
+
     private:
         GLFWwindow* _target = nullptr;
         ecs::RefComponent<Camera> _camera;
+
+        void LoadErrorMaterial() const;
     };
 }

@@ -20,11 +20,12 @@ namespace rei::render
 
         void Render() const;
 
-        void SetModel(const assets::AssetRef<Model>& model);
-        void SetMaterial(const assets::AssetRef<Material>& material);
+        REI_API void SetModel(const assets::AssetRef<Model>& model);
+        REI_API void SetMaterial(const assets::AssetRef<Material>& material);
 
-        assets::AssetRef<Model>& GetModel();
-        assets::AssetRef<Material>& GetMaterial();
+        REI_API assets::AssetRef<Model>& GetModel();
+        REI_API assets::AssetRef<Material>& GetMaterial();
+        REI_API const Shader& GetRenderShader() const;
 
     private:
         void BindTextures() const;

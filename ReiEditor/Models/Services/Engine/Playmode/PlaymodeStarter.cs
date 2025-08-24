@@ -8,7 +8,7 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public class PlaymodeStarter : IPlaymodeStarter, IDisposable
 {
-    public ICondition CanStartPlaymode => _canStartPlaymodeCondition;
+    public ICondition CanStart => _canStartPlaymodeCondition;
 	
     private ConditionGroup _canStartPlaymodeCondition { get; }
 	
@@ -17,7 +17,11 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
     private readonly IBuildStarter _buildStarter;
     private readonly IEngineRunner _engineRunner;
 
-    public PlaymodeStarter(IBuildService buildService, ILogger<PlaymodeStarter> logger, IBuildStarter buildStarter, IEngineRunner engineRunner)
+    public PlaymodeStarter(
+        IBuildService buildService,
+        ILogger<PlaymodeStarter> logger,
+        IBuildStarter buildStarter,
+        IEngineRunner engineRunner)
     {
         _buildService = buildService;
         _logger = logger;
@@ -34,20 +38,30 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
         _canStartPlaymodeCondition.Dispose();
     }
 	
-    public void StartPlaymode()
+    public void Start()
     {
         Task.Run(EnterPlaymodeTask);
     }
 
     private async Task EnterPlaymodeTask()
     {
-        if (!CanStartPlaymode.IsTrue.Value)
+        try
         {
-            _logger.LogError($"Cannot start playmode");
-            return;
-        }
+            await _engineRunner.StopEngine();
+        
+            await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
+        
+            if (!CanStart.IsTrue.Value)
+            {
+                _logger.LogError($"Cannot start playmode");
+                return;
+            }
 
-        await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
-        _engineRunner.StartEngine(EngineRunMode.PlayMode);
+            _engineRunner.StartEngine(EngineRunMode.PlayMode);
+        }
+        catch (Exception e)
+        {
+            _logger.LogException(e);
+        }
     }
 }

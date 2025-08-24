@@ -4,6 +4,7 @@ using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Scenes.Templates;
@@ -19,8 +20,8 @@ public class ProjectSetupService : IProjectSetupService
     private readonly IAssetsService _assetsService;
     private readonly IEditorProceduresService _editorProceduresService;
     private readonly IProjectUpdateService _projectUpdateService;
-    private readonly IAssetImporter _assetImporter;
     private readonly DefaultSceneTemplate _defaultSceneTemplate;
+    private readonly IBuildStarter _buildStarter;
 
     public ProjectSetupService(
         ILogger<ProjectSetupService> logger, 
@@ -29,8 +30,8 @@ public class ProjectSetupService : IProjectSetupService
         IAssetsService assetsService, 
         IEditorProceduresService editorProceduresService, 
         IProjectUpdateService projectUpdateService, 
-        IAssetImporter assetImporter, 
-        DefaultSceneTemplate defaultSceneTemplate)
+        DefaultSceneTemplate defaultSceneTemplate, 
+        IBuildStarter buildStarter)
     {
         _logger = logger;
         _sceneManagementService = sceneManagementService;
@@ -38,8 +39,8 @@ public class ProjectSetupService : IProjectSetupService
         _assetsService = assetsService;
         _editorProceduresService = editorProceduresService;
         _projectUpdateService = projectUpdateService;
-        _assetImporter = assetImporter;
         _defaultSceneTemplate = defaultSceneTemplate;
+        _buildStarter = buildStarter;
     }
 
     public async Task PrepareProject()
@@ -49,9 +50,8 @@ public class ProjectSetupService : IProjectSetupService
 
         var project = _activeProjectService.GetActiveProject();
         
-        await _assetImporter.ReimportAll();
-        await _sceneManagementService.InitializeAsync();
         await _projectUpdateService.UpdateProject(project);
+        await _sceneManagementService.InitializeAsync();
 		
         if (!project.HasBeenSetup)
         {
@@ -63,6 +63,8 @@ public class ProjectSetupService : IProjectSetupService
         {
             await OpenLastScene();
         }
+
+        await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
 		
         prepareProjectProcedure.Complete();
     }

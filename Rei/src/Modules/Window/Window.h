@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #define GLFW_EXPOSE_NATIVE_WIN32
+#include "WindowCreationSettings.h"
 #include "GLFW/glfw3.h"
 #include "GLFW/glfw3native.h"
 
@@ -15,7 +16,7 @@ namespace rei::window
         eventpp::CallbackList<void (int width, int height)> SizeChangedEvent;
         eventpp::CallbackList<void ()> CloseRequestEvent;
         
-        Window(const std::string& name, int width, int height, bool hideWindowByDefault);
+        Window(const WindowCreationSettings& settings);
 
         friend bool operator==(const Window& lhs, const Window& rhs)
         {

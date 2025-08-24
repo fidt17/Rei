@@ -8,7 +8,7 @@ namespace rei::window
     public:
         eventpp::CallbackList<void()> MainWindowClosedEvent;
 
-        std::shared_ptr<Window> CreateMainWindow(WindowManager& windowManager, i32 width, i32 height, bool hideByDefault);
+        std::shared_ptr<Window> CreateMainWindow(WindowManager& windowManager, const WindowCreationSettings& settings);
 
         std::shared_ptr<Window> GetMainWindow();
 

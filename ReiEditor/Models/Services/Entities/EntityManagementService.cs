@@ -60,7 +60,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         try
         {
-            if (_engineRunner.IsActive.Value)
+            if (!_engineRunner.IsActive.Value)
             {
                 _entityApi.CreateNewEntity(name);
             }

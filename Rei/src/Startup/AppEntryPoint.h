@@ -16,12 +16,12 @@ extern void ConfigureComponentsFactory(rei::BehaviourRegistry& factory);
 
 namespace rei::external
 {
-    REI_EXTERN_API inline internal::engine::Engine* CreateEngine(const char* resourcesDir)
+    REI_EXTERN_API inline internal::engine::Engine* CreateEngine(const char* resourcesDir, const i32 mode)
     {
         try
         {
             std::filesystem::current_path(resourcesDir);
-            auto engine = new internal::engine::Engine(CreateApp());
+            auto engine = new internal::engine::Engine(CreateApp(), static_cast<internal::engine::EngineMode>(mode));
             ConfigureComponentsFactory(GetEntityManager().GetBehaviourRegistry());
             return engine;
         }
@@ -53,8 +53,17 @@ int main()
 {
     try
     {
-        const auto engine = rei::external::CreateEngine(std::filesystem::current_path().string().c_str());
-        engine->CreateMainWindow(1080, 720, false);
+        const auto engine = rei::external::CreateEngine(std::filesystem::current_path().string().c_str(), rei::internal::engine::EngineMode::PlayMode);
+
+        WindowCreationSettings windowSettings;
+        windowSettings.Name = "Main Window";
+        windowSettings.Width = 1080;
+        windowSettings.Height = 720;
+        windowSettings.HideOnCreation = false;
+        windowSettings.CenterCursor = true;
+        windowSettings.HideCursor = true;
+        engine->CreateMainWindow(windowSettings);
+        
         rei::external::Start(engine);
         return engine->GetExitCode();
     }

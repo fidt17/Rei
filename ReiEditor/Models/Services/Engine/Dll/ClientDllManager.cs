@@ -29,10 +29,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
 
     public void Dispose()
     {
-        if (_dllLoaded)
-        {
-            UnloadDll();
-        }
+        UnloadDll();
     }
 
     public bool DllExists() => File.Exists(GetDllPath());

@@ -8,23 +8,33 @@
 
 namespace rei::internal::engine
 {
+    enum EngineMode
+    {
+        EditorMode = 0,
+        PlayMode = 1
+    };
+
     class Engine
     {
     public:
         eventpp::CallbackList<void(int)> ShutdownEvent;
-        
-        REI_API explicit Engine(std::shared_ptr<App> app);
+
+        REI_API explicit Engine(std::shared_ptr<App> app, EngineMode mode);
         Engine(const Engine& e) = delete;
-        
+
         REI_API void Start();
         REI_API void Shutdown(int exitCode);
 
+        REI_API bool IsPlaymode() const;
+        REI_API bool IsEditor() const;
+
         REI_API int GetExitCode() const;
 
-        REI_API std::shared_ptr<window::Window> CreateMainWindow(i32 width, i32 height, bool hideByDefault);
+        REI_API std::shared_ptr<window::Window> CreateMainWindow(const WindowCreationSettings& settings);
         REI_API std::shared_ptr<Task> ExecuteOnMainThread(std::function<void()>) const;
 
     private:
+        EngineMode _mode;
         bool _runEngine = false;
         int _exitCode;
 
@@ -33,7 +43,7 @@ namespace rei::internal::engine
 
         std::shared_ptr<TaskExecutor> _reiMainThread;
         std::shared_ptr<render::Renderer> _mainRenderer;
-        
+
         std::shared_ptr<App> _app;
         std::shared_ptr<ecs::World> _internalWorld;
 

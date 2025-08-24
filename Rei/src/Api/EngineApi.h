@@ -26,13 +26,22 @@ REI_EXTERN_API inline i64 BuildAsset(const char* file, const char* dest, const i
     return rei::resources::AssetBuilder().BuildAsset(file, dest, offset);
 }
 
-REI_EXTERN_API inline rei::window::Window* CreatePlaymodeWindow()
+REI_EXTERN_API inline rei::window::Window* CreateEngineWindow()
 {
     std::shared_ptr<rei::window::Window> window;
 
     rei::GetEngine().ExecuteOnMainThread([&]
     {
-        window = rei::GetEngine().CreateMainWindow(1080, 720, true);
+        WindowCreationSettings windowSettings;
+        windowSettings.Name = "Engine Window";
+        windowSettings.Width = 100;
+        windowSettings.Height = 100;
+        windowSettings.HideOnCreation = true;
+        windowSettings.CenterCursor = false;
+        
+        windowSettings.HideCursor = rei::GetEngine().IsPlaymode();
+        
+        window = rei::GetEngine().CreateMainWindow(windowSettings);
         window->DisableStyle();
     })->WaitForCompletion();
 

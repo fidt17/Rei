@@ -102,6 +102,7 @@
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,6 +133,7 @@ xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,6 +163,7 @@ xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -192,6 +195,7 @@ xcopy /y /d "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -2,7 +2,6 @@
 using System.Windows.Input;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Engine.Playmode;
-using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode.Commands;
 
@@ -16,17 +15,17 @@ public class StartPlaymodeCommand : ICommand, IDisposable
 	{
 		_playmodeStarter = playmodeStarter;
 
-		_playmodeStarter.CanStartPlaymode.IsTrue.Subscribe(HandleCanStartPlaymodeValueChangedEvent);
+		_playmodeStarter.CanStart.IsTrue.Subscribe(HandleCanStartPlaymodeValueChangedEvent);
 	}
 
 	public void Dispose()
 	{
-		_playmodeStarter.CanStartPlaymode.IsTrue.Unsubscribe(HandleCanStartPlaymodeValueChangedEvent);
+		_playmodeStarter.CanStart.IsTrue.Unsubscribe(HandleCanStartPlaymodeValueChangedEvent);
 	}
 
-	public bool CanExecute(object? parameter) => _playmodeStarter.CanStartPlaymode.IsTrue.Value;
+	public bool CanExecute(object? parameter) => _playmodeStarter.CanStart.IsTrue.Value;
 
-	public void Execute(object? parameter) => _playmodeStarter.StartPlaymode();
+	public void Execute(object? parameter) => _playmodeStarter.Start();
 
 	private void HandleCanStartPlaymodeValueChangedEvent(bool isActive)
 	{

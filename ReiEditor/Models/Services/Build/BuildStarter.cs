@@ -9,38 +9,40 @@ namespace ReiEditor.Models.Services.Build;
 
 public class BuildStarter : IBuildStarter, IDisposable
 {
-	public ICondition CanStartBuild => _canStartBuildCondition;
+    public ICondition CanStartBuild => _canStartBuildCondition;
 
-	private readonly ConditionGroup _canStartBuildCondition;
+    private readonly ConditionGroup _canStartBuildCondition;
 	
-	private readonly IBuildService _buildService;
-	private readonly IClientDllManager _dllManager;
-	private readonly IAssetsService _assetsService;
-	private readonly IEngineRunner _engineRunner;
+    private readonly IBuildService _buildService;
+    private readonly IAssetsService _assetsService;
+    private readonly IEngineRunner _engineRunner;
+    private readonly IClientDllManager _dllManager;
 
-	public BuildStarter(IBuildService buildService, IClientDllManager dllManager, IAssetsService assetsService, IEngineRunner engineRunner)
-	{
-		_buildService = buildService;
-		_dllManager = dllManager;
-		_assetsService = assetsService;
-		_engineRunner = engineRunner;
+    public BuildStarter(IBuildService buildService, IAssetsService assetsService, IEngineRunner engineRunner, IClientDllManager dllManager)
+    {
+        _buildService = buildService;
+        _assetsService = assetsService;
+        _engineRunner = engineRunner;
+        _dllManager = dllManager;
 
-		_canStartBuildCondition = new ConditionGroup(
-			new Condition(_buildService.BuildInProgress, target: false),
-			new Condition(_dllManager.DllLoaded, target: false),
-			new Condition(_engineRunner.IsPlaymodeActive, target: false),
-			new Condition(_assetsService.SaveInProcess, target: false));
-	}
+        _canStartBuildCondition = new ConditionGroup(
+            new Condition(_buildService.BuildInProgress, target: false),
+            new Condition(_engineRunner.IsPlaymodeActive, target: false),
+            new Condition(_assetsService.SaveInProcess, target: false));
+    }
 
-	public void Dispose()
-	{
-		_canStartBuildCondition.Dispose();
-	}
+    public void Dispose()
+    {
+        _canStartBuildCondition.Dispose();
+    }
 
-	public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
-	{
-		if (!_canStartBuildCondition.IsTrue.Value) return false;
+    public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
+    {
+        await _engineRunner.StopEngine();
+        _dllManager.UnloadDll();
+        
+        if (!_canStartBuildCondition.IsTrue.Value) return false;
 		
-		return await _buildService.BuildProject(configuration);
-	}
+        return await _buildService.BuildProject(configuration);
+    }
 }

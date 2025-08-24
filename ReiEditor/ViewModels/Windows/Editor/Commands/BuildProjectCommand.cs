@@ -3,17 +3,21 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Build;
+using ReiEditor.Models.Services.Engine.Playmode;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Commands;
 
 public class BuildProjectCommand : ICommand, IDisposable
 {
     private readonly IBuildStarter _buildStarter;
+    private readonly IEditorModeStarter _editorModeStarter;
+    
     public event EventHandler? CanExecuteChanged;
 
-    public BuildProjectCommand(IBuildStarter buildStarter)
+    public BuildProjectCommand(IBuildStarter buildStarter, IEditorModeStarter editorModeStarter)
     {
         _buildStarter = buildStarter;
+        _editorModeStarter = editorModeStarter;
         _buildStarter.CanStartBuild.IsTrue.Subscribe(HandleCanStartBuildChangedEvent);
     }
 
@@ -26,7 +30,11 @@ public class BuildProjectCommand : ICommand, IDisposable
 
     public void Execute(object? parameter)
     {
-        Task.Run(() => _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug));
+        Task.Run(async () =>
+        {
+            await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
+            _editorModeStarter.Start();
+        });
     }
 	
     private void HandleCanStartBuildChangedEvent(bool value)

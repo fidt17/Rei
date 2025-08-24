@@ -622,6 +622,7 @@
     <ClInclude Include="src\Modules\Scenes\SceneManager.h" />
     <ClInclude Include="src\Modules\Window\MainWindowHandler.h" />
     <ClInclude Include="src\Modules\Window\Window.h" />
+    <ClInclude Include="src\Modules\Window\WindowCreationSettings.h" />
     <ClInclude Include="src\Modules\Window\WindowManager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Api\EngineApi.h" />

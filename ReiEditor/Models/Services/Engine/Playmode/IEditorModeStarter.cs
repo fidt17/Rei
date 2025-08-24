@@ -2,9 +2,9 @@
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
-public interface IPlaymodeStarter
+public interface IEditorModeStarter
 {
-	ICondition CanStart { get; }
-
-	void Start();
+    ICondition CanStart { get; }
+    
+    void Start();
 }

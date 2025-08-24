@@ -64,21 +64,15 @@ namespace rei::render
 
     void MeshRenderer::Render() const
     {
-        if (!_material.IsLoaded)
-        {
-            LOG_ERROR("Material " + _material.Id + " is not loaded. Cannot render mesh.");
-            return;
-        }
-
         if (!_model.IsLoaded)
         {
             LOG_ERROR("Model " + _model.Id + " is not loaded. Cannot render mesh.");
             return;
         }
 
-        _material.Asset->GetShader().Use();
+        GetRenderShader().Use();
         BindTextures();
-        
+
         for (const auto& mesh : _model.Asset->GetMeshes())
         {
             RenderMesh(mesh);
@@ -103,5 +97,12 @@ namespace rei::render
     assets::AssetRef<Material>& MeshRenderer::GetMaterial()
     {
         return _material;
+    }
+
+    const Shader& MeshRenderer::GetRenderShader() const
+    {
+        if (_material.IsLoaded) return _material.Asset->GetShader();
+        
+        return GetAssetManager().GetById<Material>(REI_ERROR_MATERIAL_ID).Asset->GetShader();
     }
 }
