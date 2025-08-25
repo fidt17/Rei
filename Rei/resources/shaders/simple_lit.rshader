@@ -49,7 +49,6 @@ struct PointLight
     uniform PointLight _PointLights[NR_POINT_LIGHTS];
 
     uniform float _Shininess;
-    
     uniform vec4 _Color;
 
     out vec4 FragColor;

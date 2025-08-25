@@ -103,6 +103,6 @@ namespace rei::render
     {
         if (_material.IsLoaded) return _material.Asset->GetShader();
         
-        return GetAssetManager().GetById<Material>(REI_ERROR_MATERIAL_ID).Asset->GetShader();
+        return GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID).Asset->GetShader();
     }
 }

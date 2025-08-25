@@ -22,6 +22,12 @@
     void REI_SET(const nlohmann::json& data); \
     private:
 
+// --- RENDER ---
+#define MAX_POINT_LIGHTS_COUNT 4
+#define REI_FALLBACK_MATERIAL_ID "REI_ERROR_MATERIAL"
+#define REI_LIGHT_SOURCE_MATERIAL_ID "REI_LIGHT_SOURCE_MATERIAL"
+// --------------
+
 #include "pch.h"
 #include "Common/Logging/Log.h"
 #include "Common/Assert.h"

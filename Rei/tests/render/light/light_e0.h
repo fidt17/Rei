@@ -1,11 +1,10 @@
 ﻿#pragma once
-#include "../BaseRenderScenario.h"
 #include "../../../resources/rei_behaviours/render/light/AmbientLight.h"
 #include "../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Services.h"
+#include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Resources/AssetBuilder.h"
 
 namespace rei::render
 {
@@ -183,7 +182,7 @@ public:
 
 constexpr int POINT_LIGHTS_COUNT = 4;
 
-class light_e0 : public BaseRenderScenario
+class light_e0 : public rei::render::BaseRenderScenario
 {
 public:
     explicit light_e0(GLFWwindow* target)

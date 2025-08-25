@@ -1,11 +1,11 @@
 ﻿#pragma once
-#include "../BaseRenderScenario.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 #include "glm/fwd.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtx/vector_angle.inl"
+#include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
 
@@ -62,7 +62,7 @@ public:
     }
 };
 
-class transform_e0 : public BaseRenderScenario
+class transform_e0 : public rei::render::BaseRenderScenario
 {
 public:
     explicit transform_e0(GLFWwindow* target)

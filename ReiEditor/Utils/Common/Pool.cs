@@ -5,12 +5,14 @@ namespace ReiEditor.Utils.Common;
 
 public class Pool<T>
 {
-    private readonly Func<T> factoryFunction;
+    private readonly Func<T> _factoryFunction;
+    private readonly Action<T> _resetFunction;
     private readonly ConcurrentQueue<T> _pool = new();
 
-    public Pool(Func<T> factoryFunction)
+    public Pool(Func<T> factoryFunction, Action<T> resetFunction)
     {
-        this.factoryFunction = factoryFunction;
+        _factoryFunction = factoryFunction;
+        _resetFunction = resetFunction;
     }
 
     public T Get()
@@ -28,13 +30,14 @@ public class Pool<T>
     public void Put(T value)
     {
         _pool.Enqueue(value);
+        _resetFunction(value);
     }
 
     public void Populate(int count)
     {
         for (int i = 0; i < count; i++)
         {
-            Put(factoryFunction());
+            Put(_factoryFunction());
         }
     }
 }

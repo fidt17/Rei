@@ -14,7 +14,7 @@
 
     <Border Classes="Window" VerticalAlignment="Center"
             Classes.Visible="{Binding ShowStatusBar}"
-            Margin="0">
+            Margin="2,0, 2,0">
         <Border.Styles>
             <Style Selector="Border.Visible">
                 <Style.Animations>

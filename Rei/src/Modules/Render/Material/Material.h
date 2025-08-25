@@ -2,8 +2,6 @@
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
 
-#define REI_ERROR_MATERIAL_ID "REI_ERROR_MATERIAL"
-
 namespace rei::render
 {
     class Material

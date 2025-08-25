@@ -6,6 +6,7 @@
 #include "glm/fwd.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtx/vector_angle.inl"
+#include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
 
@@ -96,7 +97,7 @@ public:
     }
 };
 
-class transform_e1 : public BaseRenderScenario
+class transform_e1 : public rei::render::BaseRenderScenario
 {
 public:
     explicit transform_e1(GLFWwindow* target)

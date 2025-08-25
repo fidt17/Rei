@@ -1,5 +1,6 @@
 ﻿#include "Renderer.h"
-#include "../../../tests/render/BaseRenderScenario.h"
+
+#include "RenderScenario/DefaultRenderScenario.h"
 
 #define RENDER_SCENARIO_NUM 10
 
@@ -42,8 +43,6 @@ namespace rei::render
 {
     SET_LOG_SCOPE("RENDERER")
 
-    std::unique_ptr<BaseRenderScenario> _renderScenario;
-
     void Renderer::SetCamera(const ecs::RefComponent<Camera>& camera)
     {
         _camera = camera;
@@ -78,8 +77,8 @@ namespace rei::render
             REI_THROW("GLAD Initialization failed")
         }
 
-        LoadErrorMaterial();
-        _renderScenario = CREATE_RENDER_SCENARIO(_target);
+        PrepareMaterials();
+        _renderScenario = std::make_unique<DefaultRenderScenario>(_target);
         _renderScenario->Setup();
         
         if (!_camera.IsNull())
@@ -107,10 +106,18 @@ namespace rei::render
         _renderScenario->Dispose();
     }
 
-    void Renderer::LoadErrorMaterial() const
+    void Renderer::PrepareMaterials() const
     {
         // todo: put in engine resources
-        const auto shader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/error.rshader");
-        GetAssetManager().CreateAssetWithId<Material>(REI_ERROR_MATERIAL_ID,shader);
+        //const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/error.rshader");
+        
+        const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader");
+        fallbackShader.Asset->SetFloat("_Shininess", 0.5);
+        fallbackShader.Asset->SetColor("_Color", Color(1,1,1,1));
+        
+        GetAssetManager().CreateAssetWithId<Material>(REI_FALLBACK_MATERIAL_ID,fallbackShader);
+
+        const auto lightSourceShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader");
+        GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);
     }
 }

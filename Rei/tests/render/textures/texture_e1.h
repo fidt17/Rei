@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include "../BaseRenderScenario.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
+#include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
 
-class texture_e1 : public BaseRenderScenario
+class texture_e1 : public rei::render::BaseRenderScenario
 {
 public:
     explicit texture_e1(GLFWwindow* target)

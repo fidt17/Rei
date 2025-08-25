@@ -13,10 +13,12 @@ using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Build;
 
-public class BuildService : IBuildService
+public class BuildService : IBuildService, IAsyncDisposable
 {
     public Utils.Common.IObservable<bool> BuildInProgress => _buildInProgress;
     public Utils.Common.IObservable<bool> IsBuildReady => _isBuildReady;
+
+    private bool _discardBuild;
 
     private readonly Observable<bool> _buildInProgress = new(false);
     private readonly Observable<bool> _isBuildReady = new(false);
@@ -44,6 +46,18 @@ public class BuildService : IBuildService
         _assetImporter = assetImporter;
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (!_buildInProgress.Value) return;
+        
+        _logger.LogWarning("Waiting for build to finish before disposing");
+        _discardBuild = true;
+        while (_buildInProgress.Value)
+        {
+            await Task.Delay(10);
+        }
+    }
+
     public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
     {
         if (_buildInProgress)
@@ -56,6 +70,7 @@ public class BuildService : IBuildService
         stopwatch.Start();
         
         var buildFolder = Path.Combine(_resourceService.GetRootPath(), "bin");
+        _discardBuild = false;
         _buildInProgress.Value = true;
         _isBuildReady.Value = false;
             
@@ -71,6 +86,11 @@ public class BuildService : IBuildService
             
             await _assetBuilder.BuildAssets(buildFolder);
             stopwatch.Stop();
+
+            if (_discardBuild)
+            {
+                throw new Exception("Build was discarded");
+            }
         }
         catch (Exception e)
         {

@@ -41,6 +41,18 @@ public class DefaultSceneTemplate : ISceneTemplate
                     rotation["z"].Value = 0;
                 }
             }
+            
+            var camera = mainCamera.GetBehaviour(_behaviourRegistry.GetIdByName(EngineBehavioursUtility.CAMERA));
+            if (camera != null)
+            {
+                if (camera.GetProperty(EngineBehavioursUtility.CAMERA_BACKGROUND_COLOR).Value is Dictionary<string, SerializedProperty> backgroundColor)
+                {
+                    backgroundColor["r"].Value = 0.074;
+                    backgroundColor["g"].Value = 0.090;
+                    backgroundColor["b"].Value = 0.116;
+                    backgroundColor["a"].Value = 1;
+                }
+            }
         }
 
         var pointLight = _entityManagementService.CreateEntity("Point Light");

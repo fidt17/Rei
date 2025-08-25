@@ -60,7 +60,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         try
         {
-            if (!_engineRunner.IsActive.Value)
+            if (_engineRunner.IsActive.Value)
             {
                 _entityApi.CreateNewEntity(name);
             }
@@ -88,7 +88,11 @@ public class EntityManagementService : IEntityManagementService, IDisposable
     {
         try
         {
-            if (string.IsNullOrEmpty(name)) throw new Exception($"Invalid entity name [{name}]");
+            if (string.IsNullOrEmpty(name))
+            {
+                name = $"Entity {e.Id}";
+            }
+            
             if (e.Name == name) return;
 
             if (_engineRunner.IsActive.Value)
@@ -357,6 +361,7 @@ public class EntityManagementService : IEntityManagementService, IDisposable
             if (scene == null) throw new Exception("Current scene is missing");
 
             var currentSceneEntities = scene.Entities.ToList();
+            //_logger.LogWarning($"Scene entities: {JsonConvert.SerializeObject(entities)}");
             
             // Create missing entities
             foreach (var entityId in entities.Entities)

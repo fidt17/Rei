@@ -43,7 +43,7 @@
                         HotKey="Ctrl+B"
                         Command="{Binding BuildProjectCommand}"
                         Content="Build" />
-                    
+
                     <Button
                         HotKey="Ctrl+I"
                         Command="{Binding ImportEngineResourcesCommand}"
@@ -65,7 +65,7 @@
                   ColumnDefinitions="Auto, *, Auto">
 
                 <hierarchies:HierarchyWindow
-                    Width="280"
+                    Width="230"
                     Grid.Column="0"
                     DataContext="{Binding Hierarchy}" />
 
@@ -75,22 +75,28 @@
                     DataContext="{Binding PlaymodePanel}" />
 
                 <monitor:MonitorWindow
-                    Width="400"
+                    Width="450"
                     Grid.Column="2"
                     DataContext="{Binding Monitor}" />
             </Grid>
 
-            <console:ConsoleEditorWindow
+            <!-- Footer -->
+            <Grid 
                 Height="280"
-                Grid.Column="0" Grid.Row="1"
+                Grid.Row="1"
+                Grid.Column="0"
                 Grid.ColumnSpan="2"
-                DataContext="{Binding Console}" />
+                RowDefinitions="*, Auto">
+                <console:ConsoleEditorWindow
+                    DataContext="{Binding Console}" />
+
+                <!-- Status Bar -->
+                <statusBar:StatusBarView 
+                    Grid.Row="1"
+                    DataContext="{Binding StatusBar}" />
+            </Grid>
         </Grid>
 
-        <!-- Status Bar -->
-        <Grid Grid.Row="2">
-            <statusBar:StatusBarView DataContext="{Binding StatusBar}" />
-        </Grid>
     </Grid>
 
 </Window>

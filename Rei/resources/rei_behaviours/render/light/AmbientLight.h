@@ -11,8 +11,8 @@ namespace rei::render
         SERIALIZE Color _color;
 
     public:
-        REI_API f32 GetStrength() const { return _strength; }
-        REI_API Color GetColor() const { return _color; }
+        REI_API f32 GetStrength() const;
+        REI_API Color GetColor() const;
     };
 }
 EXPORT_COMPONENT(rei::render::AmbientLight);

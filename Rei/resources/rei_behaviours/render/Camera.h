@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "glm/ext/matrix_transform.hpp"
+#include "Modules/Render/Color/Color.h"
 
 namespace rei::render
 {
@@ -10,6 +11,7 @@ namespace rei::render
         SERIALIZE f32 _fov = 45;
         SERIALIZE i32 _nearClipPlane = 0;
         SERIALIZE i32 _farClipPlane = 1000;
+        SERIALIZE Color _backgroundColor = Color(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
 
         i32 _outputWidth;
         i32 _outputHeight;
@@ -18,6 +20,7 @@ namespace rei::render
         REI_API f32 GetFov() const;
         REI_API i32 GetNearClipPlane() const;
         REI_API i32 GetFarClipPlane() const;
+        REI_API const Color& GetBackgroundColor() const;
 
         REI_API void SetOutputSize(int width, int height);
 

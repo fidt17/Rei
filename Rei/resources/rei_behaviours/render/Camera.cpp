@@ -25,6 +25,11 @@ namespace rei::render
         return _farClipPlane;
     }
 
+    const Color& Camera::GetBackgroundColor() const
+    {
+        return _backgroundColor;
+    }
+
     void Camera::SetOutputSize(int width, int height)
     {
         _outputWidth = width;

@@ -8,6 +8,7 @@ public static class EngineBehavioursUtility
     public const string TRANSFORM_SCALE = "_scale";
     
     public const string CAMERA = "Camera";
+    public const string CAMERA_BACKGROUND_COLOR = "_backgroundColor";
     
     public const string AMBIENT_LIGHT = "AmbientLight";
     public const string POINT_LIGHT = "PointLight";

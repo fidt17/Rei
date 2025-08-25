@@ -8,7 +8,7 @@ namespace ReiEditor.Models.Services.Engine.Api;
 
 public class EntityApi : IEntityApi
 {
-    private readonly Pool<StringBuilder> _responseBufferPool = new(() => new StringBuilder(16384));
+    private readonly Pool<StringBuilder> _responseBufferPool = new(() => new StringBuilder(16384), x => x.Clear());
     private readonly IEngineApi _engineApi;
 
     public EntityApi(IEngineApi engineApi)

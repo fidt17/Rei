@@ -1,10 +1,10 @@
 ﻿#pragma once
-#include "../BaseRenderScenario.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
+#include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 #include "Modules/Render/Shaders/ShaderUtility.h"
 
-class hello_triangle_indexed final : public BaseRenderScenario
+class hello_triangle_indexed final : public rei::render::BaseRenderScenario
 {
 public:
     explicit hello_triangle_indexed(GLFWwindow* target)

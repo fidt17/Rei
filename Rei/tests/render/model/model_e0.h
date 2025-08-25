@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "../BaseRenderScenario.h"
 #include "../../../resources/rei_behaviours/render/MeshRenderer.h"
 #include "glfw/glfw3.h"
 #include "Modules/Render/Model/Model.h"
@@ -7,8 +6,8 @@
 #include "../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Engine.h"
+#include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 
-#define POINT_LIGHTS_COUNT 4
 
 class BoxVertexData
 {
@@ -96,7 +95,7 @@ public:
     }
 };
 
-class model_e0 : public BaseRenderScenario
+class model_e0 : public rei::render::BaseRenderScenario
 {
 public:
     explicit model_e0(GLFWwindow* target)
@@ -119,7 +118,6 @@ public:
 
         CreateModel(rei::math::Vector3(0, 0, 0));
     }
-
 
     void CreateModel(rei::math::Vector3 position)
     {
@@ -192,7 +190,7 @@ public:
         }
     }
 
-    void RenderPointLight(const rei::ecs::RefComponent<rei::behaviour::PointLight>& light)
+    void RenderPointLight(const rei::ecs::RefComponent<rei::render::PointLight>& light)
     {
         if (light.IsNull()) return;
 
@@ -247,16 +245,16 @@ public:
     void FindPointLights()
     {
         ECS_WORLD(rei::GetInternalWorld());
-        const auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::behaviour::PointLight>();
+        const auto f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::PointLight>();
         rei::GetInternalWorld().RefreshAll();
 
         _pointLights.clear();
         i32 lightsCount = 0;
         FOR(e, f)
         {
-            _pointLights.emplace_back(GET_REF(e, rei::behaviour::PointLight));
+            _pointLights.emplace_back(GET_REF(e, rei::render::PointLight));
             lightsCount++;
-            if (lightsCount >= POINT_LIGHTS_COUNT) break;
+            if (lightsCount >= MAX_POINT_LIGHTS_COUNT) break;
         }
     }
 
@@ -269,5 +267,5 @@ private:
     BoxVertexData _lightBox;
 
     rei::ecs::RefComponent<rei::render::AmbientLight> _ambientLight;
-    std::vector<rei::ecs::RefComponent<rei::behaviour::PointLight>> _pointLights;
+    std::vector<rei::ecs::RefComponent<rei::render::PointLight>> _pointLights;
 };

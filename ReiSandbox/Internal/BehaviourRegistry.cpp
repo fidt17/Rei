@@ -24,7 +24,7 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
     f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_SET(json); });
     f.RegisterComponent<rei::transformation::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e).REI_SET(json); });
     f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e).REI_SET(json); });
-    f.RegisterComponent<rei::behaviour::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::behaviour::PointLight>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::behaviour::PointLight>(e).REI_SET(json); });
+    f.RegisterComponent<rei::render::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::PointLight>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::PointLight>(e).REI_SET(json); });
 }
 
 // --- REI_GET METHODS ---
@@ -118,7 +118,7 @@ nlohmann::json rei::render::AmbientLight::REI_GET() const
     };
 }
 
-nlohmann::json rei::behaviour::PointLight::REI_GET() const
+nlohmann::json rei::render::PointLight::REI_GET() const
 {
     return {
         {"REI_TYPE", "PointLight"},
@@ -192,7 +192,7 @@ void rei::render::AmbientLight::REI_SET(const nlohmann::json& data)
     if (data.contains("_color")) _color.REI_SET(data.at("_color").at("Value"));
 }
 
-void rei::behaviour::PointLight::REI_SET(const nlohmann::json& data)
+void rei::render::PointLight::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("_strength")) _strength = data.at("_strength").at("Value");
     if (data.contains("_color")) _color.REI_SET(data.at("_color").at("Value"));

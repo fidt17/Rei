@@ -1,11 +1,8 @@
 ﻿#pragma once
 
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include "../../../resources/rei_behaviours/render/Camera.h"
 #include "Ecs/RefComponent.h"
-#include "glad/glad.h"
-#include "glfw/glfw3.h"
-#include "glfw/glfw3native.h"
+#include "RenderScenario/BaseRenderScenario.h"
 
 namespace rei::render
 {
@@ -26,7 +23,8 @@ namespace rei::render
     private:
         GLFWwindow* _target = nullptr;
         ecs::RefComponent<Camera> _camera;
+        std::unique_ptr<BaseRenderScenario> _renderScenario = nullptr;
 
-        void LoadErrorMaterial() const;
+        void PrepareMaterials() const;
     };
 }
