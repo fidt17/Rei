@@ -2,11 +2,13 @@
 using System.Text;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Engine.Api.DTO;
+using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
 public class EntityApi : IEntityApi
 {
+    private readonly Pool<StringBuilder> _responseBufferPool = new(() => new StringBuilder(16384));
     private readonly IEngineApi _engineApi;
 
     public EntityApi(IEngineApi engineApi)
@@ -21,10 +23,14 @@ public class EntityApi : IEntityApi
         
         try
         {
-            var buffer = new StringBuilder(2048);
+            var buffer = _responseBufferPool.Get();
+            
             _engineApi.Invoke(typeof(GetSceneEntitiesDelegate), "GetSceneEntitiesList", buffer, buffer.Capacity);
+            var response = JsonConvert.DeserializeObject<GetSceneEntitiesResponse>(buffer.ToString());
+            
+            _responseBufferPool.Put(buffer);
 
-            return JsonConvert.DeserializeObject<GetSceneEntitiesResponse>(buffer.ToString());
+            return response;
         }
         catch (Exception)
         {
@@ -39,10 +45,14 @@ public class EntityApi : IEntityApi
         
         try
         {
-            var buffer = new StringBuilder(8096);
-            _engineApi.Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, buffer, buffer.Capacity);
+            var buffer = _responseBufferPool.Get();
             
-            return JsonConvert.DeserializeObject<GetEntityDataResponse>(buffer.ToString());
+            _engineApi.Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, buffer, buffer.Capacity);
+            var response = JsonConvert.DeserializeObject<GetEntityDataResponse>(buffer.ToString());
+            
+            _responseBufferPool.Put(buffer);
+            
+            return response;
         }
         catch (Exception)
         {
