@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Services.Render;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -70,6 +71,13 @@ public class EngineApi : IEngineApi
 
     public Task<IntPtr> CreateEngineWindow() => InvokeAsync<IntPtr>(typeof(ActionDelegate), "CreateEngineWindow");
 
+    private delegate void ChangeRenderModeDelegate(int mode);
+    public void ChangeRenderMode(RenderMode mode)
+    {
+        if (!IsEngineRunning) return;
+        Invoke(typeof(ChangeRenderModeDelegate), "ChangeRenderMode", (int) mode);
+    }
+    
     private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);
     public IntPtr GetWindowHandle(IntPtr windowPtr) => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle", windowPtr);
 

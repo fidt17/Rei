@@ -23,6 +23,7 @@ public class PlaymodeModule : Module
     private void ConfigureViews(ContainerBuilder builder)
     {
         builder.RegisterType<PlaymodePanelViewModel>();
+        builder.RegisterType<RenderModeSelectionViewModel>();
         
         builder.RegisterType<StartPlaymodeCommand>();
         builder.RegisterType<StopPlaymodeCommand>();

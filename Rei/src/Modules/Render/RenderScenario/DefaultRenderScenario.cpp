@@ -20,11 +20,24 @@ void rei::render::DefaultRenderScenario::Setup()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_MULTISAMPLE);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void rei::render::DefaultRenderScenario::Render()
 {
+    const auto renderMode = _camera.Get().GetRenderMode();
+    if (renderMode == Shaded)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+    else if (renderMode == WireframeLines)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
+    else if (renderMode == WireframePoints)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    }
+
     FindAmbientLights();
     FindPointLights();
 
@@ -128,7 +141,7 @@ void rei::render::DefaultRenderScenario::RenderPointLights() const
     for (auto& light : _pointLights)
     {
         if (light.IsNull()) return;
-        
+
         const auto& material = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
         material.Asset->GetShader().SetColor("_Color", light.Get().GetColor());
         material.Asset->GetShader().SetFloat("_Strength", light.Get().GetStrength());

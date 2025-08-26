@@ -42,7 +42,8 @@ public class BuildStarter : IBuildStarter, IDisposable
         _dllManager.UnloadDll();
         
         if (!_canStartBuildCondition.IsTrue.Value) return false;
-		
+
+        await _assetsService.SaveProject();
         return await _buildService.BuildProject(configuration);
     }
 }

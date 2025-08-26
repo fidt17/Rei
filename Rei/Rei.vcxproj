@@ -609,6 +609,7 @@
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\DefaultRenderScenario.h" />
+    <ClInclude Include="src\Modules\Render\RenderScenario\RenderMode.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\Systems\AssignMainCameraSystem.h" />

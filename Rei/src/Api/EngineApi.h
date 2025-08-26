@@ -38,9 +38,8 @@ REI_EXTERN_API inline rei::window::Window* CreateEngineWindow()
         windowSettings.Height = 100;
         windowSettings.HideOnCreation = true;
         windowSettings.CenterCursor = false;
-        
         windowSettings.HideCursor = rei::GetEngine().IsPlaymode();
-        
+
         window = rei::GetEngine().CreateMainWindow(windowSettings);
         window->DisableStyle();
     })->WaitForCompletion();
@@ -51,6 +50,21 @@ REI_EXTERN_API inline rei::window::Window* CreateEngineWindow()
 REI_EXTERN_API inline HWND GetWindowHandle(const rei::window::Window* window)
 {
     return window->GetWindowHandle();
+}
+
+REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt)
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        const auto mode = static_cast<RenderMode>(modeInt);
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto& cameraFilter = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::Camera>();
+
+        FOR(e, cameraFilter)
+        {
+            GET(e, rei::render::Camera).SetRenderMode(mode);
+        }
+    });
 }
 
 REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const int width, const int height)

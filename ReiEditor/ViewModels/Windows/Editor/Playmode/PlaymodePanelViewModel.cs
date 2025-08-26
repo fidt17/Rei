@@ -6,7 +6,6 @@ using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Playmode.Commands;
-using ReiEditor.ViewModels.Windows.Editor.Rendering;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
 
@@ -48,6 +47,28 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #endregion
     
+    #region EngineActive
+
+    private bool _engineActive;
+    public bool EngineActive
+    {
+        get => _engineActive;
+        private set => SetField(ref _engineActive, value);
+    }
+
+    #endregion
+    
+    #region RenderModeSelection
+
+    private RenderModeSelectionViewModel _renderModeSelection = new();
+    public RenderModeSelectionViewModel RenderModeSelection
+    {
+        get => _renderModeSelection;
+        private set => SetField(ref _renderModeSelection, value);
+    }
+
+    #endregion
+    
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineWindowController _engineWindow;
     private readonly IEngineApi _engineApi;
@@ -63,17 +84,21 @@ public class PlaymodePanelViewModel : BaseViewModel
         IFactory<StartPlaymodeCommand> startPlaymodeCommand, 
         IFactory<StopPlaymodeCommand> stopPlaymodeCommand,
         IEngineWindowController engineWindow,
-        IEngineApi engineApi, IEngineRunner engineRunner)
+        IFactory<RenderModeSelectionViewModel> renderModeSelection,
+        IEngineApi engineApi, 
+        IEngineRunner engineRunner)
     {
         _windowProvider = null;
         _engineWindow = engineWindow;
         _engineApi = engineApi;
         _engineRunner = engineRunner;
+        RenderModeSelection = renderModeSelection.CreateInstance();
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 
         _engineRunner.IsPlaymodeActive.Subscribe(HandlePlaymodeActiveValueChangedEvent);
         _engineRunner.IsEditorActive.Subscribe(HandleIsEditorActiveValueChangedEvent);
+        _engineRunner.IsActive.Subscribe(HandleIsEngineActiveValueChangedEvent);
         _engineWindow.WindowPointer.Subscribe(HandleWindowPointerChangedEvent);
     }
 
@@ -87,6 +112,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 		
         StartPlaymodeCommand.Dispose();
         StopPlaymodeCommand.Dispose();
+        RenderModeSelection.Dispose();
     }
 
     private void HandleWindowPointerChangedEvent(IntPtr? ptr)
@@ -112,5 +138,10 @@ public class PlaymodePanelViewModel : BaseViewModel
     private void HandleIsEditorActiveValueChangedEvent(bool isActive)
     {
         EditorModeActive = isActive;
+    }
+
+    private void HandleIsEngineActiveValueChangedEvent(bool isActive)
+    {
+        EngineActive = isActive;
     }
 }

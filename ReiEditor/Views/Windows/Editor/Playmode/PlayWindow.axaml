@@ -3,8 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
-             xmlns:rendering="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Rendering"
              xmlns:engineWindow="clr-namespace:ReiEditor.Views.Controls.EngineWindow"
+             xmlns:playmode1="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.Editor.Playmode.PlayWindow"
              x:DataType="playmode:PlaymodePanelViewModel">
@@ -15,27 +15,24 @@
 
     <Border Classes="Window">
         <Grid RowDefinitions="Auto, *">
-            
+
             <!-- Header -->
             <Grid Grid.Row="0">
-                <TextBlock
-                    IsVisible="{Binding EditorModeActive}"
+                <StackPanel
                     HorizontalAlignment="Right"
-                    FontSize="14"
-                    Text="EDITOR MODE" />
+                    Orientation="Horizontal">
 
-                <TextBlock
-                    IsVisible="{Binding PlayModeActive}"
-                    HorizontalAlignment="Right"
-                    FontSize="14"
-                    Text="PLAY MODE" />
+                    <playmode1:RenderModeSelectionView
+                        DataContext="{Binding RenderModeSelection}" />
+
+                </StackPanel>
             </Grid>
 
             <ContentControl
                 Grid.Row="1"
                 Content="{Binding WindowProvider}">
                 <ContentControl.DataTemplates>
-                    <DataTemplate DataType="{x:Type rendering:EngineWindowProviderViewModel}">
+                    <DataTemplate DataType="{x:Type playmode:EngineWindowProviderViewModel}">
                         <engineWindow:WindowEngineControl />
                     </DataTemplate>
                 </ContentControl.DataTemplates>

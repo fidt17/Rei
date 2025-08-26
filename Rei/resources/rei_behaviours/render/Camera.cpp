@@ -30,10 +30,20 @@ namespace rei::render
         return _backgroundColor;
     }
 
+    RenderMode Camera::GetRenderMode() const
+    {
+        return _renderMode;
+    }
+
     void Camera::SetOutputSize(int width, int height)
     {
         _outputWidth = width;
         _outputHeight = height;
+    }
+
+    void Camera::SetRenderMode(const RenderMode mode)
+    {
+        _renderMode = mode;
     }
 
     glm::mat4 Camera::GetProjectionMatrix() const

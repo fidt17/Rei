@@ -1,7 +1,7 @@
 ﻿using System;
 using ReiEditor.Models.Services.Engine.Api;
 
-namespace ReiEditor.ViewModels.Windows.Editor.Rendering;
+namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
 
 public class EngineWindowProviderViewModel
 {

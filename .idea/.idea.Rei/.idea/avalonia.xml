@@ -72,6 +72,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/MonitorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/PlayWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/PlaymodePanelView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Playmode/RenderModeSelectionView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
