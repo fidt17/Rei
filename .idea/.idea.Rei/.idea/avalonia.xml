@@ -62,6 +62,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/Custom/CustomPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/Custom/Vector3PropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/CustomPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/EnumPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/FloatPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/IntegerPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/PropertiesDisplayControl.axaml" value="ReiEditor/ReiEditor.csproj" />

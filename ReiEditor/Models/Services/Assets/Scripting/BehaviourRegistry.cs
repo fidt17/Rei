@@ -32,6 +32,7 @@ public class BehaviourRegistry : IBehaviourRegistry
     private readonly ISolutionGenerator _solutionGenerator;
     private readonly IActiveProjectService _activeProjectService;
     private readonly IResourceService _resourceService;
+    private readonly SourceFilesUtility _sourceFilesUtility;
 
     public BehaviourRegistry(
         IAssetCreator assetCreator,
@@ -40,7 +41,8 @@ public class BehaviourRegistry : IBehaviourRegistry
         IEngineSettingsProvider engineSettingsProvider,
         ISerializableObjectsRegistry serializableObjectsRegistry,
         ISolutionGenerator solutionGenerator,
-        IActiveProjectService activeProjectService)
+        IActiveProjectService activeProjectService, 
+        SourceFilesUtility sourceFilesUtility)
     {
         _assetCreator = assetCreator;
         _resourceService = resourceService;
@@ -48,8 +50,9 @@ public class BehaviourRegistry : IBehaviourRegistry
         _serializableObjectsRegistry = serializableObjectsRegistry;
         _solutionGenerator = solutionGenerator;
         _activeProjectService = activeProjectService;
+        _sourceFilesUtility = sourceFilesUtility;
         _utility = new BehaviourFileUtility(resourceService, engineSettingsProvider);
-        _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
+        _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService, serializableObjectsRegistry);
     }
 
     public bool TryGetById(int id, [NotNullWhen(returnValue: true)] out BehaviourAssetInfo? behaviour) => _behaviours.TryGetValue(id, out behaviour);
@@ -90,8 +93,8 @@ public class BehaviourRegistry : IBehaviourRegistry
         {
             if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.Path}");
             
-            var namespaceStr = SourceFilesUtility.GetObjectNamespaceFrom(behaviourFile.Content);
-            var properties = SourceFilesUtility.GetSerializedProperties(behaviourFile.Content);
+            var namespaceStr = SourceFilesUtility.GetObjectNamespaceFrom(behaviourFile.Content, behaviourFile.Path);
+            var properties = _sourceFilesUtility.GetSerializedProperties(behaviourFile.Content);
             RegisterBehaviour(new BehaviourAssetInfo(namespaceStr, name, behaviourMeta.BehaviourId, new ObjectFile<string>(behaviourFile.Content, behaviourFile.Path), properties, behaviourFile.Path));
         }
 

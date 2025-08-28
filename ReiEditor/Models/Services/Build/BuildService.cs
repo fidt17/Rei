@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Models.Services.Engine.Dll;
@@ -31,9 +32,20 @@ public class BuildService : IBuildService, IAsyncDisposable
     private readonly ISolutionBuilder _solutionBuilder;
     private readonly IClientDllManager _clientDllManager;
     private readonly IEditorConsoleService _editorConsoleService;
+    private readonly SourceFilesUtility _sourceFilesUtility;
     private readonly ILogger<BuildService> _logger;
 
-    public BuildService(IResourceService resourceService, IAssetsService assetsService, IAssetBuilder assetBuilder, ISourceTracker sourceTracker, ISolutionBuilder solutionBuilder, IClientDllManager clientDllManager, ILogger<BuildService> logger, IEditorConsoleService editorConsoleService, IAssetImporter assetImporter)
+    public BuildService(
+        IResourceService resourceService,
+        IAssetsService assetsService,
+        IAssetBuilder assetBuilder,
+        ISourceTracker sourceTracker,
+        ISolutionBuilder solutionBuilder,
+        IClientDllManager clientDllManager,
+        ILogger<BuildService> logger,
+        IEditorConsoleService editorConsoleService,
+        IAssetImporter assetImporter,
+        SourceFilesUtility sourceFilesUtility)
     {
         _resourceService = resourceService;
         _assetsService = assetsService;
@@ -44,6 +56,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         _logger = logger;
         _editorConsoleService = editorConsoleService;
         _assetImporter = assetImporter;
+        _sourceFilesUtility = sourceFilesUtility;
     }
 
     public async ValueTask DisposeAsync()
@@ -77,6 +90,8 @@ public class BuildService : IBuildService, IAsyncDisposable
         try
         {
             await _assetImporter.ReimportAll();
+            if (!_sourceFilesUtility.AreSourceFilesValid) throw new Exception("Cannot build project with source files validation errors");
+            
             await _assetsService.SaveProject();
 
             if (!_clientDllManager.DllExists() || await _sourceTracker.ChangedOrNewSourcesExist())

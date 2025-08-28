@@ -9,6 +9,7 @@ namespace ReiEditor.Models.Services.Assets.Scripting.Serialization;
 public class SerializableObjectsRegistry : ISerializableObjectsRegistry
 {
     private readonly List<SerializableObjectInfo> _serializableObjects = new();
+    private readonly List<SerializableEnum> _serializableEnums = new();
     private readonly SourceFilesUtility _sourceFilesUtility;
     private readonly ILogger<SerializableObjectsRegistry> _logger;
 
@@ -23,7 +24,10 @@ public class SerializableObjectsRegistry : ISerializableObjectsRegistry
     public Task Refresh()
     {
         _serializableObjects.Clear();
-        _serializableObjects.AddRange(_sourceFilesUtility.FindAllSerializableObjects());
+
+        var processedFiles = _sourceFilesUtility.ProcessFiles();
+        _serializableObjects.AddRange(processedFiles.SerializableObjects);
+        _serializableEnums.AddRange(processedFiles.SerializableEnums);
 
         LogSerializableObjects();
         
@@ -39,6 +43,11 @@ public class SerializableObjectsRegistry : ISerializableObjectsRegistry
         }
         
         return _serializableObjects.Find(x => x.ObjectName == objectName);
+    }
+
+    public SerializableEnum? GetEnum(string enumName)
+    {
+        return _serializableEnums.Find(x => x.EnumName == enumName);
     }
 
     private void LogSerializableObjects()

@@ -22,6 +22,8 @@
     void REI_SET(const nlohmann::json& data); \
     private:
 
+#define SERIALIZABLE_ENUM(ENUM_NAME) enum ENUM_NAME
+
 // --- RENDER ---
 #define MAX_POINT_LIGHTS_COUNT 4
 #define REI_FALLBACK_MATERIAL_ID "REI_ERROR_MATERIAL"

@@ -13,6 +13,7 @@ public static class SerializedTypeExtensions
             SerializedTypeEnum.String => value is string,
             SerializedTypeEnum.Boolean => value is bool,
             SerializedTypeEnum.Float => value is int or float or double or long,
+            SerializedTypeEnum.Enum => value != null && value.GetType().IsInteger(),
             SerializedTypeEnum.Custom => true,
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
@@ -31,6 +32,7 @@ public static class SerializedTypeExtensions
                 SerializedTypeEnum.String => value,
                 SerializedTypeEnum.Boolean => bool.Parse(value),
                 SerializedTypeEnum.Float => float.Parse(value.Replace('f', '0')),
+                SerializedTypeEnum.Enum => int.Parse(value),
                 SerializedTypeEnum.Custom => null,
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
             };
@@ -50,6 +52,7 @@ public static class SerializedTypeExtensions
             SerializedTypeEnum.String => "",
             SerializedTypeEnum.Boolean => false,
             SerializedTypeEnum.Float => 0f,
+            SerializedTypeEnum.Enum => 0,
             SerializedTypeEnum.Custom => null,
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)

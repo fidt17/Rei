@@ -22,7 +22,7 @@ public:
         if (e == rei::ecs::NULL_ENTITY) return;
 
         ECS_WORLD(rei::GetInternalWorld());
-        GET(e, rei::behaviour::PointLight).SetColor(rei::render::Color::Lerp(_from, _to, _progress));
+        GET(e, rei::render::PointLight).SetColor(rei::render::Color::Lerp(_from, _to, _progress));
 
         _progress += _speed * _direction;
         if (_progress > 1)

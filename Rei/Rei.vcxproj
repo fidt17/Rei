@@ -563,6 +563,7 @@
     <ClInclude Include="external\stb_image.h" />
     <ClInclude Include="resources\meshes\CubeVertexData.h" />
     <ClInclude Include="resources\rei_behaviours\render\Camera.h" />
+    <ClInclude Include="resources\rei_behaviours\render\CameraPerspectiveEnum.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />

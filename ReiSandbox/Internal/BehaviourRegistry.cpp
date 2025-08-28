@@ -9,7 +9,8 @@
 #include "C:\Repos\Rei\Rei\src\Modules\Assets\AssetRef.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"
 #include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\ColorLerp.h"
-#include "C:\Repos\Rei\ReiSandbox\Scripts\TestMovement.h"
+#include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\RotateAroundAxis.h"
+#include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\TestMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\MeshRenderer.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
@@ -19,6 +20,7 @@
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
     f.RegisterComponent<::ColorLerp>(6, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::ColorLerp>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<::ColorLerp>(e).REI_SET(json); });
+    f.RegisterComponent<::RotateAroundAxis>(7, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::RotateAroundAxis>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<::RotateAroundAxis>(e).REI_SET(json); });
     f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e).REI_SET(json); });
     f.RegisterComponent<rei::render::Camera>(0, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e).REI_SET(json); });
     f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json {return rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) {rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e).REI_SET(json); });
@@ -70,13 +72,21 @@ nlohmann::json ColorLerp::REI_GET() const
     };
 }
 
+nlohmann::json RotateAroundAxis::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "RotateAroundAxis"},
+        {"_rotationSpeed", _rotationSpeed.REI_GET()},
+    };
+}
+
 nlohmann::json TestMovement::REI_GET() const
 {
     return {
         {"REI_TYPE", "TestMovement"},
         {"_radius", _radius},
         {"_speed", _speed},
-        {"_actionFlag", _actionFlag},
+        {"_horizontalMovement", _horizontalMovement},
     };
 }
 
@@ -87,6 +97,8 @@ nlohmann::json rei::render::Camera::REI_GET() const
         {"_fov", _fov},
         {"_nearClipPlane", _nearClipPlane},
         {"_farClipPlane", _farClipPlane},
+        {"_backgroundColor", _backgroundColor.REI_GET()},
+        {"_perspective", (int) _perspective},
     };
 }
 
@@ -159,11 +171,16 @@ void ColorLerp::REI_SET(const nlohmann::json& data)
     if (data.contains("_speed")) _speed = data.at("_speed").at("Value");
 }
 
+void RotateAroundAxis::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_rotationSpeed")) _rotationSpeed.REI_SET(data.at("_rotationSpeed").at("Value"));
+}
+
 void TestMovement::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("_radius")) _radius = data.at("_radius").at("Value");
     if (data.contains("_speed")) _speed = data.at("_speed").at("Value");
-    if (data.contains("_actionFlag")) _actionFlag = data.at("_actionFlag").at("Value");
+    if (data.contains("_horizontalMovement")) _horizontalMovement = data.at("_horizontalMovement").at("Value");
 }
 
 void rei::render::Camera::REI_SET(const nlohmann::json& data)
@@ -171,6 +188,8 @@ void rei::render::Camera::REI_SET(const nlohmann::json& data)
     if (data.contains("_fov")) _fov = data.at("_fov").at("Value");
     if (data.contains("_nearClipPlane")) _nearClipPlane = data.at("_nearClipPlane").at("Value");
     if (data.contains("_farClipPlane")) _farClipPlane = data.at("_farClipPlane").at("Value");
+    if (data.contains("_backgroundColor")) _backgroundColor.REI_SET(data.at("_backgroundColor").at("Value"));
+    if (data.contains("_perspective")) _perspective = data.at("_perspective").at("Value");
 }
 
 void rei::render::MeshRenderer::REI_SET(const nlohmann::json& data)

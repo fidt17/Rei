@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.ViewModels.Common;
@@ -9,7 +10,7 @@ namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 
 public static class PropertyViewUtils
 {
-    public static BaseViewModel CreatePropertyViewModel(SerializedProperty property)
+    public static BaseViewModel CreatePropertyViewModel(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry)
     {
         return property.Type switch
         {
@@ -17,7 +18,8 @@ public static class PropertyViewUtils
             SerializedTypeEnum.String => new StringPropertyViewModel(property),
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property),
+            SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -36,7 +38,7 @@ public static class PropertyViewUtils
         return new string(charList.ToArray());
     }
 
-    private static BaseViewModel GetPropertyViewModelForCustomType(SerializedProperty property)
+    private static BaseViewModel GetPropertyViewModelForCustomType(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry)
     {
         if (property.SourceType == "Vector3")
         {
@@ -47,6 +49,6 @@ public static class PropertyViewUtils
             return new ColorPropertyViewModel(property);
         }
 
-        return new CustomPropertyViewModel(property);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry);
     }
 }

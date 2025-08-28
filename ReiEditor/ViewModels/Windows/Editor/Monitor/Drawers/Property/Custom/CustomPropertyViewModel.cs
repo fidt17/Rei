@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Utils.Common;
@@ -17,16 +18,18 @@ public class CustomPropertyViewModel : BaseViewModel
     public ObservableField<bool> Expanded { get; } = new(false);
     
     private readonly SerializedProperty _property;
+    private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
 
 #pragma warning disable CS8618
     public CustomPropertyViewModel() { }
 #pragma warning restore CS8618
 
-    public CustomPropertyViewModel(SerializedProperty property)
+    public CustomPropertyViewModel(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
         
         _property = property;
+        _serializableObjectsRegistry = serializableObjectsRegistry;
 
         PropertyName = new(property);
         _property.ValueChangedEvent += HandlePropertyValueChangedEvent;
@@ -57,7 +60,7 @@ public class CustomPropertyViewModel : BaseViewModel
             
             foreach (var subProperty in subProperties)
             {
-                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value));
+                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry));
             }
         }
         else

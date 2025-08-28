@@ -94,7 +94,7 @@ public class BehaviourFileUtility
     public bool TryGetBehaviourNameFrom(string text, out string name)
     {
         name = "";
-        var regex = new Regex($".*{BehaviourMacrosConstants.BEHAVIOUR_BODY}\\((.*)\\).*");
+        var regex = new Regex($".*{SourceFileMacrosConstants.BEHAVIOUR_BODY}\\((.*)\\).*");
         if (!regex.IsMatch(text)) return false;
             
         name = regex.Match(text).Groups[1].Value;

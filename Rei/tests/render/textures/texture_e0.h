@@ -1,12 +1,9 @@
 ﻿#pragma once
-#include "../BaseRenderScenario.h
-#include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Services.h"
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "Modules/Render/RenderScenario/BaseRenderScenario.h"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Shaders/ShaderUtility.h"
 #include "Modules/Render/Textures/Texture.h"
 
 class texture_e0 : public rei::render::BaseRenderScenario
@@ -71,7 +68,7 @@ public:
     {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        
+
         ConfigureVertexData();
     }
 
@@ -83,6 +80,7 @@ public:
         _shader->Use();
 
         _shader->Use();
+
         _shader->SetMatrix4f("projection", _camera.Get().GetProjectionMatrix());
         _shader->SetMatrix4f("view", _camera.Get().GetViewMatrix());
         auto model = glm::mat4(1.0f);

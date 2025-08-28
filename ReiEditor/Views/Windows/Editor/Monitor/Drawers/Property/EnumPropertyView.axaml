@@ -1,0 +1,39 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.EnumPropertyView"
+             x:DataType="property:EnumPropertyViewModel">
+
+    <Design.DataContext>
+        <property:EnumPropertyViewModel />
+    </Design.DataContext>
+
+    <Border
+        x:Name="RootBorder"
+        Padding="1">
+        <Grid
+            ColumnDefinitions="Auto, *">
+
+            <TextBlock
+                x:Name="PropertyNameTextBlock"
+                Grid.Column="0"
+                Width="120"
+                VerticalAlignment="Center"
+                FontSize="14"
+                Foreground="{StaticResource Gray_4}"
+                Text="hello" />
+
+            <ComboBox
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Width="{Binding ComboBoxWidth, RelativeSource={RelativeSource AncestorType=property1:EnumPropertyView}}"
+                SelectedValue="{Binding SelectedValue, Mode=TwoWay}"
+                ItemsSource="{Binding Options}" />
+        </Grid>
+    </Border>
+</UserControl>

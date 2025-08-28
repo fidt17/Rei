@@ -8,4 +8,5 @@ public interface ISerializableObjectsRegistry
     IEnumerable<SerializableObjectInfo> GetObjects();
     Task Refresh();
     SerializableObjectInfo? GetObject(string objectName);
+    SerializableEnum? GetEnum(string enumName);
 }

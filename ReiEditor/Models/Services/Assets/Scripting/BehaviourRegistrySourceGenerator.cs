@@ -12,10 +12,12 @@ public class BehaviourRegistrySourceGenerator
     private const string INCLUDE_FORMAT = "#include {0}";
         
     private readonly IResourceService _resourceService;
+    private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
 
-    public BehaviourRegistrySourceGenerator(IResourceService resourceService)
+    public BehaviourRegistrySourceGenerator(IResourceService resourceService, ISerializableObjectsRegistry serializableObjectsRegistry)
     {
         _resourceService = resourceService;
+        _serializableObjectsRegistry = serializableObjectsRegistry;
     }
 
     public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects)
@@ -206,7 +208,13 @@ public class BehaviourRegistrySourceGenerator
                     propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
                 }
 
-                if (list.Exists(x =>
+                var isEnum = _serializableObjectsRegistry.GetEnum(propertyType) != null;
+
+                if (isEnum)
+                {
+                    str.AppendLine("        {" + $"\"{p.Key}\", (int) {p.Key}" + "},");
+                }
+                else if (list.Exists(x =>
                     {
                         var objName = x.ObjectName;
                         indexOfTemplateStart = objName.IndexOf('<');

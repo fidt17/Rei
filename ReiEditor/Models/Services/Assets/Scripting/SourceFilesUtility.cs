@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
@@ -16,6 +18,16 @@ namespace ReiEditor.Models.Services.Assets.Scripting;
 
 public class SourceFilesUtility
 {
+    public class ProcessedFilesResult
+    {
+        public List<SerializableObjectInfo> SerializableObjects { get; } = new();
+        public List<SerializableEnum> SerializableEnums { get; } = new();
+    }
+
+    public bool AreSourceFilesValid { get; private set; }
+
+    private ProcessedFilesResult _processedFiles = new();
+    
     private readonly IResourceService _resourceService;
     private readonly IEngineSettingsProvider _engineSettings;
     private readonly ILogger<SourceFilesUtility> _logger;
@@ -27,9 +39,9 @@ public class SourceFilesUtility
         _logger = logger;
     }
 
-    public List<SerializableObjectInfo> FindAllSerializableObjects()
+    public ProcessedFilesResult ProcessFiles()
     {
-        var result = new List<SerializableObjectInfo>();
+        _processedFiles = new();
         
         var paths = new List<string>
         {
@@ -37,38 +49,114 @@ public class SourceFilesUtility
             _engineSettings.GetEnginePath(),
         };
         
+        AreSourceFilesValid = true;
+        
         foreach (var rootDir in paths)
         {
             foreach (var path in Directory.EnumerateFiles(rootDir, $"*{FileExtensions.H}", SearchOption.AllDirectories))
             {
-                var fileContents = File.ReadAllText(path);
-                var isSerializable = TryGetSerializableObjectNameFrom(fileContents, out var name, out var isTemplate);
-                if (!isSerializable) continue;
-
-                var namespaceStr = GetObjectNamespaceFrom(fileContents);
-                var properties = GetSerializedProperties(fileContents);
-                var serializableObject = new SerializableObjectInfo(namespaceStr, name, isTemplate, new ObjectFile<string>(fileContents, path), properties, path);
-
-                if (result.Exists(x => x.ObjectName == serializableObject.ObjectName))
+                try
                 {
-                    _logger.LogError($"Found multiple serializable objects with same name: {serializableObject.ObjectName}. This is not supported. " +
-                                     $"Serializable objects name must be unique.");
-                    continue;
+                    var fileContents = File.ReadAllText(path);
+
+                    TryAddSerializableObject(fileContents, path, _processedFiles.SerializableObjects);
+                    TryAddSerializableEnum(fileContents, path, _processedFiles.SerializableEnums);
                 }
-                
-                result.Add(serializableObject);
+                catch (Exception e)
+                {
+                    _logger.LogError($"Exception while parsing file {path}. \n {e}");
+                    AreSourceFilesValid = false;
+                }
             }
         }
+        
+        return _processedFiles;
+    }
 
-        return result;
+    private void TryAddSerializableObject(string fileContents, string path, List<SerializableObjectInfo> result)
+    {
+        var isSerializable = TryGetSerializableObjectNameFrom(fileContents, out var name, out var isTemplate);
+        if (!isSerializable) return;
+
+        var namespaceStr = GetObjectNamespaceFrom(fileContents, path);
+        var properties = GetSerializedProperties(fileContents);
+        var serializableObject = new SerializableObjectInfo(namespaceStr, name, isTemplate, new ObjectFile<string>(fileContents, path), properties, path);
+
+        if (result.Exists(x => x.ObjectName == serializableObject.ObjectName))
+        {
+            _logger.LogError($"Found multiple serializable objects with same name: {serializableObject.ObjectName}. This is not supported. " +
+                             $"Serializable objects name must be unique.");
+            return;
+        }
+                
+        result.Add(serializableObject);
     }
     
+    private void TryAddSerializableEnum(string fileContents, string path, List<SerializableEnum> result)
+    {
+        var hasEnum = TryGetEnumNameFrom(fileContents, out var name);
+        if (!hasEnum) return;
+
+        var namespaceStr = GetObjectNamespaceFrom(fileContents, path);
+        var enumObject = new SerializableEnum
+        {
+            Namespace = namespaceStr,
+            EnumName = name,
+            IncludePath = path
+        };
+
+        if (result.Exists(x => x.EnumName == enumObject.EnumName))
+        {
+            _logger.LogError($"Found multiple serializable enums with same name: {enumObject.EnumName}. This is not supported. " +
+                             $"Serializable enum name must be unique.");
+            return;
+        }
+        
+        string escapedEnumName = Regex.Escape(enumObject.EnumName); 
+        string enumBodyPattern = $@"(?ms){SourceFileMacrosConstants.SERIALIZABLE_ENUM}\({escapedEnumName}\)\s*\{{\s*(.*?)\s*\}};?"; // Matches SERIALIZABLE_ENUM(enumName) { ... };
+        Match enumMatch = Regex.Match(fileContents, enumBodyPattern, RegexOptions.Singleline);
+
+        if (enumMatch.Success)
+        {
+            string enumBody = enumMatch.Groups[1].Value.Trim();
+            string[] enumOptions = enumBody.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+            int currentValue = 0;
+            foreach (string option in enumOptions)
+            {
+                string trimmedOption = option.Trim();
+
+                // Check if the option has an explicit value assignment (e.g., "SomeOther = 3")
+                Match assignmentMatch = Regex.Match(trimmedOption, @"(\w+)\s*=\s*(\d+)");
+                if (assignmentMatch.Success)
+                {
+                    string optionName = assignmentMatch.Groups[1].Value.Trim();
+                    int assignedValue = int.Parse(assignmentMatch.Groups[2].Value.Trim());
+                    enumObject.Options[optionName] = assignedValue;
+                    currentValue = assignedValue + 1; // Increment for the next option, if it doesn't have an explicit value
+                }
+                else
+                {
+                    // No explicit value, assign the current value
+                    enumObject.Options[trimmedOption] = currentValue;
+                    currentValue++;
+                }
+            }
+        }
+        else
+        {
+            return;
+        }                
+        
+        result.Add(enumObject);
+    }
+
     public bool TryGetSerializableObjectNameFrom(string text, out string name, out bool isTemplate)
     {
         name = "";
         isTemplate = text.AllIndexesOf("template <typename").Count > 0 || text.AllIndexesOf("template<typename").Count > 0;
         
-        var regex = new Regex($".*{BehaviourMacrosConstants.SERIALIZABLE_BODY}\\((.*)\\).*");
+        var regex = new Regex($".*{SourceFileMacrosConstants.SERIALIZABLE_BODY}\\((.*)\\).*");
         
         if (!regex.IsMatch(text)) return false;
             
@@ -78,14 +166,32 @@ public class SourceFilesUtility
         return true;
     }
     
-    public static string GetObjectNamespaceFrom(string text)
+    public bool TryGetEnumNameFrom(string text, out string name)
+    {
+        name = "";
+
+        var regex = new Regex($@"{SourceFileMacrosConstants.SERIALIZABLE_ENUM}\((?<enumName>[A-Za-z0-9_]+)\)");        
+        
+        if (!regex.IsMatch(text)) return false;
+            
+        var matches = regex.Matches(text);
+        if (matches.Count == 0) return false;
+        if (matches.Count > 1) throw new Exception("Multiple serializable enums were found in one source file. This is not supported.");
+
+        name = matches[0].Groups["enumName"].Value;
+        if (name == "ENUM_NAME") return false;
+
+        return true;
+    }
+    
+    public static string GetObjectNamespaceFrom(string text, string path)
     {
         const string NAMESPACE = "namespace";
         var namespaceIndexes = text.AllIndexesOf(NAMESPACE);
         if (namespaceIndexes.Count == 0) return "";
         if (namespaceIndexes.Count > 1)
         {
-            throw new Exception("Multiple or nested namespaces were found in the behaviour file. This is not supported.");
+            throw new Exception($"Multiple or nested namespaces were found in the behaviour file path={path}. This is not supported.");
         }
 
         var startIndex = namespaceIndexes[0] + NAMESPACE.Length;
@@ -103,11 +209,11 @@ public class SourceFilesUtility
         return result;
     }
     
-    public static Dictionary<string, SerializableObjectInfo.SerializedPropertyData> GetSerializedProperties(string text)
+    public Dictionary<string, SerializableObjectInfo.SerializedPropertyData> GetSerializedProperties(string text)
     {
         text = RemoveComments(text);
         var result = new Dictionary<string, SerializableObjectInfo.SerializedPropertyData>();
-        var serializedIndexes = text.AllIndexesOf(BehaviourMacrosConstants.SERIALIZE);
+        var serializedIndexes = text.AllIndexesOf(SourceFileMacrosConstants.SERIALIZE);
 
         foreach (var serializedIndex in serializedIndexes)
         {
@@ -146,8 +252,24 @@ public class SourceFilesUtility
         return result;
     }
 
-    private static SerializedTypeEnum GetSerializedTypeForVariableType(string type)
+    private SerializedTypeEnum GetSerializedTypeForVariableType(string type)
     {
+        var typeParts = type.Split("::");
+        var typeWithoutNamespace = typeParts.Last();
+        var namespaceStr = "";
+        if (typeParts.Length > 1)
+        {
+            for (var i = 0; i < typeParts.Length - 1; i++)
+            {
+                if (i != 0)
+                {
+                    namespaceStr += "::";
+                }
+                
+                namespaceStr += typeParts[i];
+            }
+        }
+        
         if (type is "int" or "i32" or "u32")
         {
             return SerializedTypeEnum.Integer;
@@ -168,6 +290,11 @@ public class SourceFilesUtility
             return SerializedTypeEnum.Float;
         }
 
+        if (_processedFiles.SerializableEnums.Exists(x => x.EnumName == typeWithoutNamespace))
+        {
+            return SerializedTypeEnum.Enum;
+        }
+        
         return SerializedTypeEnum.Custom;
     }
 

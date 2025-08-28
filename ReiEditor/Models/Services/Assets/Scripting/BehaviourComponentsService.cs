@@ -116,14 +116,41 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private SerializedProperty CreateSerializedProperty(string name, SerializableObjectInfo.SerializedPropertyData propertyData, SerializedProperty? parentProperty)
     {
-        var propertyValue = propertyData.Type.ParseDefaultValue(propertyData.DefaultValue);
+        object? propertyValue;
+        
+        if (propertyData.Type == SerializedTypeEnum.Enum)
+        {
+            var enumData = _serializableObjectsRegistry.GetEnum(propertyData.SourceType.Split("::").Last());
+            if (enumData == null)
+            {
+                _logger.LogError($"Could not find serializable enum info for property {name} {propertyData.SourceType}");
+                propertyValue = 0;
+            }
+            else
+            {
+                if (int.TryParse(propertyData.DefaultValue, out var enumInt))
+                {
+                    propertyValue = enumInt;
+                }
+                else
+                {
+                    propertyValue = enumData.Options[propertyData.DefaultValue!.Split("::").Last()];
+                }
+            }
+        }
+        else
+        {
+            propertyValue = propertyData.Type.ParseDefaultValue(propertyData.DefaultValue);
+        }
+        
         var property = new SerializedProperty(name, propertyData.Type, propertyValue, propertyData.SourceType, parentProperty);
+        
         if (property.Type != SerializedTypeEnum.Custom) return property;
         
         var nestedPropertyData = _serializableObjectsRegistry.GetObject(property.SourceType);
         if (nestedPropertyData == null)
         {
-            _logger.LogError($"Could not find serializable object info for property {name} {propertyData.SourceType}");
+            _logger.LogError($"Could not find serializable object info for property {name} {propertyData.SourceType} {propertyData.Type}");
             return property;
         }
 

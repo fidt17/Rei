@@ -1,8 +1,9 @@
 ﻿#include "Renderer.h"
 
+#include "Material/Material.h"
 #include "RenderScenario/DefaultRenderScenario.h"
 
-#define RENDER_SCENARIO_NUM 10
+#define RENDER_SCENARIO_NUM 5
 
 #if RENDER_SCENARIO_NUM == 0
     #include "../../../tests/render/hello_triangle/hello_triangle.h"
@@ -79,6 +80,7 @@ namespace rei::render
 
         PrepareMaterials();
         _renderScenario = std::make_unique<DefaultRenderScenario>(_target);
+        //_renderScenario = CREATE_RENDER_SCENARIO(_target);
         _renderScenario->Setup();
         
         if (!_camera.IsNull())
