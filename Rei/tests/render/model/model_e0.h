@@ -254,7 +254,7 @@ public:
         {
             _pointLights.emplace_back(GET_REF(e, rei::render::PointLight));
             lightsCount++;
-            if (lightsCount >= MAX_POINT_LIGHTS_COUNT) break;
+            if (lightsCount >= REI_MAX_POINT_LIGHTS_COUNT) break;
         }
     }
 

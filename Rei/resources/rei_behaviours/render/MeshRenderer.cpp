@@ -57,9 +57,8 @@ namespace rei::render
             }
 
             _material.Asset->GetShader().SetInt(textureName + number, i);
-            glBindTexture(GL_TEXTURE_2D, texturePtr->GetId());
+            texturePtr->Use();
         }
-        glActiveTexture(GL_TEXTURE0);
     }
 
     void MeshRenderer::Render() const
@@ -69,7 +68,7 @@ namespace rei::render
             LOG_ERROR("Model " + _model.Id + " is not loaded. Cannot render mesh.");
             return;
         }
-
+        
         GetRenderShader().Use();
         BindTextures();
 
@@ -102,7 +101,7 @@ namespace rei::render
     const Shader& MeshRenderer::GetRenderShader() const
     {
         if (_material.IsLoaded) return _material.Asset->GetShader();
-        
+
         return GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID).Asset->GetShader();
     }
 }

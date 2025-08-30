@@ -1,91 +1,19 @@
-﻿#define NR_POINT_LIGHTS 4
-
-struct AmbientLight
-{
-    float Strength;
-    vec4 Color;
-};
-
-struct PointLight
-{
-    vec3 Position;
-    float Strength;
-    vec4 Color;
-};
-
-#ifdef VERTEX
-    layout (location = 0) in vec3 aPos;
-    layout (location = 1) in vec3 aNormal;
-
-    uniform PointLight _PointLights[NR_POINT_LIGHTS];
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-
-    out vec3 FragPos;
-    out vec3 Normal;
-    out vec3 PointLightPositions[NR_POINT_LIGHTS];
-
+﻿#ifdef VERTEX
     void main()
     {
-        gl_Position = projection * view * model * vec4(aPos, 1.0);
-        FragPos = vec3(view * model * vec4(aPos, 1.0));
-        Normal = mat3(transpose(inverse(view * model))) * aNormal;
-
-        for (int i = 0; i < NR_POINT_LIGHTS; i++)
-        {
-            vec3 lightPosition = _PointLights[i].Position;
-            PointLightPositions[i] = vec3(view * vec4(lightPosition, 1.0));
-        }
+        REI_CalculateFragPosAndNormal();
+        REI_CalculatePointLightPositions();
     }
 #endif
 
 #ifdef FRAGMENT
-    in vec3 FragPos;
-    in vec3 Normal;
-    in vec3 PointLightPositions[NR_POINT_LIGHTS];
-
-    uniform AmbientLight _AmbientLight;
-    uniform PointLight _PointLights[NR_POINT_LIGHTS];
-
     uniform float _Shininess;
     uniform vec4 _Color;
 
-    out vec4 FragColor;
-
-    vec4 CalcPointLight(PointLight light, vec3 lightPosition)
-    {
-        // diffuse 
-        vec3 norm = normalize(Normal);
-        vec3 lightDir = normalize(lightPosition - FragPos);
-        float diff = max(dot(norm, lightDir), 0.0);
-        vec4 diffuse = diff * light.Color;
-        
-        // specular
-        vec3 viewDir = normalize(-FragPos);
-        vec3 reflectDir = reflect(-lightDir, norm);  
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), _Shininess);
-        vec4 specular = spec * light.Color; 
-
-        vec4 result = diffuse + specular;
-        result.a = 1;
-        return result * light.Strength;
-    } 
-
     void main()
     {
-        // ambient
-        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;
-        ambient.a = 1;
-
-        FragColor = _Color;          
-
-        // point light
-        vec4 pointLight;
-        for (int i = 0; i < NR_POINT_LIGHTS; i++)
-        {
-            pointLight += CalcPointLight(_PointLights[i], PointLightPositions[i]);
-        }
+        vec4 ambient = REI_CalculateAmbientLight();
+        vec4 pointLight = REI_CalculatePointLight(_Shininess);
         
         FragColor = (ambient + pointLight) * _Color;
     }

@@ -593,6 +593,7 @@
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
+    <ClInclude Include="src\Modules\Assets\TextAsset.h" />
     <ClInclude Include="src\Modules\Behaviour\Behaviour.h" />
     <ClInclude Include="src\Modules\Behaviour\Components\BehaviourCollection.h" />
     <ClInclude Include="src\Modules\Behaviour\Components\DisposeBehavioursEvent.h" />
@@ -693,6 +694,7 @@
     <ClCompile Include="src\Engine\Services.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
+    <ClCompile Include="src\Modules\Assets\TextAsset.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
@@ -813,7 +815,11 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="resources\shaders\default.rshader" />
+    <Content Include="resources\shaders\includes\ambient_light.rshader_include" />
+    <Content Include="resources\shaders\includes\fragment_common.rshader_include" />
+    <Content Include="resources\shaders\includes\point_light.rshader_include" />
+    <Content Include="resources\shaders\includes\shader_common.rshader_include" />
+    <Content Include="resources\shaders\includes\vertex_common.rshader_include" />
     <Content Include="resources\shaders\error.rshader" />
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />

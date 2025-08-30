@@ -1,99 +1,23 @@
-﻿#define NR_POINT_LIGHTS 4
-
-struct AmbientLight
-{
-    float Strength;
-    vec4 Color;
-};
-
-struct PointLight
-{
-    vec3 Position;
-    float Strength;
-    vec4 Color;
-};
-
-#ifdef VERTEX
-    layout (location = 0) in vec3 aPos;
-    layout (location = 1) in vec3 aNormal;
-    layout (location = 2) in vec2 aTexCoords;
-
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-    uniform PointLight _PointLights[NR_POINT_LIGHTS];
-
-    out vec2 TexCoords;
-    out vec3 FragPos;
-    out vec3 Normal;
-    out vec3 PointLightPositions[NR_POINT_LIGHTS];
-
+﻿#ifdef VERTEX
     void main()
     {
-       TexCoords = aTexCoords;    
-
-       vec4 vm = view * model * vec4(aPos, 1.0);
-       FragPos = vec3(vm);
-       gl_Position = projection * vm;
-       Normal = mat3(transpose(inverse(view * model))) * aNormal;
-
-       for (int i = 0; i < NR_POINT_LIGHTS; i++)
-       {
-           vec3 lightPosition = _PointLights[i].Position;
-           PointLightPositions[i] = vec3(view * vec4(lightPosition, 1.0));
-       }
+       REI_CalculateFragPosAndNormal();
+       REI_CalculatePointLightPositions();
     }
 #endif
 
 #ifdef FRAGMENT
-    in vec2 TexCoords;
-    in vec3 FragPos;
-    in vec3 Normal;
-    in vec3 PointLightPositions[NR_POINT_LIGHTS];
-
-    uniform AmbientLight _AmbientLight;
-    uniform PointLight _PointLights[NR_POINT_LIGHTS];
-
     uniform float _Shininess;
     uniform sampler2D texture_diffuse1;
     uniform sampler2D texture_specular1;
 
-    out vec4 FragColor;
-
-    vec4 CalcPointLight(PointLight light, vec3 lightPosition)
-    {
-        // diffuse 
-        vec3 norm = normalize(Normal);
-        vec3 lightDir = normalize(lightPosition - FragPos);
-        float diff = max(dot(norm, lightDir), 0.0);
-        vec4 diffuse = diff * light.Color;
-        
-        // specular
-        vec3 viewDir = normalize(-FragPos);
-        vec3 reflectDir = reflect(-lightDir, norm);  
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), _Shininess);
-        vec4 specular = spec * light.Color; 
-
-        vec4 result = diffuse + specular;
-        result.a = 1;
-        return result * light.Strength;
-    } 
-
     void main()
     {    
-        // ambient
-        vec4 ambient = _AmbientLight.Strength * _AmbientLight.Color;
-        ambient.a = 1;
+        vec4 ambient = REI_CalculateAmbientLight();
+        vec4 pointLight = REI_CalculatePointLight(_Shininess);
 
-        // point light
-        vec4 pointLight;
-        for (int i = 0; i < NR_POINT_LIGHTS; i++)
-        {
-            pointLight += CalcPointLight(_PointLights[i], PointLightPositions[i]);
-        }
-
-        vec4 texColor = texture(texture_diffuse1, TexCoords);
-        vec4 specularColor = texture(texture_specular1, TexCoords);
+        vec4 texColor = REI_Sample(texture_diffuse1, _TexCoords);
+        vec4 specularColor = REI_Sample(texture_specular1, _TexCoords);
 
         FragColor = (ambient + pointLight * specularColor) * texColor;
     }

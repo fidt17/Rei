@@ -105,7 +105,7 @@ void rei::render::DefaultRenderScenario::SetPointLights(const Shader& shader) co
 {
     for (int i = 0; i < _pointLights.size(); i++)
     {
-        if (i > MAX_POINT_LIGHTS_COUNT) break;
+        if (i > REI_MAX_POINT_LIGHTS_COUNT) break;
 
         const auto& light = _pointLights[i];
         if (light.IsNull()) continue;

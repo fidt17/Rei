@@ -1,0 +1,5 @@
+﻿struct AmbientLight
+{
+    float Strength;
+    vec4 Color;
+};

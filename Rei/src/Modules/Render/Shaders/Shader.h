@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "glm/fwd.hpp"
 #include "Modules/Render/Color/Color.h"
 
 namespace rei::render
@@ -26,10 +25,5 @@ namespace rei::render
         
     private:
         u32 _id;
-        
-#if DEBUG
-        std::string _vertexShader;
-        std::string _fragmentShader;
-#endif
     };
 }

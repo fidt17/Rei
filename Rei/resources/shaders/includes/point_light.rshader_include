@@ -1,0 +1,6 @@
+﻿struct PointLight
+{
+    vec3 Position;
+    float Strength;
+    vec4 Color;
+};
