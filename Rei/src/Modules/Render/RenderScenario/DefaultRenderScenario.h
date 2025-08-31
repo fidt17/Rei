@@ -20,6 +20,8 @@ namespace rei::render
 
     private:
         void SetBackgroundColor() const;
+        void SetPolygonMode() const;
+        void ResetBuffers() const;
 
         void FindAmbientLights();
         void FindPointLights();
@@ -28,6 +30,7 @@ namespace rei::render
         void SetPointLights(const Shader& shader) const;
 
         void RenderMeshRenderers() const;
+        void RenderOutlines() const;
         void RenderPointLights() const;
 
     private:

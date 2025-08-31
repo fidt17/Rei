@@ -1,7 +1,9 @@
 ﻿#pragma once
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/Editor/SelectedTag.h"
 #include "Modules/EntityManagement/EntityManager.h"
+#include "rei_behaviours/render/RenderOutlineTag.h"
 
 REI_EXTERN_API inline void CreateNewEntity(const char* name)
 {
@@ -117,5 +119,34 @@ REI_EXTERN_API inline void DeleteBehaviour(const i32 sceneEntityId, const i32 be
         if (IS_DEAD(e)) return;
 
         rei::GetEntityManager().DeleteBehaviour(e, behaviourId);
+    });
+}
+
+REI_EXTERN_API inline void SelectEntity(const i32 sceneEntityId)
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+
+        const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+        if (IS_DEAD(e)) return;
+
+        GET(e, rei::editor::SelectedTag);
+        GET(e, rei::render::RenderOutlineTag);
+    });
+}
+
+REI_EXTERN_API inline void ResetEntitySelection()
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+
+        const auto& f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::editor::SelectedTag>();
+        FOR(e, f)
+        {
+            DEL(e, rei::editor::SelectedTag);
+            DEL(e, rei::render::RenderOutlineTag);
+        }
     });
 }

@@ -567,6 +567,7 @@
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
+    <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
@@ -601,6 +602,7 @@
     <ClInclude Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
+    <ClInclude Include="src\Modules\Editor\SelectedTag.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
     <ClInclude Include="src\Modules\Render\Color\Color.h" />
@@ -815,6 +817,7 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\shaders\normal_outline.rshader" />
     <Content Include="resources\shaders\includes\ambient_light.rshader_include" />
     <Content Include="resources\shaders\includes\fragment_common.rshader_include" />
     <Content Include="resources\shaders\includes\point_light.rshader_include" />

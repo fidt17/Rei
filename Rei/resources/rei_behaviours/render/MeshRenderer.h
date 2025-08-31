@@ -19,6 +19,7 @@ namespace rei::render
         }
 
         void Render() const;
+        void RenderOutline() const;
 
         REI_API void SetModel(const assets::AssetRef<Model>& model);
         REI_API void SetMaterial(const assets::AssetRef<Material>& material);
@@ -26,10 +27,12 @@ namespace rei::render
         REI_API assets::AssetRef<Model>& GetModel();
         REI_API assets::AssetRef<Material>& GetMaterial();
         REI_API const Shader& GetRenderShader() const;
+        REI_API const Shader& GetOutlineShader() const;
 
     private:
         void BindTextures() const;
         void RenderMesh(const std::vector<Mesh>::value_type& mesh) const;
+        void RenderMeshOutline(const std::vector<Mesh>::value_type& mesh) const;
     };
 }
 

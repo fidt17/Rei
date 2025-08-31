@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Avalonia.Threading;
 using ReactiveUI;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Utils.Common;
@@ -32,6 +33,7 @@ public class HierarchyWindowViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
+    private readonly IEntityApi _entityApi;
 
 #pragma warning disable CS8618
     public HierarchyWindowViewModel() { }
@@ -41,11 +43,13 @@ public class HierarchyWindowViewModel : BaseViewModel
         Hierarchy<GameEntity> hierarchy,
         ISelectionService selectionService,
         IFactory<HierarchyNodeViewModel> hierarchyElementFactory,
-        IFactory<CreateSceneEntityCommand> createSceneEntityCommand)
+        IFactory<CreateSceneEntityCommand> createSceneEntityCommand, 
+        IEntityApi entityApi)
     {
         _activeHierarchy = hierarchy;
         _selectionService = selectionService;
         _hierarchyElementFactory = hierarchyElementFactory;
+        _entityApi = entityApi;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
         
         SetHierarchy(hierarchy);
@@ -109,6 +113,8 @@ public class HierarchyWindowViewModel : BaseViewModel
         {
             n.Deselect();
         }
+        
+        _selectionService.ResetSelection();
     }
 	
     private void HandleNodeSelectedChangedEvent(HierarchyNodeViewModel node, bool isSelected)

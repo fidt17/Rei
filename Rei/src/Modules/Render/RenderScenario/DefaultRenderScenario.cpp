@@ -2,6 +2,7 @@
 #include "DefaultRenderScenario.h"
 
 #include "../../../../resources/rei_behaviours/render/MeshRenderer.h"
+#include "../../../../resources/rei_behaviours/render/RenderOutlineTag.h"
 #include "../../../../resources/rei_behaviours/render/light/AmbientLight.h"
 #include "../../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../../resources/rei_behaviours/transformation/Transform.h"
@@ -17,12 +18,44 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
 void rei::render::DefaultRenderScenario::Setup()
 {
     glEnable(GL_DEPTH_TEST);
+
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_MULTISAMPLE);
 }
 
+void rei::render::DefaultRenderScenario::ResetBuffers() const
+{
+    glStencilMask(0xFF);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glStencilMask(0x00);
+}
+
 void rei::render::DefaultRenderScenario::Render()
+{
+    FindAmbientLights();
+    FindPointLights();
+
+    _projectionMatrix = _camera.Get().GetProjectionMatrix();
+    _viewMatrix = _camera.Get().GetViewMatrix();
+
+    SetPolygonMode();
+    SetBackgroundColor();
+
+    ResetBuffers();
+
+    RenderMeshRenderers();
+    RenderPointLights();
+
+    RenderOutlines();
+
+    glfwSwapBuffers(_target);
+}
+
+void rei::render::DefaultRenderScenario::SetPolygonMode() const
 {
     const auto renderMode = _camera.Get().GetRenderMode();
     if (renderMode == Shaded)
@@ -37,20 +70,6 @@ void rei::render::DefaultRenderScenario::Render()
     {
         glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
     }
-
-    FindAmbientLights();
-    FindPointLights();
-
-    _projectionMatrix = _camera.Get().GetProjectionMatrix();
-    _viewMatrix = _camera.Get().GetViewMatrix();
-
-    SetBackgroundColor();
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    RenderMeshRenderers();
-    RenderPointLights();
-
-    glfwSwapBuffers(_target);
 }
 
 void rei::render::DefaultRenderScenario::Dispose()
@@ -120,20 +139,57 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();
-    GetInternalWorld().RefreshAll();
 
     FOR(e, f)
     {
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
 
+        // render mesh normally
         const Shader& shader = meshRenderer.GetRenderShader();
-
         SetAmbientLight(shader);
         SetPointLights(shader);
-
         shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
+
+        // render to stencil buffer with disabled depth test
+        if (HAS(e, RenderOutlineTag))
+        {
+            glStencilFunc(GL_ALWAYS, 1, 0xFF); // mark fragments as 1 with mask of 0xFF
+            glStencilMask(0xFF); // set target mask
+
+            glDisable(GL_DEPTH_TEST);
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+            meshRenderer.Render();
+
+            glEnable(GL_DEPTH_TEST);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+            glStencilMask(0x00); // reset stencil mask
+        }
     }
+}
+
+void rei::render::DefaultRenderScenario::RenderOutlines() const
+{
+    ECS_WORLD(rei::GetInternalWorld());
+    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer, RenderOutlineTag>();
+
+    glDisable(GL_DEPTH_TEST);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF); // draw everywhere except for fragments marked as 1 on mask of 0xFF
+    glStencilMask(0x00); // do not override stencil data
+    
+    FOR(e, f)
+    {
+        // render mesh with outline shader
+        const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+        const Shader& outlineShader = meshRenderer.GetOutlineShader();
+        outlineShader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
+        meshRenderer.RenderOutline();
+    }
+
+    glEnable(GL_DEPTH_TEST);
+    glStencilFunc(GL_ALWAYS, 1, 0x00);
 }
 
 void rei::render::DefaultRenderScenario::RenderPointLights() const

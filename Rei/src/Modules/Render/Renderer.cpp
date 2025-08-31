@@ -114,12 +114,14 @@ namespace rei::render
         //const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/error.rshader");
         
         const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader");
-        fallbackShader.Asset->SetFloat("_Shininess", 0.5);
-        fallbackShader.Asset->SetColor("_Color", Color(1,1,1,1));
-        
-        GetAssetManager().CreateAssetWithId<Material>(REI_FALLBACK_MATERIAL_ID,fallbackShader);
+        auto fallbackMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_FALLBACK_MATERIAL_ID,fallbackShader);
+        fallbackMaterial->GetShader().SetFloat("_Shininess", 0.5);
+        fallbackMaterial->GetShader().SetColor("_Color", Color(1,1,1,1));
 
         const auto lightSourceShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader");
         GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);
+        
+        const auto outlineShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/normal_outline.rshader");
+        auto outlineMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OUTLINE_MATERIAL_ID,outlineShader);
     }
 }

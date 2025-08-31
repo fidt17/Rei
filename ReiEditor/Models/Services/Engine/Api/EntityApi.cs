@@ -150,4 +150,34 @@ public class EntityApi : IEntityApi
             // ignore
         }
     }
+
+    private delegate void SelectEntityDelegate(int sceneEntityId);
+    public void SelectEntity(int sceneEntityId)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+        
+        try
+        {
+            _engineApi.Invoke(typeof(SelectEntityDelegate), "SelectEntity", sceneEntityId);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
+
+    private delegate void ResetEntitySelectionDelegate();
+    public void ResetEntitySelection()
+    {
+        if (!_engineApi.IsEngineRunning) return;
+        
+        try
+        {
+            _engineApi.Invoke(typeof(ResetEntitySelectionDelegate), "ResetEntitySelection");
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
 }

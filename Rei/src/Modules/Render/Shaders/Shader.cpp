@@ -83,7 +83,7 @@ namespace rei::render
 
         const std::string vertexShader = version + shader_includes + shader_vertex_includes + "\n#define VERTEX;\n" + content;
         const std::string fragmentShader = version + shader_includes + shader_fragment_includes + "\n#define FRAGMENT;\n" + content;
-
+        
         _id = ShaderUtility().CreateShaderProgram(vertexShader.c_str(), fragmentShader.c_str());
     }
 
@@ -139,6 +139,7 @@ namespace rei::render
 
     void Shader::SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const
     {
+        Use();
         glUniformMatrix4fv(GetLocation("_Projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
         glUniformMatrix4fv(GetLocation("_View"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
         glUniformMatrix4fv(GetLocation("_Model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));

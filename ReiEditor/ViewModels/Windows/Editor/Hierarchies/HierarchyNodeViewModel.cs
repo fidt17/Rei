@@ -14,14 +14,16 @@ using ReiEditor.ViewModels.Controls;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
-public class HierarchyNodeViewModel : BaseViewModel, ISelectable
+public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 {
     public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; } = new();
     public ICommand ConfirmRenameCommand { get; }
     public ICommand DeleteCommand { get; }
     public MoveNodeCommand MoveNodeCommand { get; }
-	
+
+    GameEntity IEntitySelectable.Entity => Node.Content;
+    
     public ObservableField<string> Name { get; } = new("Node");
     public ObservableField<string> RenameValue { get; } = new("");
 	

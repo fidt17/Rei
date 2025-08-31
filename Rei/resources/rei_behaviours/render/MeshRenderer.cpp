@@ -12,6 +12,13 @@ namespace rei::render
         glBindVertexArray(0);
     }
 
+    void MeshRenderer::RenderMeshOutline(const std::vector<Mesh>::value_type& mesh) const
+    {
+        glBindVertexArray(mesh.VAO);
+        glDrawElements(GL_TRIANGLES, mesh.Indices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+    }
+
     void MeshRenderer::BindTextures() const
     {
         unsigned int diffuseNr = 1;
@@ -78,6 +85,22 @@ namespace rei::render
         }
     }
 
+    void MeshRenderer::RenderOutline() const
+    {
+        if (!_model.IsLoaded)
+        {
+            LOG_ERROR("Model " + _model.Id + " is not loaded. Cannot render mesh outline");
+            return;
+        }
+        
+        GetOutlineShader().Use();
+
+        for (const auto& mesh : _model.Asset->GetMeshes())
+        {
+            RenderMeshOutline(mesh);
+        }
+    }
+
     void MeshRenderer::SetModel(const assets::AssetRef<Model>& model)
     {
         _model = model;
@@ -103,5 +126,10 @@ namespace rei::render
         if (_material.IsLoaded) return _material.Asset->GetShader();
 
         return GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID).Asset->GetShader();
+    }
+
+    const Shader& MeshRenderer::GetOutlineShader() const
+    {
+        return GetAssetManager().GetById<Material>(REI_OUTLINE_MATERIAL_ID).Asset->GetShader();
     }
 }

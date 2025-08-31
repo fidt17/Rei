@@ -16,4 +16,7 @@ public interface IEntityApi
 
     void AddBehaviour(int sceneEntityId, int behaviourId);
     void DeleteBehaviour(int sceneEntityId, int behaviourId);
+
+    void SelectEntity(int sceneEntityId);
+    void ResetEntitySelection();
 }

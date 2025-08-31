@@ -28,6 +28,7 @@
 #define REI_MAX_POINT_LIGHTS_COUNT 4
 #define REI_FALLBACK_MATERIAL_ID "REI_ERROR_MATERIAL"
 #define REI_LIGHT_SOURCE_MATERIAL_ID "REI_LIGHT_SOURCE_MATERIAL"
+#define REI_OUTLINE_MATERIAL_ID "REI_OUTLINE_MATERIAL"
 // --------------
 
 #include "pch.h"
@@ -41,3 +42,6 @@
 
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/Behaviour/Behaviour.h"
+
+// Force include components
+#include "Modules/Editor/SelectedTag.h"

@@ -1,0 +1,13 @@
+﻿#ifdef VERTEX
+    void main()
+    {
+        gl_Position = _Projection * _View * _Model * vec4(aPos + aNormal * 0.1, 1.0);
+    }
+#endif
+
+#ifdef FRAGMENT
+    void main()
+    {   
+        FragColor = vec4(1, 0.35, 0.2, 1);
+    }
+#endif
