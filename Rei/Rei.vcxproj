@@ -562,6 +562,7 @@
     <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="external\stb_image.h" />
     <ClInclude Include="resources\meshes\CubeVertexData.h" />
+    <ClInclude Include="resources\meshes\QuadVertexData.h" />
     <ClInclude Include="resources\rei_behaviours\render\Camera.h" />
     <ClInclude Include="resources\rei_behaviours\render\CameraPerspectiveEnum.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
@@ -613,6 +614,7 @@
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\DefaultRenderScenario.h" />
+    <ClInclude Include="src\Modules\Render\RenderScenario\FrameBuffer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\RenderMode.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
@@ -784,6 +786,7 @@
       <AdditionalIncludeDirectories>C:\Repos\Rei\Rei\src;C:\Repos\Rei\Rei\external;</AdditionalIncludeDirectories>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
+    <ClCompile Include="src\Modules\Render\RenderScenario\FrameBuffer.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\AssignMainCameraSystem.cpp" />
@@ -817,7 +820,6 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="resources\shaders\normal_outline.rshader" />
     <Content Include="resources\shaders\includes\ambient_light.rshader_include" />
     <Content Include="resources\shaders\includes\fragment_common.rshader_include" />
     <Content Include="resources\shaders\includes\point_light.rshader_include" />
@@ -826,6 +828,8 @@
     <Content Include="resources\shaders\error.rshader" />
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />
+    <Content Include="resources\shaders\post_processing\alpha_outline.rshader" />
+    <Content Include="resources\shaders\post_processing\overlay_texture.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />

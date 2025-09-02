@@ -32,6 +32,12 @@ namespace rei::render
         return _renderMode;
     }
 
+    void Camera::GetOutputSize(int& width, int& height) const
+    {
+        width = _outputWidth;
+        height = _outputHeight;
+    }
+
     void Camera::SetOutputSize(int width, int height)
     {
         _outputWidth = width;

@@ -1,12 +1,14 @@
 ﻿#include "pch.h"
 #include "DefaultRenderScenario.h"
 
+#include "FrameBuffer.h"
 #include "../../../../resources/rei_behaviours/render/MeshRenderer.h"
 #include "../../../../resources/rei_behaviours/render/RenderOutlineTag.h"
 #include "../../../../resources/rei_behaviours/render/light/AmbientLight.h"
 #include "../../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../../resources/rei_behaviours/transformation/Transform.h"
 #include "glad/glad.h"
+#include "Modules/EntityManagement/EntityManager.h"
 
 #include "Modules/Render/Shaders/Shader.h"
 
@@ -25,32 +27,51 @@ void rei::render::DefaultRenderScenario::Setup()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_MULTISAMPLE);
+    
+    _outlineQuadMaterial = GetAssetManager().GetById<Material>(REI_OUTLINE_MATERIAL_ID);
+    _lightSourceMaterial = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
 }
 
-void rei::render::DefaultRenderScenario::ResetBuffers() const
+void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
 {
-    glStencilMask(0xFF);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glStencilMask(stencilMask);
+    glClear(clearMask);
     glStencilMask(0x00);
 }
 
-void rei::render::DefaultRenderScenario::Render()
+void rei::render::DefaultRenderScenario::OnBeforeRender()
 {
     FindAmbientLights();
     FindPointLights();
 
     _projectionMatrix = _camera.Get().GetProjectionMatrix();
     _viewMatrix = _camera.Get().GetViewMatrix();
+    _camera.Get().GetOutputSize(_outputWidth, _outputHeight);
+}
 
+void rei::render::DefaultRenderScenario::Render()
+{
     SetPolygonMode();
-    SetBackgroundColor();
 
-    ResetBuffers();
+    // selected objects pass
+    _outlineObjectsBuffer.SetOutputSize(_outputWidth, _outputHeight);
+    _outlineObjectsBuffer.EnableBuffer();
+    SetBackgroundColor(Color(0,0,0,0));
+    ClearBuffer();
+    
+    RenderOutlineObjects();
+    
+    _outlineObjectsBuffer.DisableBuffer();
+    // ------
+
+    // main pass
+    SetBackgroundColor(_camera.Get().GetBackgroundColor());
+    ClearBuffer();
 
     RenderMeshRenderers();
     RenderPointLights();
-
-    RenderOutlines();
+    RenderOutlineFrame();
+    // ------
 
     glfwSwapBuffers(_target);
 }
@@ -76,9 +97,8 @@ void rei::render::DefaultRenderScenario::Dispose()
 {
 }
 
-void rei::render::DefaultRenderScenario::SetBackgroundColor() const
+void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) const
 {
-    const auto& color = _camera.Get().GetBackgroundColor();
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
@@ -144,52 +164,27 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
     {
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
 
-        // render mesh normally
         const Shader& shader = meshRenderer.GetRenderShader();
         SetAmbientLight(shader);
         SetPointLights(shader);
         shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
-
-        // render to stencil buffer with disabled depth test
-        if (HAS(e, RenderOutlineTag))
-        {
-            glStencilFunc(GL_ALWAYS, 1, 0xFF); // mark fragments as 1 with mask of 0xFF
-            glStencilMask(0xFF); // set target mask
-
-            glDisable(GL_DEPTH_TEST);
-            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-            meshRenderer.Render();
-
-            glEnable(GL_DEPTH_TEST);
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
-            glStencilMask(0x00); // reset stencil mask
-        }
     }
 }
 
-void rei::render::DefaultRenderScenario::RenderOutlines() const
+void rei::render::DefaultRenderScenario::RenderOutlineObjects() const
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer, RenderOutlineTag>();
 
-    glDisable(GL_DEPTH_TEST);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF); // draw everywhere except for fragments marked as 1 on mask of 0xFF
-    glStencilMask(0x00); // do not override stencil data
-    
     FOR(e, f)
     {
-        // render mesh with outline shader
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
-        const Shader& outlineShader = meshRenderer.GetOutlineShader();
-        outlineShader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
-        meshRenderer.RenderOutline();
+        
+        const Shader& shader = meshRenderer.GetRenderShader();
+        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
+        meshRenderer.Render();
     }
-
-    glEnable(GL_DEPTH_TEST);
-    glStencilFunc(GL_ALWAYS, 1, 0x00);
 }
 
 void rei::render::DefaultRenderScenario::RenderPointLights() const
@@ -198,11 +193,20 @@ void rei::render::DefaultRenderScenario::RenderPointLights() const
     {
         if (light.IsNull()) return;
 
-        const auto& material = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
-        material.Asset->GetShader().SetColor("_Color", light.Get().GetColor());
-        material.Asset->GetShader().SetFloat("_Strength", light.Get().GetStrength());
-        material.Asset->GetShader().SetViewMatrices(_projectionMatrix, _viewMatrix, light.Get().GetTransform().CalculateModelMatrix());
+        const auto& shader = _lightSourceMaterial.Asset->GetShader();
+        shader.SetColor("_Color", light.Get().GetColor());
+        shader.SetFloat("_Strength", light.Get().GetStrength());
+        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, light.Get().GetTransform().CalculateModelMatrix());
 
         _cubeVertexData.Render();
     }
+}
+
+void rei::render::DefaultRenderScenario::RenderOutlineFrame() const
+{
+    _outlineQuadMaterial.Asset->GetShader().Use();
+ 
+    glActiveTexture(GL_TEXTURE0 + 0);
+    glBindTexture(GL_TEXTURE_2D, _outlineObjectsBuffer.GetColorTexture());
+    _quadVertexData.Render();
 }

@@ -13,6 +13,7 @@ namespace rei::render
 
         void SetCamera(const ecs::RefComponent<Camera>& camera);
         virtual void Setup() = 0;
+        virtual void OnBeforeRender() = 0;
         virtual void Render() = 0;
         virtual void Dispose() = 0;
 

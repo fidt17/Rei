@@ -99,6 +99,7 @@ namespace rei::render
             return;
         }
 
+        _renderScenario->OnBeforeRender();
         _renderScenario->Render();
     }
 
@@ -121,7 +122,11 @@ namespace rei::render
         const auto lightSourceShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader");
         GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);
         
-        const auto outlineShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/normal_outline.rshader");
+        const auto outlineShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/alpha_outline.rshader");
         auto outlineMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OUTLINE_MATERIAL_ID,outlineShader);
+        outlineMaterial->GetShader().SetColor("_Color", Color(1, 0.35f, 0.2f, 1));
+        
+        const auto overlayTextureShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/overlay_texture.rshader");
+        auto overlayTextureMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_TEXTURE_MATERIAL_ID,overlayTextureShader);
     }
 }

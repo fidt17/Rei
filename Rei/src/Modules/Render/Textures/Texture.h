@@ -15,7 +15,7 @@ namespace rei::render
     public:
         explicit Texture(resources::BinaryReader& reader);
 
-        void Use() const;
+        void Use(i32 idx = 0) const;
 
         u32 GetId() const;
         

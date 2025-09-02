@@ -25,8 +25,9 @@ rei::render::Texture::Texture(resources::BinaryReader& reader)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-void rei::render::Texture::Use() const
+void rei::render::Texture::Use(const i32 idx) const
 {
+    glActiveTexture(GL_TEXTURE0 + idx);
     glBindTexture(GL_TEXTURE_2D, _id);
 }
 
