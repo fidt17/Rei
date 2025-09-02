@@ -9,9 +9,7 @@ namespace rei::render
 
         ~FrameBuffer();
 
-        void SetOutputSize(int width, int height);
-        
-        void EnableBuffer() const;
+        void EnableBuffer(int width, int height);
         void DisableBuffer() const;
 
         u32 GetColorTexture() const;

@@ -17,8 +17,10 @@ rei::render::FrameBuffer::~FrameBuffer()
     DisposeTexture();
 }
 
-void rei::render::FrameBuffer::SetOutputSize(int width, int height)
+void rei::render::FrameBuffer::EnableBuffer(const int width, const int height)
 {
+    glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
+    
     const bool updateTexture = _outputWidth != width || _outputHeight != height;
     _outputWidth = width;
     _outputHeight = height;
@@ -27,16 +29,11 @@ void rei::render::FrameBuffer::SetOutputSize(int width, int height)
     {
         CreateTexture();
     }
-}
-
-void rei::render::FrameBuffer::EnableBuffer() const
-{
+    
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
         LOG_ERROR("FrameBuffer setup is not complete")
     }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
 }
 
 void rei::render::FrameBuffer::DisableBuffer() const

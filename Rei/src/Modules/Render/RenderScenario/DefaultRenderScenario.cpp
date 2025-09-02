@@ -54,8 +54,7 @@ void rei::render::DefaultRenderScenario::Render()
     SetPolygonMode();
 
     // selected objects pass
-    _outlineObjectsBuffer.SetOutputSize(_outputWidth, _outputHeight);
-    _outlineObjectsBuffer.EnableBuffer();
+    _outlineObjectsBuffer.EnableBuffer(_outputWidth, _outputHeight);
     SetBackgroundColor(Color(0,0,0,0));
     ClearBuffer();
     
