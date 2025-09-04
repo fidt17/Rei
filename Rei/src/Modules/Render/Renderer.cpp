@@ -112,7 +112,7 @@ namespace rei::render
     void Renderer::PrepareMaterials() const
     {
         // todo: put in engine resources
-        //const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/error.rshader");
+        //const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/special/error.rshader");
         
         const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader");
         auto fallbackMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_FALLBACK_MATERIAL_ID,fallbackShader);
@@ -128,5 +128,14 @@ namespace rei::render
         
         const auto overlayTextureShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/overlay_texture.rshader");
         auto overlayTextureMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_TEXTURE_MATERIAL_ID,overlayTextureShader);
+        
+        const auto grayscaleShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/grayscale.rshader");
+        auto grayscaleMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_GRAYSCALE_MATERIAL_ID,grayscaleShader);
+        
+        const auto inversionShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/inversion.rshader");
+        auto inversionMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_INVERSION_MATERIAL_ID,inversionShader);
+        
+        const auto depthShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/special/depth.rshader");
+        auto depthMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_DEPTH_MATERIAL_ID,depthShader);
     }
 }

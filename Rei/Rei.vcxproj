@@ -825,12 +825,15 @@
     <Content Include="resources\shaders\includes\point_light.rshader_include" />
     <Content Include="resources\shaders\includes\shader_common.rshader_include" />
     <Content Include="resources\shaders\includes\vertex_common.rshader_include" />
-    <Content Include="resources\shaders\error.rshader" />
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />
     <Content Include="resources\shaders\post_processing\alpha_outline.rshader" />
+    <Content Include="resources\shaders\post_processing\grayscale.rshader" />
+    <Content Include="resources\shaders\post_processing\inversion.rshader" />
     <Content Include="resources\shaders\post_processing\overlay_texture.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />
+    <Content Include="resources\shaders\special\depth.rshader" />
+    <Content Include="resources\shaders\special\error.rshader" />
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />
     <Content Include="resources\shaders\test\test_3.rshader" />

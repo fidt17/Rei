@@ -79,8 +79,11 @@ public class RenderModeSelectionViewModel : BaseViewModel
     private void ConfigureOptions()
     {
         _modeNames.Add("Shaded", RenderMode.Shaded);
-        _modeNames.Add("Wireframe (Lines)", RenderMode.WireframeLine);
+        _modeNames.Add("Wireframe (Lines)", RenderMode.WireframeLines);
         _modeNames.Add("Wireframe (Points)", RenderMode.WireframePoints);
+        _modeNames.Add("Depth", RenderMode.Depth);
+        _modeNames.Add("Grayscale", RenderMode.Grayscale);
+        _modeNames.Add("Inversion", RenderMode.Inversion);
         
         foreach (var keyValuePair in _modeNames)
         {

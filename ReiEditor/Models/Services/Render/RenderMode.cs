@@ -3,6 +3,12 @@
 public enum RenderMode
 {
     Shaded = 0,
-    WireframeLine = 1,
-    WireframePoints = 2
+    
+    WireframeLines = 1,
+    WireframePoints = 2,
+
+    Depth = 3,
+    
+    Grayscale = 4,
+    Inversion = 5
 }

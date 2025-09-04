@@ -46,15 +46,3 @@ vec4 REI_Sample(sampler2D sampler)
 {
     return texture(sampler, _TexCoords);
 }
-
-vec4 REI_Inversion(vec4 color)
-{
-    return vec4(vec3(1.0 - color), 1.0);
-}
-
-vec4 REI_Grayscale(vec4 color)
-{
-    float average = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
-    color = vec4(average, average, average, 1.0);
-    return vec4(vec3(1.0 - color), 1.0);
-}
