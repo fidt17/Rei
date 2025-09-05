@@ -1,5 +1,10 @@
 #pragma once
 
+namespace rei::window
+{
+    class WindowManager;
+}
+
 namespace rei::input
 {
     class Input;
@@ -32,8 +37,8 @@ namespace rei
         void SetAssetManager(const std::shared_ptr<assets::AssetManager>& assetManager) { _assetManager = assetManager; }
         REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
 
-        void SetInput(const std::shared_ptr<input::Input>& input) { _input = input; }
-        REI_API static input::Input& Input() { return *(GetInstance()->_input); }
+        void SetWindowManager(const std::shared_ptr<window::WindowManager>& assetManager) { _windowManager = assetManager; }
+        REI_API window::WindowManager& GetWindowManager() const { return *_windowManager; }
 
         REI_API static Services* GetInstance();
 
@@ -45,11 +50,12 @@ namespace rei
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<assets::AssetManager> _assetManager;
-        std::shared_ptr<input::Input> _input;
+        std::shared_ptr<window::WindowManager> _windowManager;
     };
 
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
     inline ecs::World& GetInternalWorld() { return Services::GetInstance()->GetInternalWorld(); }
     inline EntityManager& GetEntityManager() { return Services::GetInstance()->GetEntityManager(); }
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
+    inline window::WindowManager& GetWindowManager() { return Services::GetInstance()->GetWindowManager(); }
 }

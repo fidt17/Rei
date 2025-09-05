@@ -9,13 +9,6 @@ namespace rei::window
  
          _window = windowManager.NewWindow(settings);
  
-         _window->OnKeyEvent.append([&](const int key, const int, const int)
-         {
-             if (key != GLFW_KEY_ESCAPE) return;
- 
-             windowManager.CloseWindow(*_window);
-         });
- 
          _window->CloseRequestEvent.append([&]
          {
              windowManager.CloseWindow(*_window);

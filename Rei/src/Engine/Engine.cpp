@@ -9,10 +9,10 @@
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
 #include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
+#include "Modules/Editor/FlyCameraSystem.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Render/Systems/AssignMainCameraSystem.h"
-#include "Modules/Render/Systems/FlyCameraSystem.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Startup/App.h"
 
@@ -30,14 +30,13 @@ namespace rei::internal::engine
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>()),
         _entityManager(std::make_shared<EntityManager>(_internalWorld)),
-        _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager)),
-        _input(std::make_shared<input::Input>())
+        _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager))
     {
         Services::GetInstance()->SetEngine(this);
         Services::GetInstance()->SetAssetManager(_assetManager);
         Services::GetInstance()->SetInternalWorld(_internalWorld);
         Services::GetInstance()->SetEntityManager(_entityManager);
-        Services::GetInstance()->SetInput(_input);
+        Services::GetInstance()->SetWindowManager(_windowManager);
 
         ConfigureInternalWorld();
         SetupGLFW();
@@ -69,15 +68,15 @@ namespace rei::internal::engine
         {
             _internalWorld->AddSystem<behaviour::StartBehavioursSystem>(_entityManager);
             _internalWorld->AddSystem<ecs::DeleteHere<StartBehavioursEvent>>();
-            
+
             _internalWorld->AddSystem<behaviour::UpdateBehavioursSystem>(_entityManager);
             _internalWorld->AddSystem([&] { _app->OnUpdate(); });
-            
-            _internalWorld->AddSystem<render::FlyCameraSystem>(_input);
         }
 
+        _internalWorld->AddSystem<editor::FlyCameraSystem>();
+
         _internalWorld->AddSystem<render::AssignMainCameraSystem>(_mainRenderer);
-        
+
         _internalWorld->AddSystem([&] { _mainRenderer->Render(); });
 
         _internalWorld->AddSystem([&] { _reiMainThread->CompleteTasks(); });
@@ -103,7 +102,7 @@ namespace rei::internal::engine
             _mainRenderer->GetCamera().Get().SetOutputSize(width, height);
         });
 
-        Services::Input().SetSource(mainWindow->GetGLFWWindow());
+        Input::SetSource(mainWindow->GetGLFWWindow());
 
         _mainRenderer->SetTarget(mainWindow->GetGLFWWindow());
 

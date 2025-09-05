@@ -14,6 +14,8 @@ namespace rei::render
 
     void MeshRenderer::BindTextures() const
     {
+        if (!_material.IsLoaded) return;
+        
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
         unsigned int normalNr = 1;

@@ -13,6 +13,8 @@ namespace rei::window
         void CloseWindow(Window& w);
         void CloseAll();
 
+        void SetCursorIcon(i32 icon) const;
+        
     private:
         std::vector<std::shared_ptr<Window>> _windows;
     };

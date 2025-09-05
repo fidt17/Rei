@@ -1,14 +1,17 @@
 ﻿#include "pch.h"
 #include "WindowManager.h"
 
+#include "Modules/Input/Input.h"
+
 namespace rei::window
 {
     void WindowManager::OnUpdate()
     {
         if (_windows.empty()) return;
 
+        Input::Update();
         glfwPollEvents();
-        
+
         for (const auto& window : _windows)
         {
             window->OnUpdate();
@@ -39,5 +42,15 @@ namespace rei::window
             window->Close();
         }
         _windows.clear();
+    }
+
+    void WindowManager::SetCursorIcon(i32 icon) const
+    {
+        const auto cursor = glfwCreateStandardCursor(icon);
+
+        for (const auto& window : _windows)
+        {
+            glfwSetCursor(window->GetGLFWWindow(), cursor);
+        }
     }
 }

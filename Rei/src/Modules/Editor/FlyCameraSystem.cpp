@@ -1,16 +1,17 @@
 ﻿#include "pch.h"
 #include "FlyCameraSystem.h"
 
-#include "../../../../resources/rei_behaviours/render/Camera.h"
-#include "../../../../resources/rei_behaviours/transformation/Transform.h"
+#include "../../../resources/rei_behaviours/render/Camera.h"
+#include "../../../resources/rei_behaviours/transformation/Transform.h"
+#include "Engine/Engine.h"
+#include "Modules/Input/Input.h"
+#include "Modules/Window/WindowManager.h"
 
-rei::render::FlyCameraSystem::FlyCameraSystem(
+rei::editor::FlyCameraSystem::FlyCameraSystem(
     const std::shared_ptr<ecs::EcsRegistry>& ecs,
-    const std::shared_ptr<ecs::FilterProvider>& filters,
-    const std::shared_ptr<input::Input>& input)
+    const std::shared_ptr<ecs::FilterProvider>& filters)
     : System(ecs, filters),
-      _f(filters->Get<transformation::Transform, Camera>()),
-      _input(input)
+      _f(filters->Get<transformation::Transform, render::Camera>())
 {
 }
 
@@ -21,8 +22,18 @@ float lastX = -1, lastY = -1;
 bool didSetCursorPos;
 int framesToSkip = 60;
 
-void rei::render::FlyCameraSystem::OnUpdate()
+void rei::editor::FlyCameraSystem::OnUpdate()
 {
+    if (GetEngine().IsEditor())
+    {
+        if (Input::IsMouseButtonUp(GLFW_MOUSE_BUTTON_RIGHT))
+        {
+            didSetCursorPos = false;
+        }
+
+        if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) return;
+    }
+
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
@@ -31,53 +42,58 @@ void rei::render::FlyCameraSystem::OnUpdate()
     {
         auto& transform = GET(e, transformation::Transform);
 
-        const float cameraSpeed = 3.0f * deltaTime; // adjust accordingly
+        float cameraSpeed = 3.0f * deltaTime; // adjust accordingly
 
         glm::vec3 cameraRight = transform.GetRight();
         glm::vec3 cameraFront = transform.GetForward();
 
-        if (_input->KeyPressed(GLFW_KEY_W))
+        if (Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
+        {
+            cameraSpeed *= 2;
+        }
+
+        if (Input::IsKeyDown(GLFW_KEY_W))
         {
             transform.GetPosition() += cameraSpeed * cameraFront;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_S))
+        if (Input::IsKeyDown(GLFW_KEY_S))
         {
             transform.GetPosition() -= cameraSpeed * cameraFront;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_A))
+        if (Input::IsKeyDown(GLFW_KEY_A))
         {
             transform.GetPosition() += cameraSpeed * -cameraRight;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_D))
+        if (Input::IsKeyDown(GLFW_KEY_D))
         {
             transform.GetPosition() += cameraSpeed * cameraRight;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_Q))
+        if (Input::IsKeyDown(GLFW_KEY_Q))
         {
             transform.GetRotation().x += cameraSpeed * 45;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_E))
+        if (Input::IsKeyDown(GLFW_KEY_E))
         {
             transform.GetRotation().x -= cameraSpeed * 45;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_R))
+        if (Input::IsKeyDown(GLFW_KEY_R))
         {
             transform.GetRotation().y += cameraSpeed * 45;
         }
 
-        if (_input->KeyPressed(GLFW_KEY_F))
+        if (Input::IsKeyDown(GLFW_KEY_F))
         {
             transform.GetRotation().y -= cameraSpeed * 45;
         }
 
         f32 xpos, ypos;
-        _input->GetCursorPosition(xpos, ypos);
+        Input::GetMousePosition(xpos, ypos);
         if (!didSetCursorPos)
         {
             if (xpos >= 0 && ypos >= 0)
