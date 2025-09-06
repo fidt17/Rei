@@ -18,14 +18,27 @@ rei::render::Mesh::Mesh(resources::BinaryReader& reader)
         vertex = reader.GetByType<u32>();
     }
 
+    int totalVertices = 0;
+    Faces = std::vector<Face>(reader.GetI32());
+    for (auto& face : Faces)
+    {
+        const auto verticesCount = reader.GetI32();
+        for (int i = 0; i < verticesCount; i++)
+        {
+            face.Vertices.emplace_back(reader.GetByType<Vertex>());
+            totalVertices++;
+        }
+    }
+
     Setup();
 }
 
-rei::render::Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned>& indices)
+rei::render::Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
     : VAO(0), VBO(0), EBO(0)
 {
     Vertices = vertices;
     Indices = indices;
+    Faces = faces;
 
     Setup();
 }

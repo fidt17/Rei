@@ -1,7 +1,8 @@
 ﻿#include "pch.h"
 #include "Camera.h"
 
-#include "../transformation/Transform.h"
+#include "Modules/Render/Camera/MainCameraTag.h"
+#include "../../transformation/Transform.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/quaternion_common.hpp"
 
@@ -68,19 +69,54 @@ namespace rei::render
         const glm::vec3 cameraPosition = GetTransform().GetPosition();
 
         constexpr glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        const glm::vec3 cameraDirection = glm::normalize(cameraPosition - cameraTarget);
+        const glm::vec3 cameraDirection = normalize(cameraPosition - cameraTarget);
 
         const glm::vec3 up = math::Vector3::Up();
-        const glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+        const glm::vec3 cameraRight = normalize(cross(up, cameraDirection));
 
-        const glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+        const glm::vec3 cameraUp = cross(cameraDirection, cameraRight);
 
         const glm::vec3 forward = GetTransform().GetForward();
 
-        const glm::mat4 view = glm::lookAt(cameraPosition,
-                                           cameraPosition + forward,
-                                           up);
+        const glm::mat4 view = lookAt(cameraPosition,
+                                      cameraPosition + forward,
+                                      up);
 
         return view;
+    }
+
+    math::Ray Camera::GetScreenPointToRay(const f32 xPos, const f32 yPos) const
+    {
+        // Convert screen coordinates to normalized device coordinates
+        const f32 x = (2.0f * xPos) / _outputWidth - 1.0f;
+        const f32 y = 1.0f - (2.0f * yPos) / _outputHeight;
+        
+        // Convert to clip coordinates
+        const auto rayClip = glm::vec4(x, y, -1.0f, 1.0f);
+        
+        // Convert to eye coordinates
+        const glm::mat4 projection = GetProjectionMatrix();
+        glm::vec4 rayEye = inverse(projection) * rayClip;
+        rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+        
+        // Convert to world coordinates
+        const glm::mat4 view = GetViewMatrix();
+        const glm::vec4 rayWorld = inverse(view) * rayEye;
+        const glm::vec3 rayDirection = normalize(glm::vec3(rayWorld));
+        
+        return math::Ray(GetTransform().GetPosition(), math::Vector3(rayDirection));
+    }
+
+    ecs::RefComponent<Camera> Camera::GetMainCamera()
+    {
+         ECS_WORLD(GetInternalWorld());
+         auto f = GetInternalWorld().GetFiltersRegistry()->Get<Camera, MainCameraTag>();
+ 
+         FOR(e, f)
+         {
+             return GET_REF(e, Camera);
+         }
+        
+         return {};
     }
 }

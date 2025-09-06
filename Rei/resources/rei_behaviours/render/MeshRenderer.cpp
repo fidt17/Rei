@@ -2,6 +2,9 @@
 #include "MeshRenderer.h"
 
 #include "glad/glad.h"
+#include "Modules/Editor/SelectionCollider.h"
+#include "Modules/Physics/MeshCollider.h"
+#include "Modules/Physics/SphereCollider.h"
 
 namespace rei::render
 {
@@ -15,7 +18,7 @@ namespace rei::render
     void MeshRenderer::BindTextures() const
     {
         if (!_material.IsLoaded) return;
-        
+
         unsigned int diffuseNr = 1;
         unsigned int specularNr = 1;
         unsigned int normalNr = 1;
@@ -61,6 +64,29 @@ namespace rei::render
         }
     }
 
+    void MeshRenderer::LoadAssets(assets::AssetManager& assetManager)
+    {
+        assetManager.Load(_model);
+        assetManager.Load(_material);
+    }
+
+    void MeshRenderer::Init()
+    {
+        ECS_WORLD(GetInternalWorld());
+
+        /*
+        const auto sphereCollider = std::make_shared<physics::SphereCollider>();
+        sphereCollider->SetRadius(0.5);
+        auto& col = GET(GetEntity(), editor::SelectionCollider);
+        col.Collider = sphereCollider;
+        */
+        
+        const auto meshCollider = std::make_shared<physics::MeshCollider>();
+        meshCollider->SetModel(_model);
+        auto& col = GET(GetEntity(), editor::SelectionCollider);
+        col.Collider = meshCollider;
+    }
+
     void MeshRenderer::Render() const
     {
         if (!_model.IsLoaded)
@@ -68,7 +94,7 @@ namespace rei::render
             LOG_ERROR("Model " + _model.Id + " is not loaded. Cannot render mesh.");
             return;
         }
-        
+
         GetRenderShader().Use();
         BindTextures();
 

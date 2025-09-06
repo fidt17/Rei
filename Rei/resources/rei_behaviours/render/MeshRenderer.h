@@ -12,11 +12,9 @@ namespace rei::render
         SERIALIZE assets::AssetRef<Material> _material;
 
     public:
-        void LoadAssets(assets::AssetManager& assetManager) override
-        {
-            assetManager.Load(_model);
-            assetManager.Load(_material);
-        }
+        REI_API void LoadAssets(assets::AssetManager& assetManager) override;
+
+        REI_API void Init() override;
 
         void Render() const;
 

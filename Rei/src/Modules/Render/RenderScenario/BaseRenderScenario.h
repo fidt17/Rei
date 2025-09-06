@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../resources/rei_behaviours/render/Camera.h"
+#include "../resources/rei_behaviours/render/camera/Camera.h"
 #include "glad/glad.h"
 #include "glfw/glfw3.h"
 

@@ -1,8 +1,10 @@
 ﻿#include "pch.h"
 #include "AssignMainCameraSystem.h"
 
+#include "MainCameraTag.h"
+
 rei::render::AssignMainCameraSystem::AssignMainCameraSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs, const std::shared_ptr<ecs::FilterProvider>& filters,
-    const std::shared_ptr<Renderer>& renderer):
+                                                            const std::shared_ptr<Renderer>& renderer):
     System(ecs, filters),
     _f(filters->Get<Camera>()),
     _renderer(renderer)
@@ -15,6 +17,7 @@ void rei::render::AssignMainCameraSystem::OnUpdate()
     FOR(e, _f)
     {
         _renderer->SetCamera(GET_REF(e, Camera));
+        GET(e, MainCameraTag);
         return;
     }
 }

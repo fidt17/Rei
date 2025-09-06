@@ -8,7 +8,7 @@ namespace rei::ecs
         return Id == other.Id && Generation == other.Generation;
     }
 
-    std::string Entity::ToString() const
+    Entity::operator std::string() const
     {
         return "Entity[" + std::to_string(Id) + ":" + std::to_string(Generation) + "]";
     }

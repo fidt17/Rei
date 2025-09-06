@@ -8,8 +8,10 @@
 #include "../../../../resources/rei_behaviours/render/light/PointLight.h"
 #include "../../../../resources/rei_behaviours/transformation/Transform.h"
 #include "glad/glad.h"
+#include "Modules/Editor/SelectionCollider.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
+#include "Modules/Physics/SphereCollider.h"
 
 #include "Modules/Render/Shaders/Shader.h"
 
@@ -32,7 +34,7 @@ void rei::render::DefaultRenderScenario::Setup()
     _overlayMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_TEXTURE_MATERIAL_ID);
     _grayscaleMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_GRAYSCALE_MATERIAL_ID);
     _inversionMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_INVERSION_MATERIAL_ID);
-    
+
     _outlineQuadMaterial = GetAssetManager().GetById<Material>(REI_OUTLINE_MATERIAL_ID);
     _lightSourceMaterial = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
     _depthMaterial = GetAssetManager().GetById<Material>(REI_DEPTH_MATERIAL_ID);
@@ -111,7 +113,9 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     ClearBuffer();
 
     RenderMeshRenderers();
+    
     RenderPointLights();
+    RenderSelectionColliders();
     // ------
 
     // post processing
@@ -275,6 +279,40 @@ void rei::render::DefaultRenderScenario::RenderPointLights() const
     }
 }
 
+void rei::render::DefaultRenderScenario::RenderSelectionColliders() const
+{
+    ECS_WORLD(GetInternalWorld());
+    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<transformation::Transform, editor::SelectionCollider>();
+
+    FOR(e, f)
+    {
+        auto& transform = GET(e, transformation::Transform);
+        auto& collider = GET(e, editor::SelectionCollider);
+
+        const auto& shader = _lightSourceMaterial.Asset->GetShader();
+        shader.SetColor("_Color", Color{0, 1, 0, 1});
+        shader.SetFloat("_Strength", 1);
+
+        if (collider.Collider->GetType() == physics::Sphere)
+        {
+            const std::shared_ptr<physics::SphereCollider>& sphereCollider = std::reinterpret_pointer_cast<physics::SphereCollider>(collider.Collider);
+
+            auto model = glm::mat4(1.0f);
+            model = translate(model, glm::vec3(transform.GetPosition()));
+            model = rotate(model, glm::radians(transform.GetRotation().x), glm::vec3(1, 0, 0));
+            model = rotate(model, glm::radians(transform.GetRotation().y), glm::vec3(0, 1, 0));
+            model = rotate(model, glm::radians(transform.GetRotation().z), glm::vec3(0, 0, 1));
+            model = scale(model, glm::vec3(sphereCollider->GetRadius()));
+
+            shader.SetViewMatrices(_projectionMatrix, _viewMatrix, model);
+
+            glDisable(GL_DEPTH_TEST);
+            _cubeVertexData.Render();
+            glEnable(GL_DEPTH_TEST);
+        }
+    }
+}
+
 void rei::render::DefaultRenderScenario::RenderOutlineFrame() const
 {
     _outlineQuadMaterial.Asset->GetShader().Use();
@@ -302,7 +340,7 @@ void rei::render::DefaultRenderScenario::RenderPostprocessing() const
     {
         material = _inversionMaterial;
     }
-    
+
     material.Asset->GetShader().Use();
 
     glActiveTexture(GL_TEXTURE0 + 0);

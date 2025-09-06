@@ -38,7 +38,7 @@ REI_EXTERN_API inline rei::window::Window* CreateEngineWindow()
         windowSettings.Height = 100;
         windowSettings.HideOnCreation = true;
         windowSettings.CenterCursor = false;
-        windowSettings.HideCursor = rei::GetEngine().IsPlaymode();
+        windowSettings.HideCursor = false;
 
         window = rei::GetEngine().CreateMainWindow(windowSettings);
         window->DisableStyle();

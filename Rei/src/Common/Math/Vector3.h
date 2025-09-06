@@ -19,15 +19,22 @@ namespace rei::math
         operator std::string() const;
 
         Vector3 operator-() const;
-        
+
         Vector3& operator+=(const glm::vec<3, float>& vec);
         Vector3& operator+=(const Vector3& vec);
-        
+
         Vector3& operator-=(const glm::vec<3, float>& vec);
         Vector3& operator-=(const Vector3& vec);
-        
+
         Vector3& operator*=(float value);
         Vector3& operator/=(float value);
+        
+        Vector3 operator+(const Vector3& vec) const;
+        Vector3 operator-(const Vector3& vec) const;
+        Vector3 operator*(float value) const;
+        Vector3 operator/(float value) const;
+
+        f32 Length() const;
 
         static Vector3 Right();
         static Vector3 Left();
@@ -37,5 +44,8 @@ namespace rei::math
 
         static Vector3 Forward();
         static Vector3 Backwards();
+
+        static float Dot(const Vector3& a, const Vector3& b);
+        static Vector3 Cross(const Vector3& a, const Vector3& b);
     };
 }

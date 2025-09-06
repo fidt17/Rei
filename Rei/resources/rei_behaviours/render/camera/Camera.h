@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CameraPerspectiveEnum.h"
+#include "Common/Math/Ray.h"
 #include "glm/ext/matrix_transform.hpp"
 #include "Modules/Render/Color/Color.h"
 #include "Modules/Render/RenderScenario/RenderMode.h"
@@ -10,14 +11,13 @@ namespace rei::render
     {
     private:
         BEHAVIOUR_BODY(Camera)
-        
         SERIALIZE f32 _fov = 45;
         SERIALIZE f32 _orthographicSize = 4;
-        
+
         SERIALIZE i32 _nearClipPlane = 0;
         SERIALIZE i32 _farClipPlane = 1000;
         SERIALIZE Color _backgroundColor = Color(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
-        
+
         SERIALIZE CameraPerspectiveEnum _perspective = Perspective;
 
         i32 _outputWidth;
@@ -38,6 +38,10 @@ namespace rei::render
 
         REI_API glm::mat4 GetProjectionMatrix() const;
         REI_API glm::mat4 GetViewMatrix() const;
+
+        REI_API math::Ray GetScreenPointToRay(f32 xPos, f32 yPos) const;
+
+        REI_API static ecs::RefComponent<Camera> GetMainCamera();
     };
 }
 

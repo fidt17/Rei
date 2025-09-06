@@ -1,8 +1,6 @@
 ﻿#pragma once
+#include "Face.h"
 #include "Vertex.h"
-#include "Modules/Render/Material/Material.h"
-#include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Textures/Texture.h"
 
 namespace rei::render
 {
@@ -11,14 +9,14 @@ namespace rei::render
     public:
         std::vector<Vertex> Vertices;
         std::vector<u32> Indices;
+        std::vector<Face> Faces;
         u32 VAO, VBO, EBO;
 
         REI_API Mesh() = default;
         Mesh(resources::BinaryReader& reader);
-        Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
+        Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces);
 
     private:
-
         void Setup();
     };
 }

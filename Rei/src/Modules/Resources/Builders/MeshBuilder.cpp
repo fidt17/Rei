@@ -8,6 +8,7 @@ rei::render::Mesh MeshBuilder::ProcessMesh(const aiMesh* mesh) const
 {
     std::vector<rei::render::Vertex> vertices;
     std::vector<unsigned int> indices;
+    std::vector<rei::render::Face> faces;
 
     // process vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -31,14 +32,17 @@ rei::render::Mesh MeshBuilder::ProcessMesh(const aiMesh* mesh) const
     // process indices
     for (unsigned int i = 0; i < mesh->mNumFaces; i++)
     {
-        const aiFace face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++)
+        const aiFace ai_face = mesh->mFaces[i];
+        auto& face = faces.emplace_back();
+        for (unsigned int j = 0; j < ai_face.mNumIndices; j++)
         {
-            indices.push_back(face.mIndices[j]);
+            auto idx = ai_face.mIndices[j];
+            indices.push_back(idx);
+            face.Vertices.push_back(vertices[idx]);
         }
     }
 
-    return rei::render::Mesh(vertices, indices);
+    return rei::render::Mesh(vertices, indices, faces);
 }
 
 void MeshBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vector<rei::render::Mesh>& meshes) const
@@ -67,7 +71,7 @@ void MeshBuilder::BuildMeshAsset(const std::filesystem::path& assetPath, rei::re
 
     // meshes
     writer.WriteI32(meshes.size());
-    for (auto mesh : meshes)
+    for (const auto& mesh : meshes)
     {
         // vertices
         writer.WriteI32(mesh.Vertices.size());
@@ -81,6 +85,17 @@ void MeshBuilder::BuildMeshAsset(const std::filesystem::path& assetPath, rei::re
         for (const auto& index : mesh.Indices)
         {
             writer.Write(index);
+        }
+
+        // faces
+        writer.WriteI32(mesh.Faces.size());
+        for (auto& face : mesh.Faces)
+        {
+            writer.WriteI32(face.Vertices.size());
+            for (int i = 0; i < face.Vertices.size(); i++)
+            {
+                writer.Write(face.Vertices[i]);
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ namespace rei::ecs
         EntityGen Generation = 0;
 
         bool operator==(const Entity& other) const;
-        std::string ToString() const;
+        operator std::string() const;
     };
     
     const Entity NULL_ENTITY(-1, 0);

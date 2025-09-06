@@ -3,7 +3,6 @@
 #include "FrameBuffer.h"
 #include "../../../../resources/meshes/CubeVertexData.h"
 #include "../../../../resources/meshes/QuadVertexData.h"
-#include "../../../../resources/rei_behaviours/render/Camera.h"
 #include "Modules/Render/Material/Material.h"
 
 namespace rei::render
@@ -40,6 +39,7 @@ namespace rei::render
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
         void RenderOutlineObjects() const;
         void RenderPointLights() const;
+        void RenderSelectionColliders() const;
 
         void RenderOutlineFrame() const;
         void RenderPostprocessing() const;

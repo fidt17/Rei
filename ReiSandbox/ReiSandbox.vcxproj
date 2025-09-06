@@ -114,11 +114,6 @@
     <ClInclude Include="Scripts\RotateAroundAxis.h" />
     <ClInclude Include="Scripts\TestMovement.h" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="Scripts\ColorLerp.h.meta" />
-    <Content Include="Scripts\RotateAroundAxis.h.meta" />
-    <Content Include="Scripts\TestMovement.h.meta" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

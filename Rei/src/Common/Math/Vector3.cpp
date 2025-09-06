@@ -77,6 +77,31 @@ namespace rei::math
         return *this;
     }
 
+    Vector3 Vector3::operator+(const Vector3& vec) const
+    {
+        return Vector3( x + vec.x, y + vec.y, z + vec.z );
+    }
+
+    Vector3 Vector3::operator-(const Vector3& vec) const
+    {
+        return Vector3( x - vec.x, y - vec.y, z - vec.z );
+    }
+
+    Vector3 Vector3::operator*(const float value) const
+    {
+        return Vector3( x * value, y * value, z * value );
+    }
+
+    Vector3 Vector3::operator/(const float value) const
+    {
+        return Vector3( x / value, y / value, z / value );
+    }
+
+    f32 Vector3::Length() const
+    {
+        return sqrt(x * x + y * y + z * z);
+    }
+
     Vector3 Vector3::Right()
     {
         return Vector3(1, 0, 0);
@@ -105,5 +130,18 @@ namespace rei::math
     Vector3 Vector3::Backwards()
     {
         return Vector3(0, 0, -1);
+    }
+
+    float Vector3::Dot(const Vector3& a, const Vector3& b)
+    {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    Vector3 Vector3::Cross(const Vector3& a, const Vector3& b)
+    {
+        const f32 new_x = a.y * b.z - a.z * b.y;
+        const f32 new_y = a.z * b.x - a.x * b.z;
+        const f32 new_z = a.x * b.y - a.y * b.x;
+        return Vector3(new_x, new_y, new_z);
     }
 }

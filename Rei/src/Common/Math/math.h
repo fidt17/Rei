@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "Ray.h"
+#include "Vector3.h"
 
 namespace rei::math
 {
@@ -7,4 +9,6 @@ namespace rei::math
     {
         return a + t * (b - a);
     }
+
+    bool SphereRayIntersection(const Vector3& center, f32 _radius, const Ray& ray);
 }

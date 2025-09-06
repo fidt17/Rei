@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "FlyCameraSystem.h"
 
-#include "../../../resources/rei_behaviours/render/Camera.h"
+#include "../../../resources/rei_behaviours/render/camera/Camera.h"
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Engine.h"
 #include "Modules/Input/Input.h"
@@ -24,15 +24,12 @@ int framesToSkip = 60;
 
 void rei::editor::FlyCameraSystem::OnUpdate()
 {
-    if (GetEngine().IsEditor())
+    if (Input::IsMouseButtonUp(GLFW_MOUSE_BUTTON_RIGHT))
     {
-        if (Input::IsMouseButtonUp(GLFW_MOUSE_BUTTON_RIGHT))
-        {
-            didSetCursorPos = false;
-        }
-
-        if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) return;
+        didSetCursorPos = false;
     }
+
+    if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) return;
 
     float currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
@@ -49,7 +46,7 @@ void rei::editor::FlyCameraSystem::OnUpdate()
 
         if (Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
         {
-            cameraSpeed *= 2;
+            cameraSpeed *= 3;
         }
 
         if (Input::IsKeyDown(GLFW_KEY_W))

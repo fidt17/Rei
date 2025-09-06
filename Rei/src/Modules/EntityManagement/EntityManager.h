@@ -20,7 +20,7 @@ namespace rei
 
                     if (HAS(e, T))
                     {
-                        REI_THROW("Entity " + e.ToString() + " already has a component " + STRING(id))
+                        REI_THROW("Entity " + std::string(e) + " already has a component " + STRING(id))
                     }
 
                     T& t = GET(e, T);

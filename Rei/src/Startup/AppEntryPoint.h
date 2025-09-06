@@ -61,7 +61,7 @@ int main()
         windowSettings.Height = 720;
         windowSettings.HideOnCreation = false;
         windowSettings.CenterCursor = true;
-        windowSettings.HideCursor = true;
+        windowSettings.HideCursor = false;
         engine->CreateMainWindow(windowSettings);
         
         rei::external::Start(engine);
