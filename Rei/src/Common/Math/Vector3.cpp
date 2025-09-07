@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+
 #include "Vector3.h"
 
 namespace rei::math
@@ -28,7 +29,7 @@ namespace rei::math
         x += vec.x;
         y += vec.y;
         z += vec.z;
-        
+
         return *this;
     }
 
@@ -37,16 +38,16 @@ namespace rei::math
         x += vec.x;
         y += vec.y;
         z += vec.z;
-        
+
         return *this;
     }
-    
+
     Vector3& Vector3::operator-=(const glm::vec<3, float>& vec)
     {
         x -= vec.x;
         y -= vec.y;
         z -= vec.z;
-        
+
         return *this;
     }
 
@@ -55,7 +56,7 @@ namespace rei::math
         x -= vec.x;
         y -= vec.y;
         z -= vec.z;
-        
+
         return *this;
     }
 
@@ -79,22 +80,46 @@ namespace rei::math
 
     Vector3 Vector3::operator+(const Vector3& vec) const
     {
-        return Vector3( x + vec.x, y + vec.y, z + vec.z );
+        return Vector3(x + vec.x, y + vec.y, z + vec.z);
     }
 
     Vector3 Vector3::operator-(const Vector3& vec) const
     {
-        return Vector3( x - vec.x, y - vec.y, z - vec.z );
+        return Vector3(x - vec.x, y - vec.y, z - vec.z);
     }
 
     Vector3 Vector3::operator*(const float value) const
     {
-        return Vector3( x * value, y * value, z * value );
+        return Vector3(x * value, y * value, z * value);
     }
 
     Vector3 Vector3::operator/(const float value) const
     {
-        return Vector3( x / value, y / value, z / value );
+        return Vector3(x / value, y / value, z / value);
+    }
+
+    Vector3 Vector3::operator*(const Vector3& vec) const
+    {
+        return Vector3(x * vec.x, y * vec.y, z * vec.z);
+    }
+
+    Vector3 Vector3::operator/(const Vector3& vec) const
+    {
+        return Vector3(x / vec.x, y / vec.y, z / vec.z);
+    }
+
+    Vector3 Vector3::Transform(const glm::mat4& m) const
+    {
+        return Vector3(glm::vec3(m * glm::vec4(x, y, z, 1)));
+    }
+
+    f32 Vector3::operator[](const i32 idx) const
+    {
+        if (idx == 0) return x;
+        if (idx == 1) return y;
+        if (idx == 2) return z;
+
+        REI_THROW("Vector3 element idx out of range: " + STRING(idx))
     }
 
     f32 Vector3::Length() const
@@ -132,6 +157,18 @@ namespace rei::math
         return Vector3(0, 0, -1);
     }
 
+    Vector3 Vector3::Max()
+    {
+        constexpr f32 max = std::numeric_limits<f32>::max();
+        return Vector3(max, max, max);
+    }
+
+    Vector3 Vector3::Min()
+    {
+        constexpr f32 min = std::numeric_limits<f32>::lowest();
+        return Vector3(min, min, min);
+    }
+
     float Vector3::Dot(const Vector3& a, const Vector3& b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -143,5 +180,10 @@ namespace rei::math
         const f32 new_y = a.z * b.x - a.x * b.z;
         const f32 new_z = a.x * b.y - a.y * b.x;
         return Vector3(new_x, new_y, new_z);
+    }
+
+    Vector3 Vector3::Average(const Vector3& a, const Vector3& b)
+    {
+        return Vector3((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
     }
 }

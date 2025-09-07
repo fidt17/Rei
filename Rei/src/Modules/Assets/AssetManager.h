@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "AssetRef.h"
 #include "AssetsMap.h"
+#include "Common/Time/ScopedTimer.h"
 #include "Modules/Resources/AssetBuilder.h"
 #include "Modules/Resources/Serialization/BinaryReader.h"
 
@@ -92,15 +93,17 @@ namespace rei::assets
             if (ref.Id == "") return false;
             if (ref.IsLoaded) return true;
 
+            auto loadedAsset = _loadedAssets.find(ref.Id);
+            if (loadedAsset != _loadedAssets.end())
+            {
+                ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
+                ref.IsLoaded = true;
+                return true;
+            }
+
             try
             {
-                auto loadedAsset = _loadedAssets.find(ref.Id);
-                if (loadedAsset != _loadedAssets.end())
-                {
-                    ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
-                    ref.IsLoaded = true;
-                    return true;
-                }
+                time::ScopedTimer timer("Asset " + ref.Id + " loading");
 
                 // if an absolute path to the asset is used instead
                 if (ref.Id.rfind("@", 0) == 0)

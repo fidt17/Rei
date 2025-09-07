@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Core.h"
+
 #include "glm/vec3.hpp"
+#include "glm/fwd.hpp"
 
 namespace rei::math
 {
@@ -28,11 +30,19 @@ namespace rei::math
 
         Vector3& operator*=(float value);
         Vector3& operator/=(float value);
-        
+
         Vector3 operator+(const Vector3& vec) const;
         Vector3 operator-(const Vector3& vec) const;
+        
         Vector3 operator*(float value) const;
         Vector3 operator/(float value) const;
+
+        Vector3 operator*(const Vector3& vec) const;
+        Vector3 operator/(const Vector3& vec) const;
+
+        Vector3 Transform(const glm::mat4& m) const;
+        
+        f32 operator[](i32 idx) const;
 
         f32 Length() const;
 
@@ -45,7 +55,11 @@ namespace rei::math
         static Vector3 Forward();
         static Vector3 Backwards();
 
+        static Vector3 Max();
+        static Vector3 Min();
+
         static float Dot(const Vector3& a, const Vector3& b);
         static Vector3 Cross(const Vector3& a, const Vector3& b);
+        static Vector3 Average(const Vector3& a, const Vector3& b);
     };
 }

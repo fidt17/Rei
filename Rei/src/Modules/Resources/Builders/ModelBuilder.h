@@ -3,10 +3,10 @@
 #include "assimp/scene.h"
 #include "Modules/Render/Mesh/Mesh.h"
 
-class MeshBuilder
+class ModelBuilder
 {
 public:
-    void BuildMeshAsset(const std::filesystem::path& assetPath, rei::resources::BinaryWriter& writer) const;
+    void BuildModelAsset(const std::filesystem::path& assetPath, rei::resources::BinaryWriter& writer) const;
     
 private:
     rei::render::Mesh ProcessMesh(const aiMesh* mesh) const;

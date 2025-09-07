@@ -3,6 +3,7 @@
 
 #include "BuildScenesConfig.h"
 #include "Scene.h"
+#include "Common/Time/ScopedTimer.h"
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
@@ -19,6 +20,7 @@ namespace rei::scenes
 
     void SceneManager::LoadScene(const int id)
     {
+        time::ScopedTimer timer("Scene " + STRING(id) + " loading");
         REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
 
         _activeScene = _buildScenesConfig->GetScene(id);

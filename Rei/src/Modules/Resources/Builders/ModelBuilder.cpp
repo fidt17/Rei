@@ -1,10 +1,10 @@
 ﻿#include "pch.h"
-#include "MeshBuilder.h"
+#include "ModelBuilder.h"
 
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 
-rei::render::Mesh MeshBuilder::ProcessMesh(const aiMesh* mesh) const
+rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
 {
     std::vector<rei::render::Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -42,10 +42,10 @@ rei::render::Mesh MeshBuilder::ProcessMesh(const aiMesh* mesh) const
         }
     }
 
-    return rei::render::Mesh(vertices, indices, faces);
+    return rei::render::Mesh("NaN", vertices, indices, faces);
 }
 
-void MeshBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vector<rei::render::Mesh>& meshes) const
+void ModelBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vector<rei::render::Mesh>& meshes) const
 {
     // process node's meshes
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -61,7 +61,7 @@ void MeshBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vec
     }
 }
 
-void MeshBuilder::BuildMeshAsset(const std::filesystem::path& assetPath, rei::resources::BinaryWriter& writer) const
+void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::resources::BinaryWriter& writer) const
 {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(assetPath.string(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
@@ -69,10 +69,15 @@ void MeshBuilder::BuildMeshAsset(const std::filesystem::path& assetPath, rei::re
     std::vector<rei::render::Mesh> meshes;
     ProcessNode(scene->mRootNode, scene, meshes);
 
+    writer.WriteStr(assetPath.filename().generic_string());
+
     // meshes
     writer.WriteI32(meshes.size());
+    i32 meshCounter = 0;
     for (const auto& mesh : meshes)
     {
+        writer.WriteStr(assetPath.filename().generic_string() + ":" + STRING(meshCounter++));
+
         // vertices
         writer.WriteI32(mesh.Vertices.size());
         for (const auto& vertex : mesh.Vertices)

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Face.h"
+#include "MeshBVHNode.h"
 #include "Vertex.h"
 
 namespace rei::render
@@ -7,16 +8,24 @@ namespace rei::render
     class Mesh
     {
     public:
+        std::string Name;
         std::vector<Vertex> Vertices;
         std::vector<u32> Indices;
         std::vector<Face> Faces;
+
         u32 VAO, VBO, EBO;
+
+        MeshBVHNode BVHRoot;
 
         REI_API Mesh() = default;
         Mesh(resources::BinaryReader& reader);
-        Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces);
+        Mesh(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces);
+
+        REI_API void Setup();
+        REI_API void Dispose() const;
 
     private:
-        void Setup();
+        void SetupOpenGlObjects();
+        void SetupBVH();
     };
 }

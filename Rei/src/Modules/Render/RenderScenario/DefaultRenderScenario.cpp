@@ -57,8 +57,19 @@ void rei::render::DefaultRenderScenario::OnBeforeRender()
     _camera.Get().GetOutputSize(_outputWidth, _outputHeight);
 }
 
+f32 _s = 0.5f;
 void rei::render::DefaultRenderScenario::Render()
 {
+    if (Input::IsKeyDown(GLFW_KEY_DOWN))
+    {
+        _s -= 0.001f;
+    }
+    else if (Input::IsKeyDown(GLFW_KEY_UP))
+    {
+        _s += 0.001f;
+    }
+    //LOG_WARNING(STRING(_s))
+    
     const auto renderMode = _camera.Get().GetRenderMode();
     if (renderMode == WireframeLines || renderMode == WireframePoints)
     {
@@ -113,9 +124,10 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     ClearBuffer();
 
     RenderMeshRenderers();
-    
+
     RenderPointLights();
     RenderSelectionColliders();
+    RenderMeshRenderersBVH();
     // ------
 
     // post processing
@@ -249,6 +261,152 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
     }
 }
 
+void rei::render::DefaultRenderScenario::RenderBVH(const MeshBVHNode& node,
+                                                   const math::Vector3& pos,
+                                                   const math::Vector3& rot,
+                                                   const math::Vector3& s) const
+{
+    
+    using math::Vector3;
+
+    auto rootModel = glm::mat4(1.0f);
+    rootModel = translate(rootModel, glm::vec3(pos));
+    rootModel = rotate(rootModel, glm::radians(rot.x), glm::vec3(1, 0, 0));
+    rootModel = rotate(rootModel, glm::radians(rot.y), glm::vec3(0, 1, 0));
+    rootModel = rotate(rootModel, glm::radians(rot.z), glm::vec3(0, 0, 1));
+    rootModel = scale(rootModel, glm::vec3(s));
+
+    const Vector3 minTransformed = node.Min.Transform(rootModel);
+    const Vector3 maxTransformed = node.Max.Transform(rootModel);
+    const Vector3 centerTransformed = Vector3::Average(minTransformed, maxTransformed);
+
+    RenderBox(minTransformed, Vector3(0.05f, 0.05f, 0.05f), Vector3(0, 0, 0), Color(0, 1, 0, 1));
+    RenderBox(maxTransformed, Vector3(0.05f, 0.05f, 0.05f), Vector3(0, 0, 0), Color(0, 1, 0, 1));
+    RenderBox(centerTransformed, Vector3(0.05f, 0.05f, 0.05f), Vector3(0, 0, 0), Color(0, 1, 0, 1));
+
+    auto boxModel = glm::mat4(1.0f);
+    boxModel = translate(boxModel, glm::vec3(Vector3::Average(node.Min, node.Max)));
+    boxModel = scale(boxModel, glm::vec3((node.Max - node.Min)));
+    boxModel = rootModel * boxModel;
+
+    auto rayModel = glm::mat4(1.0f);
+    rayModel = translate(rayModel, glm::vec3(Vector3::Average(node.Min, node.Max)));
+    rayModel = scale(rayModel, glm::vec3((node.Max - node.Min) * 1.01f));
+    rayModel = rootModel * rayModel;
+    RenderBox(rayModel, Color(0, 0, 1, 1));
+
+    f32 xPos, yPos;
+    Input::GetMousePosition(xPos, yPos);
+    const auto ray = Camera::GetMainCamera().Get().GetScreenPointToRay(xPos, yPos);
+    //const bool cursorHit = BoxRayIntersection((node.Max - node.Min) / 2, ray, rayModel);
+    const bool cursorHit = BoxRayIntersection(Vector3(1,1,1), ray, rayModel);
+    //const bool cursorHit = BoxRayIntersection((node.Max - node.Min) / 2, ray, rayModel);
+
+    if (cursorHit)
+    {
+        LOG_WARNING("------------")
+        /*
+        LOG_WARNING("Dimensions: " + std::string((node.Max - node.Min)))
+        LOG_WARNING("Root Scale: " + std::string(s))
+        LOG_WARNING("Scale: " + std::string((node.Max - node.Min) * s))
+        LOG_WARNING("Center: " + std::string(Vector3::Average(node.Max, node.Min) * s))
+        LOG_WARNING("World Center: " + std::string(centerTransformed))
+    */
+        
+        LOG_WARNING("Dimensions: " + std::string((node.Max - node.Min) / 2))
+        LOG_WARNING("Ray origin: " + std::string(ray.Origin))
+        LOG_WARNING("Ray direction: " + std::string(ray.Direction))
+    }
+
+    RenderBox(boxModel, cursorHit ? Color(0, 1, 0, 1) : Color(1, 1, 1, 1));
+
+    /*
+    const auto nodeScale = node.Max - node.Min;
+    const auto nodeCenter = Vector3::Average(node.Max, node.Min);
+
+    auto tm = translate(glm::mat4(1.0f), glm::vec3(pos));
+    //tm = translate(tm, glm::vec3(nodeCenter * s));
+    auto rm = glm::mat4(1.0f);
+    rm = rotate(rm, glm::radians(rot.x), glm::vec3(1, 0, 0));
+    rm = rotate(rm, glm::radians(rot.y), glm::vec3(0, 1, 0));
+    rm = rotate(rm, glm::radians(rot.z), glm::vec3(0, 0, 1));
+    auto sm = scale(glm::mat4(1.0f), glm::vec3(s));
+
+    Vector3 dPos = Vector3(0, 0, 0);
+    dPos = dPos.Transform(tm);
+    Vector3 dScale = nodeScale;
+    dScale = dScale.Transform(sm);
+    RenderBox(dPos, dScale, Vector3(0, 0, 0), Color(1, 1, 1, 1));
+    */
+
+    /*
+    auto minTransformed = math::Vector3(glm::vec3(model * glm::vec4(node.Min.x, node.Min.y, node.Min.z, 1)));
+    auto maxTransformed = math::Vector3(glm::vec3(model * glm::vec4(node.Max.x, node.Max.y, node.Max.z, 1)));
+    const auto boxScale = math::Vector3(node.Max.x - node.Min.x, node.Max.y - node.Min.y, node.Max.z - node.Min.z);
+    const auto boxScaleTransformed = math::Vector3(maxTransformed.x - minTransformed.x, maxTransformed.y - minTransformed.y,
+                                                   maxTransformed.z - minTransformed.z);
+    auto boxModel = scale(model, glm::vec3(boxScale));
+
+    f32 xPos, yPos;
+    Input::GetMousePosition(xPos, yPos);
+    const auto ray = Camera::GetMainCamera().Get().GetScreenPointToRay(xPos, yPos);
+
+    const bool cursorHit = BoxRayIntersection(node.Min, node.Max, ray, model);
+
+    if (cursorHit)
+    {
+        LOG_WARNING("Min: " + std::string(minTransformed) + ", Max: " + std::string(maxTransformed))
+
+        RenderBox(minTransformed, math::Vector3(0.25f, 0.25f, 0.25f), math::Vector3(0, 0, 0), Color(1, 1, 1, 1));
+        RenderBox(maxTransformed, math::Vector3(0.25f, 0.25f, 0.25f), math::Vector3(0, 0, 0), Color(1, 1, 1, 1));
+    }
+
+    math::Vector3 dPos = math::Vector3(0, 0, 0);
+    dPos = math::Vector3(glm::vec3(model * glm::vec4(dPos.x, dPos.y, dPos.z, 1)));
+    RenderBox(dPos, boxScaleTransformed, math::Vector3(0, 0, 0), Color(1, 1, 1, 1));
+
+    const auto& shader = _lightSourceMaterial.Asset->GetShader();
+    shader.SetColor("_Color", cursorHit ? Color(0, 1, 0, 1) : Color(1, 0, 0, 1));
+    shader.SetFloat("_Strength", 1);
+
+    shader.SetViewMatrices(_projectionMatrix, _viewMatrix, boxModel);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDisable(GL_DEPTH_TEST);
+    _cubeVertexData.Render();
+    glEnable(GL_DEPTH_TEST);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    if (node.Left)
+    {
+        RenderBVH(*node.Left, position, rotation, scale);
+    }
+
+    if (node.Right)
+    {
+        RenderBVH(*node.Right, position, rotation, scale);
+    }
+*/
+}
+
+void rei::render::DefaultRenderScenario::RenderMeshRenderersBVH() const
+{
+    ECS_WORLD(rei::GetInternalWorld());
+    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();
+
+    FOR(e, f)
+    {
+        auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+        if (!meshRenderer.GetModel().IsLoaded) continue;
+
+        for (const auto& mesh : meshRenderer.GetModel().Asset->GetMeshes())
+        {
+            auto& transform = meshRenderer.GetTransform();
+            RenderBVH(mesh.BVHRoot, transform.GetPosition(), transform.GetRotation(), transform.GetScale());
+        }
+    }
+}
+
 void rei::render::DefaultRenderScenario::RenderOutlineObjects() const
 {
     ECS_WORLD(rei::GetInternalWorld());
@@ -346,4 +504,32 @@ void rei::render::DefaultRenderScenario::RenderPostprocessing() const
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, _mainFrameBuffer.GetColorTexture());
     _quadVertexData.Render();
+}
+
+void rei::render::DefaultRenderScenario::RenderBox(const glm::mat4& transformation, const Color& color) const
+{
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDisable(GL_DEPTH_TEST);
+
+    const auto& shader = _lightSourceMaterial.Asset->GetShader();
+    shader.SetColor("_Color", color);
+    shader.SetFloat("_Strength", 1);
+
+    shader.SetViewMatrices(_projectionMatrix, _viewMatrix, transformation);
+
+    _cubeVertexData.Render();
+
+    glEnable(GL_DEPTH_TEST);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void rei::render::DefaultRenderScenario::RenderBox(const math::Vector3 pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color) const
+{
+    auto model = glm::mat4(1.0f);
+    model = translate(model, glm::vec3(pos));
+    model = rotate(model, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    model = rotate(model, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    model = rotate(model, glm::radians(rotation.z), glm::vec3(0, 0, 1));
+    model = scale(model, glm::vec3(size));
+    RenderBox(model, color);
 }

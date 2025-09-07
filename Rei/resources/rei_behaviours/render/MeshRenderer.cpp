@@ -74,13 +74,6 @@ namespace rei::render
     {
         ECS_WORLD(GetInternalWorld());
 
-        /*
-        const auto sphereCollider = std::make_shared<physics::SphereCollider>();
-        sphereCollider->SetRadius(0.5);
-        auto& col = GET(GetEntity(), editor::SelectionCollider);
-        col.Collider = sphereCollider;
-        */
-        
         const auto meshCollider = std::make_shared<physics::MeshCollider>();
         meshCollider->SetModel(_model);
         auto& col = GET(GetEntity(), editor::SelectionCollider);

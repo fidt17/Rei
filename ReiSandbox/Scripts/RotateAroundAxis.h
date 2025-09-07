@@ -10,6 +10,7 @@ private:
 public:
     void Update() override
     {
+        return;
         auto& rotation = GetTransform().GetRotation();
         rotation.x += _rotationSpeed.x;
         rotation.y += _rotationSpeed.y;

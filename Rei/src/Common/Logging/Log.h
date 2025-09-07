@@ -20,7 +20,7 @@ const std::string LOG_SCOPE;
 
 #define SET_LOG_SCOPE(x) const std::string LOG_SCOPE = (x);
 
-#ifdef _DEBUG
+#ifdef DEBUG
     #define LOG(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Info, __VA_ARGS__);
     #define LOG_WARNING(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Warning, __VA_ARGS__);
     #define LOG_ERROR(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Error, __VA_ARGS__);

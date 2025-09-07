@@ -6,8 +6,9 @@
 
 #include "Serialization/BinaryWriter.h"
 
-#include "Builders/MeshBuilder.h"
+#include "Builders/ModelBuilder.h"
 #include "Builders/TextureBuilder.h"
+#include "Common/Time/ScopedTimer.h"
 
 namespace rei::resources
 {
@@ -42,6 +43,8 @@ namespace rei::resources
 
     i64 AssetBuilder::Build(const std::filesystem::path& filePath, BinaryWriter& writer) const
     {
+        time::ScopedTimer timer("Asset " + filePath.string() + " building");
+        
         const i64 offset = writer.GetPosition();
 
         LOG("Building asset: " + filePath.string())
@@ -50,8 +53,8 @@ namespace rei::resources
         std::map<std::string, std::function<void(const std::filesystem::path&, BinaryWriter&)>> map;
         ADD_TO_MAP(".png", TextureBuilder().BuildTextureAsset)
         ADD_TO_MAP(".jpg", TextureBuilder().BuildTextureAsset)
-        ADD_TO_MAP(".obj", MeshBuilder().BuildMeshAsset)
-        ADD_TO_MAP(".fbx", MeshBuilder().BuildMeshAsset)
+        ADD_TO_MAP(".obj", ModelBuilder().BuildModelAsset)
+        ADD_TO_MAP(".fbx", ModelBuilder().BuildModelAsset)
 
         const auto extension = filePath.extension().string();
         

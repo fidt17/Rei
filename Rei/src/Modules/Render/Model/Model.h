@@ -7,10 +7,12 @@ namespace rei::render
     {
     public:
         REI_API Model(resources::BinaryReader& reader);
+        REI_API ~Model();
 
         const std::vector<Mesh>& GetMeshes() const;
 
     private:
+        std::string Name;
         std::vector<Mesh> _meshes;
     };
 }

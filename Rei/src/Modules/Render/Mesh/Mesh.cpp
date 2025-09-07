@@ -6,6 +6,8 @@
 rei::render::Mesh::Mesh(resources::BinaryReader& reader)
     : VAO(0), VBO(0), EBO(0)
 {
+    Name = reader.GetStr();
+
     Vertices = std::vector<Vertex>(reader.GetI32());
     for (auto& vertex : Vertices)
     {
@@ -29,21 +31,19 @@ rei::render::Mesh::Mesh(resources::BinaryReader& reader)
             totalVertices++;
         }
     }
-
-    Setup();
 }
 
-rei::render::Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
-    : VAO(0), VBO(0), EBO(0)
+rei::render::Mesh::Mesh(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
+    :
+    Name(name),
+    VAO(0), VBO(0), EBO(0)
 {
     Vertices = vertices;
     Indices = indices;
     Faces = faces;
-
-    Setup();
 }
 
-void rei::render::Mesh::Setup()
+void rei::render::Mesh::SetupOpenGlObjects()
 {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -70,4 +70,22 @@ void rei::render::Mesh::Setup()
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, TexCoords)));
 
     glBindVertexArray(0);
+}
+
+void rei::render::Mesh::SetupBVH()
+{
+    BVHRoot.BuildBVH(BVHRoot, Faces);
+}
+
+void rei::render::Mesh::Setup()
+{
+    SetupBVH();
+    SetupOpenGlObjects();
+}
+
+void rei::render::Mesh::Dispose() const
+{
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 }

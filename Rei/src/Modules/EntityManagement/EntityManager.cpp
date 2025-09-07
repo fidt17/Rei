@@ -2,6 +2,7 @@
 #include "EntityManager.h"
 
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
+#include "Common/Time/ScopedTimer.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Components/EntityInfo.h"
@@ -41,6 +42,7 @@ rei::ecs::Entity rei::EntityManager::CreateNewEntity(const std::string& name)
 
 void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
 {
+    time::ScopedTimer entityCreationTimer("Entity " + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + " creation");
     ECS_WORLD(GetInternalWorld());
 
     struct EntityToBehaviour

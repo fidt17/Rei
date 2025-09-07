@@ -4,6 +4,7 @@
 #include "../../../../resources/meshes/CubeVertexData.h"
 #include "../../../../resources/meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
+#include "Modules/Render/Mesh/MeshBVHNode.h"
 
 namespace rei::render
 {
@@ -37,12 +38,17 @@ namespace rei::render
 
         void RenderMeshRenderers() const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
+        void RenderBVH(const MeshBVHNode& node, const math::Vector3& position, const math::Vector3& rotation, const math::Vector3& scale) const;
+        void RenderMeshRenderersBVH() const;
         void RenderOutlineObjects() const;
         void RenderPointLights() const;
         void RenderSelectionColliders() const;
 
         void RenderOutlineFrame() const;
         void RenderPostprocessing() const;
+        
+        void RenderBox(const glm::mat4& transformation, const Color& color) const;
+        void RenderBox(const math::Vector3 pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color) const;
 
     private:
         glm::mat4 _projectionMatrix = 0;
