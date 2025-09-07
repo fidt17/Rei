@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "EntityManager.h"
 
-#include "../../../resources/rei_behaviours/transformation/Transform.h"
+#include "rei_behaviours/transformation/Transform.h"
 #include "Common/Time/ScopedTimer.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"

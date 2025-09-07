@@ -624,6 +624,7 @@
     <ClInclude Include="src\Modules\Render\Mesh\MeshBVHNode.h" />
     <ClInclude Include="src\Modules\Render\Mesh\Vertex.h" />
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
+    <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\GizmosModule.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
@@ -732,6 +733,7 @@
     <ClCompile Include="src\Modules\Render\Mesh\Face.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\MeshBVHNode.cpp" />
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
+    <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\GizmosModule.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\BaseRenderScenario.cpp" />
@@ -857,7 +859,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)resources;</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
@@ -915,7 +917,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)resources;</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>

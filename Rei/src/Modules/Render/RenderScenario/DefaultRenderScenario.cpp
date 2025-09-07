@@ -2,21 +2,22 @@
 #include "DefaultRenderScenario.h"
 
 #include "FrameBuffer.h"
-#include "../../../../resources/rei_behaviours/render/MeshRenderer.h"
-#include "../../../../resources/rei_behaviours/render/RenderOutlineTag.h"
-#include "../../../../resources/rei_behaviours/render/light/AmbientLight.h"
-#include "../../../../resources/rei_behaviours/render/light/PointLight.h"
-#include "../../../../resources/rei_behaviours/transformation/Transform.h"
 #include "glad/glad.h"
-#include "Modules/Editor/SelectionCollider.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Physics/SphereCollider.h"
 
 #include "Modules/Render/Shaders/Shader.h"
+#include "rei_behaviours/render/MeshRenderer.h"
+#include "rei_behaviours/render/RenderOutlineTag.h"
+#include "rei_behaviours/render/light/AmbientLight.h"
+#include "rei_behaviours/render/light/PointLight.h"
+#include "rei_behaviours/transformation/Transform.h"
 
 rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
-    : BaseRenderScenario(target)
+    : BaseRenderScenario(target),
+      _gizmosModule(std::make_shared<GizmosModule>()),
+      _bvhRenderModule(std::make_shared<BVHRenderModule>(_gizmosModule))
 {
 }
 
@@ -39,7 +40,7 @@ void rei::render::DefaultRenderScenario::Setup()
     _lightSourceMaterial = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
     _depthMaterial = GetAssetManager().GetById<Material>(REI_DEPTH_MATERIAL_ID);
 
-    _gizmosModule.Setup();
+    _gizmosModule->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -58,7 +59,7 @@ void rei::render::DefaultRenderScenario::OnBeforeRender()
     _viewMatrix = _camera.Get().GetViewMatrix();
     _camera.Get().GetOutputSize(_outputWidth, _outputHeight);
 
-    _gizmosModule.OnBeforeRender(_projectionMatrix, _viewMatrix);
+    _gizmosModule->OnBeforeRender(_projectionMatrix, _viewMatrix);
 }
 
 void rei::render::DefaultRenderScenario::Render()
@@ -119,7 +120,7 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     RenderMeshRenderers();
 
     RenderPointLights();
-    RenderMeshRenderersBVH();
+    _bvhRenderModule->RenderMeshRenderersBVH();
     // ------
 
     // post processing
@@ -253,48 +254,6 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
     }
 }
 
-void rei::render::DefaultRenderScenario::RenderBVH(const MeshBVHNode& node, const glm::mat4& model) const
-{
-    using math::Vector3;
-
-    if (node.Left)
-    {
-        RenderBVH(*node.Left, model);
-    }
-
-    if (node.Right)
-    {
-        RenderBVH(*node.Right, model);
-    }
-
-    if (!node.Left && !node.Right)
-    {
-        auto boxModel = glm::mat4(1.0f);
-        boxModel = translate(boxModel, glm::vec3(Vector3::Average(node.Min, node.Max)));
-        boxModel = scale(boxModel, glm::vec3((node.Max - node.Min)));
-        boxModel = model * boxModel;
-
-        _gizmosModule.RenderWireframeBox(boxModel, Color::White());
-    }
-}
-
-void rei::render::DefaultRenderScenario::RenderMeshRenderersBVH() const
-{
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();
-
-    FOR(e, f)
-    {
-        auto& meshRenderer = GET(e, rei::render::MeshRenderer);
-        if (!meshRenderer.GetModel().IsLoaded) continue;
-
-        for (const auto& mesh : meshRenderer.GetModel().Asset->GetMeshes())
-        {
-            auto& transform = meshRenderer.GetTransform();
-            RenderBVH(mesh.BVHRoot, transform.CalculateModelMatrix());
-        }
-    }
-}
 
 void rei::render::DefaultRenderScenario::RenderOutlineObjects() const
 {
@@ -360,4 +319,3 @@ void rei::render::DefaultRenderScenario::RenderPostprocessing() const
     glBindTexture(GL_TEXTURE_2D, _mainFrameBuffer.GetColorTexture());
     _quadVertexData.Render();
 }
-

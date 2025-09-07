@@ -5,6 +5,7 @@
 #include "../../../../resources/meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
 #include "Modules/Render/Mesh/MeshBVHNode.h"
+#include "Modules/Render/Modules/BVHRenderModule.h"
 #include "Modules/Render/Modules/GizmosModule.h"
 
 namespace rei::render
@@ -39,8 +40,6 @@ namespace rei::render
 
         void RenderMeshRenderers() const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
-        void RenderBVH(const MeshBVHNode& node, const glm::mat4& model) const;
-        void RenderMeshRenderersBVH() const;
         void RenderOutlineObjects() const;
         void RenderPointLights() const;
 
@@ -48,7 +47,8 @@ namespace rei::render
         void RenderPostprocessing() const;
 
     private:
-        GizmosModule _gizmosModule;
+        std::shared_ptr<GizmosModule> _gizmosModule;
+        std::shared_ptr<BVHRenderModule> _bvhRenderModule;
         
         glm::mat4 _projectionMatrix = 0;
         glm::mat4 _viewMatrix = 0;

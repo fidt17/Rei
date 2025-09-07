@@ -1,8 +1,8 @@
 ﻿#include "pch.h"
 #include "Behaviour.h"
 
-#include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Engine/Services.h"
+#include "rei_behaviours/transformation/Transform.h"
 
 rei::Behaviour::Behaviour(const i32 id, const ecs::Entity e):
     _id(id),
