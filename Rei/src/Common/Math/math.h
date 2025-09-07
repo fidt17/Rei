@@ -12,7 +12,7 @@ namespace rei::math
         return a + t * (b - a);
     }
 
-    bool SphereRayIntersection(const Vector3& center, f32 _radius, const Ray& ray);
-    bool BoxRayIntersection(const ::rei::math::Vector3& boxSize, const ::rei::math::Ray& ray, const glm::mat4& modelMatrix);
+    bool SphereRayIntersection(const Vector3& center, f32 radius, const Ray& ray);
+    bool BoxRayIntersection(const Vector3& boxSize, const Ray& ray, const glm::mat4& modelMatrix);
     bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix);
 }

@@ -1,15 +1,10 @@
 ﻿#include "pch.h"
 
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-
-bool rei::math::SphereRayIntersection(const Vector3& center, const f32 _radius, const Ray& ray)
+bool rei::math::SphereRayIntersection(const Vector3& center, const f32 radius, const Ray& ray)
 {
     const Vector3 m = ray.Origin - center;
     const f32 b = Vector3::Dot(m, ray.Direction);
-    const f32 c = Vector3::Dot(m, m) - _radius * _radius;
+    const f32 c = Vector3::Dot(m, m) - radius * radius;
 
     if (c > 0.0f && b > 0.0f) return false;
     const float d = b * b - c;
@@ -39,7 +34,7 @@ bool rei::math::BoxRayIntersection(const Vector3& boxSize, const Ray& ray, const
     return tMax >= tMin && tMax >= 0.0f;
 }
 
-bool rei::math::FaceRayIntersection(const render::Face& face, const math::Ray& ray, const glm::mat4& modelMatrix)
+bool rei::math::FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix)
 {
     using math::Vector3;
 

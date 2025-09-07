@@ -16,7 +16,10 @@ void rei::physics::SphereCollider::SetRadius(const f32 radius)
     _radius = radius;
 }
 
-bool rei::physics::SphereCollider::Intersect(const math::Ray& ray, const math::Vector3& position, const glm::mat4& model) const
+bool rei::physics::SphereCollider::Intersect(const math::Ray& ray, const glm::mat4& model) const
 {
-    return SphereRayIntersection(position, _radius, ray);
+    auto pos = math::Vector3(0, 0, 0);
+    pos = pos.Transform(model);
+    
+    return SphereRayIntersection(pos, _radius, ray);
 }

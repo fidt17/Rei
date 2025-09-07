@@ -5,7 +5,6 @@
 #include "../../../resources/rei_behaviours/render/RenderOutlineTag.h"
 #include "../../../resources/rei_behaviours/render/camera/Camera.h"
 #include "../../../resources/rei_behaviours/transformation/Transform.h"
-#include "Modules/Components/EntityInfo.h"
 #include "Modules/Input/Input.h"
 
 rei::editor::SelectEntityWithCursorSystem::SelectEntityWithCursorSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
@@ -15,7 +14,7 @@ rei::editor::SelectEntityWithCursorSystem::SelectEntityWithCursorSystem(const st
 {
 }
 
-void rei::editor::SelectEntityWithCursorSystem::ResetAllEntitiesSelection()
+void rei::editor::SelectEntityWithCursorSystem::ResetAllEntitiesSelection() const
 {
     FOR(e, _selectedEntities)
     {
@@ -39,13 +38,10 @@ void rei::editor::SelectEntityWithCursorSystem::OnUpdate()
     {
         if (HAS(e, SelectedTag)) continue;
 
-        auto& [Id, Name] = GET(e, EntityInfo);
         auto& transform = GET(e, transformation::Transform);
         auto& [Collider] = GET(e, SelectionCollider);
 
-/// TODODO : https://chat.deepseek.com/a/chat/s/90d38609-d17f-447a-8a69-58211d05c9c3
-        
-        if (Collider->Intersect(ray, transform.GetPosition(), transform.CalculateModelMatrix()))
+        if (Collider->Intersect(ray, transform.CalculateModelMatrix()))
         {
             ResetAllEntitiesSelection();
 

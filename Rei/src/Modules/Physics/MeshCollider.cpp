@@ -20,8 +20,7 @@ void rei::physics::MeshCollider::SetModel(const assets::AssetRef<render::Model>&
     _model = model;
 }
 
-bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const math::Vector3& position, const glm::mat4& model,
-                                              const render::MeshBVHNode& node) const
+bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const glm::mat4& model, const render::MeshBVHNode& node) const
 {
     using math::Vector3;
 
@@ -29,8 +28,8 @@ bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const math::
     boxModel = translate(boxModel, glm::vec3(Vector3::Average(node.Min, node.Max)));
     boxModel = scale(boxModel, glm::vec3((node.Max - node.Min)));
     boxModel = model * boxModel;
-    
-    if (!BoxRayIntersection(Vector3(1,1,1), ray, boxModel)) return false;
+
+    if (!BoxRayIntersection(Vector3(1, 1, 1), ray, boxModel)) return false;
 
     if (!node.Faces.empty())
     {
@@ -47,7 +46,7 @@ bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const math::
 
     if (node.Left)
     {
-        if (IntersectBVH(ray, position, model, *node.Left))
+        if (IntersectBVH(ray, model, *node.Left))
         {
             return true;
         }
@@ -55,7 +54,7 @@ bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const math::
 
     if (node.Right)
     {
-        if (IntersectBVH(ray, position, model, *node.Right))
+        if (IntersectBVH(ray, model, *node.Right))
         {
             return true;
         }
@@ -64,27 +63,12 @@ bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const math::
     return false;
 }
 
-bool rei::physics::MeshCollider::Intersect(const math::Ray& ray, const math::Vector3& position, const glm::mat4& model) const
+bool rei::physics::MeshCollider::Intersect(const math::Ray& ray, const glm::mat4& model) const
 {
     using math::Vector3;
 
     if (!_model.VerifyIsLoaded()) return false;
 
-    for (const auto& mesh : _model.Asset->GetMeshes())
-    {
-        /*
-        for (const auto & face : mesh.Faces)
-        {
-            if (math::FaceRayIntersection(face, ray, model))
-            {
-                return true;
-            }
-        }
-        */
-        if (IntersectBVH(ray, position, model, mesh.BVHRoot))
-        {
-            return true;
-        }
-    }
-    return false;
+    const auto& meshes = _model.Asset->GetMeshes();
+    return std::ranges::any_of(meshes, [&](const render::Mesh& m) { return IntersectBVH(ray, model, m.BVHRoot); });
 }

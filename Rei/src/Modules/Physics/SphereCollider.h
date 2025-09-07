@@ -16,6 +16,6 @@ namespace rei::physics
         REI_API f32 GetRadius() const;
         REI_API void SetRadius(f32 radius);
 
-        REI_API bool Intersect(const math::Ray& ray, const math::Vector3& position, const glm::mat4& model) const override;
+        REI_API bool Intersect(const math::Ray& ray, const glm::mat4& model) const override;
     };
 }
