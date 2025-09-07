@@ -1,5 +1,17 @@
 ﻿#include "pch.h"
 
+glm::mat4 rei::math::GetTransformationMatrix(const Vector3& position, const Vector3& rotation, const Vector3& s)
+{
+    auto model = glm::mat4(1.0f);
+    model = translate(model, glm::vec3(position));
+    model = rotate(model, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    model = rotate(model, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    model = rotate(model, glm::radians(rotation.z), glm::vec3(0, 0, 1));
+    model = scale(model, glm::vec3(s));
+
+    return model;
+}
+
 bool rei::math::SphereRayIntersection(const Vector3& center, const f32 radius, const Ray& ray)
 {
     const Vector3 m = ray.Origin - center;

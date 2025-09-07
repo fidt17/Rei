@@ -19,5 +19,12 @@ namespace rei::render
         }
 
         operator std::string() const;
+
+        static Color Clear();
+        static Color White();
+        static Color Black();
+        static Color Red();
+        static Color Green();
+        static Color Blue();
     };
 }

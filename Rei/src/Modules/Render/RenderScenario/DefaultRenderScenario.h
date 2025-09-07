@@ -5,6 +5,7 @@
 #include "../../../../resources/meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
 #include "Modules/Render/Mesh/MeshBVHNode.h"
+#include "Modules/Render/Modules/GizmosModule.h"
 
 namespace rei::render
 {
@@ -42,15 +43,13 @@ namespace rei::render
         void RenderMeshRenderersBVH() const;
         void RenderOutlineObjects() const;
         void RenderPointLights() const;
-        void RenderSelectionColliders() const;
 
         void RenderOutlineFrame() const;
         void RenderPostprocessing() const;
-        
-        void RenderBox(const glm::mat4& transformation, const Color& color) const;
-        void RenderBox(const math::Vector3 pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color) const;
 
     private:
+        GizmosModule _gizmosModule;
+        
         glm::mat4 _projectionMatrix = 0;
         glm::mat4 _viewMatrix = 0;
         i32 _outputWidth = 0, _outputHeight = 0;

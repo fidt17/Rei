@@ -66,6 +66,25 @@ void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Fac
     }
 }
 
+bool rei::render::MeshBVHNode::IsRayIntersecting(const math::Ray& ray, const glm::mat4& model) const
+{
+    using math::Vector3;
+
+    auto boxModel = glm::mat4(1.0f);
+    boxModel = translate(boxModel, glm::vec3(Vector3::Average(Min, Max)));
+    boxModel = scale(boxModel, glm::vec3((Max - Min)));
+    boxModel = model * boxModel;
+
+    if (!BoxRayIntersection(Vector3(1, 1, 1), ray, boxModel)) return false;
+
+    if (!Faces.empty())
+    {
+        return std::ranges::any_of(Faces, [&](const auto& f) { return math::FaceRayIntersection(f, ray, model); });
+    }
+
+    return Left && Left->IsRayIntersecting(ray, model) || Right && Right->IsRayIntersecting(ray, model);
+}
+
 void rei::render::MeshBVHNode::CalculateBoundingBox(const std::vector<Face>& faces)
 {
     Min = math::Vector3::Max();

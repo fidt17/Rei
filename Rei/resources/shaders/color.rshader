@@ -1,0 +1,15 @@
+﻿#ifdef VERTEX
+    void main()
+    {
+        REI_CalculateFragPosAndNormal();
+    }
+#endif
+
+#ifdef FRAGMENT
+    uniform vec4 _Color;
+
+    void main()
+    {   
+        FragColor = _Color;
+    }
+#endif

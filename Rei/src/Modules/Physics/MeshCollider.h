@@ -17,8 +17,5 @@ namespace rei::physics
         REI_API void SetModel(const assets::AssetRef<render::Model>& model);
 
         REI_API bool Intersect(const math::Ray& ray, const glm::mat4& model) const override;
-
-    private:
-        bool IntersectBVH(const math::Ray& ray, const glm::mat4& model, const render::MeshBVHNode& node) const;
     };
 }

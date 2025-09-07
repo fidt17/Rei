@@ -137,5 +137,8 @@ namespace rei::render
         
         const auto depthShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/special/depth.rshader");
         auto depthMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_DEPTH_MATERIAL_ID,depthShader);
+        
+        const auto colorShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/color.rshader");
+        auto gizmosMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_GIZMOS_MATERIAL_ID,colorShader);
     }
 }

@@ -7,8 +7,8 @@ namespace rei::render
 {
     Model::Model(resources::BinaryReader& reader)
     {
-        Name = reader.GetStr();
-        time::ScopedTimer timer("Model " + Name + " loading");
+        _name = reader.GetStr();
+        time::ScopedTimer timer(std::format("Model {} loading", _name));
         
         const i32 meshCount = reader.GetI32();
         for (int i = 0; i < meshCount; i++)

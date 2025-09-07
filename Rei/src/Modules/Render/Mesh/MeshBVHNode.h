@@ -15,6 +15,8 @@ namespace rei::render
     public:
         void BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, int depth = 0);
 
+        bool IsRayIntersecting(const math::Ray& ray, const glm::mat4& model) const;
+
     private:
         void CalculateBoundingBox(const std::vector<Face>& faces);
     };

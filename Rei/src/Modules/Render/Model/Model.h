@@ -12,7 +12,7 @@ namespace rei::render
         const std::vector<Mesh>& GetMeshes() const;
 
     private:
-        std::string Name;
+        std::string _name;
         std::vector<Mesh> _meshes;
     };
 }
