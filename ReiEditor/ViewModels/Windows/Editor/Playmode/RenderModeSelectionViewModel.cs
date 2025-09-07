@@ -84,6 +84,7 @@ public class RenderModeSelectionViewModel : BaseViewModel
         _modeNames.Add("Depth", RenderMode.Depth);
         _modeNames.Add("Grayscale", RenderMode.Grayscale);
         _modeNames.Add("Inversion", RenderMode.Inversion);
+        _modeNames.Add("BVH", RenderMode.BVH);
         
         foreach (var keyValuePair in _modeNames)
         {

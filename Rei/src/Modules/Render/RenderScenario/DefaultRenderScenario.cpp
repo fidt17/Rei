@@ -17,7 +17,8 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
       _gizmos(std::make_shared<GizmosModule>(_cameraModule)),
       _bvh(std::make_shared<BVHRenderModule>(_gizmos)),
       _lighting(std::make_shared<LightingRenderModule>(_cameraModule)),
-      _outline(std::make_shared<OutlineRenderModule>(_cameraModule))
+      _outline(std::make_shared<OutlineRenderModule>(_cameraModule)),
+      _postProcessingModule(std::make_shared<PostProcessingModule>(_cameraModule))
 {
 }
 
@@ -32,15 +33,12 @@ void rei::render::DefaultRenderScenario::Setup()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_MULTISAMPLE);
 
-    _overlayMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_TEXTURE_MATERIAL_ID);
-    _grayscaleMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_GRAYSCALE_MATERIAL_ID);
-    _inversionMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_INVERSION_MATERIAL_ID);
-
     _depthMaterial = GetAssetManager().GetById<Material>(REI_DEPTH_MATERIAL_ID);
 
     _gizmos->Setup();
     _lighting->Setup();
     _outline->Setup();
+    _postProcessingModule->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -108,13 +106,17 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     RenderMeshRenderers();
 
     _lighting->Render();
-    _bvh->Render();
+
+    if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
+    {
+        _bvh->Render();
+    }
     // ------
 
     // post processing
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     ClearBuffer();
-    RenderPostprocessing();
+    _postProcessingModule->Render(_mainFrameBuffer);
     _outline->RenderOutlineFrame();
     // ------
 }
@@ -179,26 +181,4 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
 
         meshRenderer.SetMaterial(originalMaterial);
     }
-}
-
-void rei::render::DefaultRenderScenario::RenderPostprocessing() const
-{
-    const auto renderMode = _camera.Get().GetRenderMode();
-
-    auto material = _overlayMaterial;
-
-    if (renderMode == Grayscale)
-    {
-        material = _grayscaleMaterial;
-    }
-    else if (renderMode == Inversion)
-    {
-        material = _inversionMaterial;
-    }
-
-    material.Asset->GetShader().Use();
-
-    glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, _mainFrameBuffer.GetColorTexture());
-    _quadVertexData.Render();
 }

@@ -28,10 +28,10 @@ void rei::render::BVHRenderModule::RenderBVH(const MeshBVHNode& node, const glm:
     {
         auto boxModel = glm::mat4(1.0f);
         boxModel = translate(boxModel, glm::vec3(Vector3::Average(node.Min, node.Max)));
-        boxModel = scale(boxModel, glm::vec3((node.Max - node.Min)));
+        boxModel = scale(boxModel, glm::vec3((node.Max - node.Min) * 0.99f));
         boxModel = model * boxModel;
 
-        _gizmosModule->RenderWireframeBox(boxModel, Color::White());
+        _gizmosModule->RenderWireframeBox(boxModel, Color::White(), false);
     }
 }
 

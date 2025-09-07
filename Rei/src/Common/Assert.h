@@ -18,5 +18,5 @@
     #define REI_ASSERT(x, msg) 
 #endif
 
-#define REI_THROW_IF(x, msg) if (x) { REI_THROW(msg); }
-#define REI_THROW(msg) throw std::runtime_error((msg) + std::string("\n") + CODE_PATH);
+#define REI_THROW_IF(x, msg) if (x) { REI_THROW(msg) }
+#define REI_THROW(msg) throw std::runtime_error(std::format("{}\n {}", msg, CODE_PATH));

@@ -28,7 +28,7 @@ namespace rei::assets
             }
         }
 
-        REI_THROW_IF(!didFindResources, "[AssetManager] Resources folder is missing");
+        REI_THROW_IF(!didFindResources, std::format("[AssetManager] Resources folder is missing"));
         
         _map = std::make_unique<AssetsMap>(Load<AssetsMap>("map.bin", 0));
     }

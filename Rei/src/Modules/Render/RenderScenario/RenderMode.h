@@ -8,5 +8,7 @@ enum RenderMode
 
     Depth = 3,
     Grayscale = 4,
-    Inversion = 5
+    Inversion = 5,
+
+    BVH = 6
 };

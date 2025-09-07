@@ -37,3 +37,8 @@ void rei::render::CameraModule::SetCamera(const ecs::RefComponent<Camera>& camer
 {
     _camera = camera;
 }
+
+rei::ecs::RefComponent<rei::render::Camera>& rei::render::CameraModule::GetCamera()
+{
+    return _camera;
+}

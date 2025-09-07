@@ -9,6 +9,7 @@
 #include "Modules/Render/Modules/GizmosModule.h"
 #include "Modules/Render/Modules/LightingRenderModule.h"
 #include "Modules/Render/Modules/OutlineRenderModule.h"
+#include "Modules/Render/Modules/PostProcessingModule.h"
 
 namespace rei::render
 {
@@ -37,8 +38,6 @@ namespace rei::render
         void RenderMeshRenderers() const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
 
-        void RenderPostprocessing() const;
-
     public:
         void SetCamera(const ecs::RefComponent<Camera>& camera) override
         {
@@ -52,15 +51,10 @@ namespace rei::render
         std::shared_ptr<BVHRenderModule> _bvh;
         std::shared_ptr<LightingRenderModule> _lighting;
         std::shared_ptr<OutlineRenderModule> _outline;
+        std::shared_ptr<PostProcessingModule> _postProcessingModule;
         
         FrameBuffer _mainFrameBuffer;
 
-        QuadVertexData _quadVertexData;
-
         assets::AssetRef<Material> _depthMaterial{};
-        
-        assets::AssetRef<Material> _overlayMaterial{};
-        assets::AssetRef<Material> _grayscaleMaterial{};
-        assets::AssetRef<Material> _inversionMaterial{};
     };
 }

@@ -8,7 +8,7 @@ namespace rei::window
         settings.HideOnCreation ? glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE) : glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
         _glfwWindow = glfwCreateWindow(settings.Width, settings.Height, settings.Name.c_str(), nullptr, nullptr);
-        REI_THROW_IF(!_glfwWindow, "Window creation failed")
+        REI_THROW_IF(!_glfwWindow, std::format("Window creation failed"))
 
         glfwSetWindowUserPointer(_glfwWindow, this);
         glfwSetWindowSizeCallback(_glfwWindow, [](GLFWwindow* w, const int newWidth, const int newHeight)

@@ -628,6 +628,7 @@
     <ClInclude Include="src\Modules\Render\Modules\GizmosModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
+    <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\CameraModule.h" />
@@ -740,6 +741,7 @@
     <ClCompile Include="src\Modules\Render\Modules\GizmosModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
+    <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\BaseRenderScenario.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\CameraModule.cpp" />
@@ -889,7 +891,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>DEBUG;REI_TEST;REI_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
@@ -919,7 +921,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>RELEASE;REI_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>

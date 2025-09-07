@@ -17,6 +17,8 @@ namespace rei::render
 
         void SetCamera(const ecs::RefComponent<Camera>& camera);
 
+        ecs::RefComponent<Camera>& GetCamera();
+
     private:
         glm::mat4 _projectionMatrix = 0;
         glm::mat4 _viewMatrix = 0;
