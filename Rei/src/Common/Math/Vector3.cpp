@@ -186,4 +186,20 @@ namespace rei::math
     {
         return Vector3((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
     }
+
+    f32 Vector3::Length(const Vector3& v)
+    {
+        return sqrt(v.x * v.x + v.y * v.y + v.z + v.z);
+    }
+
+    Vector3 Vector3::Normalize(const Vector3& v)
+    {
+        const f32 length = Length(v);
+        if (length < 1e-6f)
+        {
+            return Vector3(0,0,0);
+        }
+        
+        return v / length;
+    }
 }

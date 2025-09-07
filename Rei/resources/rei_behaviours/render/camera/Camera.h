@@ -42,6 +42,10 @@ namespace rei::render
         REI_API math::Ray GetScreenPointToRay(f32 xPos, f32 yPos) const;
 
         REI_API static ecs::RefComponent<Camera> GetMainCamera();
+
+    private:
+        REI_API math::Ray GetPerspectiveScreenPointToRay(f32 xPos, f32 yPos) const;
+        REI_API math::Ray GetOrhographicScreenPointToRay(f32 xPos, f32 yPos) const;
     };
 }
 

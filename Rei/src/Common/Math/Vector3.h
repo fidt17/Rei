@@ -61,5 +61,7 @@ namespace rei::math
         static float Dot(const Vector3& a, const Vector3& b);
         static Vector3 Cross(const Vector3& a, const Vector3& b);
         static Vector3 Average(const Vector3& a, const Vector3& b);
+        static f32 Length(const Vector3& v);
+        static Vector3 Normalize(const Vector3& v);
     };
 }

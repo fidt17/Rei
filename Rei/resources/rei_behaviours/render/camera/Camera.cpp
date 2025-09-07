@@ -87,36 +87,75 @@ namespace rei::render
 
     math::Ray Camera::GetScreenPointToRay(const f32 xPos, const f32 yPos) const
     {
-        // Convert screen coordinates to normalized device coordinates
-        const f32 x = (2.0f * xPos) / _outputWidth - 1.0f;
-        const f32 y = 1.0f - (2.0f * yPos) / _outputHeight;
+        if (_perspective == Perspective)
+        {
+            return GetPerspectiveScreenPointToRay(xPos, yPos);
+        }
         
-        // Convert to clip coordinates
-        const auto rayClip = glm::vec4(x, y, -1.0f, 1.0f);
-        
-        // Convert to eye coordinates
-        const glm::mat4 projection = GetProjectionMatrix();
-        glm::vec4 rayEye = inverse(projection) * rayClip;
-        rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
-        
-        // Convert to world coordinates
-        const glm::mat4 view = GetViewMatrix();
-        const glm::vec4 rayWorld = inverse(view) * rayEye;
-        const glm::vec3 rayDirection = normalize(glm::vec3(rayWorld));
-        
-        return math::Ray(GetTransform().GetPosition(), math::Vector3(rayDirection));
+        return GetOrhographicScreenPointToRay(xPos, yPos);
     }
 
     ecs::RefComponent<Camera> Camera::GetMainCamera()
     {
-         ECS_WORLD(GetInternalWorld());
-         auto f = GetInternalWorld().GetFiltersRegistry()->Get<Camera, MainCameraTag>();
- 
-         FOR(e, f)
-         {
-             return GET_REF(e, Camera);
-         }
+        ECS_WORLD(GetInternalWorld());
+        auto f = GetInternalWorld().GetFiltersRegistry()->Get<Camera, MainCameraTag>();
+
+        FOR(e, f)
+        {
+            return GET_REF(e, Camera);
+        }
+
+        return {};
+    }
+
+    math::Ray Camera::GetPerspectiveScreenPointToRay(const f32 xPos, const f32 yPos) const
+    {
+        // Convert screen coordinates to normalized device coordinates
+        const f32 x = (2.0f * xPos) / _outputWidth - 1.0f;
+        const f32 y = 1.0f - (2.0f * yPos) / _outputHeight;
+
+        // Convert to clip coordinates
+        const auto rayClip = glm::vec4(x, y, -1.0f, 1.0f);
+
+        // Convert to eye coordinates
+        const glm::mat4 projection = GetProjectionMatrix();
+        glm::vec4 rayEye = inverse(projection) * rayClip;
+        rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+
+        // Convert to world coordinates
+        const glm::mat4 view = GetViewMatrix();
+        const glm::vec4 rayWorld = inverse(view) * rayEye;
+        const glm::vec3 rayDirection = normalize(glm::vec3(rayWorld));
+
+        return math::Ray(GetTransform().GetPosition(), math::Vector3(rayDirection));
+    }
+
+    math::Ray Camera::GetOrhographicScreenPointToRay(const f32 xPos, const f32 yPos) const
+    {
+        // Convert screen coordinates to normalized device coordinates (NDC)
+        float ndcX = (2.0f * xPos) / _outputWidth - 1.0f;
+        float ndcY = 1.0f - (2.0f * yPos) / _outputHeight; // Flip Y-axis
         
-         return {};
+        // Get view and projection matrices
+        const glm::mat4 view = GetViewMatrix();
+        const glm::mat4 projection = GetProjectionMatrix();
+        
+        // Calculate inverse of view-projection matrix
+        const glm::mat4 invViewProj = glm::inverse(projection * view);
+        
+        // Create points at near and far planes in NDC
+        const glm::vec4 nearPointNDC(ndcX, ndcY, -1.0f, 1.0f);
+        const glm::vec4 farPointNDC(ndcX, ndcY, 1.0f, 1.0f);
+        
+        // Convert to world space
+        const glm::vec4 nearPointWorld = invViewProj * nearPointNDC;
+        const glm::vec4 farPointWorld = invViewProj * farPointNDC;
+        
+        // For orthographic, no perspective division needed
+        math::Ray ray;
+        ray.Origin = math::Vector3(nearPointWorld);
+        ray.Direction = math::Vector3::Normalize(math::Vector3(farPointWorld) - ray.Origin);
+        
+        return ray;
     }
 }
