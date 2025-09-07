@@ -10,14 +10,13 @@
 #include "Modules/Render/Shaders/Shader.h"
 #include "rei_behaviours/render/MeshRenderer.h"
 #include "rei_behaviours/render/RenderOutlineTag.h"
-#include "rei_behaviours/render/light/AmbientLight.h"
-#include "rei_behaviours/render/light/PointLight.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
     : BaseRenderScenario(target),
-      _gizmosModule(std::make_shared<GizmosModule>()),
-      _bvhRenderModule(std::make_shared<BVHRenderModule>(_gizmosModule))
+      _gizmos(std::make_shared<GizmosModule>()),
+      _bvh(std::make_shared<BVHRenderModule>(_gizmos)),
+      _lighting(std::make_shared<LightingRenderModule>())
 {
 }
 
@@ -37,10 +36,10 @@ void rei::render::DefaultRenderScenario::Setup()
     _inversionMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_INVERSION_MATERIAL_ID);
 
     _outlineQuadMaterial = GetAssetManager().GetById<Material>(REI_OUTLINE_MATERIAL_ID);
-    _lightSourceMaterial = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
     _depthMaterial = GetAssetManager().GetById<Material>(REI_DEPTH_MATERIAL_ID);
 
-    _gizmosModule->Setup();
+    _gizmos->Setup();
+    _lighting->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -52,14 +51,12 @@ void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const 
 
 void rei::render::DefaultRenderScenario::OnBeforeRender()
 {
-    FindAmbientLights();
-    FindPointLights();
-
     _projectionMatrix = _camera.Get().GetProjectionMatrix();
     _viewMatrix = _camera.Get().GetViewMatrix();
     _camera.Get().GetOutputSize(_outputWidth, _outputHeight);
 
-    _gizmosModule->OnBeforeRender(_projectionMatrix, _viewMatrix);
+    _gizmos->OnBeforeRender(_projectionMatrix, _viewMatrix);
+    _lighting->OnBeforeRender(_projectionMatrix, _viewMatrix);
 }
 
 void rei::render::DefaultRenderScenario::Render()
@@ -119,8 +116,8 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
 
     RenderMeshRenderers();
 
-    RenderPointLights();
-    _bvhRenderModule->RenderMeshRenderersBVH();
+    _lighting->Render();
+    _bvh->Render();
     // ------
 
     // post processing
@@ -162,59 +159,6 @@ void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) 
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void rei::render::DefaultRenderScenario::FindAmbientLights()
-{
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<AmbientLight>();
-    GetInternalWorld().RefreshAll();
-
-    if (f->GetEntitiesCount() == 0) return;
-    _ambientLight = GET_REF(*f->begin(), rei::render::AmbientLight);
-}
-
-void rei::render::DefaultRenderScenario::FindPointLights()
-{
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<PointLight>();
-    GetInternalWorld().RefreshAll();
-
-    _pointLights.clear();
-    FOR(e, f)
-    {
-        _pointLights.emplace_back(GET_REF(e, rei::render::PointLight));
-    }
-}
-
-void rei::render::DefaultRenderScenario::SetAmbientLight(const Shader& shader) const
-{
-    if (_ambientLight.IsNull())
-    {
-        shader.SetFloat("_AmbientLight.Strength", 0);
-        shader.SetColor("_AmbientLight.Color", Color(0, 0, 0, 1));
-        return;
-    }
-
-    shader.SetFloat("_AmbientLight.Strength", _ambientLight.Get().GetStrength());
-
-    const auto& c = _ambientLight.Get().GetColor();
-    shader.SetColor("_AmbientLight.Color", c);
-}
-
-void rei::render::DefaultRenderScenario::SetPointLights(const Shader& shader) const
-{
-    for (int i = 0; i < _pointLights.size(); i++)
-    {
-        if (i > REI_MAX_POINT_LIGHTS_COUNT) break;
-
-        const auto& light = _pointLights[i];
-        if (light.IsNull()) continue;
-
-        shader.SetVector3("_PointLights[" + std::to_string(i) + "].Position", light.Get().GetTransform().GetPosition());
-        shader.SetFloat("_PointLights[" + std::to_string(i) + "].Strength", light.Get().GetStrength());
-        shader.SetColor("_PointLights[" + std::to_string(i) + "].Color", light.Get().GetColor());
-    }
-}
-
 void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
 {
     ECS_WORLD(rei::GetInternalWorld());
@@ -225,8 +169,7 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
 
         const Shader& shader = meshRenderer.GetRenderShader();
-        SetAmbientLight(shader);
-        SetPointLights(shader);
+        _lighting->SetLightValues(shader);
         shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
     }
@@ -245,8 +188,7 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
         meshRenderer.SetMaterial(material);
 
         const Shader& shader = meshRenderer.GetRenderShader();
-        SetAmbientLight(shader);
-        SetPointLights(shader);
+        _lighting->SetLightValues(shader);
         shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
 
@@ -267,21 +209,6 @@ void rei::render::DefaultRenderScenario::RenderOutlineObjects() const
         const Shader& shader = meshRenderer.GetRenderShader();
         shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
-    }
-}
-
-void rei::render::DefaultRenderScenario::RenderPointLights() const
-{
-    for (auto& light : _pointLights)
-    {
-        if (light.IsNull()) return;
-
-        const auto& shader = _lightSourceMaterial.Asset->GetShader();
-        shader.SetColor("_Color", light.Get().GetColor());
-        shader.SetFloat("_Strength", light.Get().GetStrength());
-        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, light.Get().GetTransform().CalculateModelMatrix());
-
-        _cubeVertexData.Render();
     }
 }
 

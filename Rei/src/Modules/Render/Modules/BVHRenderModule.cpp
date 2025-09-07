@@ -35,7 +35,7 @@ void rei::render::BVHRenderModule::RenderBVH(const MeshBVHNode& node, const glm:
     }
 }
 
-void rei::render::BVHRenderModule::RenderMeshRenderersBVH() const
+void rei::render::BVHRenderModule::Render() const
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();

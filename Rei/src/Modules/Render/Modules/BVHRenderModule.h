@@ -10,7 +10,7 @@ namespace rei::render
     public:
         explicit BVHRenderModule(const std::shared_ptr<GizmosModule>& gizmosModule);
 
-        void RenderMeshRenderersBVH() const;
+        void Render() const;
         
     private:
         std::shared_ptr<GizmosModule> _gizmosModule;

@@ -4,9 +4,9 @@
 #include "../../../../resources/meshes/CubeVertexData.h"
 #include "../../../../resources/meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
-#include "Modules/Render/Mesh/MeshBVHNode.h"
 #include "Modules/Render/Modules/BVHRenderModule.h"
 #include "Modules/Render/Modules/GizmosModule.h"
+#include "Modules/Render/Modules/LightingRenderModule.h"
 
 namespace rei::render
 {
@@ -32,23 +32,17 @@ namespace rei::render
         void SetBackgroundColor(const Color& color) const;
         void ClearBuffer(int clearMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, i32 stencilMask = 0xFF) const;
 
-        void FindAmbientLights();
-        void FindPointLights();
-
-        void SetAmbientLight(const Shader& shader) const;
-        void SetPointLights(const Shader& shader) const;
-
         void RenderMeshRenderers() const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
         void RenderOutlineObjects() const;
-        void RenderPointLights() const;
 
         void RenderOutlineFrame() const;
         void RenderPostprocessing() const;
 
     private:
-        std::shared_ptr<GizmosModule> _gizmosModule;
-        std::shared_ptr<BVHRenderModule> _bvhRenderModule;
+        std::shared_ptr<GizmosModule> _gizmos;
+        std::shared_ptr<BVHRenderModule> _bvh;
+        std::shared_ptr<LightingRenderModule> _lighting;
         
         glm::mat4 _projectionMatrix = 0;
         glm::mat4 _viewMatrix = 0;
@@ -57,13 +51,9 @@ namespace rei::render
         FrameBuffer _outlineObjectsBuffer;
         FrameBuffer _mainFrameBuffer;
 
-        ecs::RefComponent<AmbientLight> _ambientLight = {};
-        std::vector<ecs::RefComponent<PointLight>> _pointLights = {};
-
         CubeVertexData _cubeVertexData;
         QuadVertexData _quadVertexData;
 
-        assets::AssetRef<Material> _lightSourceMaterial{};
         assets::AssetRef<Material> _outlineQuadMaterial{};
         assets::AssetRef<Material> _depthMaterial{};
         
