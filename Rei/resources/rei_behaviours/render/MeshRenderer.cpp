@@ -37,7 +37,7 @@ namespace rei::render
         {
             if (!textures[i].IsLoaded)
             {
-                LOG_ERROR("Texture " + textures[i].Id + " is not loaded")
+                LOG_ERROR("Texture {} is not loaded", textures[i].Id)
                 continue;
             }
             const auto texturePtr = textures[i].Asset;
@@ -63,7 +63,7 @@ namespace rei::render
                 textureName = "texture_height";
                 break;
             default:
-                LOG_ERROR("Unknown texture type: " + textureType)
+                LOG_ERROR("Unknown texture type: {}", static_cast<int>(textureType))
                 continue;
             }
 
@@ -87,7 +87,7 @@ namespace rei::render
     {
         if (!_model.IsLoaded)
         {
-            LOG_ERROR("Model " + _model.Id + " is not loaded. Cannot render mesh.");
+            LOG_ERROR("Model {} is not loaded. Cannot render mesh.", _model.Id)
             return;
         }
 

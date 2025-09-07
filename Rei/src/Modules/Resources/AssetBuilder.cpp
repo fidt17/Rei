@@ -35,7 +35,7 @@ namespace rei::resources
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR(e.what())
+            LOG_ERROR("{}", e.what())
         }
 
         return 0;
@@ -47,7 +47,7 @@ namespace rei::resources
         
         const i64 offset = writer.GetPosition();
 
-        LOG("Building asset: " + filePath.string())
+        LOG("Building asset: {}", filePath.string())
 
         #define ADD_TO_MAP(x, y) map[x] = [&](const std::filesystem::path& p, BinaryWriter& w) { y(p, w); };
         std::map<std::string, std::function<void(const std::filesystem::path&, BinaryWriter&)>> map;
@@ -68,7 +68,7 @@ namespace rei::resources
         }
 
         const i64 bytesWritten = writer.GetPosition() - offset;
-        LOG("Total Size: " + STRING(bytesWritten) + " bytes")
+        LOG("Total Size: {} bytes", bytesWritten)
 
         return writer.GetPosition();
     }
@@ -83,7 +83,7 @@ namespace rei::resources
 
     std::string AssetBuilder::ReadAllText(const std::filesystem::path& path) const
     {
-        REI_ASSERT(std::filesystem::exists(path), "File " + path.string() + " does not exist")
+        REI_ASSERT(std::filesystem::exists(path), std::format("File {} does not exist", std::string(path)))
 
         std::stringstream strStream;
         strStream << std::ifstream(path).rdbuf();

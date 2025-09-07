@@ -21,9 +21,9 @@ const std::string LOG_SCOPE;
 #define SET_LOG_SCOPE(x) const std::string LOG_SCOPE = (x);
 
 #ifdef DEBUG
-    #define LOG(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Info, __VA_ARGS__);
-    #define LOG_WARNING(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Warning, __VA_ARGS__);
-    #define LOG_ERROR(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Error, __VA_ARGS__);
+    #define LOG(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Info, std::format(__VA_ARGS__));
+    #define LOG_WARNING(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Warning, std::format(__VA_ARGS__));
+    #define LOG_ERROR(...) rei::common::logging::Log::GetLogger()->Log(LOG_SCOPE, rei::common::logging::LogLevelEnum::Error, std::format(__VA_ARGS__));
     #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
     #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
     #define LOG_USE_COUNT(x) LOG("Use count of " + std::string(#x) + " = " + STRING(x.use_count()))

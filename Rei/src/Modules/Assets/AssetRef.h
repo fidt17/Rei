@@ -45,7 +45,7 @@ namespace rei::assets
         {
             if (IsLoaded) return true;
 
-            LOG_ERROR("Asset id=" + Id + " is not loaded")
+            LOG_ERROR("Asset id={} is not loaded", Id)
             return false;
         }
 

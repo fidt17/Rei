@@ -23,11 +23,11 @@ namespace rei::render
 
             if (shaderType == Vertex)
             {
-                LOG_ERROR("Vertex shader compilation failed\n" + std::string(infoLog))
+                LOG_ERROR("Vertex shader compilation failed\n,{}", std::string(infoLog))
             }
             else if (shaderType == Fragment)
             {
-                LOG_ERROR("Fragment shader compilation failed\n" + std::string(infoLog))
+                LOG_ERROR("Fragment shader compilation failed\n{}", std::string(infoLog))
             }
         }
     }
@@ -41,7 +41,7 @@ namespace rei::render
             constexpr int LOG_BUFFER_SIZE = 512;
             char infoLog[LOG_BUFFER_SIZE];
             glGetProgramInfoLog(shaderProgram, LOG_BUFFER_SIZE, nullptr, infoLog);
-            LOG_ERROR("Shader linking failed\n" + std::string(infoLog));
+            LOG_ERROR("Shader linking failed\n{}", std::string(infoLog))
         }
     }
 

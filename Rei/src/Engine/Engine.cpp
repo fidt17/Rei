@@ -47,7 +47,7 @@ namespace rei::internal::engine
     {
         glfwSetErrorCallback([](int error_code, const char* description)
         {
-            LOG_ERROR("GLFW ERROR. " + STRING(error_code) + " " + description);
+            LOG_ERROR("GLFW ERROR. {} {}", error_code, description);
         });
 
         if (!glfwInit())
@@ -126,7 +126,7 @@ namespace rei::internal::engine
         }
         catch (const std::exception& exc)
         {
-            LOG_ERROR("Exception on engine start", exc.what())
+            LOG_ERROR("Exception on engine start. {}", exc.what())
             Shutdown(ENGINE_INITIALIZATION_ERROR_EXIT_CODE);
         }
 
@@ -144,7 +144,7 @@ namespace rei::internal::engine
         }
         catch (const std::exception& exc)
         {
-            LOG_ERROR("Exception in engine update loop", exc.what())
+            LOG_ERROR("Exception in engine update loop, {}", exc.what())
             Shutdown(ENGINE_UPDATE_ERROR_EXIT_CODE);
         }
     }

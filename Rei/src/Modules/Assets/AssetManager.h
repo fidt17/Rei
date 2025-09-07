@@ -52,7 +52,7 @@ namespace rei::assets
             remove(dest.c_str());
 
             std::cout << "\n";
-            LOG("Created temp file at " + dest);
+            LOG("Created temp file at {}", dest)
 
             i32 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
@@ -63,7 +63,7 @@ namespace rei::assets
             _loadedAssetsSize += assetSize;
 
             _loadedAssets[ref.Id] = new AssetRef<T>(ref);
-            LOG("Loaded asset id=" + ref.Id + ", size=" + STRING(assetSize / 1024 / 1024.0) + " Mb, total=" + STRING(_loadedAssetsSize / 1024 / 1024.0) + " Mb")
+            LOG("Loaded asset id={}, size={} Mb, total={} Mb", ref.Id, assetSize / 1024 / 1024.0, _loadedAssetsSize / 1024 / 1024.0)
 
             return ref;
         }
@@ -103,7 +103,7 @@ namespace rei::assets
 
             try
             {
-                time::ScopedTimer timer("Asset " + ref.Id + " loading");
+                time::ScopedTimer timer(std::format("Asset {0} loading", ref.Id));
 
                 // if an absolute path to the asset is used instead
                 if (ref.Id.rfind("@", 0) == 0)
@@ -119,7 +119,7 @@ namespace rei::assets
             }
             catch (std::exception e)
             {
-                LOG_ERROR("Cought exception while trying to load asset id=" + ref.Id + "\n Exception: " + e.what())
+                LOG_ERROR("Cought exception while trying to load asset id={}\n Exception: {}", ref.Id, e.what())
                 ref.IsLoaded = false;
             }
 
@@ -130,7 +130,7 @@ namespace rei::assets
         {
             for (auto loadedAsset : _loadedAssets)
             {
-                LOG("Delete asset id=" + loadedAsset.first)
+                LOG("Delete asset id={}", loadedAsset.first)
                 _loadedAssetsSize -= loadedAsset.second->GetAssetSize();
 
                 loadedAsset.second->UnloadAsset();
@@ -142,7 +142,7 @@ namespace rei::assets
         {
             for (const auto& tmpFile : _tmpFiles)
             {
-                LOG_WARNING("Deleted temp file at " + tmpFile);
+                LOG_WARNING("Deleted temp file at {}", tmpFile)
                 remove(tmpFile.c_str());
             }
         }
@@ -197,7 +197,7 @@ namespace rei::assets
 
             _loadedAssetsSize += assetSize;
 
-            LOG("Loaded asset id=" + ref.Id + ", size=" + STRING(assetSize) + " b, total=" + STRING(_loadedAssetsSize / 1024 / 1024.0) + " Mb")
+            LOG("Loaded asset id={}, size={} b, total={} Mb", ref.Id, assetSize, _loadedAssetsSize / 1024 / 1024.0)
         }
     };
 }

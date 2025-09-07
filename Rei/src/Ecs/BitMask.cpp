@@ -9,9 +9,7 @@ namespace rei::ecs
         {
             Resize(flagIdx);
         }
-    
-        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(),
-                   "FlagIdx is too large. Idx: " + std::to_string(flagIdx) + ". Mask size: " + std::to_string(_flags.size()))
+        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(), std::format("FlagIdx is too large. Idx: {}. mask size: {}", flagIdx, _flags.size()))
 
         const auto layerIdx = GetLayerIdx(flagIdx);
         _flags.at(layerIdx) |= static_cast<mask>(1) << flagIdx;
@@ -19,8 +17,7 @@ namespace rei::ecs
 
     void BitMask::Remove(const mask flagIdx)
     {
-        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(),
-                   "FlagIdx is too large. Idx: " + std::to_string(flagIdx) + ". Mask size: " + std::to_string(_flags.size()))
+        REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(), std::format("FlagIdx is too large. Idx: {}. Mask size: {}", flagIdx, _flags.size()))
 
         const auto layerIdx = GetLayerIdx(flagIdx);
         _flags.at(layerIdx) &= ~(static_cast<mask>(1) << flagIdx);
@@ -28,8 +25,7 @@ namespace rei::ecs
 
     bool BitMask::All(const BitMask& other) const
     {
-        REI_ASSERT(_flags.size() == other._flags.size(),
-                   "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
+        REI_ASSERT(_flags.size() == other._flags.size(), std::format("Sizes differ. This size: {}. Other size: {}", _flags.size(), other._flags.size()))
 
         for (mask i = 0; i < _flags.size(); i++)
         {
@@ -45,8 +41,7 @@ namespace rei::ecs
 
     bool BitMask::Any(const BitMask& other) const
     {
-        REI_ASSERT(_flags.size() == other._flags.size(),
-                   "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
+        REI_ASSERT(_flags.size() == other._flags.size(), std::format("Sizes differ. This size: {}. Other size: {}", _flags.size(), other._flags.size()))
 
         for (mask i = 0; i < _flags.size(); i++)
         {
@@ -90,8 +85,7 @@ namespace rei::ecs
 
     bool BitMask::operator==(const BitMask& other) const
     {
-        REI_ASSERT(_flags.size() == other._flags.size(),
-                   "Sizes differ. This size: " + std::to_string(_flags.size()) + ". Other size: " + std::to_string(other._flags.size()))
+        REI_ASSERT(_flags.size() == other._flags.size(), std::format("Sizes differ. This size: {}. Other size: {}", _flags.size(), other._flags.size()))
 
         for (auto i = 0; i < _flags.size(); i++)
         {

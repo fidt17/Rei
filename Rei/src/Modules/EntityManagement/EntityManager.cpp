@@ -33,7 +33,6 @@ rei::ecs::Entity rei::EntityManager::CreateNewEntity(const std::string& name)
 
     const auto e = NEW_ENTITY();
     GET(e, EntityInfo) = {GenerateNewSceneEntityId(), name};
-    LOG_WARNING("CREATE NEW ENTITY: " + name)
 
     AddBehaviour<transformation::Transform>(e).Reset();
 
@@ -75,7 +74,7 @@ void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
     }
     catch (std::exception& e)
     {
-        LOG_ERROR("Scene entity creation exception. Entity Id " + STRING(sceneEntity.GetId()) + ". Exception: " + e.what());
+        LOG_ERROR("Scene entity creation exception. Entity Id {}. Exception: {}", sceneEntity.GetId(), e.what());
     }
 
     for (const auto& [Entity, BehaviourId] : behavioursToInit)

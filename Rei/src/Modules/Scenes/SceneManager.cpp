@@ -31,6 +31,6 @@ namespace rei::scenes
             _entityManager->Create(sceneEntity);
         }
 
-        LOG("Loaded scene \"" + _activeScene->GetName() + "\"")
+        LOG("Loaded scene {}", _activeScene->GetName())
     }
 }

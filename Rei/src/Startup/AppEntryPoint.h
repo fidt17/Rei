@@ -27,7 +27,7 @@ namespace rei::external
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR("Exception", e.what())
+            LOG_ERROR("Exception {}", e.what())
             return nullptr;
         }
     }
@@ -69,7 +69,7 @@ int main()
     }
     catch (const std::exception& e)
     {
-        LOG_ERROR("Exception", e.what())
+        LOG_ERROR("Exception {}", e.what())
         return DEFAULT_ERROR_EXIT_CODE;
     }
 }

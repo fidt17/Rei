@@ -25,12 +25,12 @@ long long rei::time::ScopedTimer::Stop()
     {
         if (ms < 1000)
         {
-            LOG("[T:" + _name + "] " + STRING(ms) + " ms");
+            LOG("[T:{}] {} ms", _name, ms)
         }
         else
         {
             const double seconds = ms / 1000.0;
-            LOG_WARNING("[T:" + _name + "] " + STRING(seconds) + " seconds");
+            LOG_WARNING("[T:{}] {} seconds", _name, seconds)
         }
     }
 
