@@ -3,16 +3,17 @@
 
 #include "rei_behaviours/transformation/Transform.h"
 
+rei::render::LightingRenderModule::LightingRenderModule(const std::shared_ptr<CameraModule>& cameraModule): _cameraModule(cameraModule)
+{
+}
+
 void rei::render::LightingRenderModule::Setup()
 {
     _lightSourceMaterial = GetAssetManager().GetById<Material>(REI_LIGHT_SOURCE_MATERIAL_ID);
 }
 
-void rei::render::LightingRenderModule::OnBeforeRender(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix)
+void rei::render::LightingRenderModule::OnBeforeRender()
 {
-    _projectionMatrix = projectionMatrix;
-    _viewMatrix = viewMatrix;
-    
     FindAmbientLights();
     FindPointLights();
 }
@@ -90,7 +91,7 @@ void rei::render::LightingRenderModule::RenderPointLights() const
         const auto& shader = _lightSourceMaterial.Asset->GetShader();
         shader.SetColor("_Color", light.Get().GetColor());
         shader.SetFloat("_Strength", light.Get().GetStrength());
-        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, light.Get().GetTransform().CalculateModelMatrix());
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), light.Get().GetTransform().CalculateModelMatrix());
 
         _cubeVertexData.Render();
     }

@@ -9,14 +9,15 @@
 
 #include "Modules/Render/Shaders/Shader.h"
 #include "rei_behaviours/render/MeshRenderer.h"
-#include "rei_behaviours/render/RenderOutlineTag.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
     : BaseRenderScenario(target),
-      _gizmos(std::make_shared<GizmosModule>()),
+      _cameraModule(std::make_shared<CameraModule>()),
+      _gizmos(std::make_shared<GizmosModule>(_cameraModule)),
       _bvh(std::make_shared<BVHRenderModule>(_gizmos)),
-      _lighting(std::make_shared<LightingRenderModule>())
+      _lighting(std::make_shared<LightingRenderModule>(_cameraModule)),
+      _outline(std::make_shared<OutlineRenderModule>(_cameraModule))
 {
 }
 
@@ -35,11 +36,11 @@ void rei::render::DefaultRenderScenario::Setup()
     _grayscaleMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_GRAYSCALE_MATERIAL_ID);
     _inversionMaterial = GetAssetManager().GetById<Material>(REI_OVERLAY_INVERSION_MATERIAL_ID);
 
-    _outlineQuadMaterial = GetAssetManager().GetById<Material>(REI_OUTLINE_MATERIAL_ID);
     _depthMaterial = GetAssetManager().GetById<Material>(REI_DEPTH_MATERIAL_ID);
 
     _gizmos->Setup();
     _lighting->Setup();
+    _outline->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -51,12 +52,8 @@ void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const 
 
 void rei::render::DefaultRenderScenario::OnBeforeRender()
 {
-    _projectionMatrix = _camera.Get().GetProjectionMatrix();
-    _viewMatrix = _camera.Get().GetViewMatrix();
-    _camera.Get().GetOutputSize(_outputWidth, _outputHeight);
-
-    _gizmos->OnBeforeRender(_projectionMatrix, _viewMatrix);
-    _lighting->OnBeforeRender(_projectionMatrix, _viewMatrix);
+    _cameraModule->OnBeforeRender();
+    _lighting->OnBeforeRender();
 }
 
 void rei::render::DefaultRenderScenario::Render()
@@ -101,17 +98,11 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
 {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // selected objects pass
-    _outlineObjectsBuffer.EnableBuffer(_outputWidth, _outputHeight);
-    SetBackgroundColor(Color(0, 0, 0, 0));
-    ClearBuffer();
-
-    RenderOutlineObjects();
-    // ------
+    _outline->RenderPass();
 
     // main pass
-    _mainFrameBuffer.EnableBuffer(_outputWidth, _outputHeight);
-    SetBackgroundColor(_camera.Get().GetBackgroundColor());
+    _mainFrameBuffer.EnableBuffer(_cameraModule->GetWidth(), _cameraModule->GetHeight());
+    SetBackgroundColor(_cameraModule->GetBackgroundColor());
     ClearBuffer();
 
     RenderMeshRenderers();
@@ -124,21 +115,15 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     ClearBuffer();
     RenderPostprocessing();
-    RenderOutlineFrame();
+    _outline->RenderOutlineFrame();
     // ------
 }
 
-void rei::render::DefaultRenderScenario::RenderInDepthMode()
+void rei::render::DefaultRenderScenario::RenderInDepthMode() const
 {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // selected objects pass
-    _outlineObjectsBuffer.EnableBuffer(_outputWidth, _outputHeight);
-    SetBackgroundColor(Color(0, 0, 0, 0));
-    ClearBuffer();
-
-    RenderOutlineObjects();
-    // ------
+    _outline->RenderPass();
 
     // main pass
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -146,7 +131,7 @@ void rei::render::DefaultRenderScenario::RenderInDepthMode()
     ClearBuffer();
 
     RenderMeshRenderersWithOverrideMaterial(_depthMaterial);
-    RenderOutlineFrame();
+    _outline->RenderOutlineFrame();
     // ------
 }
 
@@ -170,7 +155,7 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
 
         const Shader& shader = meshRenderer.GetRenderShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
     }
 }
@@ -189,40 +174,11 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
 
         const Shader& shader = meshRenderer.GetRenderShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
 
         meshRenderer.SetMaterial(originalMaterial);
     }
-}
-
-
-void rei::render::DefaultRenderScenario::RenderOutlineObjects() const
-{
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer, RenderOutlineTag>();
-
-    FOR(e, f)
-    {
-        const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
-
-        const Shader& shader = meshRenderer.GetRenderShader();
-        shader.SetViewMatrices(_projectionMatrix, _viewMatrix, meshRenderer.GetTransform().CalculateModelMatrix());
-        meshRenderer.Render();
-    }
-}
-
-void rei::render::DefaultRenderScenario::RenderOutlineFrame() const
-{
-    _outlineQuadMaterial.Asset->GetShader().Use();
-
-    glDisable(GL_DEPTH_TEST);
-
-    glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, _outlineObjectsBuffer.GetColorTexture());
-    _quadVertexData.Render();
-
-    glEnable(GL_DEPTH_TEST);
 }
 
 void rei::render::DefaultRenderScenario::RenderPostprocessing() const

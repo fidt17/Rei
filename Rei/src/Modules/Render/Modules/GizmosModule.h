@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../../../../resources/meshes/CubeVertexData.h"
+#include "Modules/Render/RenderScenario/CameraModule.h"
 
 namespace rei::render
 {
@@ -9,8 +10,9 @@ namespace rei::render
     class GizmosModule
     {
     public:
+        explicit GizmosModule(const std::shared_ptr<CameraModule>& cameraModule);
+
         void Setup();
-        void OnBeforeRender(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix);
         
         void RenderBox(const glm::mat4& transformation, const Color& color, bool useDepth = true) const;
         void RenderBox(const math::Vector3& pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color, bool useDepth = true) const;
@@ -22,8 +24,7 @@ namespace rei::render
         void RenderBox(const glm::mat4& transformation, const Color& color, bool useDepth, bool wireframe) const;
 
     private:
-        glm::mat4 _projectionMatrix = 0;
-        glm::mat4 _viewMatrix = 0;
+        std::shared_ptr<CameraModule> _cameraModule;
         
         assets::AssetRef<Material> _gizmosMaterial{};
         

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "BaseRenderScenario.h"
+#include "CameraModule.h"
 #include "FrameBuffer.h"
 #include "../../../../resources/meshes/CubeVertexData.h"
 #include "../../../../resources/meshes/QuadVertexData.h"
@@ -7,6 +8,7 @@
 #include "Modules/Render/Modules/BVHRenderModule.h"
 #include "Modules/Render/Modules/GizmosModule.h"
 #include "Modules/Render/Modules/LightingRenderModule.h"
+#include "Modules/Render/Modules/OutlineRenderModule.h"
 
 namespace rei::render
 {
@@ -27,34 +29,34 @@ namespace rei::render
     private:
         void RenderInWireframeMode() const;
         void RenderInNormalMode();
-        void RenderInDepthMode();
+        void RenderInDepthMode() const;
         
         void SetBackgroundColor(const Color& color) const;
         void ClearBuffer(int clearMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, i32 stencilMask = 0xFF) const;
 
         void RenderMeshRenderers() const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
-        void RenderOutlineObjects() const;
 
-        void RenderOutlineFrame() const;
         void RenderPostprocessing() const;
 
+    public:
+        void SetCamera(const ecs::RefComponent<Camera>& camera) override
+        {
+            BaseRenderScenario::SetCamera(camera);
+            _cameraModule->SetCamera(camera);
+        }
+
     private:
+        std::shared_ptr<CameraModule> _cameraModule;
         std::shared_ptr<GizmosModule> _gizmos;
         std::shared_ptr<BVHRenderModule> _bvh;
         std::shared_ptr<LightingRenderModule> _lighting;
+        std::shared_ptr<OutlineRenderModule> _outline;
         
-        glm::mat4 _projectionMatrix = 0;
-        glm::mat4 _viewMatrix = 0;
-        i32 _outputWidth = 0, _outputHeight = 0;
-
-        FrameBuffer _outlineObjectsBuffer;
         FrameBuffer _mainFrameBuffer;
 
-        CubeVertexData _cubeVertexData;
         QuadVertexData _quadVertexData;
 
-        assets::AssetRef<Material> _outlineQuadMaterial{};
         assets::AssetRef<Material> _depthMaterial{};
         
         assets::AssetRef<Material> _overlayMaterial{};

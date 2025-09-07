@@ -11,7 +11,7 @@ namespace rei::render
         explicit BaseRenderScenario(GLFWwindow* target);
         virtual ~BaseRenderScenario() = default;
 
-        void SetCamera(const ecs::RefComponent<Camera>& camera);
+        virtual void SetCamera(const ecs::RefComponent<Camera>& camera);
         virtual void Setup() = 0;
         virtual void OnBeforeRender() = 0;
         virtual void Render() = 0;

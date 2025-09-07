@@ -4,15 +4,13 @@
 #include "glad/glad.h"
 #include "Modules/Render/Material/Material.h"
 
+rei::render::GizmosModule::GizmosModule(const std::shared_ptr<CameraModule>& cameraModule): _cameraModule(cameraModule)
+{
+}
+
 void rei::render::GizmosModule::Setup()
 {
     _gizmosMaterial = GetAssetManager().GetById<Material>(REI_GIZMOS_MATERIAL_ID);
-}
-
-void rei::render::GizmosModule::OnBeforeRender(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix)
-{
-    _projectionMatrix = projectionMatrix;
-    _viewMatrix = viewMatrix;
 }
 
 void rei::render::GizmosModule::RenderBox(const glm::mat4& transformation, const Color& color, bool useDepth) const
@@ -43,7 +41,7 @@ void rei::render::GizmosModule::RenderBox(const glm::mat4& transformation, const
 
     const auto& shader = _gizmosMaterial.Asset->GetShader();
     shader.SetColor("_Color", color);
-    shader.SetViewMatrices(_projectionMatrix, _viewMatrix, transformation);
+    shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), transformation);
 
     _cubeVertexData.Render();
 
