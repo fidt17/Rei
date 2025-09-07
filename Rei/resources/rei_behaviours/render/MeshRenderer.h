@@ -28,6 +28,7 @@ namespace rei::render
     private:
         void BindTextures() const;
         void RenderMesh(const std::vector<Mesh>::value_type& mesh) const;
+        void ConfigureSelectionCollider() const;
     };
 }
 

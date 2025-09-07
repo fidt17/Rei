@@ -38,7 +38,7 @@ namespace rei::render
 
         void RenderMeshRenderers() const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
-        void RenderBVH(const MeshBVHNode& node, const math::Vector3& position, const math::Vector3& rotation, const math::Vector3& scale) const;
+        void RenderBVH(const MeshBVHNode& node, const glm::mat4& model) const;
         void RenderMeshRenderersBVH() const;
         void RenderOutlineObjects() const;
         void RenderPointLights() const;

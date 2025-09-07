@@ -25,7 +25,12 @@ bool rei::physics::MeshCollider::IntersectBVH(const math::Ray& ray, const math::
 {
     using math::Vector3;
 
-    if (!BoxRayIntersection(node.Min, ray, model)) return false;
+    auto boxModel = glm::mat4(1.0f);
+    boxModel = translate(boxModel, glm::vec3(Vector3::Average(node.Min, node.Max)));
+    boxModel = scale(boxModel, glm::vec3((node.Max - node.Min)));
+    boxModel = model * boxModel;
+    
+    if (!BoxRayIntersection(Vector3(1,1,1), ray, boxModel)) return false;
 
     if (!node.Faces.empty())
     {

@@ -33,9 +33,9 @@ rei::render::Mesh::Mesh(resources::BinaryReader& reader)
     }
 }
 
-rei::render::Mesh::Mesh(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
+rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
     :
-    Name(name),
+    Name(std::move(name)),
     VAO(0), VBO(0), EBO(0)
 {
     Vertices = vertices;

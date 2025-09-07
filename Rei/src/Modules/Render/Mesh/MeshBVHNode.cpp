@@ -3,8 +3,8 @@
 
 void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, const int depth)
 {
-    constexpr int MAX_DEPTH = 0;
-    constexpr int MIN_FACES = 5;
+    constexpr int MAX_DEPTH = 5;
+    constexpr int MIN_FACES = 16;
 
     constexpr int X_AXIS = 1;
     constexpr int Y_AXIS = 2;

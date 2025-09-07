@@ -4,7 +4,6 @@
 #include "glad/glad.h"
 #include "Modules/Editor/SelectionCollider.h"
 #include "Modules/Physics/MeshCollider.h"
-#include "Modules/Physics/SphereCollider.h"
 
 namespace rei::render
 {
@@ -13,6 +12,15 @@ namespace rei::render
         glBindVertexArray(mesh.VAO);
         glDrawElements(GL_TRIANGLES, mesh.Indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
+    }
+
+    void MeshRenderer::ConfigureSelectionCollider() const
+    {
+        ECS_WORLD(GetInternalWorld());
+        
+        const auto meshCollider = std::make_shared<physics::MeshCollider>();
+        meshCollider->SetModel(_model);
+        GET(GetEntity(), editor::SelectionCollider).Collider = meshCollider;
     }
 
     void MeshRenderer::BindTextures() const
@@ -72,12 +80,7 @@ namespace rei::render
 
     void MeshRenderer::Init()
     {
-        ECS_WORLD(GetInternalWorld());
-
-        const auto meshCollider = std::make_shared<physics::MeshCollider>();
-        meshCollider->SetModel(_model);
-        auto& col = GET(GetEntity(), editor::SelectionCollider);
-        col.Collider = meshCollider;
+        ConfigureSelectionCollider();
     }
 
     void MeshRenderer::Render() const

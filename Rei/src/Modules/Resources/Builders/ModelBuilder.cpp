@@ -71,7 +71,6 @@ void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::
 
     writer.WriteStr(assetPath.filename().generic_string());
 
-    // meshes
     writer.WriteI32(meshes.size());
     i32 meshCounter = 0;
     for (const auto& mesh : meshes)
