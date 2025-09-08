@@ -14,8 +14,8 @@ namespace rei::math
         SERIALIZE f32 y = 0;
         SERIALIZE f32 z = 0;
 
-        REI_API explicit Vector3(f32 x, f32 y = 0, f32 z = 0);
-        REI_API explicit Vector3(glm::vec3 vec3);
+        REI_API Vector3(f32 x, f32 y = 0, f32 z = 0);
+        REI_API Vector3(glm::vec3 vec3);
 
         REI_API constexpr operator glm::vec3() const { return glm::vec3(x, y, z); }
         REI_API operator std::string() const;

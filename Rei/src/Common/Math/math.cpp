@@ -1,5 +1,15 @@
 ﻿#include "pch.h"
 
+glm::mat4 rei::math::GetRotationMatrix(const Vector3& rotation)
+{
+    auto model = glm::mat4(1.0f);
+    model = rotate(model, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    model = rotate(model, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    model = rotate(model, glm::radians(rotation.z), glm::vec3(0, 0, 1));
+
+    return model;
+}
+
 glm::mat4 rei::math::GetTransformationMatrix(const Vector3& position, const Vector3& rotation, const Vector3& s)
 {
     auto model = glm::mat4(1.0f);

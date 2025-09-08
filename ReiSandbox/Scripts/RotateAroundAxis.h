@@ -22,6 +22,14 @@ public:
     void DrawGizmos(const rei::render::Gizmos& gizmos) override
     {
         auto& transform = GetTransform();
-        gizmos.RenderWireframeBox(transform.GetPosition(), rei::math::Vector3::One() * 3, {}, rei::render::Color::Red(), false);
+        const auto& position = transform.GetPosition();
+
+        const f32 size = 3;
+
+        gizmos.DrawWireframeBox(position, {size, size, size}, GetTransform().GetRotation(), {1,0,0,1});
+
+        gizmos.DrawLine(position, position + transform.GetRight() * 3, rei::render::Color::Red(), false);
+        gizmos.DrawLine(position, position + transform.GetUp() * 3, rei::render::Color::Green(), false);
+        gizmos.DrawLine(position, position + transform.GetForward() * 3, rei::render::Color::Blue(), false);
     }
 };

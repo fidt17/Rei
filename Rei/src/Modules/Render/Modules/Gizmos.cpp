@@ -30,29 +30,102 @@ void rei::render::Gizmos::RenderBehaviourGizmos() const
     }
 }
 
-void rei::render::Gizmos::RenderBox(const glm::mat4& transformation, const Color& color, bool useDepth) const
+void rei::render::Gizmos::DrawLine(const math::Vector3& start, const math::Vector3& end, const Color& color, const bool useDepth) const
 {
-    RenderBox(transformation, color, useDepth, false);
+    using glm::vec3;
+    using glm::mat4;
+
+    const vec3 direction = vec3(end - start);
+    const f32 distance = length(direction) / 1.7320508076;
+    const vec3 v1_normalized = normalize(vec3(1, 1, 1));
+    const vec3 v2_normalized = normalize(vec3(direction));
+    const vec3 rotation_axis = cross(v1_normalized, v2_normalized);
+    const f32 dotProduct = dot(v1_normalized, v2_normalized);
+    const f32 angle = glm::acos(glm::clamp(dotProduct, -1.0f, 1.0f)); // Clamp to avoid floating point errors with acos
+    const mat4 rotation = rotate(mat4(1.0f), angle, rotation_axis);
+
+    auto model = mat4(1.0f);
+    model = translate(model, vec3(start));
+    model = scale(model, vec3(distance, distance, distance));
+    model = model * rotation;
+
+    const auto& shader = _gizmosMaterial.Asset->GetShader();
+    shader.SetColor("_Color", color);
+    shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), model);
+
+    if (!useDepth)
+    {
+        glDisable(GL_DEPTH_TEST);
+    }
+    else
+    {
+        glEnable(GL_DEPTH_TEST);
+    }
+
+    _lineMesh.Render();
+
+    glEnable(GL_DEPTH_TEST);
 }
 
-void rei::render::Gizmos::RenderBox(const math::Vector3& pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
-                                    const bool useDepth) const
+void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& color, bool useDepth) const
 {
-    RenderBox(GetTransformationMatrix(pos, rotation, size), color, useDepth, false);
+    DrawBox(transformation, color, useDepth, false);
 }
 
-void rei::render::Gizmos::RenderWireframeBox(const glm::mat4& transformation, const Color& color, bool useDepth) const
+void rei::render::Gizmos::DrawBox(const math::Vector3& pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
+                              const bool useDepth) const
 {
-    RenderBox(transformation, color, useDepth, true);
+    DrawBox(GetTransformationMatrix(pos, rotation, size), color, useDepth, false);
 }
 
-void rei::render::Gizmos::RenderWireframeBox(const math::Vector3& pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
-                                             const bool useDepth) const
+void rei::render::Gizmos::DrawWireframeBox(const glm::mat4& transformation, const Color& color, bool useDepth) const
 {
-    RenderBox(GetTransformationMatrix(pos, rotation, size), color, useDepth, true);
+    DrawBox(transformation, color, useDepth, true);
 }
 
-void rei::render::Gizmos::RenderBox(const glm::mat4& transformation, const Color& color, bool useDepth, bool wireframe) const
+void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
+                                       const bool useDepth) const
+{
+    const math::Vector3 halfSize = size / 2.0f;
+
+    std::vector<math::Vector3> vertices = {
+        {-halfSize.x, -halfSize.y, +halfSize.z}, // bottom left front
+        {+halfSize.x, -halfSize.y, +halfSize.z}, // bottom right front
+        {+halfSize.x, +halfSize.y, +halfSize.z}, // top right front
+        {-halfSize.x, +halfSize.y, +halfSize.z}, // top left front
+        {-halfSize.x, -halfSize.y, -halfSize.z}, // bottom left back
+        {+halfSize.x, -halfSize.y, -halfSize.z}, // bottom right back
+        {+halfSize.x, +halfSize.y, -halfSize.z}, // top right back
+        {-halfSize.x, +halfSize.y, -halfSize.z}  // top left back
+    };
+
+    const auto rotationMatrix = GetRotationMatrix(rotation);
+
+    for (auto& vertex : vertices)
+    {
+        vertex = vertex.Transform(rotationMatrix) + center;
+    }
+    
+    // Front face
+    DrawLine(vertices[0], vertices[1], color, useDepth); // bottom
+    DrawLine(vertices[1], vertices[2], color, useDepth); // right
+    DrawLine(vertices[2], vertices[3], color, useDepth); // top
+    DrawLine(vertices[3], vertices[0], color, useDepth); // left
+
+    // Back face
+    DrawLine(vertices[4], vertices[5], color, useDepth); // bottom
+    DrawLine(vertices[5], vertices[6], color, useDepth); // right
+    DrawLine(vertices[6], vertices[7], color, useDepth); // top
+    DrawLine(vertices[7], vertices[4], color, useDepth); // left
+
+    // Connecting edges between front and back faces
+    DrawLine(vertices[0], vertices[4], color, useDepth); // bottom left
+    DrawLine(vertices[1], vertices[5], color, useDepth); // bottom right
+    DrawLine(vertices[2], vertices[6], color, useDepth); // top right
+    DrawLine(vertices[3], vertices[7], color, useDepth); // top left
+}
+
+void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& color, const bool useDepth, const bool wireframe) const
 {
     if (wireframe)
     {
@@ -71,7 +144,7 @@ void rei::render::Gizmos::RenderBox(const glm::mat4& transformation, const Color
     shader.SetColor("_Color", color);
     shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), transformation);
 
-    _cubeVertexData.Render();
+    _cubeMesh.Render();
 
     glEnable(GL_DEPTH_TEST);
     if (wireframe)

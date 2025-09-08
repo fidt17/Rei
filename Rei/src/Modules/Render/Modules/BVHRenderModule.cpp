@@ -31,7 +31,7 @@ void rei::render::BVHRenderModule::RenderBVH(const MeshBVHNode& node, const glm:
         boxModel = scale(boxModel, glm::vec3((node.Max - node.Min) * 0.99f));
         boxModel = model * boxModel;
 
-        _gizmosModule->RenderWireframeBox(boxModel, Color::White(), false);
+        _gizmosModule->DrawWireframeBox(boxModel, Color::White(), false);
     }
 }
 

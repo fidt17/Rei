@@ -6,6 +6,7 @@
 
 namespace rei::math
 {
+    glm::mat4 GetRotationMatrix(const Vector3& rotation);
     glm::mat4 GetTransformationMatrix(const Vector3& position, const Vector3& rotation, const Vector3& scale);
     
     bool SphereRayIntersection(const Vector3& center, f32 radius, const Ray& ray);
