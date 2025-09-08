@@ -2,12 +2,9 @@
 
 #include "Transform.h"
 
-#include "glm/trigonometric.hpp"
-#include "glm/ext/quaternion_geometric.hpp"
-
 void rei::transformation::Transform::Reset()
 {
-    _position = math::Vector3(0,0,0);
+    _position = math::Vector3(0, 0, 0);
     _rotation = math::Vector3(0, 0, 0);
     _scale = math::Vector3(1, 1, 1);
 }
@@ -34,34 +31,21 @@ glm::mat4 rei::transformation::Transform::CalculateModelMatrix() const
 
 rei::math::Vector3 rei::transformation::Transform::GetForward() const
 {
-    glm::vec3 forward;
-
-    const float yaw = _rotation.x - 90.0f;
-    const float pitch = _rotation.y;
-
-    forward.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    forward.y = sin(glm::radians(pitch));
-    forward.z = -sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-
-    forward = normalize(forward);
-
-    return math::Vector3(forward);
+    return math::Vector3::Forward().Transform(GetRotationMatrix(_rotation));
 }
 
 rei::math::Vector3 rei::transformation::Transform::GetRight() const
 {
-    const glm::vec3 forward = GetForward();
-    const glm::vec3 up = GetUp();
-
-    return math::Vector3(normalize(cross(forward, up)));
+    return math::Vector3::Right().Transform(GetRotationMatrix(_rotation));
 }
 
 rei::math::Vector3 rei::transformation::Transform::GetUp() const
 {
-    return math::Vector3(0, 1.0f, 0);
+    return math::Vector3::Up().Transform(GetRotationMatrix(_rotation));
 }
 
 rei::transformation::Transform::operator std::string() const
 {
-    return "P: " + std::string(_position) + "; R: " + std::string(_rotation) + "; S: " + std::string(_scale);
+    auto f = std::format("P: {}\nR: {}\nS: {}", std::string(_position), std::string(_rotation), std::string(_scale));
+    return std::string(f);
 }

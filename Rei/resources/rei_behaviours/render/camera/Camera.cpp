@@ -52,37 +52,30 @@ namespace rei::render
 
     glm::mat4 Camera::GetProjectionMatrix() const
     {
+        glm::mat4 projection;
+
         const f32 aspect = static_cast<float>(_outputWidth) / static_cast<float>(_outputHeight);
         if (_perspective == Orthographic)
         {
-            return glm::ortho(-_orthographicSize * aspect, _orthographicSize * aspect,
-                              -_orthographicSize, _orthographicSize,
-                              0.0f, 100.0f);
+            projection = glm::ortho(-_orthographicSize * aspect, _orthographicSize * aspect,
+                                    -_orthographicSize, _orthographicSize,
+                                    0.0f, 100.0f);
+        }
+        else
+        {
+            projection = glm::perspective(glm::radians(_fov), aspect, static_cast<float>(_nearClipPlane) + 0.01f, static_cast<float>(_farClipPlane));
         }
 
-        // else return perspective
-        return glm::perspective(glm::radians(_fov), aspect, static_cast<float>(_nearClipPlane) + 0.01f, static_cast<float>(_farClipPlane));
+        projection = scale(projection, glm::vec3(-1.0f, 1.0f, 1.0f));
+
+        return projection;
     }
 
     glm::mat4 Camera::GetViewMatrix() const
     {
-        const glm::vec3 cameraPosition = GetTransform().GetPosition();
-
-        constexpr glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        const glm::vec3 cameraDirection = normalize(cameraPosition - cameraTarget);
-
-        const glm::vec3 up = math::Vector3::Up();
-        const glm::vec3 cameraRight = normalize(cross(up, cameraDirection));
-
-        const glm::vec3 cameraUp = cross(cameraDirection, cameraRight);
-
-        const glm::vec3 forward = GetTransform().GetForward();
-
-        const glm::mat4 view = lookAt(cameraPosition,
-                                      cameraPosition + forward,
-                                      up);
-
-        return view;
+        auto& transform = GetTransform();
+        const auto& position = transform.GetPosition();
+        return lookAt(glm::vec3(position), glm::vec3(position + transform.GetForward()), glm::vec3(0, 1, 0));
     }
 
     math::Ray Camera::GetScreenPointToRay(const f32 xPos, const f32 yPos) const
@@ -91,7 +84,7 @@ namespace rei::render
         {
             return GetPerspectiveScreenPointToRay(xPos, yPos);
         }
-        
+
         return GetOrhographicScreenPointToRay(xPos, yPos);
     }
 
@@ -135,27 +128,27 @@ namespace rei::render
         // Convert screen coordinates to normalized device coordinates (NDC)
         float ndcX = (2.0f * xPos) / _outputWidth - 1.0f;
         float ndcY = 1.0f - (2.0f * yPos) / _outputHeight; // Flip Y-axis
-        
+
         // Get view and projection matrices
         const glm::mat4 view = GetViewMatrix();
         const glm::mat4 projection = GetProjectionMatrix();
-        
+
         // Calculate inverse of view-projection matrix
         const glm::mat4 invViewProj = glm::inverse(projection * view);
-        
+
         // Create points at near and far planes in NDC
         const glm::vec4 nearPointNDC(ndcX, ndcY, -1.0f, 1.0f);
         const glm::vec4 farPointNDC(ndcX, ndcY, 1.0f, 1.0f);
-        
+
         // Convert to world space
         const glm::vec4 nearPointWorld = invViewProj * nearPointNDC;
         const glm::vec4 farPointWorld = invViewProj * farPointNDC;
-        
+
         // For orthographic, no perspective division needed
         math::Ray ray;
         ray.Origin = math::Vector3(nearPointWorld);
         ray.Direction = math::Vector3::Normalize(math::Vector3(farPointWorld) - ray.Origin);
-        
+
         return ray;
     }
 }

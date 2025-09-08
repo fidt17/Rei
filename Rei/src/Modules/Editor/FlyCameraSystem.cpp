@@ -20,7 +20,7 @@ float lastFrame = 0.0f; // Time of last frame
 
 float lastX = -1, lastY = -1;
 bool didSetCursorPos;
-int framesToSkip = 60;
+int framesToSkip = 5;
 
 void rei::editor::FlyCameraSystem::OnUpdate()
 {
@@ -71,22 +71,22 @@ void rei::editor::FlyCameraSystem::OnUpdate()
 
         if (Input::IsKeyDown(GLFW_KEY_Q))
         {
-            transform.GetRotation().x += cameraSpeed * 45;
+            transform.GetPosition() -= cameraSpeed * cameraRight;
         }
 
         if (Input::IsKeyDown(GLFW_KEY_E))
         {
-            transform.GetRotation().x -= cameraSpeed * 45;
+            transform.GetPosition() += cameraSpeed * cameraRight;
         }
 
         if (Input::IsKeyDown(GLFW_KEY_R))
         {
-            transform.GetRotation().y += cameraSpeed * 45;
+            transform.GetPosition() += math::Vector3::Up() * cameraSpeed;
         }
 
         if (Input::IsKeyDown(GLFW_KEY_F))
         {
-            transform.GetRotation().y -= cameraSpeed * 45;
+            transform.GetPosition() -= math::Vector3::Up() * cameraSpeed;
         }
 
         f32 xpos, ypos;
@@ -105,28 +105,26 @@ void rei::editor::FlyCameraSystem::OnUpdate()
         }
         else
         {
-            float xoffset = xpos - lastX;
-            float yoffset = lastY - ypos; // reversed since y-coordinates range from bottom to top
-
-            const float sensitivity = 0.1f;
-            xoffset *= sensitivity;
-            yoffset *= sensitivity;
+            constexpr float sensitivity = 0.2f;
+            const float xOffset = (xpos - lastX) * sensitivity;
+            const float yOffset = (lastY - ypos) * sensitivity; // reversed since y-coordinates range from bottom to top
 
             lastX = xpos;
             lastY = ypos;
 
-            transform.GetRotation().x -= xoffset;
-            transform.GetRotation().y += yoffset;
 
-            if (transform.GetRotation().y > 89.0f)
-                transform.GetRotation().y = 89.0f;
-            if (transform.GetRotation().y < -89.0f)
-                transform.GetRotation().y = -89.0f;
+            transform.GetRotation().y += xOffset;
+            transform.GetRotation().x -= yOffset;
 
-            if (transform.GetRotation().x > 360.0f)
-                transform.GetRotation().x = 0.0f;
-            if (transform.GetRotation().x < -360.0f)
-                transform.GetRotation().x = -0.0f;
+            if (transform.GetRotation().x > 89.0f)
+                transform.GetRotation().x = 89.0f;
+            if (transform.GetRotation().x < -89.0f)
+                transform.GetRotation().x = -89.0f;
+
+            if (transform.GetRotation().y > 360.0f)
+                transform.GetRotation().y = 0.0f;
+            if (transform.GetRotation().y < -360.0f)
+                transform.GetRotation().y = -0.0f;
         }
 
         //LOG(std::string(transform))

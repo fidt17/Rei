@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "glm/fwd.hpp"
 
 namespace rei::transformation
 {
@@ -23,7 +22,7 @@ namespace rei::transformation
         REI_API math::Vector3 GetForward() const;
         REI_API math::Vector3 GetRight() const;
         REI_API math::Vector3 GetUp() const;
-
+        
         REI_API operator std::string() const;
     };
 }
