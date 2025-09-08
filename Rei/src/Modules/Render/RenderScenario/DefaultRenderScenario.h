@@ -6,7 +6,7 @@
 #include "../../../../resources/meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
 #include "Modules/Render/Modules/BVHRenderModule.h"
-#include "Modules/Render/Modules/GizmosModule.h"
+#include "Modules/Render/Modules/Gizmos.h"
 #include "Modules/Render/Modules/LightingRenderModule.h"
 #include "Modules/Render/Modules/OutlineRenderModule.h"
 #include "Modules/Render/Modules/PostProcessingModule.h"
@@ -47,7 +47,7 @@ namespace rei::render
 
     private:
         std::shared_ptr<CameraModule> _cameraModule;
-        std::shared_ptr<GizmosModule> _gizmos;
+        std::shared_ptr<Gizmos> _gizmos;
         std::shared_ptr<BVHRenderModule> _bvh;
         std::shared_ptr<LightingRenderModule> _lighting;
         std::shared_ptr<OutlineRenderModule> _outline;

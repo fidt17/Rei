@@ -127,6 +127,11 @@ namespace rei::math
         return sqrt(x * x + y * y + z * z);
     }
 
+    Vector3 Vector3::One()
+    {
+        return Vector3(1, 1, 1);
+    }
+
     Vector3 Vector3::Right()
     {
         return Vector3(1, 0, 0);

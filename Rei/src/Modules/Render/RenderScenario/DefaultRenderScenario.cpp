@@ -14,7 +14,7 @@
 rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
     : BaseRenderScenario(target),
       _cameraModule(std::make_shared<CameraModule>()),
-      _gizmos(std::make_shared<GizmosModule>(_cameraModule)),
+      _gizmos(std::make_shared<Gizmos>(_cameraModule)),
       _bvh(std::make_shared<BVHRenderModule>(_gizmos)),
       _lighting(std::make_shared<LightingRenderModule>(_cameraModule)),
       _outline(std::make_shared<OutlineRenderModule>(_cameraModule)),
@@ -104,6 +104,7 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     ClearBuffer();
 
     RenderMeshRenderers();
+    _gizmos->RenderBehaviourGizmos();
 
     _lighting->Render();
 

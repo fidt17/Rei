@@ -6,12 +6,6 @@
 
 namespace rei::math
 {
-    template <typename T>
-    T lerp(T a, T b, T t)
-    {
-        return a + t * (b - a);
-    }
-
     glm::mat4 GetTransformationMatrix(const Vector3& position, const Vector3& rotation, const Vector3& scale);
     
     bool SphereRayIntersection(const Vector3& center, f32 radius, const Ray& ray);

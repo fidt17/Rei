@@ -6,7 +6,7 @@
 #include "rei_behaviours/render/MeshRenderer.h"
 #include "rei_behaviours/transformation/Transform.h"
 
-rei::render::BVHRenderModule::BVHRenderModule(const std::shared_ptr<GizmosModule>& gizmosModule): _gizmosModule(gizmosModule)
+rei::render::BVHRenderModule::BVHRenderModule(const std::shared_ptr<Gizmos>& gizmosModule): _gizmosModule(gizmosModule)
 {
 }
 

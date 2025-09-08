@@ -31,7 +31,7 @@ void rei::editor::FlyCameraSystem::OnUpdate()
 
     if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) return;
 
-    float currentFrame = glfwGetTime();
+    double currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
 

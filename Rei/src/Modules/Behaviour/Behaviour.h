@@ -5,6 +5,11 @@
 
 namespace rei
 {
+    namespace render
+    {
+        class Gizmos;
+    }
+
     namespace transformation
     {
         class Transform;
@@ -24,6 +29,7 @@ namespace rei
         virtual void Start() { }
         virtual void Update() { }
         virtual void Dispose() { }
+        virtual void DrawGizmos(const render::Gizmos&) { }
 
         REI_API i32 GetBehaviourId() const;
         

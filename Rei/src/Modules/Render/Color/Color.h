@@ -15,7 +15,7 @@ namespace rei::render
 
         static Color Lerp(const Color& from, const Color& to, float t)
         {
-            return Color(math::lerp(from.r, to.r, t), math::lerp(from.g, to.g, t), math::lerp(from.b, to.b, t), math::lerp(from.a, to.a, t));
+            return Color(std::lerp(from.r, to.r, t), std::lerp(from.g, to.g, t), std::lerp(from.b, to.b, t), std::lerp(from.a, to.a, t));
         }
 
         operator std::string() const;

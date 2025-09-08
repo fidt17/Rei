@@ -625,7 +625,7 @@
     <ClInclude Include="src\Modules\Render\Mesh\Vertex.h" />
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
-    <ClInclude Include="src\Modules\Render\Modules\GizmosModule.h" />
+    <ClInclude Include="src\Modules\Render\Modules\Gizmos.h" />
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
@@ -738,7 +738,7 @@
     <ClCompile Include="src\Modules\Render\Mesh\MeshBVHNode.cpp" />
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
-    <ClCompile Include="src\Modules\Render\Modules\GizmosModule.cpp" />
+    <ClCompile Include="src\Modules\Render\Modules\Gizmos.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />

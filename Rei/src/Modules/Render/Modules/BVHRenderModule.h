@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "GizmosModule.h"
+#include "Gizmos.h"
 
 namespace rei::render
 {
@@ -8,12 +8,12 @@ namespace rei::render
     class BVHRenderModule
     {
     public:
-        explicit BVHRenderModule(const std::shared_ptr<GizmosModule>& gizmosModule);
+        explicit BVHRenderModule(const std::shared_ptr<Gizmos>& gizmosModule);
 
         void Render() const;
         
     private:
-        std::shared_ptr<GizmosModule> _gizmosModule;
+        std::shared_ptr<Gizmos> _gizmosModule;
         void RenderBVH(const MeshBVHNode& node, const glm::mat4& model) const;
     };
 }

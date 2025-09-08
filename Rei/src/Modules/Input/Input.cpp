@@ -137,15 +137,15 @@ namespace rei
         }
     }
 
-    void Input::MousePositionCallback(GLFWwindow* window, const double xpos, const double ypos)
+    void Input::MousePositionCallback(GLFWwindow* window, const double xPos, const double yPos)
     {
-        _mouseX = xpos;
-        _mouseY = ypos;
+        _mouseX = static_cast<float>(xPos);
+        _mouseY = static_cast<float>(yPos);
     }
 
-    void Input::ScrollCallback(GLFWwindow* window, const double xoffset, const double yoffset)
+    void Input::ScrollCallback(GLFWwindow* window, const double xOffset, const double yOffset)
     {
-        _scrollX = xoffset;
-        _scrollY = yoffset;
+        _scrollX = static_cast<float>(xOffset);
+        _scrollY = static_cast<float>(yOffset);
     }
 }
