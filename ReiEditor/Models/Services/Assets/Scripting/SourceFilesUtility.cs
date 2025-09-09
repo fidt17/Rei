@@ -117,7 +117,7 @@ public class SourceFilesUtility
         if (enumMatch.Success)
         {
             string enumBody = enumMatch.Groups[1].Value.Trim();
-            string[] enumOptions = enumBody.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] enumOptions = enumBody.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
             int currentValue = 0;
             foreach (string option in enumOptions)
@@ -254,19 +254,6 @@ public class SourceFilesUtility
     {
         var typeParts = type.Split("::");
         var typeWithoutNamespace = typeParts.Last();
-        var namespaceStr = "";
-        if (typeParts.Length > 1)
-        {
-            for (var i = 0; i < typeParts.Length - 1; i++)
-            {
-                if (i != 0)
-                {
-                    namespaceStr += "::";
-                }
-                
-                namespaceStr += typeParts[i];
-            }
-        }
         
         if (type is "int" or "i32" or "u32")
         {

@@ -11,6 +11,4 @@ public interface IEntityManagementService
     void DeleteBehaviour(GameEntity e, int behaviourId);
 	
     void DestroyEntity(GameEntity e);
-
-    void UpdateEntityState(GameEntity e);
 }

@@ -117,7 +117,7 @@ public class HierarchyWindowViewModel : BaseViewModel
     {
         if (!isSelected) return;
 
-        _selectionService.Select(node);
+        _selectionService.Select(node.Node.Content);
 		
         foreach (var n in GetAllNodes())
         {

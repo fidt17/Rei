@@ -60,10 +60,13 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
         ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete", Delete));
+        
+        _selectionService.RegisterSelectable(this);
     }
 
     public override void Dispose()
     {
+        _selectionService.UnregisterSelectable(this);
         Node.Content.NameChangedEvent -= HandleNameChangedEvent;
     }
 

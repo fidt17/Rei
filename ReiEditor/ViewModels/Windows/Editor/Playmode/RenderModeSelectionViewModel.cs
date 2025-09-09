@@ -34,7 +34,7 @@ public class RenderModeSelectionViewModel : BaseViewModel
     
     #region SelectedRenderMode
 
-    private string _selectedRenderMode;
+    private string _selectedRenderMode = "";
     public string SelectedRenderMode
     {
         get => _selectedRenderMode;

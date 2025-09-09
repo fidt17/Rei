@@ -90,7 +90,7 @@ public class EngineRunner : IEngineRunner, IDisposable
             {
                 _logger.LogError("Engine failure...");
                 _logger.LogException(e);
-                StopEngine();
+                _ = StopEngine();
             }
         });
 

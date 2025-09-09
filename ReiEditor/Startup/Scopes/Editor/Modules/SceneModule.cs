@@ -13,8 +13,10 @@ public class SceneModule : Module
     protected override void Load(ContainerBuilder b)
     {
         b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
-        b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
         b.RegisterSingleton<SceneStateSynchronizer>().As<ISceneStateSynchronizer>();
+        
+        b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
+        b.RegisterSingleton<EntityStateSynchronizer>().As<IEntityStateSynchronizer>();
 
         b.RegisterType<CreateSceneEntityCommand>();
 

@@ -1,7 +1,5 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 
 namespace ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
 

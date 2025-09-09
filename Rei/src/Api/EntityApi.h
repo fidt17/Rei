@@ -39,7 +39,11 @@ REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const int bu
     FOR(e, filter)
     {
         const auto& info = GET(e, EntityInfo);
-        data["Entities"].push_back(info.Id);
+
+        data["Entities"].push_back({
+            {"Id", info.Id},
+            {"IsSelected", HAS(e, rei::editor::SelectedTag)}
+        });
     }
 
     strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);

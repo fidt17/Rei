@@ -28,7 +28,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IEditorRefreshService _editorRefreshService;
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
 
-    private readonly IEntityManagementService _entityManagementService;
+    private readonly IEntityStateSynchronizer _entityStateSynchronizer;
 
     private CancellationTokenSource? _entityUpdateStateCTS;
 
@@ -40,12 +40,12 @@ public class MonitorWindowViewModel : BaseViewModel
         ISelectionService selectionService,
         IEditorRefreshService editorRefreshService,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
-        IEntityManagementService entityManagementService)
+        IEntityStateSynchronizer entityStateSynchronizer)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
-        _entityManagementService = entityManagementService;
+        _entityStateSynchronizer = entityStateSynchronizer;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
         _editorRefreshService.RefreshedEvent += HandleRefreshedEvent;
@@ -94,7 +94,7 @@ public class MonitorWindowViewModel : BaseViewModel
         _entityUpdateStateCTS?.Cancel();
         _entityUpdateStateCTS = new CancellationTokenSource();
 
-        _entityManagementService.UpdateEntityState(e);
+        _entityStateSynchronizer.UpdateEntityState(e);
 
         var token = _entityUpdateStateCTS.Token;
         Task.Run(async () =>
@@ -105,7 +105,7 @@ public class MonitorWindowViewModel : BaseViewModel
 
                 Dispatcher.UIThread.Invoke(() =>
                 {
-                    _entityManagementService.UpdateEntityState(e);
+                    _entityStateSynchronizer.UpdateEntityState(e);
                 });
             }
             // ReSharper disable once FunctionNeverReturns
