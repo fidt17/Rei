@@ -2,6 +2,7 @@
 #include "Gizmos.h"
 
 #include "glad/glad.h"
+#include "meshes/CircleVertexData.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Render/Material/Material.h"
@@ -15,7 +16,7 @@ void rei::render::Gizmos::Setup()
     _gizmosMaterial = GetAssetManager().GetById<Material>(REI_GIZMOS_MATERIAL_ID);
 }
 
-void rei::render::Gizmos::RenderBehaviourGizmos() const
+void rei::render::Gizmos::RenderBehaviourGizmos()
 {
     ECS_WORLD(GetInternalWorld());
 
@@ -73,7 +74,7 @@ void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& 
 }
 
 void rei::render::Gizmos::DrawBox(const math::Vector3& pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
-                              const bool useDepth) const
+                                  const bool useDepth) const
 {
     DrawBox(GetTransformationMatrix(pos, rotation, size), color, useDepth, false);
 }
@@ -84,7 +85,7 @@ void rei::render::Gizmos::DrawWireframeBox(const glm::mat4& transformation, cons
 }
 
 void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
-                                       const bool useDepth) const
+                                           const bool useDepth) const
 {
     const math::Vector3 halfSize = size / 2.0f;
 
@@ -96,7 +97,7 @@ void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const ma
         {-halfSize.x, -halfSize.y, -halfSize.z}, // bottom left back
         {+halfSize.x, -halfSize.y, -halfSize.z}, // bottom right back
         {+halfSize.x, +halfSize.y, -halfSize.z}, // top right back
-        {-halfSize.x, +halfSize.y, -halfSize.z}  // top left back
+        {-halfSize.x, +halfSize.y, -halfSize.z} // top left back
     };
 
     const auto rotationMatrix = GetRotationMatrix(rotation);
@@ -105,7 +106,7 @@ void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const ma
     {
         vertex = vertex.Transform(rotationMatrix) + center;
     }
-    
+
     // Front face
     DrawLine(vertices[0], vertices[1], color, useDepth); // bottom
     DrawLine(vertices[1], vertices[2], color, useDepth); // right
@@ -123,6 +124,66 @@ void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const ma
     DrawLine(vertices[1], vertices[5], color, useDepth); // bottom right
     DrawLine(vertices[2], vertices[6], color, useDepth); // top right
     DrawLine(vertices[3], vertices[7], color, useDepth); // top left
+}
+
+void rei::render::Gizmos::DrawCircle(const math::Vector3& center, const math::Vector3& forward, const math::Vector3& up, const f32 radius, const Color& color, i32 segments, const bool useDepth)
+{
+    using math::Vector3;
+
+    segments = std::max(segments, 4);
+
+    auto model = glm::mat4(1);
+    model = translate(model, glm::vec3(center));
+    model = model * LookAt(glm::vec3(0, 0, 0), glm::vec3(forward), up);
+    model = scale(model, {radius, radius, radius});
+
+    const auto& shader = _gizmosMaterial.Asset->GetShader();
+    shader.SetColor("_Color", color);
+    shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), model);
+
+    if (!useDepth)
+    {
+        glDisable(GL_DEPTH_TEST);
+    }
+    else
+    {
+        glEnable(GL_DEPTH_TEST);
+    }
+
+    if (!_circles.contains(segments))
+    {
+        _circles.emplace(segments, std::make_unique<CircleVertexData>(segments));
+    }
+    _circles[segments]->Render();
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+void rei::render::Gizmos::DrawWireSphere(const math::Vector3& center, const f32 radius, const Color& color, i32 segments, const bool useDepth)
+{
+    using math::Vector3;
+
+    segments = std::max(segments, 4);
+
+    for (int i = 0; i <= segments; i++)
+    {
+        const f32 angle = PI * i / segments;
+        const f32 circleRadius = radius * sin(angle);
+        const f32 offset = radius * cos(angle);
+
+        Vector3 circleCenter = {center.x, center.y + offset, center.z};
+        DrawCircle(circleCenter, Vector3::Up(), Vector3::Right(), circleRadius, color, 2 * segments * (circleRadius / radius), useDepth);
+    }
+
+    for (int i = 0; i <= segments; i++)
+    {
+        const f32 angle = PI * i / segments;
+        const f32 circleRadius = radius * sin(angle);
+        const f32 offset = radius * cos(angle);
+
+        Vector3 circleCenter = {center.x, center.y, center.z + offset};
+        DrawCircle(circleCenter, Vector3::Forward(), Vector3::Up(), circleRadius, color, 2 * segments * (circleRadius / radius), useDepth);
+    }
 }
 
 void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& color, const bool useDepth, const bool wireframe) const

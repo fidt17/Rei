@@ -29,7 +29,7 @@ namespace rei
         virtual void Start() { }
         virtual void Update() { }
         virtual void Dispose() { }
-        virtual void DrawGizmos(const render::Gizmos&) { }
+        virtual void DrawGizmos(render::Gizmos&) { }
 
         REI_API i32 GetBehaviourId() const;
         

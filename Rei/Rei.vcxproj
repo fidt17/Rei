@@ -561,6 +561,7 @@
     <ClInclude Include="external\json.hpp" />
     <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="external\stb_image.h" />
+    <ClInclude Include="resources\meshes\CircleVertexData.h" />
     <ClInclude Include="resources\meshes\CubeVertexData.h" />
     <ClInclude Include="resources\meshes\LineVertexData.h" />
     <ClInclude Include="resources\meshes\QuadVertexData.h" />

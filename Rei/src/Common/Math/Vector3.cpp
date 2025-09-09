@@ -194,7 +194,7 @@ namespace rei::math
 
     f32 Vector3::Length(const Vector3& v)
     {
-        return sqrt(v.x * v.x + v.y * v.y + v.z + v.z);
+        return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     }
 
     Vector3 Vector3::Normalize(const Vector3& v)

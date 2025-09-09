@@ -20,6 +20,28 @@ glm::mat4 rei::math::GetTransformationMatrix(const Vector3& position, const Vect
     return model;
 }
 
+glm::mat4 rei::math::LookAt(const Vector3& origin, Vector3 direction, const Vector3& up)
+{
+    direction = Vector3::Normalize(direction);
+    
+    const f32 yaw = atan2f(direction.x, direction.z);
+    const f32 pitch = -asinf(direction.y);
+    
+    const Vector3 right = Vector3::Normalize(Vector3::Cross(direction, up));
+    const Vector3 actualUp = Vector3::Normalize(Vector3::Cross(right, direction));
+    const f32 roll = atan2f(right.y, actualUp.y);
+    
+    auto transform = glm::mat4(1.0f);
+    
+    transform = translate(transform, glm::vec3(-origin));
+    
+    transform = rotate(transform, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+    transform = rotate(transform, pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+    transform = rotate(transform, roll, glm::vec3(0.0f, 0.0f, 1.0f));
+    
+    return transform;
+}
+
 bool rei::math::SphereRayIntersection(const Vector3& center, const f32 radius, const Ray& ray)
 {
     const Vector3 m = ray.Origin - center;

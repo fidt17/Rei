@@ -5,11 +5,6 @@ namespace rei::window
     class WindowManager;
 }
 
-namespace rei::input
-{
-    class Input;
-}
-
 namespace rei
 {
     class EntityManager;
