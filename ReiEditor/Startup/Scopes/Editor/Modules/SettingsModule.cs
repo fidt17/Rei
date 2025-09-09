@@ -9,14 +9,14 @@ namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
 public class SettingsModule : Module
 {
-	protected override void Load(ContainerBuilder builder)
-	{
-		base.Load(builder);
+    protected override void Load(ContainerBuilder builder)
+    {
+        base.Load(builder);
 
-		builder.RegisterSingleton<SettingsWindowService>().As<ISettingsWindowService>();
-		builder.RegisterType<OpenSettingsWindowCommand>();
-		builder.RegisterType<SetMsBuildLocationCommand>();
+        builder.RegisterSingleton<SettingsWindowService>().As<ISettingsWindowService>();
+        builder.RegisterType<OpenSettingsWindowCommand>();
+        builder.RegisterType<SetMsBuildLocationCommand>();
 
-		builder.RegisterType<EditorSettingsWindowViewModel>();
-	}
+        builder.RegisterType<EditorSettingsWindowViewModel>();
+    }
 }

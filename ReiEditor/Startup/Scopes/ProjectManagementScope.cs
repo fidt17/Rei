@@ -14,39 +14,39 @@ namespace ReiEditor.Startup.Scopes;
 
 public class ProjectManagementScope : BaseLifetimeScope
 {
-	public ProjectManagementScope(ApplicationScope parentScope) : base(nameof(ProjectManagementScope), parentScope) { }
+    public ProjectManagementScope(ApplicationScope parentScope) : base(nameof(ProjectManagementScope), parentScope) { }
 
-	protected override Task OnScopeStart()
-	{
-		Scope.Resolve<ProjectManagementEntryPoint>().Start();
+    protected override Task OnScopeStart()
+    {
+        Scope.Resolve<ProjectManagementEntryPoint>().Start();
 		
-		return Task.CompletedTask;
-	}
+        return Task.CompletedTask;
+    }
 
-	protected override void ConfigureContainer(ContainerBuilder b)
-	{
-		b.RegisterInstance(this);
+    protected override void ConfigureContainer(ContainerBuilder b)
+    {
+        b.RegisterInstance(this);
 
-		b.RegisterType<ProjectCreationService>().As<IProjectCreationService>();
-		b.RegisterSingleton<ProjectDeletionService>().As<IProjectDeletionService>();
-		b.RegisterSingleton<BookmarkedProjectsService>().As<IBookmarkedProjectsService>();
+        b.RegisterType<ProjectCreationService>().As<IProjectCreationService>();
+        b.RegisterSingleton<ProjectDeletionService>().As<IProjectDeletionService>();
+        b.RegisterSingleton<BookmarkedProjectsService>().As<IBookmarkedProjectsService>();
 
-		b.RegisterSingleton<ProjectManagementEntryPoint>();
+        b.RegisterSingleton<ProjectManagementEntryPoint>();
 		
-		ConfigureViews(b);
-	}
+        ConfigureViews(b);
+    }
 
-	private void ConfigureViews(ContainerBuilder b)
-	{
-		b.RegisterType<ProjectManagementWindowViewModel>();
-		b.RegisterType<EditorSetupTabViewModel>();
-		b.RegisterType<ProjectsListTabViewModel>();
-		b.RegisterType<ProjectCreationTabViewModel>();
+    private void ConfigureViews(ContainerBuilder b)
+    {
+        b.RegisterType<ProjectManagementWindowViewModel>();
+        b.RegisterType<EditorSetupTabViewModel>();
+        b.RegisterType<ProjectsListTabViewModel>();
+        b.RegisterType<ProjectCreationTabViewModel>();
 
-		b.RegisterType<SetEngineLocationCommand>();
-		b.RegisterType<SetMsBuildLocationCommand>();
-		b.RegisterType<OpenProjectCommand>();
+        b.RegisterType<SetEngineLocationCommand>();
+        b.RegisterType<SetMsBuildLocationCommand>();
+        b.RegisterType<OpenProjectCommand>();
 
-		b.RegisterType<ProjectsListElementViewModel>();
-	}
+        b.RegisterType<ProjectsListElementViewModel>();
+    }
 }

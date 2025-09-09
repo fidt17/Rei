@@ -5,8 +5,8 @@ namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
 public class StatusBarModule : Module
 {
-	protected override void Load(ContainerBuilder builder)
-	{
-		builder.RegisterType<StatusBarViewModel>();
-	}
+    protected override void Load(ContainerBuilder builder)
+    {
+        builder.RegisterType<StatusBarViewModel>();
+    }
 }

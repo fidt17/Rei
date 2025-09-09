@@ -23,54 +23,54 @@ namespace ReiEditor.Startup.Scopes;
 
 public class ApplicationScope : BaseLifetimeScope
 {
-	public ApplicationScope() : base(nameof(ApplicationScope)) { }
+    public ApplicationScope() : base(nameof(ApplicationScope)) { }
 	
-	protected override async Task OnScopeStart()
-	{
-		await Scope.Resolve<IEditorPreferencesService>().InitializeAsync();
-		await Scope.Resolve<IEditorSettingsService>().InitializeAsync();
-		await Scope.Resolve<IEngineSettingsProvider>().InitializeAsync();
+    protected override async Task OnScopeStart()
+    {
+        await Scope.Resolve<IEditorPreferencesService>().InitializeAsync();
+        await Scope.Resolve<IEditorSettingsService>().InitializeAsync();
+        await Scope.Resolve<IEngineSettingsProvider>().InitializeAsync();
 		
-		Scope.Resolve<ApplicationEntryPoint>().Start();
-	}
+        Scope.Resolve<ApplicationEntryPoint>().Start();
+    }
 
-	protected override void ConfigureContainer(ContainerBuilder b)
-	{
-		b.RegisterInstance(this);
-		b.RegisterSingleton<ApplicationShutdownService>().As<IApplicationShutdownService>();
+    protected override void ConfigureContainer(ContainerBuilder b)
+    {
+        b.RegisterInstance(this);
+        b.RegisterSingleton<ApplicationShutdownService>().As<IApplicationShutdownService>();
 		
-		b.RegisterGeneric(typeof(SystemConsoleLogger<>)).As(typeof(ILogger<>)).AsSelf();
+        b.RegisterGeneric(typeof(SystemConsoleLogger<>)).As(typeof(ILogger<>)).AsSelf();
 		
-		b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
-		b.RegisterModule<SerializationModule>();
+        b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
+        b.RegisterModule<SerializationModule>();
 
-		b.RegisterSingleton<EditorResourceService>().As<IEditorResourceService>();
-		b.RegisterSingleton<EngineSettingsProvider>().As<IEngineSettingsProvider>();
+        b.RegisterSingleton<EditorResourceService>().As<IEditorResourceService>();
+        b.RegisterSingleton<EngineSettingsProvider>().As<IEngineSettingsProvider>();
 		
-		b.Register<IStorageProvider>(c =>
-		{
-			var window = c.Resolve<IMainWindowService>().GetMainWindow();
-			return window.StorageProvider;
-		});
+        b.Register<IStorageProvider>(c =>
+        {
+            var window = c.Resolve<IMainWindowService>().GetMainWindow();
+            return window.StorageProvider;
+        });
 		
-		b.RegisterSingleton<WindowsFileExplorerProvider>().As<IFileExplorerProvider>();
+        b.RegisterSingleton<WindowsFileExplorerProvider>().As<IFileExplorerProvider>();
 		
-		b.RegisterSingleton<ProjectTemplateProvider>().As<IProjectTemplateProvider>();
-		b.RegisterSingleton<SolutionGenerator>().As<ISolutionGenerator>();
+        b.RegisterSingleton<ProjectTemplateProvider>().As<IProjectTemplateProvider>();
+        b.RegisterSingleton<SolutionGenerator>().As<ISolutionGenerator>();
 
-		b.RegisterSingleton<EditorSettingsService>().As<IEditorSettingsService>();
-		b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();
-		b.RegisterSingleton<EditorPreferencesService>().As<IEditorPreferencesService>();
-		b.RegisterSingleton<ActiveProjectService>().As<IActiveProjectService>();
+        b.RegisterSingleton<EditorSettingsService>().As<IEditorSettingsService>();
+        b.RegisterSingleton<EditorStorageService>().As<IEditorStorageService>();
+        b.RegisterSingleton<EditorPreferencesService>().As<IEditorPreferencesService>();
+        b.RegisterSingleton<ActiveProjectService>().As<IActiveProjectService>();
 
-		b.RegisterSingleton<ApplicationEntryPoint>();
-		b.RegisterSingleton<MainWindowService>().As<IMainWindowService>();
+        b.RegisterSingleton<ApplicationEntryPoint>();
+        b.RegisterSingleton<MainWindowService>().As<IMainWindowService>();
 		
-		ConfigureViews(b);
-	}
+        ConfigureViews(b);
+    }
 	
-	private void ConfigureViews(ContainerBuilder b)
-	{
-		b.RegisterType<ShellWindowViewModel>();
-	}
+    private void ConfigureViews(ContainerBuilder b)
+    {
+        b.RegisterType<ShellWindowViewModel>();
+    }
 }

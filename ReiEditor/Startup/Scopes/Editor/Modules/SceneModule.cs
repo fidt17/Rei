@@ -10,21 +10,22 @@ namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
 public class SceneModule : Module
 {
-	protected override void Load(ContainerBuilder b)
-	{
-		b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
-		b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
+    protected override void Load(ContainerBuilder b)
+    {
+        b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
+        b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
+        b.RegisterSingleton<SceneStateSynchronizer>().As<ISceneStateSynchronizer>();
 
-		b.RegisterType<CreateSceneEntityCommand>();
+        b.RegisterType<CreateSceneEntityCommand>();
 
-		b.RegisterType<DefaultSceneTemplate>();
+        b.RegisterType<DefaultSceneTemplate>();
 		
-		ConfigureViewModels(b);
-	}
+        ConfigureViewModels(b);
+    }
 
-	private void ConfigureViewModels(ContainerBuilder b)
-	{
-		b.RegisterType<HierarchyWindowViewModel>();
-		b.RegisterType<HierarchyNodeViewModel>();
-	}
+    private void ConfigureViewModels(ContainerBuilder b)
+    {
+        b.RegisterType<HierarchyWindowViewModel>();
+        b.RegisterType<HierarchyNodeViewModel>();
+    }
 }

@@ -9,19 +9,19 @@ namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
 public class EditorConsoleModule : Module
 {
-	protected override void Load(ContainerBuilder builder)
-	{
-		builder.RegisterGeneric(typeof(EditorConsoleLogger<>)).As(typeof(ILogger<>));
-		builder.RegisterSingleton<EditorConsoleService>().As<IEditorConsoleService>();
-		builder.RegisterSingleton<EditorConsolePreferencesService>().As<IEditorConsolePreferencesService>();
+    protected override void Load(ContainerBuilder builder)
+    {
+        builder.RegisterGeneric(typeof(EditorConsoleLogger<>)).As(typeof(ILogger<>));
+        builder.RegisterSingleton<EditorConsoleService>().As<IEditorConsoleService>();
+        builder.RegisterSingleton<EditorConsolePreferencesService>().As<IEditorConsolePreferencesService>();
 
-		builder.RegisterNonLazy<ClearConsoleOnEventsSystem>();
+        builder.RegisterNonLazy<ClearConsoleOnEventsSystem>();
 		
-		ConfigureViews(builder);
-	}
+        ConfigureViews(builder);
+    }
 
-	private void ConfigureViews(ContainerBuilder builder)
-	{
-		builder.RegisterType<ConsoleEditorWindowViewModel>();
-	}
+    private void ConfigureViews(ContainerBuilder builder)
+    {
+        builder.RegisterType<ConsoleEditorWindowViewModel>();
+    }
 }

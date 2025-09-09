@@ -8,11 +8,11 @@ namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
 public class SerializationModule : Module
 {
-	protected override void Load(ContainerBuilder b)
-	{
-		b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
-		b.RegisterSingleton<BinarySerializer>().As<IBinarySerializer>();
+    protected override void Load(ContainerBuilder b)
+    {
+        b.RegisterSingleton<JsonSerializer>().As<ISerializer>();
+        b.RegisterSingleton<BinarySerializer>().As<IBinarySerializer>();
 
-		b.RegisterSingleton<BuildAssetMapSerializer>().As<IBinarySerializer<BuildAssetMap>>();
-	}
+        b.RegisterSingleton<BuildAssetMapSerializer>().As<IBinarySerializer<BuildAssetMap>>();
+    }
 }
