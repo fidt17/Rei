@@ -43,7 +43,11 @@ void rei::render::Gizmos::DrawLine(const math::Vector3& start, const math::Vecto
     const vec3 rotation_axis = cross(v1_normalized, v2_normalized);
     const f32 dotProduct = dot(v1_normalized, v2_normalized);
     const f32 angle = glm::acos(glm::clamp(dotProduct, -1.0f, 1.0f)); // Clamp to avoid floating point errors with acos
-    const mat4 rotation = rotate(mat4(1.0f), angle, rotation_axis);
+    mat4 rotation = mat4(1.0f);
+    if (rotation_axis.x != 0 || rotation_axis.y != 0 || rotation_axis.z != 0)
+    {
+        rotation = rotate(mat4(1.0f), angle, rotation_axis);
+    }
 
     auto model = mat4(1.0f);
     model = translate(model, vec3(start));
@@ -126,7 +130,8 @@ void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const ma
     DrawLine(vertices[3], vertices[7], color, useDepth); // top left
 }
 
-void rei::render::Gizmos::DrawCircle(const math::Vector3& center, const math::Vector3& forward, const math::Vector3& up, const f32 radius, const Color& color, i32 segments, const bool useDepth)
+void rei::render::Gizmos::DrawCircle(const math::Vector3& center, const math::Vector3& forward, const math::Vector3& up, const f32 radius, const Color& color,
+                                     i32 segments, const bool useDepth)
 {
     using math::Vector3;
 
