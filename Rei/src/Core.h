@@ -22,6 +22,9 @@
     void REI_SET(const nlohmann::json& data); \
     private:
 
+#define REI_EVENT(x) eventpp::CallbackList<void(x)>
+#define REI_EVENT_HANDLE(x) eventpp::internal_::CallbackListBase<void(x), eventpp::DefaultPolicies>::Handle
+
 #define SERIALIZABLE_ENUM(ENUM_NAME) enum ENUM_NAME
 
 // --- RENDER ---
@@ -34,6 +37,7 @@
 #define REI_OVERLAY_INVERSION_MATERIAL_ID "REI_OVERLAY_INVERSION_MATERIAL"
 #define REI_DEPTH_MATERIAL_ID "REI_DEPTH_MATERIAL"
 #define REI_GIZMOS_MATERIAL_ID "REI_GIZMOS_MATERIAL"
+#define REI_EDITOR_GRID_MATERIAL_ID "REI_EDITOR_GRID_MATERIAL"
 // --------------
 
 #include "pch.h"

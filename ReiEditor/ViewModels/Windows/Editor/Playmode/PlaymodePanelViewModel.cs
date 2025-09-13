@@ -69,6 +69,17 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #endregion
     
+    #region EditorGridOptions
+
+    private EditorGridOptionsViewModel _editorGridOptions = new();
+    public EditorGridOptionsViewModel EditorGridOptions
+    {
+        get => _editorGridOptions;
+        private set => SetField(ref _editorGridOptions, value);
+    }
+
+    #endregion
+    
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineWindowController _engineWindow;
     private readonly IEngineApi _engineApi;
@@ -85,6 +96,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         IFactory<StopPlaymodeCommand> stopPlaymodeCommand,
         IEngineWindowController engineWindow,
         IFactory<RenderModeSelectionViewModel> renderModeSelection,
+        IFactory<EditorGridOptionsViewModel> editorGridOptions,
         IEngineApi engineApi, 
         IEngineRunner engineRunner)
     {
@@ -92,7 +104,10 @@ public class PlaymodePanelViewModel : BaseViewModel
         _engineWindow = engineWindow;
         _engineApi = engineApi;
         _engineRunner = engineRunner;
+        
         RenderModeSelection = renderModeSelection.CreateInstance();
+        EditorGridOptions = editorGridOptions.CreateInstance();
+        
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 
@@ -112,7 +127,9 @@ public class PlaymodePanelViewModel : BaseViewModel
 		
         StartPlaymodeCommand.Dispose();
         StopPlaymodeCommand.Dispose();
+        
         RenderModeSelection.Dispose();
+        EditorGridOptions.Dispose();
     }
 
     private void HandleWindowPointerChangedEvent(IntPtr? ptr)

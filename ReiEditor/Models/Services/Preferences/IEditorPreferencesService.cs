@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using ReiEditor.Models.EditorApp.ViewportGrid;
 using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Startup.Common;
 
@@ -6,15 +7,18 @@ namespace ReiEditor.Models.Services.Preferences;
 
 public interface IEditorPreferencesService : IAsyncInitializable
 {
-	string? GetEnginePath();
-	void SetEnginePath(string path);
+    string? GetEnginePath();
+    void SetEnginePath(string path);
 
-	string? GetMsBuildPath();
-	void SetMsBuildPath(string path);
+    string? GetMsBuildPath();
+    void SetMsBuildPath(string path);
 	
-	IEnumerable<Project> GetBookmarkedProjects();
-	void SetBookmarkedProjects(IEnumerable<Project> paths);
+    IEnumerable<Project> GetBookmarkedProjects();
+    void SetBookmarkedProjects(IEnumerable<Project> paths);
 
-	ConsolePreferences GetConsolePreferences();
-	void SetConsolePreferences(ConsolePreferences consolePreferences);
+    ConsolePreferences GetConsolePreferences();
+    void SetConsolePreferences(ConsolePreferences consolePreferences);
+
+    ViewportGridSettings GetGridSettings();
+    void SetGridSettings(ViewportGridSettings settings);
 }

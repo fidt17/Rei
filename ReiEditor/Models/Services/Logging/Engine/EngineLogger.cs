@@ -9,7 +9,7 @@ namespace ReiEditor.Models.Services.Logging.Engine;
 
 public class EngineLogger : IEngineLogger
 {
-    private readonly IEngineApi.CallbackDelegate _logCallbackDelegate;
+    private readonly IEngineApi.IntPtrCallbackDelegate _logCallbackDelegate;
 	
     private readonly IEditorConsoleService _editorConsoleService;
     private readonly IEngineApi _engineApi;

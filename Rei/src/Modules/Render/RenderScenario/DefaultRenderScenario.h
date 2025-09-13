@@ -7,6 +7,7 @@
 #include "Modules/Render/Material/Material.h"
 #include "Modules/Render/Modules/BVHRenderModule.h"
 #include "Modules/Render/Modules/Gizmos.h"
+#include "Modules/Render/Modules/GridRenderModule.h"
 #include "Modules/Render/Modules/LightingRenderModule.h"
 #include "Modules/Render/Modules/OutlineRenderModule.h"
 #include "Modules/Render/Modules/PostProcessingModule.h"
@@ -52,6 +53,7 @@ namespace rei::render
         std::shared_ptr<LightingRenderModule> _lighting;
         std::shared_ptr<OutlineRenderModule> _outline;
         std::shared_ptr<PostProcessingModule> _postProcessingModule;
+        std::shared_ptr<GridRenderModule> _gridRenderModule;
         
         FrameBuffer _mainFrameBuffer;
 

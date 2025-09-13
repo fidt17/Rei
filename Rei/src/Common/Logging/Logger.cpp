@@ -3,6 +3,10 @@
 
 namespace rei::common::logging
 {
+    Logger::Logger(std::string loggerScope): _loggerScope(std::move(loggerScope))
+    {
+    }
+
     void Logger::Log(const LogLevelEnum logLevel, const std::string& message) const
     {
         Log("", logLevel, message, "");

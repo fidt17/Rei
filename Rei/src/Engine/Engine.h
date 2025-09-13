@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Api/EditorEventsRelay.h"
 #include "Common/Tasks/TaskExecutor.h"
 #include "Modules/Render/Renderer.h"
 #include "Modules/Scenes/SceneManager.h"
@@ -17,7 +18,8 @@ namespace rei::internal::engine
     class Engine
     {
     public:
-        eventpp::CallbackList<void(int)> ShutdownEvent;
+        REI_EVENT() StartEvent;
+        REI_EVENT(int) ShutdownEvent;
 
         REI_API explicit Engine(std::shared_ptr<App> app, EngineMode mode);
         Engine(const Engine& e) = delete;
@@ -50,6 +52,8 @@ namespace rei::internal::engine
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<scenes::SceneManager> _sceneManager;
+
+        std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
 
         void SetupGLFW() const;
         void ConfigureInternalWorld() const;

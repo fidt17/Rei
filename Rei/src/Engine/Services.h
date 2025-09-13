@@ -7,6 +7,11 @@ namespace rei::window
 
 namespace rei
 {
+    namespace api
+    {
+        class EditorEventsRelay;
+    }
+
     class EntityManager;
 
     namespace internal::engine
@@ -32,8 +37,11 @@ namespace rei
         void SetAssetManager(const std::shared_ptr<assets::AssetManager>& assetManager) { _assetManager = assetManager; }
         REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
 
-        void SetWindowManager(const std::shared_ptr<window::WindowManager>& assetManager) { _windowManager = assetManager; }
+        void SetWindowManager(const std::shared_ptr<window::WindowManager>& windowManager) { _windowManager = windowManager; }
         REI_API window::WindowManager& GetWindowManager() const { return *_windowManager; }
+
+        void SetEditorEventsRelay(const std::shared_ptr<api::EditorEventsRelay>& relay) { _editorEventsRelay = relay; }
+        REI_API api::EditorEventsRelay& GetEditorEventsRelay() const { return *_editorEventsRelay; }
 
         REI_API static Services* GetInstance();
 
@@ -46,6 +54,7 @@ namespace rei
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<window::WindowManager> _windowManager;
+        std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
     };
 
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
@@ -53,4 +62,5 @@ namespace rei
     inline EntityManager& GetEntityManager() { return Services::GetInstance()->GetEntityManager(); }
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline window::WindowManager& GetWindowManager() { return Services::GetInstance()->GetWindowManager(); }
+    inline api::EditorEventsRelay& GetEditorEventsRelay() { return Services::GetInstance()->GetEditorEventsRelay(); }
 }

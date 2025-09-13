@@ -4,5 +4,5 @@
 
 #include "Engine/Services.h"
 
-#include "Api\EngineApi.h"
+#include "Api\EditorApi.h"
 #include "Api/EntityApi.h"

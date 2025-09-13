@@ -1,7 +1,6 @@
 ﻿#pragma once
+#include "EditorEventsRelay.h"
 #include "Engine/Engine.h"
-#include "Engine/Services.h"
-#include "Modules/Resources/AssetBuilder.h"
 
 typedef void (*LogCallbackDelegate)(const rei::common::logging::LogMessage& msg);
 REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
@@ -9,6 +8,15 @@ REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
     rei::common::logging::Log::GetLogger()->NewLogEvent.append([=](const rei::common::logging::LogMessage& msg)
     {
         callback(msg);
+    });
+}
+
+typedef void (*EngineStartCallbackDelegate)();
+REI_EXTERN_API inline void AddEngineStartCallback(const EngineStartCallbackDelegate callback)
+{
+    rei::GetEngine().StartEvent.append([=]
+    {
+        callback();
     });
 }
 
@@ -73,4 +81,12 @@ REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const
     {
         window->Resize(width, height);
     })->WaitForCompletion();
+}
+
+REI_EXTERN_API inline void SetEditorGridSettings(const rei::render::GridRenderSettings* settings)
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        rei::GetEditorEventsRelay().GridRenderSettingsReceivedEvent(*settings);
+    });
 }

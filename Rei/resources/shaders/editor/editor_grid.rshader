@@ -1,0 +1,30 @@
+﻿#ifdef VERTEX
+
+    out vec3 _WorldPos;
+
+    void main()
+    {
+        REI_CalculateFragPosAndNormal();
+
+        _WorldPos = (_Model * vec4(aPos, 1.0)).xyz;
+    }
+#endif
+
+#ifdef FRAGMENT
+    uniform vec4 _Color;
+
+    uniform vec3 _CameraPos;
+    uniform float _FadeStartDistance = 10.0;
+    uniform float _FadeEndDistance = 100.0;
+
+    in vec3 _WorldPos;
+
+    void main()
+    {   
+        float _DistanceToCamera = distance(_CameraPos, _WorldPos.xyz);
+        float fadeFactor = 1.0 - smoothstep(_FadeStartDistance, _FadeEndDistance, _DistanceToCamera);
+
+        FragColor = _Color;
+        FragColor.a *= fadeFactor;
+    }
+#endif

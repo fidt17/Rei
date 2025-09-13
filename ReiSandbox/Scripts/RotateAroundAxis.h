@@ -26,14 +26,15 @@ public:
 
         const f32 size = 3;
 
-        gizmos.DrawWireframeBox(position, {size, size, size}, GetTransform().GetRotation(), {1, 0, 0, 1});
+        //gizmos.DrawWireframeBox(position, {size, size, size}, GetTransform().GetRotation(), {1, 0, 0, 1});
 
+        /*
         gizmos.DrawLine(position, position + transform.GetRight() * 3, rei::render::Color::Red(), false);
         gizmos.DrawLine(position, position + transform.GetUp() * 3, rei::render::Color::Green(), false);
         gizmos.DrawLine(position, position + transform.GetForward() * 3, rei::render::Color::Blue(), false);
+        */
 
-        gizmos.DrawCircle(position, GetTransform().GetForward(), GetTransform().GetUp(), size, rei::render::Color::Green(), 32);
-        
-        gizmos.DrawWireSphere(position, size * 0.75, rei::render::Color(1,1,0,1), 32);
+        //gizmos.DrawCircle(position, GetTransform().GetForward(), GetTransform().GetUp(), size, rei::render::Color::Green(), 32);
+        //gizmos.DrawWireSphere(position, size * 0.75, rei::render::Color(1,1,0,1), 32);
     }
 };

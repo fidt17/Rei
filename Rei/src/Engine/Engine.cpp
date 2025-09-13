@@ -31,13 +31,15 @@ namespace rei::internal::engine
         _internalWorld(std::make_shared<ecs::World>()),
         _assetManager(std::make_shared<assets::AssetManager>()),
         _entityManager(std::make_shared<EntityManager>(_internalWorld)),
-        _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager))
+        _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager)),
+        _editorEventsRelay(std::make_shared<api::EditorEventsRelay>())
     {
         Services::GetInstance()->SetEngine(this);
         Services::GetInstance()->SetAssetManager(_assetManager);
         Services::GetInstance()->SetInternalWorld(_internalWorld);
         Services::GetInstance()->SetEntityManager(_entityManager);
         Services::GetInstance()->SetWindowManager(_windowManager);
+        Services::GetInstance()->SetEditorEventsRelay(_editorEventsRelay);
 
         ConfigureInternalWorld();
         SetupGLFW();
@@ -76,7 +78,7 @@ namespace rei::internal::engine
 
         _internalWorld->AddSystem<render::AssignMainCameraSystem>(_mainRenderer);
         _internalWorld->AddSystem<editor::FlyCameraSystem>();
-        
+
         _internalWorld->AddSystem<editor::SelectEntityWithCursorSystem>();
 
         _internalWorld->AddSystem([&] { _mainRenderer->Render(); });
@@ -123,6 +125,8 @@ namespace rei::internal::engine
             _runEngine = true;
             _sceneManager->LoadScene(0);
             _app->OnStart();
+            
+            StartEvent();
         }
         catch (const std::exception& exc)
         {

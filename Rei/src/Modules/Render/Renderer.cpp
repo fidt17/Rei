@@ -140,5 +140,8 @@ namespace rei::render
         
         const auto colorShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/color.rshader");
         auto gizmosMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_GIZMOS_MATERIAL_ID,colorShader);
+        
+        const auto editorGridShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/editor/editor_grid.rshader");
+        auto editorGridMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_EDITOR_GRID_MATERIAL_ID,editorGridShader);
     }
 }

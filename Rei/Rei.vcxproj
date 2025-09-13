@@ -563,6 +563,7 @@
     <ClInclude Include="external\stb_image.h" />
     <ClInclude Include="resources\meshes\CircleVertexData.h" />
     <ClInclude Include="resources\meshes\CubeVertexData.h" />
+    <ClInclude Include="resources\meshes\GridVertexData.h" />
     <ClInclude Include="resources\meshes\LineVertexData.h" />
     <ClInclude Include="resources\meshes\QuadVertexData.h" />
     <ClInclude Include="resources\rei_behaviours\render\camera\Camera.h" />
@@ -572,6 +573,7 @@
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
+    <ClInclude Include="src\Api\EditorEventsRelay.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
@@ -628,6 +630,7 @@
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\Gizmos.h" />
+    <ClInclude Include="src\Modules\Render\Modules\GridRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
@@ -654,7 +657,7 @@
     <ClInclude Include="src\Modules\Window\WindowCreationSettings.h" />
     <ClInclude Include="src\Modules\Window\WindowManager.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\Api\EngineApi.h" />
+    <ClInclude Include="src\Api\EditorApi.h" />
     <ClInclude Include="src\Common\Primitives.h" />
     <ClInclude Include="src\Engine\Engine.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />
@@ -685,11 +688,13 @@
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
     <ClCompile Include="external\glm\detail\glm.cpp" />
+    <ClCompile Include="resources\meshes\GridVertexData.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\camera\Camera.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\MeshRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
+    <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
     <ClCompile Include="src\Common\Math\math.cpp" />
     <ClCompile Include="src\Common\Math\Ray.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
@@ -741,6 +746,7 @@
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\Gizmos.cpp" />
+    <ClCompile Include="src\Modules\Render\Modules\GridRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />
@@ -781,6 +787,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\shaders\color.rshader" />
+    <Content Include="resources\shaders\editor\editor_grid.rshader" />
     <Content Include="resources\shaders\includes\ambient_light.rshader_include" />
     <Content Include="resources\shaders\includes\fragment_common.rshader_include" />
     <Content Include="resources\shaders\includes\point_light.rshader_include" />

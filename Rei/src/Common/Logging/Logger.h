@@ -11,10 +11,7 @@ namespace rei::common::logging
     public:
         eventpp::CallbackList<void(const LogMessage&)> NewLogEvent;
         
-        explicit Logger(std::string loggerScope)
-            : _loggerScope(std::move(loggerScope))
-        {
-        }
+        explicit Logger(std::string loggerScope);
 
         REI_API void Log(LogLevelEnum logLevel, const std::string& message) const;
         REI_API void Log(const std::string& scope, LogLevelEnum logLevel, const std::string& message) const;

@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Render;
@@ -62,9 +63,11 @@ public class EngineApi : IEngineApi
         Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
     }
 
-    public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddLogCallback", callback);
+    public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.IntPtrCallbackDelegate), "AddLogCallback", callback);
+    
+    public void AddEngineStartCallback(IntPtr callback) => Invoke(typeof(IEngineApi.IntPtrCallbackDelegate), "AddEngineStartCallback", callback);
 
-    public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.CallbackDelegate), "AddShutdownCallback", callback);
+    public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.IntPtrCallbackDelegate), "AddShutdownCallback", callback);
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
@@ -78,6 +81,32 @@ public class EngineApi : IEngineApi
         Invoke(typeof(ChangeRenderModeDelegate), "ChangeRenderMode", (int) mode);
     }
     
+    private delegate void SetEditorGridSettingsDelegate(IntPtr settings);
+    public void SetEditorGridSettings(SetViewportGridSettingsRequest settings)
+    {
+        if (!IsEngineRunning) return;
+
+        try
+        {
+            int size = Marshal.SizeOf(typeof(SetViewportGridSettingsRequest));
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+        
+            try
+            {
+                Marshal.StructureToPtr(settings, ptr, false);
+                Invoke(typeof(SetEditorGridSettingsDelegate), "SetEditorGridSettings", ptr);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            } 
+        }
+        catch (Exception e)
+        {
+            _logger.LogException(e);
+        }
+    }
+
     private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);
     public IntPtr GetWindowHandle(IntPtr windowPtr) => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle", windowPtr);
 

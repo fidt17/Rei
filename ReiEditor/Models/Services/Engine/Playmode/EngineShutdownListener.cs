@@ -9,7 +9,7 @@ public class EngineShutdownListener : IEngineShutdownListener
 {
     public event Action<int>? EngineShutdownEvent;
 
-    private readonly IEngineApi.CallbackDelegate _shutdownCallbackDelegate;
+    private readonly IEngineApi.IntPtrCallbackDelegate _shutdownCallbackDelegate;
     private readonly IEngineApi _engineApi;
 
     public EngineShutdownListener(IEngineApi engineApi)

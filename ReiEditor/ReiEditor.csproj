@@ -150,6 +150,7 @@
 
 
   <ItemGroup>
+    <Folder Include="Assets\" />
     <Folder Include="Utils\Factory\Custom" />
   </ItemGroup>
 
@@ -170,5 +171,15 @@
     <AdditionalFiles Include="Resources\ProjectTemplates\SolutionTemplate\main_cpp_template.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AdditionalFiles>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Remove="Views\Resources\Images\grid.png" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Include="Assets\Images\grid.png" />
   </ItemGroup>
 </Project>
