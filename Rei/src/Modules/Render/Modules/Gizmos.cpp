@@ -13,7 +13,7 @@ rei::render::Gizmos::Gizmos(const std::shared_ptr<CameraModule>& cameraModule): 
 
 void rei::render::Gizmos::Setup()
 {
-    _gizmosMaterial = GetAssetManager().GetById<Material>(REI_GIZMOS_MATERIAL_ID);
+    _gizmosMaterial = GetAssetManager().GetById<Material>(REI_COLOR_MATERIAL_ID);
 }
 
 void rei::render::Gizmos::RenderBehaviourGizmos()

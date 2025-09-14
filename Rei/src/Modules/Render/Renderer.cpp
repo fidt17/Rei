@@ -139,7 +139,7 @@ namespace rei::render
         auto depthMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_DEPTH_MATERIAL_ID,depthShader);
         
         const auto colorShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/color.rshader");
-        auto gizmosMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_GIZMOS_MATERIAL_ID,colorShader);
+        auto colorMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_COLOR_MATERIAL_ID,colorShader);
         
         const auto editorGridShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/editor/editor_grid.rshader");
         auto editorGridMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_EDITOR_GRID_MATERIAL_ID,editorGridShader);

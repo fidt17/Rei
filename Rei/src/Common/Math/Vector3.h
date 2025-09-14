@@ -65,5 +65,6 @@ namespace rei::math
         REI_API static Vector3 Average(const Vector3& a, const Vector3& b);
         REI_API static f32 Length(const Vector3& v);
         REI_API static Vector3 Normalize(const Vector3& v);
+        REI_API static f32 Distance(const Vector3& a, const Vector3& b);
     };
 }

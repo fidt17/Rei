@@ -207,4 +207,9 @@ namespace rei::math
         
         return v / length;
     }
+
+    f32 Vector3::Distance(const Vector3& a, const Vector3& b)
+    {
+        return Length(a - b);
+    }
 }

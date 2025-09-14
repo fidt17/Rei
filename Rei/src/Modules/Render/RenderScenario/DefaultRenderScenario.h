@@ -11,6 +11,7 @@
 #include "Modules/Render/Modules/LightingRenderModule.h"
 #include "Modules/Render/Modules/OutlineRenderModule.h"
 #include "Modules/Render/Modules/PostProcessingModule.h"
+#include "Modules/Render/Modules/TransformationControlsModule.h"
 
 namespace rei::render
 {
@@ -54,6 +55,7 @@ namespace rei::render
         std::shared_ptr<OutlineRenderModule> _outline;
         std::shared_ptr<PostProcessingModule> _postProcessingModule;
         std::shared_ptr<GridRenderModule> _gridRenderModule;
+        std::shared_ptr<TransformationControlsModule> _transformationControlsModule;
         
         FrameBuffer _mainFrameBuffer;
 

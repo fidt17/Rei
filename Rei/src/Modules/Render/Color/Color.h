@@ -26,5 +26,7 @@ namespace rei::render
         static Color Red();
         static Color Green();
         static Color Blue();
+
+        static Color FromHex(const std::string& hex);
     };
 }

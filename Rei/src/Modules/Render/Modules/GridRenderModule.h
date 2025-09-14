@@ -7,10 +7,10 @@ namespace rei::render
 {
     struct GridRenderSettings
     {
-        bool RenderXZ;
-        bool RenderXY;
-        bool RenderYZ;
-        float Opacity;
+        bool RenderXZ = true;
+        bool RenderXY = false;
+        bool RenderYZ = false;
+        float Opacity = 0.25f;
     };
     
     class GridRenderModule
@@ -27,7 +27,7 @@ namespace rei::render
         void RenderGridAtCameraXY(f32 gridSize, f32 cellSize);
         void RenderGridAtCameraYZ(f32 gridSize, f32 cellSize);
         
-        void RenderGrid(const f32 gridSize, const f32 cellSize, const math::Vector3& center, const math::Vector3& direction);
+        void RenderGrid(f32 gridSize, f32 cellSize, const math::Vector3& center, const math::Vector3& direction);
 
         void HandleGridRenderSettingsSetEvent(const GridRenderSettings& settings);
 

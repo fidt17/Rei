@@ -19,7 +19,8 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
       _lighting(std::make_shared<LightingRenderModule>(_cameraModule)),
       _outline(std::make_shared<OutlineRenderModule>(_cameraModule)),
       _postProcessingModule(std::make_shared<PostProcessingModule>(_cameraModule)),
-      _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos))
+      _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos)),
+    _transformationControlsModule(std::make_shared<TransformationControlsModule>(_cameraModule))
 {
 }
 
@@ -41,6 +42,7 @@ void rei::render::DefaultRenderScenario::Setup()
     _outline->Setup();
     _postProcessingModule->Setup();
     _gridRenderModule->Setup();
+    _transformationControlsModule->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -105,12 +107,12 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     SetBackgroundColor(_cameraModule->GetBackgroundColor());
     ClearBuffer();
 
-    _gizmos->RenderBehaviourGizmos();
     _gridRenderModule->DrawGrids();
     
     RenderMeshRenderers();
-
     _lighting->Render();
+    
+    _gizmos->RenderBehaviourGizmos();
 
     if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
     {
@@ -124,6 +126,8 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     _postProcessingModule->Render(_mainFrameBuffer);
     _outline->RenderOutlineFrame();
     // ------
+    
+    _transformationControlsModule->DrawControls();
 }
 
 void rei::render::DefaultRenderScenario::RenderInDepthMode() const
