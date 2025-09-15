@@ -1,20 +1,20 @@
 ﻿#include "pch.h"
-#include "SelectEntityWithCursorSystem.h"
+#include "PointerEntitySelectionSystem.h"
 
-#include "SelectionCollider.h"
+#include "SelectableByPointerTag.h"
 #include "../../../resources/rei_behaviours/render/RenderOutlineTag.h"
 #include "../../../resources/rei_behaviours/render/camera/Camera.h"
-#include "../../../resources/rei_behaviours/transformation/Transform.h"
 #include "Modules/Input/Input.h"
+#include "Modules/Physics/PointerCollisionListener.h"
 
-rei::editor::SelectEntityWithCursorSystem::SelectEntityWithCursorSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
+rei::editor::PointerEntitySelectionSystem::PointerEntitySelectionSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
                                                                         const std::shared_ptr<ecs::FilterProvider>& filters): System(ecs, filters),
-    _checkEntities(filters->Get<SelectionCollider>()),
+    _checkEntities(filters->Get<physics::PointerCollisionListener, SelectableByPointerTag>()),
     _selectedEntities(GetInternalWorld().GetFiltersRegistry()->Get<SelectedTag>())
 {
 }
 
-void rei::editor::SelectEntityWithCursorSystem::ResetAllEntitiesSelection() const
+void rei::editor::PointerEntitySelectionSystem::ResetAllEntitiesSelection() const
 {
     FOR(e, _selectedEntities)
     {
@@ -23,25 +23,17 @@ void rei::editor::SelectEntityWithCursorSystem::ResetAllEntitiesSelection() cons
     }
 }
 
-void rei::editor::SelectEntityWithCursorSystem::OnUpdate()
+void rei::editor::PointerEntitySelectionSystem::OnUpdate()
 {
     if (!Input::IsMouseButtonReleased(GLFW_MOUSE_BUTTON_LEFT)) return;
-
-    const auto camera = render::Camera::GetMainCamera();
-    if (camera.IsNull()) return;
-
-    f32 xPos, yPos;
-    Input::GetMousePosition(xPos, yPos);
-    const auto ray = camera.Get().GetScreenPointToRay(xPos, yPos);
 
     FOR(e, _checkEntities)
     {
         if (HAS(e, SelectedTag)) continue;
 
-        auto& transform = GET(e, transformation::Transform);
-        auto& [Collider] = GET(e, SelectionCollider);
+        const auto& listener = GET(e, physics::PointerCollisionListener);
 
-        if (Collider->Intersect(ray, transform.CalculateModelMatrix()))
+        if (listener.IsInside)
         {
             ResetAllEntitiesSelection();
 

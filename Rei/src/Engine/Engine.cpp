@@ -10,9 +10,10 @@
 #include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
 #include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
 #include "Modules/Editor/FlyCameraSystem.h"
-#include "Modules/Editor/SelectEntityWithCursorSystem.h"
+#include "Modules/Editor/PointerEntitySelectionSystem.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
+#include "Modules/Physics/Systems/PointerCollisionSystem.h"
 #include "Modules/Render/Camera/AssignMainCameraSystem.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Startup/App.h"
@@ -79,7 +80,8 @@ namespace rei::internal::engine
         _internalWorld->AddSystem<render::AssignMainCameraSystem>(_mainRenderer);
         _internalWorld->AddSystem<editor::FlyCameraSystem>();
 
-        _internalWorld->AddSystem<editor::SelectEntityWithCursorSystem>();
+        _internalWorld->AddSystem<physics::PointerCollisionSystem>();
+        _internalWorld->AddSystem<editor::PointerEntitySelectionSystem>();
 
         _internalWorld->AddSystem([&] { _mainRenderer->Render(); });
 

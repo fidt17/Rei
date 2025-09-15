@@ -2,8 +2,9 @@
 #include "MeshRenderer.h"
 
 #include "glad/glad.h"
-#include "Modules/Editor/SelectionCollider.h"
+#include "Modules/Editor/SelectableByPointerTag.h"
 #include "Modules/Physics/MeshCollider.h"
+#include "Modules/Physics/PointerCollisionListener.h"
 
 namespace rei::render
 {
@@ -20,7 +21,10 @@ namespace rei::render
         
         const auto meshCollider = std::make_shared<physics::MeshCollider>();
         meshCollider->SetModel(_model);
-        GET(GetEntity(), editor::SelectionCollider).Collider = meshCollider;
+
+        const auto e = GetEntity();
+        GET(e, physics::PointerCollisionListener).Collider = meshCollider;
+        GET(e, editor::SelectableByPointerTag);
     }
 
     void MeshRenderer::BindTextures() const

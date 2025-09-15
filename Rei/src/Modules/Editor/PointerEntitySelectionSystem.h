@@ -2,10 +2,10 @@
 
 namespace rei::editor
 {
-    class SelectEntityWithCursorSystem : public ecs::System
+    class PointerEntitySelectionSystem : public ecs::System
     {
     public:
-        SelectEntityWithCursorSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs, const std::shared_ptr<ecs::FilterProvider>& filters);
+        PointerEntitySelectionSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs, const std::shared_ptr<ecs::FilterProvider>& filters);
         
         void OnUpdate() override;
 
