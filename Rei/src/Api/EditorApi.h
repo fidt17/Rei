@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "EditorEventsRelay.h"
 #include "Engine/Engine.h"
+#include "Modules/Editor/TransformationControls/TransformationControl.h"
 
 typedef void (*LogCallbackDelegate)(const rei::common::logging::LogMessage& msg);
 REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
@@ -71,6 +72,20 @@ REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt)
         FOR(e, cameraFilter)
         {
             GET(e, rei::render::Camera).SetRenderMode(mode);
+        }
+    });
+}
+
+REI_EXTERN_API inline void ChangeTransformationMode(const bool worldSpace)
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto& controlFilter = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::editor::TransformationControl>();
+
+        FOR(e, controlFilter)
+        {
+            GET(e, rei::editor::TransformationControl).UseWorldSpace = worldSpace;
         }
     });
 }

@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "UpdateBehavioursSystem.h"
 
-#include "Engine/Services.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
@@ -20,10 +19,15 @@ namespace rei::behaviour
     {
         FOR(e, _f)
         {
-            const auto behaviours = GET(e, BehaviourCollection).Behaviours; // here we make a copy for cases when new behaviours would be added during update loop
-            for (const auto behavioursToUpdate : behaviours)
+            // here we make a copy for cases when new behaviours would be added during update loop
+            const auto behaviours = GET(e, BehaviourCollection).Behaviours;
+            for (const auto behaviourId : behaviours)
             {
-                _entityManager->GetBehaviour(e, behavioursToUpdate).Update();
+                auto& behaviour = _entityManager->GetBehaviour(e, behaviourId);
+                if (behaviour.IsEnabled())
+                {
+                    behaviour.Update();
+                }
             }
         }
     }

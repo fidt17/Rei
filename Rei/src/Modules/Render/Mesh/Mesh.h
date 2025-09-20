@@ -24,6 +24,8 @@ namespace rei::render
         REI_API void Setup();
         REI_API void Dispose() const;
 
+        REI_API void Render() const;
+
     private:
         void SetupOpenGlObjects();
         void SetupBVH();

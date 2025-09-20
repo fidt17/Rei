@@ -23,11 +23,9 @@ namespace rei::render
 
         REI_API assets::AssetRef<Model>& GetModel();
         REI_API assets::AssetRef<Material>& GetMaterial();
-        REI_API const Shader& GetRenderShader() const;
+        REI_API const Material& GetRenderMaterial() const;
 
     private:
-        void BindTextures() const;
-        void RenderMesh(const std::vector<Mesh>::value_type& mesh) const;
         void ConfigureSelectionCollider() const;
     };
 }

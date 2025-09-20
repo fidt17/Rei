@@ -106,6 +106,13 @@ public class EngineApi : IEngineApi
             _logger.LogException(e);
         }
     }
+    
+    private delegate void SetTransformationSpaceDelegate(bool worldSpace);
+    public void ChangeTransformationMode(bool worldSpace)
+    {
+        if (!IsEngineRunning) return;
+        Invoke(typeof(SetTransformationSpaceDelegate), "ChangeTransformationMode", worldSpace);
+    }
 
     private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);
     public IntPtr GetWindowHandle(IntPtr windowPtr) => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle", windowPtr);

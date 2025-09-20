@@ -80,6 +80,17 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #endregion
     
+    #region TransformationSpaceSettings
+
+    private TransformationSpaceSettingsViewModel _transformationSpaceSettings = new();
+    public TransformationSpaceSettingsViewModel TransformationSpaceSettings
+    {
+        get => _transformationSpaceSettings;
+        private set => SetField(ref _transformationSpaceSettings, value);
+    }
+
+    #endregion
+    
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineWindowController _engineWindow;
     private readonly IEngineApi _engineApi;
@@ -97,6 +108,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         IEngineWindowController engineWindow,
         IFactory<RenderModeSelectionViewModel> renderModeSelection,
         IFactory<EditorGridOptionsViewModel> editorGridOptions,
+        IFactory<TransformationSpaceSettingsViewModel> transformationSpaceSettings,
         IEngineApi engineApi, 
         IEngineRunner engineRunner)
     {
@@ -107,6 +119,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         
         RenderModeSelection = renderModeSelection.CreateInstance();
         EditorGridOptions = editorGridOptions.CreateInstance();
+        TransformationSpaceSettings = transformationSpaceSettings.CreateInstance();
         
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
@@ -124,12 +137,13 @@ public class PlaymodePanelViewModel : BaseViewModel
         _engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
         _engineRunner.IsEditorActive.Unsubscribe(HandleIsEditorActiveValueChangedEvent);
         _engineWindow.WindowPointer.Unsubscribe(HandleWindowPointerChangedEvent);
-		
-        StartPlaymodeCommand.Dispose();
-        StopPlaymodeCommand.Dispose();
         
         RenderModeSelection.Dispose();
         EditorGridOptions.Dispose();
+        TransformationSpaceSettings.Dispose();
+		
+        StartPlaymodeCommand.Dispose();
+        StopPlaymodeCommand.Dispose();
     }
 
     private void HandleWindowPointerChangedEvent(IntPtr? ptr)

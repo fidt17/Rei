@@ -17,8 +17,21 @@
         <Grid RowDefinitions="Auto, *">
 
             <!-- Header -->
-            <Grid Grid.Row="0">
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*, *">
                 <StackPanel
+                    Grid.Column="0"
+                    Spacing="5"
+                    HorizontalAlignment="Left"
+                    Orientation="Horizontal">
+
+                    <playmode1:TransformationSpaceSettingsView
+                        DataContext="{Binding TransformationSpaceSettings}" />
+
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="1"
                     Spacing="5"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal">

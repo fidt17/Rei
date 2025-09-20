@@ -23,7 +23,12 @@ namespace rei::render
 
         REI_API void SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const;
         
+        static REI_API Shader CreateInstanceFrom(const Shader& source);
+        
     private:
         u32 _id;
+
+        std::string _vertexSource;
+        std::string _fragmentSource;
     };
 }

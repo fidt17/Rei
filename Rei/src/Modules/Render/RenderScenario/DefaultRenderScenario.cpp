@@ -2,10 +2,10 @@
 #include "DefaultRenderScenario.h"
 
 #include "FrameBuffer.h"
+#include "Engine/Engine.h"
 #include "glad/glad.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
-#include "Modules/Physics/SphereCollider.h"
 
 #include "Modules/Render/Shaders/Shader.h"
 #include "rei_behaviours/render/MeshRenderer.h"
@@ -19,9 +19,9 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
       _lighting(std::make_shared<LightingRenderModule>(_cameraModule)),
       _outline(std::make_shared<OutlineRenderModule>(_cameraModule)),
       _postProcessingModule(std::make_shared<PostProcessingModule>(_cameraModule)),
-      _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos)),
-    _transformationControlsModule(std::make_shared<TransformationControlsModule>(_cameraModule))
+      _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos))
 {
+    Services::GetInstance()->SetGizmos(_gizmos);
 }
 
 void rei::render::DefaultRenderScenario::Setup()
@@ -42,7 +42,6 @@ void rei::render::DefaultRenderScenario::Setup()
     _outline->Setup();
     _postProcessingModule->Setup();
     _gridRenderModule->Setup();
-    _transformationControlsModule->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -79,7 +78,7 @@ void rei::render::DefaultRenderScenario::Render()
 
 void rei::render::DefaultRenderScenario::RenderInWireframeMode() const
 {
-    const auto renderMode = _camera.Get().GetRenderMode();
+    auto renderMode = _camera.Get().GetRenderMode();
     if (renderMode == WireframeLines)
     {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -93,7 +92,8 @@ void rei::render::DefaultRenderScenario::RenderInWireframeMode() const
     SetBackgroundColor(_camera.Get().GetBackgroundColor());
     ClearBuffer();
 
-    RenderMeshRenderers();
+    RenderMeshRenderers(SORTING_ORDER_DEFAULT, SORTING_ORDER_POST_PROCESSING - 1);
+    RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
 }
 
 void rei::render::DefaultRenderScenario::RenderInNormalMode()
@@ -107,12 +107,15 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     SetBackgroundColor(_cameraModule->GetBackgroundColor());
     ClearBuffer();
 
-    _gridRenderModule->DrawGrids();
-    
-    RenderMeshRenderers();
+    if (GetEngine().IsEditor())
+    {
+        _gridRenderModule->DrawGrids();
+    }
+
+    RenderMeshRenderers(SORTING_ORDER_DEFAULT, SORTING_ORDER_POST_PROCESSING - 1);
     _lighting->Render();
-    
-    _gizmos->RenderBehaviourGizmos();
+
+    _gizmos->Render();
 
     if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
     {
@@ -126,8 +129,8 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     _postProcessingModule->Render(_mainFrameBuffer);
     _outline->RenderOutlineFrame();
     // ------
-    
-    _transformationControlsModule->DrawControls();
+
+    RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
 }
 
 void rei::render::DefaultRenderScenario::RenderInDepthMode() const
@@ -155,7 +158,7 @@ void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) 
     glClearColor(color.r, color.g, color.b, color.a);
 }
 
-void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
+void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortingOrder, const i32 maxSortingOrder) const
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();
@@ -163,8 +166,13 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers() const
     FOR(e, f)
     {
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+        if (!meshRenderer.IsEnabled()) continue;
 
-        const Shader& shader = meshRenderer.GetRenderShader();
+        auto& material = meshRenderer.GetRenderMaterial();
+        const auto sortingOrder = material.GetSortingOrder();
+        if (sortingOrder < minSortingOrder || sortingOrder > maxSortingOrder) continue;
+
+        const Shader& shader = material.GetShader();
         _lighting->SetLightValues(shader);
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
@@ -179,11 +187,12 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
     FOR(e, f)
     {
         auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+        if (!meshRenderer.IsEnabled()) continue;
 
         const auto originalMaterial = meshRenderer.GetMaterial();
         meshRenderer.SetMaterial(material);
 
-        const Shader& shader = meshRenderer.GetRenderShader();
+        const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
         _lighting->SetLightValues(shader);
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();

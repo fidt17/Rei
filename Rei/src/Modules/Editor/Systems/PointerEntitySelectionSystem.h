@@ -12,6 +12,7 @@ namespace rei::editor
     private:
         std::shared_ptr<ecs::Filter> _checkEntities;
         std::shared_ptr<ecs::Filter> _selectedEntities;
+        std::shared_ptr<ecs::Filter> _blockSelectionEntities;
         
         void ResetAllEntitiesSelection() const;
     };

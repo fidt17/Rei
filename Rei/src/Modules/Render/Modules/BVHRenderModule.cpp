@@ -43,7 +43,7 @@ void rei::render::BVHRenderModule::Render() const
     FOR(e, f)
     {
         auto& meshRenderer = GET(e, rei::render::MeshRenderer);
-        if (!meshRenderer.GetModel().IsLoaded) continue;
+        if (!meshRenderer.GetModel().IsLoaded()) continue;
 
         for (const auto& mesh : meshRenderer.GetModel().Asset->GetMeshes())
         {

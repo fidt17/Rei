@@ -5,6 +5,6 @@ namespace rei::physics
     enum ColliderType
     {
         Sphere,
-        Mesh
+        Model
     };
 }

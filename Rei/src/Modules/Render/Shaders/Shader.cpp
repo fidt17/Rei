@@ -81,10 +81,10 @@ namespace rei::render
 
         const std::string version = "#version 330 core\n";
 
-        const std::string vertexShader = version + shader_includes + shader_vertex_includes + "\n#define VERTEX;\n" + content;
-        const std::string fragmentShader = version + shader_includes + shader_fragment_includes + "\n#define FRAGMENT;\n" + content;
+        _vertexSource = version + shader_includes + shader_vertex_includes + "\n#define VERTEX;\n" + content;
+        _fragmentSource = version + shader_includes + shader_fragment_includes + "\n#define FRAGMENT;\n" + content;
         
-        _id = ShaderUtility().CreateShaderProgram(vertexShader.c_str(), fragmentShader.c_str());
+        _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
     }
 
     Shader::Shader(const char* vertexSource, const char* fragmentSource)
@@ -143,5 +143,13 @@ namespace rei::render
         glUniformMatrix4fv(GetLocation("_Projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
         glUniformMatrix4fv(GetLocation("_View"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
         glUniformMatrix4fv(GetLocation("_Model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    }
+
+    Shader Shader::CreateInstanceFrom(const Shader& source)
+    {
+        Shader instance;
+        instance._id = ShaderUtility().CreateShaderProgram(source._vertexSource.c_str(), source._fragmentSource.c_str());
+        
+        return instance;
     }
 }

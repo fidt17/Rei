@@ -29,17 +29,21 @@ namespace rei::render
         REI_API f32 GetFov() const;
         REI_API i32 GetNearClipPlane() const;
         REI_API i32 GetFarClipPlane() const;
+        
         REI_API const Color& GetBackgroundColor() const;
         REI_API RenderMode GetRenderMode() const;
         REI_API void GetOutputSize(int& width, int& height) const;
+        REI_API CameraPerspectiveEnum GetPerspective() const;
 
         REI_API void SetOutputSize(int width, int height);
         REI_API void SetRenderMode(RenderMode mode);
+        REI_API void SetPerspective(CameraPerspectiveEnum perspective);
 
         REI_API glm::mat4 GetProjectionMatrix() const;
         REI_API glm::mat4 GetViewMatrix() const;
 
         REI_API math::Ray GetScreenPointToRay(f32 xPos, f32 yPos) const;
+        REI_API f32 CalculateConstantScale(const math::Vector3& targetPosition, f32 desiredSize) const;
 
         REI_API static ecs::RefComponent<Camera> GetMainCamera();
 

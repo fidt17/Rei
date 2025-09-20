@@ -96,7 +96,7 @@ void rei::render::GridRenderModule::RenderGrid(const f32 gridSize, const f32 cel
 
     auto model = glm::mat4(1);
     model = translate(model, glm::vec3(center));
-    model = model * LookAt(glm::vec3(0, 0, 0), direction, {0, 1, 0});
+    model = model * math::GetRotationMatrix(LookAt(direction, {0, 1, 0}));
 
     const auto& shader = _gridMaterial.Asset->GetShader();
     shader.SetColor("_Color", {1, 1, 1, _settings.Opacity});

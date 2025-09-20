@@ -2,50 +2,105 @@
 
 #include "Transform.h"
 
-void rei::transformation::Transform::Reset()
-{
-    _position = math::Vector3(0, 0, 0);
-    _rotation = math::Vector3(0, 0, 0);
-    _scale = math::Vector3(1, 1, 1);
-}
+#include "glm/ext/quaternion_trigonometric.hpp"
 
-rei::math::Vector3& rei::transformation::Transform::GetPosition()
+namespace rei::transformation
 {
-    return _position;
-}
+    void Transform::Reset()
+    {
+        _position = math::Vector3(0, 0, 0);
+        _rotation = math::Vector3(0, 0, 0);
+        _scale = math::Vector3(1, 1, 1);
+    }
 
-rei::math::Vector3& rei::transformation::Transform::GetScale()
-{
-    return _scale;
-}
+    void Transform::AfterREI_SET()
+    {
+        _quaternion = GetQuaternion(_rotation);
+    }
 
-rei::math::Vector3& rei::transformation::Transform::GetRotation()
-{
-    return _rotation;
-}
+    void Transform::BeforeREI_GET()
+    {
+        _rotation = math::GetEulerAngles(_quaternion);
+    }
 
-glm::mat4 rei::transformation::Transform::CalculateModelMatrix() const
-{
-    return GetTransformationMatrix(_position, _rotation, _scale);
-}
+    math::Vector3& Transform::GetPosition()
+    {
+        return _position;
+    }
 
-rei::math::Vector3 rei::transformation::Transform::GetForward() const
-{
-    return math::Vector3::Forward().Transform(GetRotationMatrix(_rotation));
-}
+    math::Vector3& Transform::GetScale()
+    {
+        return _scale;
+    }
 
-rei::math::Vector3 rei::transformation::Transform::GetRight() const
-{
-    return math::Vector3::Right().Transform(GetRotationMatrix(_rotation));
-}
+    const glm::quat& Transform::GetRotation() const
+    {
+        return _quaternion;
+    }
 
-rei::math::Vector3 rei::transformation::Transform::GetUp() const
-{
-    return math::Vector3::Up().Transform(GetRotationMatrix(_rotation));
-}
+    void Transform::Translate(const math::Vector3& translation)
+    {
+        _position += translation;
+    }
 
-rei::transformation::Transform::operator std::string() const
-{
-    auto f = std::format("P: {}\nR: {}\nS: {}", std::string(_position), std::string(_rotation), std::string(_scale));
-    return std::string(f);
+    void Transform::SetRotation(const math::Vector3& eulerAngles)
+    {
+        SetRotation(GetQuaternion(eulerAngles));
+    }
+
+    void Transform::SetRotation(const glm::quat& quaternion)
+    {
+        _quaternion = quaternion;
+        _rotation = math::GetEulerAngles(_quaternion);
+    }
+
+    void Transform::RotateWorld(f32 angle, const math::Vector3& axis)
+    {
+        const f32 angleRad = glm::radians(angle);
+
+        const glm::quat delta = angleAxis(angleRad, glm::vec3(math::Vector3::Normalize(axis)));
+
+        _quaternion = delta * _quaternion;
+
+        _quaternion = normalize(_quaternion);
+        _rotation = math::GetEulerAngles(_quaternion);
+    }
+
+    void Transform::RotateLocal(const f32 angle, const math::Vector3& axis)
+    {
+        const f32 angleRad = glm::radians(angle);
+
+        const glm::quat delta = angleAxis(angleRad, glm::vec3(math::Vector3::Normalize(axis)));
+
+        _quaternion = _quaternion * delta;
+
+        _quaternion = normalize(_quaternion);
+        _rotation = math::GetEulerAngles(_quaternion);
+    }
+
+    glm::mat4 Transform::CalculateModelMatrix() const
+    {
+        return GetTransformationMatrix(_position, _quaternion, _scale);
+    }
+
+    math::Vector3 Transform::GetForward() const
+    {
+        return _quaternion * glm::vec3(0,0,1);
+    }
+
+    math::Vector3 Transform::GetRight() const
+    {
+        return _quaternion * glm::vec3(1,0,0);
+    }
+
+    math::Vector3 Transform::GetUp() const
+    {
+        return _quaternion * glm::vec3(0,1,0);
+    }
+
+    Transform::operator std::string() const
+    {
+        auto f = std::format("P: {}\nR: {}\nS: {}", std::string(_position), std::string(_rotation), std::string(_scale));
+        return std::string(f);
+    }
 }

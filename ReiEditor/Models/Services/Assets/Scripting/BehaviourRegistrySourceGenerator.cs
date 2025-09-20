@@ -86,8 +86,12 @@ public class BehaviourRegistrySourceGenerator
             var behaviourId = b.Value.BehaviourId;
 
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
-                           $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{" + $"return rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e).REI_GET();" + " }, " +
-                           $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{" + $"rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e).REI_SET(json); }});");
+                           $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{ " +
+                           $"auto& b = rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e); " +
+                           $"return b.REI_GET();" + " }, " +
+                           $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " + 
+                           $"auto& b = rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
+                           $"b.REI_SET(json); b.AfterREI_SET(); }});");
         }
         
         str.AppendLine("}");

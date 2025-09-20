@@ -2,8 +2,6 @@
 #include "BaseRenderScenario.h"
 #include "CameraModule.h"
 #include "FrameBuffer.h"
-#include "../../../../resources/meshes/CubeVertexData.h"
-#include "../../../../resources/meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
 #include "Modules/Render/Modules/BVHRenderModule.h"
 #include "Modules/Render/Modules/Gizmos.h"
@@ -11,7 +9,6 @@
 #include "Modules/Render/Modules/LightingRenderModule.h"
 #include "Modules/Render/Modules/OutlineRenderModule.h"
 #include "Modules/Render/Modules/PostProcessingModule.h"
-#include "Modules/Render/Modules/TransformationControlsModule.h"
 
 namespace rei::render
 {
@@ -37,7 +34,7 @@ namespace rei::render
         void SetBackgroundColor(const Color& color) const;
         void ClearBuffer(int clearMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, i32 stencilMask = 0xFF) const;
 
-        void RenderMeshRenderers() const;
+        void RenderMeshRenderers(i32 minSortingOrder, i32 maxSortingOrder) const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
 
     public:
@@ -55,7 +52,6 @@ namespace rei::render
         std::shared_ptr<OutlineRenderModule> _outline;
         std::shared_ptr<PostProcessingModule> _postProcessingModule;
         std::shared_ptr<GridRenderModule> _gridRenderModule;
-        std::shared_ptr<TransformationControlsModule> _transformationControlsModule;
         
         FrameBuffer _mainFrameBuffer;
 

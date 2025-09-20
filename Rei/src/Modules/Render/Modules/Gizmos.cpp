@@ -2,8 +2,7 @@
 #include "Gizmos.h"
 
 #include "glad/glad.h"
-#include "meshes/CircleVertexData.h"
-#include "Modules/Behaviour/Components/BehaviourCollection.h"
+#include "glm/detail/type_quat.hpp"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Render/Material/Material.h"
 
@@ -16,19 +15,13 @@ void rei::render::Gizmos::Setup()
     _gizmosMaterial = GetAssetManager().GetById<Material>(REI_COLOR_MATERIAL_ID);
 }
 
-void rei::render::Gizmos::RenderBehaviourGizmos()
+void rei::render::Gizmos::Render()
 {
-    ECS_WORLD(GetInternalWorld());
-
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<BehaviourCollection>();
-
-    FOR(e, f)
+    for (const auto & action : _drawCommands)
     {
-        for (const auto behavioursToUpdate : GET(e, BehaviourCollection).Behaviours)
-        {
-            GetEntityManager().GetBehaviour(e, behavioursToUpdate).DrawGizmos(*this);
-        }
+        action(*this);
     }
+    _drawCommands.clear();
 }
 
 void rei::render::Gizmos::DrawLine(const math::Vector3& start, const math::Vector3& end, const Color& color, const bool useDepth) const
@@ -77,10 +70,9 @@ void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& 
     DrawBox(transformation, color, useDepth, false);
 }
 
-void rei::render::Gizmos::DrawBox(const math::Vector3& pos, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
-                                  const bool useDepth) const
+void rei::render::Gizmos::DrawBox(const math::Vector3& pos, const math::Vector3& size, const glm::quat& rotation, const Color& color, const bool useDepth) const
 {
-    DrawBox(GetTransformationMatrix(pos, rotation, size), color, useDepth, false);
+    DrawBox(GetTransformationMatrix(pos, glm::quat(rotation), size), color, useDepth, false);
 }
 
 void rei::render::Gizmos::DrawWireframeBox(const glm::mat4& transformation, const Color& color, bool useDepth) const
@@ -88,8 +80,7 @@ void rei::render::Gizmos::DrawWireframeBox(const glm::mat4& transformation, cons
     DrawBox(transformation, color, useDepth, true);
 }
 
-void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const math::Vector3& size, const math::Vector3& rotation, const Color& color,
-                                           const bool useDepth) const
+void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& pos, const math::Vector3& size, const glm::quat& rotation, const Color& color, const bool useDepth) const
 {
     const math::Vector3 halfSize = size / 2.0f;
 
@@ -104,11 +95,11 @@ void rei::render::Gizmos::DrawWireframeBox(const math::Vector3& center, const ma
         {-halfSize.x, +halfSize.y, -halfSize.z} // top left back
     };
 
-    const auto rotationMatrix = GetRotationMatrix(rotation);
+    const auto rotationMatrix = math::GetRotationMatrix(rotation);
 
     for (auto& vertex : vertices)
     {
-        vertex = vertex.Transform(rotationMatrix) + center;
+        vertex = vertex.Transform(rotationMatrix) + pos;
     }
 
     // Front face
@@ -139,7 +130,7 @@ void rei::render::Gizmos::DrawCircle(const math::Vector3& center, const math::Ve
 
     auto model = glm::mat4(1);
     model = translate(model, glm::vec3(center));
-    model = model * LookAt(glm::vec3(0, 0, 0), glm::vec3(forward), up);
+    model = model * math::GetRotationMatrix(LookAt(forward, up));
     model = scale(model, {radius, radius, radius});
 
     const auto& shader = _gizmosMaterial.Asset->GetShader();
@@ -189,6 +180,11 @@ void rei::render::Gizmos::DrawWireSphere(const math::Vector3& center, const f32 
         Vector3 circleCenter = {center.x, center.y, center.z + offset};
         DrawCircle(circleCenter, Vector3::Forward(), Vector3::Up(), circleRadius, color, 2 * segments * (circleRadius / radius), useDepth);
     }
+}
+
+void rei::render::Gizmos::EnqueueDrawCommand(const std::function<void(Gizmos& g)>& f)
+{
+    _drawCommands.push_back(f);
 }
 
 void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& color, const bool useDepth, const bool wireframe) const

@@ -28,8 +28,6 @@ public:
             position.x = cos(time) * _radius;
             position.y = sin(time) * _radius;
         }
-
-        GetTransform().GetRotation().z = time * 10;
     }
 
 private:

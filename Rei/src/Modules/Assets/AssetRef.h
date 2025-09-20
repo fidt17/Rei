@@ -10,25 +10,23 @@ namespace rei::assets
         virtual void UnloadAsset() = 0;
         virtual i32 GetAssetSize() = 0;
     };
-    
+
     template <typename T>
     struct AssetRef : public IAssetRef
     {
         SERIALIZABLE_BODY(AssetRef)
-        
-        SERIALIZE std::string Id;
-        
-        T* Asset;
-        bool IsLoaded = false;
+
+        SERIALIZE std::string Id = "";
+
+        T* Asset = nullptr;
         i32 AssetSize = 0;
-        
+
         REI_API AssetRef(std::string id) : Id(std::move(id))
         {
         }
 
         AssetRef(const AssetRef& other)
-            : IsLoaded(other.IsLoaded),
-              Id(other.Id),
+            : Id(other.Id),
               Asset(other.Asset)
         {
         }
@@ -36,23 +34,19 @@ namespace rei::assets
         T* operator->()
         {
             REI_ASSERT(Id != "", "Missing asset Id")
-            REI_ASSERT(IsLoaded, "Asset id=" + Id + " is not loaded")
-            
+            REI_ASSERT(IsLoaded(), "Asset id=" + Id + " is not loaded")
+
             return Asset;
         }
 
-        bool VerifyIsLoaded() const
+        bool IsLoaded() const
         {
-            if (IsLoaded) return true;
-
-            LOG_ERROR("Asset id={} is not loaded", Id)
-            return false;
+            return Asset;
         }
 
         void UnloadAsset() override
         {
             delete Asset;
-            IsLoaded = false;
         }
 
         i32 GetAssetSize() override

@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "meshes/QuadVertexData.h"
 #include "Modules/Render/Material/Material.h"
+#include "Modules/Render/Mesh/VertexObjects/QuadVertexData.h"
 #include "Modules/Render/RenderScenario/CameraModule.h"
 #include "Modules/Render/RenderScenario/FrameBuffer.h"
 

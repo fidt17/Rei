@@ -5,7 +5,25 @@
 
 namespace rei::window
 {
-    void WindowManager::OnUpdate()
+    WindowManager::WindowManager()
+    {
+        glfwSetErrorCallback([](int error_code, const char* description)
+        {
+            LOG_ERROR("GLFW ERROR. {} {}", error_code, description)
+        });
+
+        if (!glfwInit())
+        {
+            REI_THROW("GLFW Initialization error")
+        }
+
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_SAMPLES, 4);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+
+    void WindowManager::OnUpdate() const
     {
         if (_windows.empty()) return;
 

@@ -22,26 +22,27 @@ namespace rei::math
 
         REI_API Vector3 operator-() const;
 
-        REI_API Vector3& operator+=(const glm::vec<3, float>& vec);
+        REI_API Vector3& operator+=(const glm::vec<3, f32>& vec);
         REI_API Vector3& operator+=(const Vector3& vec);
 
-        REI_API Vector3& operator-=(const glm::vec<3, float>& vec);
+        REI_API Vector3& operator-=(const glm::vec<3, f32>& vec);
         REI_API Vector3& operator-=(const Vector3& vec);
 
-        REI_API Vector3& operator*=(float value);
-        REI_API Vector3& operator/=(float value);
+        REI_API Vector3& operator*=(f32 value);
+        REI_API Vector3& operator/=(f32 value);
 
         REI_API Vector3 operator+(const Vector3& vec) const;
         REI_API Vector3 operator-(const Vector3& vec) const;
-        
-        REI_API Vector3 operator*(float value) const;
-        REI_API Vector3 operator/(float value) const;
+
+        REI_API Vector3 operator*(f32 value) const;
+        REI_API Vector3 operator/(f32 value) const;
 
         REI_API Vector3 operator*(const Vector3& vec) const;
         REI_API Vector3 operator/(const Vector3& vec) const;
 
         REI_API Vector3 Transform(const glm::mat4& m) const;
-        
+        REI_API Vector3 Rotate(const glm::quat& q) const;
+
         REI_API f32 operator[](i32 idx) const;
 
         REI_API f32 Length() const;
@@ -60,11 +61,13 @@ namespace rei::math
         REI_API static Vector3 Max();
         REI_API static Vector3 Min();
 
-        REI_API static float Dot(const Vector3& a, const Vector3& b);
+        REI_API static f32 Dot(const Vector3& a, const Vector3& b);
         REI_API static Vector3 Cross(const Vector3& a, const Vector3& b);
         REI_API static Vector3 Average(const Vector3& a, const Vector3& b);
         REI_API static f32 Length(const Vector3& v);
         REI_API static Vector3 Normalize(const Vector3& v);
         REI_API static f32 Distance(const Vector3& a, const Vector3& b);
+        REI_API static Vector3 Abs(const Vector3& v);
+        REI_API static Vector3 Projection(const Vector3& pointToProject, const Vector3& vectorToProjectOnto);
     };
 }

@@ -1,28 +1,124 @@
 ﻿#include "pch.h"
 #include "Material.h"
 
-rei::render::Material::Material(resources::BinaryReader& reader)
-{
-    // todo 
-}
+#include "glad/glad.h"
 
-rei::render::Material::Material(assets::AssetRef<Shader> shader)
-    :_shader(shader)
+namespace rei::render
 {
-}
+    Material::Material(resources::BinaryReader& reader)
+    {
+        // todo 
+    }
 
-rei::render::Material::~Material()
-{
-    _shader->Delete();
-}
+    Material::Material(assets::AssetRef<Shader> shader)
+        : _shader(shader)
+    {
+    }
 
-const rei::render::Shader& rei::render::Material::GetShader() const
-{
-    return *_shader.Asset;
-}
+    Material::~Material()
+    {
+        _shader->Delete();
+    }
 
-std::vector<rei::assets::AssetRef<rei::render::Texture>>& rei::render::Material::GetTextures()
-{
-    return _textures;
-}
+    void Material::Use() const
+    {
+        if (!_shader.IsLoaded())
+        {
+            LOG_ERROR("Shader {} is not loaded. Cannot use this material", _shader.Id);
+            return;
+        }
 
+        _shader.Asset->Use();
+        BindTextures();
+
+        if (UseDepth())
+        {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else
+        {
+            glDisable(GL_DEPTH_TEST);
+        }
+    }
+
+    assets::AssetRef<Shader>& Material::GetShaderAsset()
+    {
+        return _shader;
+    }
+
+    const Shader& Material::GetShader() const
+    {
+        return *_shader.Asset;
+    }
+
+    std::vector<assets::AssetRef<Texture>>& Material::GetTextures()
+    {
+        return _textures;
+    }
+
+    bool Material::UseDepth() const
+    {
+        return _useDepth;
+    }
+
+    void Material::SetDepth(const bool value)
+    {
+        _useDepth = value;
+    }
+
+    assets::AssetRef<Material> Material::CreateInstanceFrom(const Material& source)
+    {
+        auto material = GetAssetManager().CreateAsset<Material>(GetAssetManager().CreateAsset<Shader>(Shader::CreateInstanceFrom(*source._shader.Asset)));
+        material.Asset->_useDepth = source._useDepth;
+        material.Asset->_sortingOrder = source._sortingOrder;
+        material.Asset->_textures = source._textures;
+
+        return material;
+    }
+
+    void Material::BindTextures() const
+    {
+        unsigned int diffuseNr = 1;
+        unsigned int specularNr = 1;
+        unsigned int normalNr = 1;
+        unsigned int heightNr = 1;
+
+        for (unsigned int i = 0; i < _textures.size(); i++)
+        {
+            if (!_textures[i].IsLoaded())
+            {
+                LOG_ERROR("Texture {} is not loaded", _textures[i].Id)
+                continue;
+            }
+            const auto texturePtr = _textures[i].Asset;
+
+            std::string number;
+            std::string textureName;
+            switch (const TextureType textureType = texturePtr->GetType())
+            {
+            case Diffuse:
+                number = std::to_string(diffuseNr++);
+                textureName = "texture_diffuse";
+                break;
+            case Specular:
+                number = std::to_string(specularNr++);
+                textureName = "texture_specular";
+                break;
+            case Normal:
+                number = std::to_string(normalNr++);
+                textureName = "texture_normal";
+                break;
+            case Height:
+                number = std::to_string(heightNr++);
+                textureName = "texture_height";
+                break;
+            default:
+                LOG_ERROR("Unknown texture type: {}", static_cast<int>(textureType))
+                continue;
+            }
+
+            _shader.Asset->SetInt(textureName + number, i);
+            texturePtr->Use(i);
+        }
+    }
+}

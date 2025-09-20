@@ -22,7 +22,10 @@ namespace rei::ecs
         template <typename T>
         REI_API T& Get(Entity e)
         {
-            REI_THROW_IF(IsDead(e), "Cannot get component from dead entity");
+            if (IsDead(e))
+            {
+                REI_THROW("Cannot get component from dead entity")
+            }
 
             auto componentSet = GetSet<T>();
 
@@ -42,7 +45,10 @@ namespace rei::ecs
         template <typename T>
         REI_API bool Has(const Entity e)
         {
-            REI_THROW_IF(IsDead(e), "Cannot check if dead entity has component")
+            if (IsDead(e))
+            {
+                REI_THROW("Cannot check if dead entity has component")
+            }
 
             auto componentSet = GetSet<T>();
             return componentSet->Has(e);
@@ -51,7 +57,10 @@ namespace rei::ecs
         template <typename T>
         REI_API void Del(Entity e)
         {
-            REI_THROW_IF(IsDead(e), "Cannot delete component on dead entity")
+            if (IsDead(e))
+            {
+                REI_THROW("Cannot delete component on dead entity")
+            }
 
             auto set = GetSet<T>();
             if (set->Delete(e))

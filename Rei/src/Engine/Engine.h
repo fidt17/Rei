@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "InternalEngineWorld.h"
 #include "Api/EditorEventsRelay.h"
 #include "Common/Tasks/TaskExecutor.h"
 #include "Modules/Render/Renderer.h"
@@ -21,13 +22,14 @@ namespace rei::internal::engine
         REI_EVENT() StartEvent;
         REI_EVENT(int) ShutdownEvent;
 
-        REI_API explicit Engine(std::shared_ptr<App> app, EngineMode mode);
+        REI_API explicit Engine(std::shared_ptr<App> app, EngineMode mode, bool isEditor);
         Engine(const Engine& e) = delete;
 
         REI_API void Start();
         REI_API void Shutdown(int exitCode);
 
         REI_API bool IsPlaymode() const;
+        REI_API bool IsEditorMode() const;
         REI_API bool IsEditor() const;
 
         REI_API int GetExitCode() const;
@@ -37,17 +39,19 @@ namespace rei::internal::engine
 
     private:
         EngineMode _mode;
+        bool _isEditor;
+        
         bool _runEngine = false;
         int _exitCode;
 
         std::shared_ptr<window::WindowManager> _windowManager;
         std::shared_ptr<window::MainWindowHandler> _mainWindowHandler;
 
-        std::shared_ptr<TaskExecutor> _reiMainThread;
+        std::shared_ptr<TaskExecutor> _mainThread;
         std::shared_ptr<render::Renderer> _mainRenderer;
 
         std::shared_ptr<App> _app;
-        std::shared_ptr<ecs::World> _internalWorld;
+        std::shared_ptr<InternalEngineWorld> _internalWorld;
 
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<EntityManager> _entityManager;
@@ -55,8 +59,6 @@ namespace rei::internal::engine
 
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
 
-        void SetupGLFW() const;
-        void ConfigureInternalWorld() const;
         void RunUpdateLoop();
     };
 }

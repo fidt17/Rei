@@ -89,3 +89,10 @@ void rei::render::Mesh::Dispose() const
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
 }
+
+void rei::render::Mesh::Render() const
+{
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, Indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}

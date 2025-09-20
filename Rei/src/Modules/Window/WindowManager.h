@@ -6,7 +6,8 @@ namespace rei::window
     class WindowManager
     {
     public:
-        void OnUpdate();
+        WindowManager();
+        void OnUpdate() const;
 
         std::shared_ptr<Window> NewWindow(const WindowCreationSettings& settings);
 

@@ -7,6 +7,7 @@ namespace rei::render
     {
     public:
         REI_API Model(resources::BinaryReader& reader);
+        REI_API Model(const std::string& name, Mesh mesh);
         REI_API ~Model();
 
         const std::vector<Mesh>& GetMeshes() const;

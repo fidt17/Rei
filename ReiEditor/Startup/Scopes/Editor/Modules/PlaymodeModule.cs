@@ -28,6 +28,7 @@ public class PlaymodeModule : Module
         builder.RegisterType<PlaymodePanelViewModel>();
         builder.RegisterType<RenderModeSelectionViewModel>();
         builder.RegisterType<EditorGridOptionsViewModel>();
+        builder.RegisterType<TransformationSpaceSettingsViewModel>();
         
         builder.RegisterType<StartPlaymodeCommand>();
         builder.RegisterType<StopPlaymodeCommand>();

@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Common.Condition;
+using ReiEditor.Utils.Factory;
+using ReiEditor.ViewModels.Windows.Editor.Commands;
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
@@ -16,17 +18,20 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
     private readonly ILogger<PlaymodeStarter> _logger;
     private readonly IBuildStarter _buildStarter;
     private readonly IEngineRunner _engineRunner;
+    private readonly SaveProjectCommand _saveProjectCommand;
 
     public PlaymodeStarter(
         IBuildService buildService,
         ILogger<PlaymodeStarter> logger,
         IBuildStarter buildStarter,
-        IEngineRunner engineRunner)
+        IEngineRunner engineRunner, 
+        IFactory<SaveProjectCommand> saveProjectCommand)
     {
         _buildService = buildService;
         _logger = logger;
         _buildStarter = buildStarter;
         _engineRunner = engineRunner;
+        _saveProjectCommand = saveProjectCommand.CreateInstance();
 
         _canStartPlaymodeCondition = new ConditionGroup(
             new Condition(_engineRunner.IsPlaymodeActive, target: false),
@@ -35,6 +40,7 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
 
     public void Dispose()
     {
+        _saveProjectCommand.Dispose();
         _canStartPlaymodeCondition.Dispose();
     }
 	
@@ -48,7 +54,8 @@ public class PlaymodeStarter : IPlaymodeStarter, IDisposable
         try
         {
             await _engineRunner.StopEngine();
-        
+
+            await _saveProjectCommand.SaveProject();
             await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
         
             if (!CanStart.IsTrue.Value)

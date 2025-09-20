@@ -28,6 +28,7 @@ public interface IEngineApi
     void ResizeWindow(IntPtr windowPtr, int width, int height);
     void ChangeRenderMode(RenderMode mode);
     void SetEditorGridSettings(SetViewportGridSettingsRequest settings);
+    void ChangeTransformationMode(bool worldSpace);
     
     void SetDllPtr(IntPtr ptr);
     void Invoke(Type delegateType, string methodName = "", params object?[]? args);

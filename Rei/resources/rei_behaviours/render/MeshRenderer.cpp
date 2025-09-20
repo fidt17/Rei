@@ -1,25 +1,20 @@
 ﻿#include "pch.h"
 #include "MeshRenderer.h"
 
-#include "glad/glad.h"
-#include "Modules/Editor/SelectableByPointerTag.h"
-#include "Modules/Physics/MeshCollider.h"
+#include "Engine/Engine.h"
+#include "Modules/Editor/Components/SelectableByPointerTag.h"
+#include "Modules/Physics/ModelCollider.h"
 #include "Modules/Physics/PointerCollisionListener.h"
 
 namespace rei::render
 {
-    void MeshRenderer::RenderMesh(const std::vector<Mesh>::value_type& mesh) const
-    {
-        glBindVertexArray(mesh.VAO);
-        glDrawElements(GL_TRIANGLES, mesh.Indices.size(), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-    }
-
     void MeshRenderer::ConfigureSelectionCollider() const
     {
+        if (!_model.IsLoaded()) return;
+
         ECS_WORLD(GetInternalWorld());
-        
-        const auto meshCollider = std::make_shared<physics::MeshCollider>();
+
+        const auto meshCollider = std::make_shared<physics::ModelCollider>();
         meshCollider->SetModel(_model);
 
         const auto e = GetEntity();
@@ -27,54 +22,6 @@ namespace rei::render
         GET(e, editor::SelectableByPointerTag);
     }
 
-    void MeshRenderer::BindTextures() const
-    {
-        if (!_material.IsLoaded) return;
-
-        unsigned int diffuseNr = 1;
-        unsigned int specularNr = 1;
-        unsigned int normalNr = 1;
-        unsigned int heightNr = 1;
-
-        const std::vector<assets::AssetRef<Texture>>& textures = _material.Asset->GetTextures();
-        for (unsigned int i = 0; i < textures.size(); i++)
-        {
-            if (!textures[i].IsLoaded)
-            {
-                LOG_ERROR("Texture {} is not loaded", textures[i].Id)
-                continue;
-            }
-            const auto texturePtr = textures[i].Asset;
-
-            std::string number;
-            std::string textureName;
-            switch (const TextureType textureType = texturePtr->GetType())
-            {
-            case Diffuse:
-                number = std::to_string(diffuseNr++);
-                textureName = "texture_diffuse";
-                break;
-            case Specular:
-                number = std::to_string(specularNr++);
-                textureName = "texture_specular";
-                break;
-            case Normal:
-                number = std::to_string(normalNr++);
-                textureName = "texture_normal";
-                break;
-            case Height:
-                number = std::to_string(heightNr++);
-                textureName = "texture_height";
-                break;
-            default:
-                LOG_ERROR("Unknown texture type: {}", static_cast<int>(textureType))
-                continue;
-            }
-
-            _material.Asset->GetShader().SetInt(textureName + number, i);
-            texturePtr->Use(i);
-        }
-    }
 
     void MeshRenderer::LoadAssets(assets::AssetManager& assetManager)
     {
@@ -84,29 +31,36 @@ namespace rei::render
 
     void MeshRenderer::Init()
     {
-        ConfigureSelectionCollider();
+        if (GetEngine().IsEditor())
+        {
+            ConfigureSelectionCollider();
+        }
     }
 
     void MeshRenderer::Render() const
     {
-        if (!_model.IsLoaded)
+        if (!_model.IsLoaded())
         {
             LOG_ERROR("Model {} is not loaded. Cannot render mesh.", _model.Id)
             return;
         }
 
-        GetRenderShader().Use();
-        BindTextures();
+        GetRenderMaterial().Use();
 
         for (const auto& mesh : _model.Asset->GetMeshes())
         {
-            RenderMesh(mesh);
+            mesh.Render();
         }
     }
 
     void MeshRenderer::SetModel(const assets::AssetRef<Model>& model)
     {
         _model = model;
+
+        if (GetEngine().IsEditor())
+        {
+            ConfigureSelectionCollider();
+        }
     }
 
     void MeshRenderer::SetMaterial(const assets::AssetRef<Material>& material)
@@ -124,10 +78,10 @@ namespace rei::render
         return _material;
     }
 
-    const Shader& MeshRenderer::GetRenderShader() const
+    const Material& MeshRenderer::GetRenderMaterial() const
     {
-        if (_material.IsLoaded) return _material.Asset->GetShader();
+        if (_material.IsLoaded()) return *_material.Asset;
 
-        return GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID).Asset->GetShader();
+        return *GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID).Asset;
     }
 }

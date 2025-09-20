@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "meshes/CubeVertexData.h"
 #include "Modules/Render/Material/Material.h"
+#include "Modules/Render/Mesh/VertexObjects/CubeVertexData.h"
 #include "Modules/Render/RenderScenario/CameraModule.h"
 #include "Modules/Render/Shaders/Shader.h"
 #include "rei_behaviours/render/light/AmbientLight.h"

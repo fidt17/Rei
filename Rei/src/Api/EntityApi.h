@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Components/EntityInfo.h"
-#include "Modules/Editor/SelectedTag.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "rei_behaviours/render/RenderOutlineTag.h"
 

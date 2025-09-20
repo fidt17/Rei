@@ -29,7 +29,7 @@ void rei::physics::PointerCollisionSystem::OnUpdate()
         listener.DidEnter = false;
         listener.DidExit = false;
 
-        if (listener.Collider && listener.Collider->Intersect(ray, transform.CalculateModelMatrix()))
+        if (listener.Collider && listener.Collider->Intersect(ray, transform.CalculateModelMatrix(), listener.CollisionPoint))
         {
             if (!listener.IsInside)
             {

@@ -33,7 +33,6 @@ namespace rei::assets
             if (loadedAsset != _loadedAssets.end())
             {
                 ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
-                ref.IsLoaded = true;
                 return ref;
             }
 
@@ -58,7 +57,6 @@ namespace rei::assets
 
             i32 assetSize;
             ref.Asset = new T(Load<T>(dest, 0, assetSize));
-            ref.IsLoaded = true;
             ref.AssetSize = assetSize;
             _loadedAssetsSize += assetSize;
 
@@ -74,7 +72,6 @@ namespace rei::assets
             AssetRef<T>* asset = new AssetRef<T>(id);
 
             asset->Asset = new T(args...);
-            asset->IsLoaded = true;
             _loadedAssets[asset->Id] = asset;
 
             return *asset;
@@ -91,13 +88,12 @@ namespace rei::assets
         REI_API bool Load(AssetRef<T>& ref)
         {
             if (ref.Id == "") return false;
-            if (ref.IsLoaded) return true;
+            if (ref.IsLoaded()) return true;
 
             auto loadedAsset = _loadedAssets.find(ref.Id);
             if (loadedAsset != _loadedAssets.end())
             {
                 ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
-                ref.IsLoaded = true;
                 return true;
             }
 
@@ -120,7 +116,6 @@ namespace rei::assets
             catch (std::exception e)
             {
                 LOG_ERROR("Cought exception while trying to load asset id={}\n Exception: {}", ref.Id, e.what())
-                ref.IsLoaded = false;
             }
 
             return false;
@@ -183,7 +178,6 @@ namespace rei::assets
             if (loadedAsset != _loadedAssets.end())
             {
                 ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
-                ref.IsLoaded = true;
                 return;
             }
 
@@ -192,7 +186,6 @@ namespace rei::assets
 
             _loadedAssets[ref.Id] = new AssetRef<T>(ref);
             ref.Asset = new T(asset);
-            ref.IsLoaded = true;
             ref.AssetSize = assetSize;
 
             _loadedAssetsSize += assetSize;

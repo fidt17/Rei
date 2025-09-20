@@ -39,6 +39,11 @@ namespace rei::render
         height = _outputHeight;
     }
 
+    CameraPerspectiveEnum Camera::GetPerspective() const
+    {
+        return _perspective;
+    }
+
     void Camera::SetOutputSize(int width, int height)
     {
         _outputWidth = width;
@@ -48,6 +53,11 @@ namespace rei::render
     void Camera::SetRenderMode(const RenderMode mode)
     {
         _renderMode = mode;
+    }
+
+    void Camera::SetPerspective(const CameraPerspectiveEnum perspective)
+    {
+        _perspective = perspective;
     }
 
     glm::mat4 Camera::GetProjectionMatrix() const
@@ -75,7 +85,8 @@ namespace rei::render
     {
         auto& transform = GetTransform();
         const auto& position = transform.GetPosition();
-        return lookAt(glm::vec3(position), glm::vec3(position + transform.GetForward()), glm::vec3(0, 1, 0));
+
+        return lookAt(glm::vec3(position), glm::vec3(position + transform.GetForward()), glm::vec3(transform.GetUp()));
     }
 
     math::Ray Camera::GetScreenPointToRay(const f32 xPos, const f32 yPos) const
@@ -86,6 +97,26 @@ namespace rei::render
         }
 
         return GetOrhographicScreenPointToRay(xPos, yPos);
+    }
+
+    f32 Camera::CalculateConstantScale(const math::Vector3& targetPosition, f32 desiredSize) const
+    {
+        desiredSize = 10 / desiredSize;
+        
+        if (_perspective == Perspective)
+        {
+            const glm::vec4 viewSpacePos = GetViewMatrix() * glm::vec4(glm::vec3(targetPosition), 1.0f);
+            const f32 distance = -viewSpacePos.z;
+
+            const f32 fovY = 2.0f * atan(1.0f / GetProjectionMatrix()[1][1]);
+            const f32 scale = (2.0f * distance * tan(fovY / 2.0f)) / desiredSize;
+
+            return scale;
+        }
+        
+        // For orthographic projection
+        float orthoHeight = 2.0f / GetProjectionMatrix()[1][1];
+        return orthoHeight / desiredSize;
     }
 
     ecs::RefComponent<Camera> Camera::GetMainCamera()

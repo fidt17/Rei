@@ -29,7 +29,8 @@ namespace rei
         virtual void Start() { }
         virtual void Update() { }
         virtual void Dispose() { }
-        virtual void DrawGizmos(render::Gizmos&) { }
+        virtual void BeforeREI_GET() { }
+        virtual void AfterREI_SET() { }
 
         REI_API i32 GetBehaviourId() const;
         
@@ -41,10 +42,16 @@ namespace rei
 
         Behaviour& operator=(const Behaviour& other) = default;
 
+        REI_API bool IsEnabled() const;
+        REI_API void Enable();
+        REI_API void Disable();
+
     private:
         i32 _id{};
         ecs::Entity _entity{-1, 0};
         ecs::RefComponent<transformation::Transform> _transform;
+
+        bool _enabled = true;
     };
 
     template <typename T>

@@ -113,6 +113,11 @@ namespace rei::math
         return Vector3(glm::vec3(m * glm::vec4(x, y, z, 1)));
     }
 
+    Vector3 Vector3::Rotate(const glm::quat& q) const
+    {
+        return Transform(GetRotationMatrix(q));
+    }
+
     f32 Vector3::operator[](const i32 idx) const
     {
         if (idx == 0) return x;
@@ -202,14 +207,24 @@ namespace rei::math
         const f32 length = Length(v);
         if (length < 1e-6f)
         {
-            return Vector3(0,0,0);
+            return Vector3(0, 0, 0);
         }
-        
+
         return v / length;
     }
 
     f32 Vector3::Distance(const Vector3& a, const Vector3& b)
     {
         return Length(a - b);
+    }
+
+    Vector3 Vector3::Abs(const Vector3& v)
+    {
+        return Vector3(abs(v.x), abs(v.y), abs(v.z));
+    }
+
+    Vector3 Vector3::Projection(const Vector3& pointToProject, const Vector3& vectorToProjectOnto)
+    {
+        return vectorToProjectOnto * Dot(pointToProject, vectorToProjectOnto) / Dot(vectorToProjectOnto, vectorToProjectOnto);
     }
 }

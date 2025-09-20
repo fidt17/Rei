@@ -20,8 +20,11 @@ namespace rei::external
     {
         try
         {
+            // todo: pass via params
+            const bool IS_EDITOR = true;
+            
             std::filesystem::current_path(resourcesDir);
-            auto engine = new internal::engine::Engine(CreateApp(), static_cast<internal::engine::EngineMode>(mode));
+            auto engine = new internal::engine::Engine(CreateApp(), static_cast<internal::engine::EngineMode>(mode), IS_EDITOR);
             ConfigureComponentsFactory(GetEntityManager().GetBehaviourRegistry());
             return engine;
         }
@@ -96,7 +99,7 @@ int main()
 {
     try
     {
-        auto engine = new rei::internal::engine::Engine(std::make_shared<BlankApp>());
+        auto engine = new rei::internal::engine::Engine(std::make_shared<BlankApp>(), rei::internal::engine::EngineMode::PlayMode, false);
         engine->Start();
         return engine->GetExitCode();
     }

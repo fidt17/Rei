@@ -1,0 +1,83 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
+             xmlns:condition="clr-namespace:ReiEditor.Utils.Common.Condition"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Playmode.TransformationSpaceSettingsView"
+             x:DataType="playmode:TransformationSpaceSettingsViewModel">
+
+    <Design.DataContext>
+        <playmode:TransformationSpaceSettingsViewModel />
+    </Design.DataContext>
+
+    <Grid IsVisible="{Binding EngineRunning}">
+        <Button
+            Command="{Binding SetLocalSpace}"
+            IsVisible="{Binding IsWorldSpace}">
+            <StackPanel
+                Spacing="5"
+                Orientation="Horizontal">
+
+                <Image
+                    Classes.invisible="{Binding IsLocalSpace}"
+                    Classes.visible="{Binding IsWorldSpace}"
+                    Width="15"
+                    Height="15"
+                    Stretch="Fill"
+                    Source="/Assets/Images/globe.png">
+                    <Image.Styles>
+                        <Style Selector="Image.invisible">
+                            <Setter Property="RenderTransform" Value="scale(0)" />
+                        </Style>
+                        <Style Selector="Image.visible">
+                            <Setter Property="RenderTransform" Value="scale(1)" />
+                        </Style>
+                    </Image.Styles>
+                    <Image.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CircularEaseOut" />
+                        </Transitions>
+                    </Image.Transitions>
+                </Image>
+
+                <TextBlock Text="World" />
+            </StackPanel>
+        </Button>
+
+        <Button
+            Command="{Binding SetWorldSpace}"
+            IsVisible="{Binding IsLocalSpace}">
+            <StackPanel
+                Spacing="5"
+                Orientation="Horizontal">
+
+                <Image
+                    Classes.invisible="{Binding IsWorldSpace}"
+                    Classes.visible="{Binding IsLocalSpace}"
+                    Width="15"
+                    Height="15"
+                    Stretch="Fill"
+                    Source="/Assets/Images/cube.png">
+                    <Image.Styles>
+                        <Style Selector="Image.invisible">
+                            <Setter Property="RenderTransform" Value="scale(0)" />
+                        </Style>
+                        <Style Selector="Image.visible">
+                            <Setter Property="RenderTransform" Value="scale(1)" />
+                        </Style>
+                    </Image.Styles>
+                    <Image.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CircularEaseOut" />
+                        </Transitions>
+                    </Image.Transitions>
+                </Image>
+
+                <TextBlock Text="Local" />
+            </StackPanel>
+        </Button>
+    </Grid>
+
+</UserControl>

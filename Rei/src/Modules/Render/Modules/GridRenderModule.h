@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "meshes/GridVertexData.h"
 #include "Modules/Render/Material/Material.h"
+#include "Modules/Render/Mesh/VertexObjects/GridVertexData.h"
 #include "Modules/Render/RenderScenario/CameraModule.h"
 
 namespace rei::render

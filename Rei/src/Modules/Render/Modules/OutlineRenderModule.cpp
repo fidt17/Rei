@@ -45,7 +45,7 @@ void rei::render::OutlineRenderModule::RenderOutlineObjects() const
     {
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
 
-        const Shader& shader = meshRenderer.GetRenderShader();
+        const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
         meshRenderer.Render();
     }

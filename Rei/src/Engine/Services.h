@@ -7,6 +7,11 @@ namespace rei::window
 
 namespace rei
 {
+    namespace render
+    {
+        class Gizmos;
+    }
+
     namespace api
     {
         class EditorEventsRelay;
@@ -42,6 +47,9 @@ namespace rei
 
         void SetEditorEventsRelay(const std::shared_ptr<api::EditorEventsRelay>& relay) { _editorEventsRelay = relay; }
         REI_API api::EditorEventsRelay& GetEditorEventsRelay() const { return *_editorEventsRelay; }
+        
+        void SetGizmos(const std::shared_ptr<render::Gizmos>& gizmos) { _gizmos = gizmos; }
+        REI_API render::Gizmos& GetGizmos() const { return *_gizmos; }
 
         REI_API static Services* GetInstance();
 
@@ -55,6 +63,7 @@ namespace rei
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<window::WindowManager> _windowManager;
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
+        std::shared_ptr<render::Gizmos> _gizmos;
     };
 
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
@@ -63,4 +72,5 @@ namespace rei
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline window::WindowManager& GetWindowManager() { return Services::GetInstance()->GetWindowManager(); }
     inline api::EditorEventsRelay& GetEditorEventsRelay() { return Services::GetInstance()->GetEditorEventsRelay(); }
+    inline render::Gizmos& GetGizmos() { return Services::GetInstance()->GetGizmos(); }
 }

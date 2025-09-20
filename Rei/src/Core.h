@@ -29,6 +29,11 @@
 
 // --- RENDER ---
 #define REI_MAX_POINT_LIGHTS_COUNT 4
+
+#define SORTING_ORDER_DEFAULT 1000
+#define SORTING_ORDER_POST_PROCESSING 2000
+#define SORTING_ORDER_MAX_VALUE 10000
+
 #define REI_FALLBACK_MATERIAL_ID "REI_ERROR_MATERIAL"
 #define REI_LIGHT_SOURCE_MATERIAL_ID "REI_LIGHT_SOURCE_MATERIAL"
 #define REI_OUTLINE_MATERIAL_ID "REI_OUTLINE_MATERIAL"
@@ -52,5 +57,5 @@
 #include "Modules/Assets/AssetManager.h"
 #include "Modules/Behaviour/Behaviour.h"
 
-// Force include components
-#include "Modules/Editor/SelectedTag.h"
+// Force include components (needed for ecs component registry to initialize correctly across different DLLs)
+#include "Modules/Editor/Components/SelectedTag.h"

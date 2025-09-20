@@ -561,12 +561,6 @@
     <ClInclude Include="external\json.hpp" />
     <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="external\stb_image.h" />
-    <ClInclude Include="resources\meshes\ArrowVertexData.h" />
-    <ClInclude Include="resources\meshes\CircleVertexData.h" />
-    <ClInclude Include="resources\meshes\CubeVertexData.h" />
-    <ClInclude Include="resources\meshes\GridVertexData.h" />
-    <ClInclude Include="resources\meshes\LineVertexData.h" />
-    <ClInclude Include="resources\meshes\QuadVertexData.h" />
     <ClInclude Include="resources\rei_behaviours\render\camera\Camera.h" />
     <ClInclude Include="resources\rei_behaviours\render\camera\CameraPerspectiveEnum.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
@@ -579,6 +573,7 @@
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
     <ClInclude Include="src\Common\Math\math.h" />
+    <ClInclude Include="src\Common\Math\Plane.h" />
     <ClInclude Include="src\Common\Math\Ray.h" />
     <ClInclude Include="src\Common\Math\Vector3.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
@@ -598,6 +593,7 @@
     <ClInclude Include="src\Ecs\Systems\DeleteHere.h" />
     <ClInclude Include="src\Ecs\TypeId.h" />
     <ClInclude Include="src\Ecs\World.h" />
+    <ClInclude Include="src\Engine\InternalEngineWorld.h" />
     <ClInclude Include="src\Engine\Services.h" />
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
@@ -610,15 +606,19 @@
     <ClInclude Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
-    <ClInclude Include="src\Modules\Editor\FlyCameraSystem.h" />
-    <ClInclude Include="src\Modules\Editor\SelectableByPointerTag.h" />
-    <ClInclude Include="src\Modules\Editor\SelectedTag.h" />
-    <ClInclude Include="src\Modules\Editor\PointerEntitySelectionSystem.h" />
+    <ClInclude Include="src\Modules\Editor\Components\SelectableByPointerTag.h" />
+    <ClInclude Include="src\Modules\Editor\Components\SelectedTag.h" />
+    <ClInclude Include="src\Modules\Editor\Components\SelectionByPointerBlockerTag.h" />
+    <ClInclude Include="src\Modules\Editor\Systems\FlyCameraSystem.h" />
+    <ClInclude Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.h" />
+    <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationControl.h" />
+    <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationControlMovementArrow.h" />
+    <ClInclude Include="src\Modules\Editor\TransformationControls\UpdateTransformationControlSystem.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
     <ClInclude Include="src\Modules\Physics\Collider.h" />
     <ClInclude Include="src\Modules\Physics\ColliderType.h" />
-    <ClInclude Include="src\Modules\Physics\MeshCollider.h" />
+    <ClInclude Include="src\Modules\Physics\ModelCollider.h" />
     <ClInclude Include="src\Modules\Physics\PointerCollisionListener.h" />
     <ClInclude Include="src\Modules\Physics\SphereCollider.h" />
     <ClInclude Include="src\Modules\Physics\Systems\PointerCollisionSystem.h" />
@@ -630,6 +630,13 @@
     <ClInclude Include="src\Modules\Render\Mesh\Face.h" />
     <ClInclude Include="src\Modules\Render\Mesh\MeshBVHNode.h" />
     <ClInclude Include="src\Modules\Render\Mesh\Vertex.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\ArrowVertexObject.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\BaseVertexObject.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\CircleVertexData.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\CubeVertexData.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\GridVertexData.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\LineVertexData.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\QuadVertexData.h" />
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\Gizmos.h" />
@@ -637,7 +644,6 @@
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
-    <ClInclude Include="src\Modules\Render\Modules\TransformationControlsModule.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\CameraModule.h" />
@@ -692,7 +698,6 @@
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
     <ClCompile Include="external\glm\detail\glm.cpp" />
-    <ClCompile Include="resources\meshes\GridVertexData.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\camera\Camera.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
@@ -700,6 +705,7 @@
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
     <ClCompile Include="src\Common\Math\math.cpp" />
+    <ClCompile Include="src\Common\Math\Plane.cpp" />
     <ClCompile Include="src\Common\Math\Ray.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
@@ -726,6 +732,7 @@
     <ClCompile Include="src\Engine\Engine.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
+    <ClCompile Include="src\Engine\InternalEngineWorld.cpp" />
     <ClCompile Include="src\Engine\Services.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\AssetsMap.cpp" />
@@ -733,11 +740,12 @@
     <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
-    <ClCompile Include="src\Modules\Editor\FlyCameraSystem.cpp" />
-    <ClCompile Include="src\Modules\Editor\PointerEntitySelectionSystem.cpp" />
+    <ClCompile Include="src\Modules\Editor\Systems\FlyCameraSystem.cpp" />
+    <ClCompile Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.cpp" />
+    <ClCompile Include="src\Modules\Editor\TransformationControls\UpdateTransformationControlSystem.cpp" />
     <ClCompile Include="src\Modules\EntityManagement\EntityManager.cpp" />
     <ClCompile Include="src\Modules\Input\Input.cpp" />
-    <ClCompile Include="src\Modules\Physics\MeshCollider.cpp" />
+    <ClCompile Include="src\Modules\Physics\ModelCollider.cpp" />
     <ClCompile Include="src\Modules\Physics\SphereCollider.cpp" />
     <ClCompile Include="src\Modules\Physics\Systems\PointerCollisionSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Camera\AssignMainCameraSystem.cpp" />
@@ -746,6 +754,9 @@
     <ClCompile Include="src\Modules\Render\Mesh\Mesh.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\Face.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\MeshBVHNode.cpp" />
+    <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\ArrowVertexObject.cpp" />
+    <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\BaseVertexObject.cpp" />
+    <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\GridVertexData.cpp" />
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\Gizmos.cpp" />
@@ -753,7 +764,6 @@
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />
-    <ClCompile Include="src\Modules\Render\Modules\TransformationControlsModule.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\BaseRenderScenario.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\CameraModule.cpp" />
@@ -790,6 +800,7 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\meshes\cube.obj" />
     <Content Include="resources\shaders\color.rshader" />
     <Content Include="resources\shaders\editor\editor_grid.rshader" />
     <Content Include="resources\shaders\includes\ambient_light.rshader_include" />

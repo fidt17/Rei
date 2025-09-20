@@ -8,6 +8,7 @@ namespace rei::physics
         bool DidEnter;
         bool IsInside;
         bool DidExit;
+        math::Vector3 CollisionPoint;
         
         std::shared_ptr<Collider> Collider;
     };
