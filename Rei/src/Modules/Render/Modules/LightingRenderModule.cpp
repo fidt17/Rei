@@ -32,21 +32,21 @@ void rei::render::LightingRenderModule::SetLightValues(const Shader& shader) con
 void rei::render::LightingRenderModule::FindAmbientLights()
 {
     ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<AmbientLight>();
-    GetInternalWorld().RefreshAll();
+    const auto ambientLights = FILTER(AmbientLight);
+    GetInternalWorld()->RefreshAll();
 
-    if (f->GetEntitiesCount() == 0) return;
-    _ambientLight = GET_REF(*f->begin(), rei::render::AmbientLight);
+    if (ambientLights->GetEntitiesCount() == 0) return;
+    _ambientLight = GET_REF(*ambientLights->begin(), rei::render::AmbientLight);
 }
 
 void rei::render::LightingRenderModule::FindPointLights()
 {
     ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<PointLight>();
-    GetInternalWorld().RefreshAll();
+    const auto pointLights = FILTER(PointLight);
+    GetInternalWorld()->RefreshAll();
 
     _pointLights.clear();
-    FOR(e, f)
+    FOR(e, pointLights)
     {
         _pointLights.emplace_back(GET_REF(e, rei::render::PointLight));
     }

@@ -1,11 +1,12 @@
 ﻿#pragma once
+#include "Ecs/System.h"
 
 namespace rei::physics
 {
     class PointerCollisionSystem : public ecs::System
     {
     public:
-        PointerCollisionSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs, const std::shared_ptr<ecs::FilterProvider>& filters);
+        PointerCollisionSystem(const std::shared_ptr<ecs::World>& world);
 
         void OnUpdate() override;
 

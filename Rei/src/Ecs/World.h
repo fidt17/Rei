@@ -2,13 +2,11 @@
 #include "EcsRegistry.h"
 #include "FiltersRegistry.h"
 #include "IEcsModule.h"
-#include "System.h"
 
 namespace rei::ecs
 {
+    class System;
     class IEcsModule;
-    class EcsRegistry;
-    class FiltersRegistry;
 
     class World : public std::enable_shared_from_this<World>
     {
@@ -17,20 +15,21 @@ namespace rei::ecs
         
         template<typename T>
         REI_API void AddSystem(){
-            _systems.emplace_back(std::make_shared<T>(GetRegistry(), GetFiltersRegistry()));
+            _systems.emplace_back(std::make_shared<T>(shared_from_this()));
         }
 
         template<typename T, typename... Args>
         REI_API void AddSystem(Args... args){
-            _systems.emplace_back(std::make_shared<T>(GetRegistry(), GetFiltersRegistry(), args...));
+            _systems.emplace_back(std::make_shared<T>(shared_from_this(), args...));
         }
 
         REI_API void AddSystem(const std::function<void()>& fn);
 
-        REI_API void AddModule(const std::shared_ptr<IEcsModule>& m)
+        template<typename T>
+        REI_API void AddModule()
         {
-            m->Configure(shared_from_this());
-            Refresh();
+            T module = T();
+            module.AddSystems(shared_from_this());
         }
 
         REI_API void Run() const;

@@ -3,9 +3,9 @@
 
 namespace rei::ecs
 {
-    CallbackSystem::CallbackSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters,
-                                   const std::function<void()>& callback): System(ecs, filters),
-                                                                           _callback(callback)
+    CallbackSystem::CallbackSystem(const std::shared_ptr<World>& world, const std::function<void()>& callback)
+        : System(world),
+          _callback(callback)
     {
     }
 

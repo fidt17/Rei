@@ -2,6 +2,7 @@
 
 #include "PointerEntitySelectionSystem.h"
 
+#include "Modules/Components/ActiveTag.h"
 #include "Modules/Editor/Components/SelectableByPointerTag.h"
 #include "Modules/Editor/Components/SelectedTag.h"
 #include "Modules/Editor/Components/SelectionByPointerBlockerTag.h"
@@ -11,12 +12,11 @@
 
 namespace rei::editor
 {
-    PointerEntitySelectionSystem::PointerEntitySelectionSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
-                                                               const std::shared_ptr<ecs::FilterProvider>& filters): System(ecs, filters),
-        _checkEntities(filters->Get<physics::PointerCollisionListener, SelectableByPointerTag>()),
-        _selectedEntities(filters->Get<SelectedTag>()),
-        _blockSelectionEntities(filters->Get<SelectionByPointerBlockerTag, physics::PointerCollisionListener>())
+    PointerEntitySelectionSystem::PointerEntitySelectionSystem(const std::shared_ptr<ecs::World>& world): System(world)
     {
+        _checkEntities = FILTER(physics::PointerCollisionListener, SelectableByPointerTag, ActiveTag);
+        _selectedEntities = FILTER(SelectedTag);
+        _blockSelectionEntities = FILTER(SelectionByPointerBlockerTag, physics::PointerCollisionListener, ActiveTag);
     }
 
     void PointerEntitySelectionSystem::ResetAllEntitiesSelection() const

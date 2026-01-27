@@ -265,11 +265,11 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     {
         if (e.IsSelected && !_selectionService.IsEntitySelected(gameEntity))
         {
-            _selectionService.Select(gameEntity);
+            _selectionService.Select(gameEntity, sendToEngine: false);
         }
         else if (!e.IsSelected && _selectionService.IsEntitySelected(gameEntity))
         {
-            _selectionService.ResetSelection();
+            _selectionService.ResetSelection(sendToEngine: false);
         }
     }
 }

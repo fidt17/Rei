@@ -17,6 +17,12 @@ namespace rei::math
     REI_API glm::quat GetQuaternion(const Vector3& eulerAngles);
     REI_API glm::quat GetQuaternion(const glm::mat4& rotationMatrix);
 
+    template <typename T>
+    int Sign(T value)
+    {
+        return value >= 0 ? +1 : -1;
+    }
+
     REI_API bool SphereRayIntersection(const Vector3& center, f32 radius, const Ray& ray, Vector3& out_intersectionPoint);
     REI_API bool BoxRayIntersection(const Vector3& boxSize, const Ray& ray, const glm::mat4& modelMatrix);
     REI_API bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix, Vector3& out_intersectionPoint);

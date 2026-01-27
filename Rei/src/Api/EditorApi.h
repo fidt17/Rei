@@ -67,7 +67,7 @@ REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt)
     {
         const auto mode = static_cast<RenderMode>(modeInt);
         ECS_WORLD(rei::GetInternalWorld());
-        const auto& cameraFilter = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::render::Camera>();
+        const auto& cameraFilter = FILTER(rei::render::Camera);
 
         FOR(e, cameraFilter)
         {
@@ -81,7 +81,7 @@ REI_EXTERN_API inline void ChangeTransformationMode(const bool worldSpace)
     rei::GetEngine().ExecuteOnMainThread([=]
     {
         ECS_WORLD(rei::GetInternalWorld());
-        const auto& controlFilter = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::editor::TransformationControl>();
+        const auto& controlFilter = FILTER(rei::editor::TransformationControl);
 
         FOR(e, controlFilter)
         {

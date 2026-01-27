@@ -4,6 +4,7 @@
 #include "FrameBuffer.h"
 #include "Engine/Engine.h"
 #include "glad/glad.h"
+#include "Modules/Components/ActiveTag.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
 
@@ -161,9 +162,9 @@ void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) 
 void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortingOrder, const i32 maxSortingOrder) const
 {
     ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();
+    const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
 
-    FOR(e, f)
+    FOR(e, meshRenderers)
     {
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
         if (!meshRenderer.IsEnabled()) continue;
@@ -182,9 +183,9 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
 void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const
 {
     ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer>();
+    const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
 
-    FOR(e, f)
+    FOR(e, meshRenderers)
     {
         auto& meshRenderer = GET(e, rei::render::MeshRenderer);
         if (!meshRenderer.IsEnabled()) continue;

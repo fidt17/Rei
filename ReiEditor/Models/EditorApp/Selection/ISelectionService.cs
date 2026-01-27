@@ -7,11 +7,11 @@ public interface ISelectionService
     Utils.Common.IObservable<ISelectable?> ActiveSelection { get; }
 
     void Select(ISelectable selectable);
-    void Select(GameEntity e);
+    void Select(GameEntity e, bool sendToEngine = true);
 
     bool IsEntitySelected(GameEntity e);
     
-    void ResetSelection();
+    void ResetSelection(bool sendToEngine = true);
 
     void RegisterSelectable(ISelectable selectable);
     void UnregisterSelectable(ISelectable selectable);

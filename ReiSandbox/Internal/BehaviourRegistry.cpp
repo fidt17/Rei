@@ -22,81 +22,81 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
     f.RegisterComponent<::ColorLerp>(6, [](const rei::ecs::Entity e) -> nlohmann::json
                                      {
-                                         auto& b = rei::GetInternalWorld().GetRegistry()->Get<::ColorLerp>(e);
+                                         auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e);
                                          return b.REI_GET();
                                      }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                      {
-                                         auto& b = rei::GetInternalWorld().GetRegistry()->Get<::ColorLerp>(e);
+                                         auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e);
                                          b.REI_SET(json);
                                          b.AfterREI_SET();
                                      });
     f.RegisterComponent<::RotateAroundAxis>(7, [](const rei::ecs::Entity e) -> nlohmann::json
                                             {
-                                                auto& b = rei::GetInternalWorld().GetRegistry()->Get<::RotateAroundAxis>(e);
+                                                auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::RotateAroundAxis>(e);
                                                 return b.REI_GET();
                                             }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                             {
-                                                auto& b = rei::GetInternalWorld().GetRegistry()->Get<::RotateAroundAxis>(e);
+                                                auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::RotateAroundAxis>(e);
                                                 b.REI_SET(json);
                                                 b.AfterREI_SET();
                                             });
     f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json
                                         {
-                                            auto& b = rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e);
+                                            auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e);
                                             return b.REI_GET();
                                         }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                         {
-                                            auto& b = rei::GetInternalWorld().GetRegistry()->Get<::TestMovement>(e);
+                                            auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e);
                                             b.REI_SET(json);
                                             b.AfterREI_SET();
                                         });
     f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json
                                                    {
-                                                       auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e);
+                                                       auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e);
                                                        return b.REI_GET();
                                                    }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                                    {
-                                                       auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::MeshRenderer>(e);
+                                                       auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e);
                                                        b.REI_SET(json);
                                                        b.AfterREI_SET();
                                                    });
-    f.RegisterComponent<rei::transformation::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json
+    f.RegisterComponent<rei::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json
                                                         {
-                                                            auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e);
+                                                            auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e);
                                                             return b.REI_GET();
                                                         }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                                         {
-                                                            auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::transformation::Transform>(e);
+                                                            auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e);
                                                             b.REI_SET(json);
                                                             b.AfterREI_SET();
                                                         });
     f.RegisterComponent<rei::render::Camera>(8, [](const rei::ecs::Entity e) -> nlohmann::json
                                              {
-                                                 auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e);
+                                                 auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e);
                                                  return b.REI_GET();
                                              }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                              {
-                                                 auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::Camera>(e);
+                                                 auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e);
                                                  b.REI_SET(json);
                                                  b.AfterREI_SET();
                                              });
     f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json
                                                    {
-                                                       auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e);
+                                                       auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e);
                                                        return b.REI_GET();
                                                    }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                                    {
-                                                       auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::AmbientLight>(e);
+                                                       auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e);
                                                        b.REI_SET(json);
                                                        b.AfterREI_SET();
                                                    });
     f.RegisterComponent<rei::render::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json
                                                  {
-                                                     auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::PointLight>(e);
+                                                     auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e);
                                                      return b.REI_GET();
                                                  }, [](const rei::ecs::Entity e, const nlohmann::json& json)
                                                  {
-                                                     auto& b = rei::GetInternalWorld().GetRegistry()->Get<rei::render::PointLight>(e);
+                                                     auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e);
                                                      b.REI_SET(json);
                                                      b.AfterREI_SET();
                                                  });
@@ -187,7 +187,7 @@ nlohmann::json rei::render::MeshRenderer::REI_GET() const
     };
 }
 
-nlohmann::json rei::transformation::Transform::REI_GET() const
+nlohmann::json rei::Transform::REI_GET() const
 {
     return {
         {"REI_TYPE", "Transform"},
@@ -287,7 +287,7 @@ void rei::render::MeshRenderer::REI_SET(const nlohmann::json& data)
     if (data.contains("_material")) _material.REI_SET(data.at("_material").at("Value"));
 }
 
-void rei::transformation::Transform::REI_SET(const nlohmann::json& data)
+void rei::Transform::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("_position")) _position.REI_SET(data.at("_position").at("Value"));
     if (data.contains("_rotation")) _rotation.REI_SET(data.at("_rotation").at("Value"));

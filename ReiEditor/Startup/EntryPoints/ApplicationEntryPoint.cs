@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Shutdown;
 using ReiEditor.Models.ProjectManagement;
@@ -42,6 +43,8 @@ public class ApplicationEntryPoint : IDisposable
 
 	public void Start()
 	{
+		if (Design.IsDesignMode) return;
+		
 		_logger.Log("Start");
 		Dispatcher.UIThread.InvokeAsync(async () =>
 		{

@@ -43,6 +43,7 @@ namespace rei::render
         REI_API glm::mat4 GetViewMatrix() const;
 
         REI_API math::Ray GetScreenPointToRay(f32 xPos, f32 yPos) const;
+        REI_API math::Vector3 WorldToScreenPosition(const math::Vector3& pos) const;
         REI_API f32 CalculateConstantScale(const math::Vector3& targetPosition, f32 desiredSize) const;
 
         REI_API static ecs::RefComponent<Camera> GetMainCamera();

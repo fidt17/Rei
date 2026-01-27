@@ -82,11 +82,11 @@ public class PlaymodePanelViewModel : BaseViewModel
     
     #region TransformationSpaceSettings
 
-    private TransformationSpaceSettingsViewModel _transformationSpaceSettings = new();
-    public TransformationSpaceSettingsViewModel TransformationSpaceSettings
+    private TransformationControlSettingsViewModel _transformationControlSettings = new();
+    public TransformationControlSettingsViewModel TransformationControlSettings
     {
-        get => _transformationSpaceSettings;
-        private set => SetField(ref _transformationSpaceSettings, value);
+        get => _transformationControlSettings;
+        private set => SetField(ref _transformationControlSettings, value);
     }
 
     #endregion
@@ -108,7 +108,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         IEngineWindowController engineWindow,
         IFactory<RenderModeSelectionViewModel> renderModeSelection,
         IFactory<EditorGridOptionsViewModel> editorGridOptions,
-        IFactory<TransformationSpaceSettingsViewModel> transformationSpaceSettings,
+        IFactory<TransformationControlSettingsViewModel> transformationSpaceSettings,
         IEngineApi engineApi, 
         IEngineRunner engineRunner)
     {
@@ -119,7 +119,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         
         RenderModeSelection = renderModeSelection.CreateInstance();
         EditorGridOptions = editorGridOptions.CreateInstance();
-        TransformationSpaceSettings = transformationSpaceSettings.CreateInstance();
+        TransformationControlSettings = transformationSpaceSettings.CreateInstance();
         
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
@@ -140,7 +140,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         
         RenderModeSelection.Dispose();
         EditorGridOptions.Dispose();
-        TransformationSpaceSettings.Dispose();
+        TransformationControlSettings.Dispose();
 		
         StartPlaymodeCommand.Dispose();
         StopPlaymodeCommand.Dispose();

@@ -1,51 +1,54 @@
 ﻿#include "pch.h"
 #include "PointerCollisionSystem.h"
 
+#include "Modules/Components/ActiveTag.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Physics/PointerCollisionListener.h"
 #include "rei_behaviours/render/camera/Camera.h"
 #include "rei_behaviours/transformation/Transform.h"
 
-rei::physics::PointerCollisionSystem::PointerCollisionSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs, const std::shared_ptr<ecs::FilterProvider>& filters)
-    : System(ecs, filters),
-      _entities(filters->Get<PointerCollisionListener, transformation::Transform>())
+namespace rei::physics
 {
-}
-
-void rei::physics::PointerCollisionSystem::OnUpdate()
-{
-    const auto camera = render::Camera::GetMainCamera();
-    if (camera.IsNull()) return;
-
-    f32 xPos, yPos;
-    Input::GetMousePosition(xPos, yPos);
-    const auto ray = camera.Get().GetScreenPointToRay(xPos, yPos);
-
-    FOR(e, _entities)
+    PointerCollisionSystem::PointerCollisionSystem(const std::shared_ptr<ecs::World>& world) : System(world)
     {
-        auto& transform = GET(e, transformation::Transform);
-        auto& listener = GET(e, PointerCollisionListener);
+        _entities = FILTER(PointerCollisionListener, Transform, ActiveTag);
+    }
 
-        listener.DidEnter = false;
-        listener.DidExit = false;
+    void PointerCollisionSystem::OnUpdate()
+    {
+        const auto camera = render::Camera::GetMainCamera();
+        if (camera.IsNull()) return;
 
-        if (listener.Collider && listener.Collider->Intersect(ray, transform.CalculateModelMatrix(), listener.CollisionPoint))
+        f32 xPos, yPos;
+        Input::GetMousePosition(xPos, yPos);
+        const auto ray = camera.Get().GetScreenPointToRay(xPos, yPos);
+
+        FOR(e, _entities)
         {
-            if (!listener.IsInside)
-            {
-                listener.DidEnter = true;
-            }
+            auto& transform = GET(e, Transform);
+            auto& listener = GET(e, PointerCollisionListener);
 
-            listener.IsInside = true;
-        }
-        else
-        {
-            if (listener.IsInside)
-            {
-                listener.DidExit = true;
-            }
+            listener.DidEnter = false;
+            listener.DidExit = false;
 
-            listener.IsInside = false;
+            if (listener.Collider && listener.Collider->Intersect(ray, transform.CalculateModelMatrix(), listener.CollisionPoint))
+            {
+                if (!listener.IsInside)
+                {
+                    listener.DidEnter = true;
+                }
+
+                listener.IsInside = true;
+            }
+            else
+            {
+                if (listener.IsInside)
+                {
+                    listener.DidExit = true;
+                }
+
+                listener.IsInside = false;
+            }
         }
     }
 }

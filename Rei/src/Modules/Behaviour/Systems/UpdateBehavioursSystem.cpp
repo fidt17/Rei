@@ -2,17 +2,16 @@
 #include "UpdateBehavioursSystem.h"
 
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
+#include "Modules/Components/ActiveTag.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
 namespace rei::behaviour
 {
-    UpdateBehavioursSystem::UpdateBehavioursSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
-                                                   const std::shared_ptr<ecs::FilterProvider>& filters,
-                                                   const std::shared_ptr<EntityManager>& entityManager) :
-        System(ecs, filters),
+    UpdateBehavioursSystem::UpdateBehavioursSystem(const std::shared_ptr<ecs::World>& world, const std::shared_ptr<EntityManager>& entityManager) :
+        System(world),
         _entityManager(entityManager)
     {
-        _f = filters->Get<BehaviourCollection>();
+        _f = FILTER(BehaviourCollection, ActiveTag);
     }
 
     void UpdateBehavioursSystem::OnUpdate()

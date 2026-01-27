@@ -30,12 +30,12 @@ REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const int bu
 {
     ECS_WORLD(rei::GetInternalWorld());
 
-    const auto& filter = rei::GetInternalWorld().GetFiltersRegistry()->Get<EntityInfo>();
+    const auto& entityInfoFilter = FILTER(EntityInfo);
 
     nlohmann::json data;
     data["Entities"] = nlohmann::json::array();
 
-    FOR(e, filter)
+    FOR(e, entityInfoFilter)
     {
         const auto& info = GET(e, EntityInfo);
 
@@ -145,8 +145,8 @@ REI_EXTERN_API inline void ResetEntitySelection()
     {
         ECS_WORLD(rei::GetInternalWorld());
 
-        const auto& f = rei::GetInternalWorld().GetFiltersRegistry()->Get<rei::editor::SelectedTag>();
-        FOR(e, f)
+        const auto& selectedEntities = FILTER(rei::editor::SelectedTag);
+        FOR(e, selectedEntities)
         {
             DEL(e, rei::editor::SelectedTag);
             DEL(e, rei::render::RenderOutlineTag);

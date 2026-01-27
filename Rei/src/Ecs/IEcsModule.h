@@ -6,6 +6,6 @@ namespace rei::ecs
     {
     public:
         virtual ~IEcsModule() = default;
-        virtual void Configure(std::shared_ptr<World>) = 0;
+        virtual void AddSystems(std::shared_ptr<World>) = 0;
     };
 }

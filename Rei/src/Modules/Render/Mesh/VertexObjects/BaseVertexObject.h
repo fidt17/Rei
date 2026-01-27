@@ -13,6 +13,7 @@ namespace rei::render
     protected:
         virtual std::string GetMeshName() const = 0;
         
+        u32 AddVertex(math::Vector3 v);
         u32 AddVertex(f32 x, f32 y, f32 z);
         void AddFace(u32 a, u32 b, u32 c);
 

@@ -53,9 +53,9 @@ namespace rei::assets
             std::cout << "\n";
             LOG("Created temp file at {}", dest)
 
-            i32 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
+            i64 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
-            i32 assetSize;
+            i64 assetSize;
             ref.Asset = new T(Load<T>(dest, 0, assetSize));
             ref.AssetSize = assetSize;
             _loadedAssetsSize += assetSize;
@@ -152,14 +152,14 @@ namespace rei::assets
         std::vector<std::string> _tmpFiles;
 
         template <typename T>
-        T Load(const std::string& path, const i32 offset)
+        T Load(const std::string& path, const i64 offset)
         {
-            i32 size;
+            i64 size;
             return Load<T>(path, offset, size);
         }
 
         template <typename T>
-        T Load(const std::string& path, const i32 offset, i32& size)
+        T Load(const std::string& path, const i64 offset, i64& size)
         {
             auto reader = resources::BinaryReader(path, offset);
             auto asset = reader.Get<T>();
@@ -172,7 +172,7 @@ namespace rei::assets
         }
 
         template <typename T>
-        void Load(AssetRef<T>& ref, const std::string& path, const i32 offset)
+        void Load(AssetRef<T>& ref, const std::string& path, const i64 offset)
         {
             auto loadedAsset = _loadedAssets.find(ref.Id);
             if (loadedAsset != _loadedAssets.end())
@@ -181,7 +181,7 @@ namespace rei::assets
                 return;
             }
 
-            i32 assetSize;
+            i64 assetSize;
             auto asset = Load<T>(path, offset, assetSize);
 
             _loadedAssets[ref.Id] = new AssetRef<T>(ref);

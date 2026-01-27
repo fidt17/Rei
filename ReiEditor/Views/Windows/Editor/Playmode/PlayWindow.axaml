@@ -26,7 +26,7 @@
                     Orientation="Horizontal">
 
                     <playmode1:TransformationSpaceSettingsView
-                        DataContext="{Binding TransformationSpaceSettings}" />
+                        DataContext="{Binding TransformationControlSettings}" />
 
                 </StackPanel>
 

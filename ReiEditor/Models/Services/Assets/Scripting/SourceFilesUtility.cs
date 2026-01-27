@@ -152,7 +152,7 @@ public class SourceFilesUtility
     public bool TryGetSerializableObjectNameFrom(string text, out string name, out bool isTemplate)
     {
         name = "";
-        isTemplate = text.AllIndexesOf("template <typename").Count > 0 || text.AllIndexesOf("template<typename").Count > 0;
+        isTemplate = false;
         
         var regex = new Regex($".*{SourceFileMacrosConstants.SERIALIZABLE_BODY}\\((.*)\\).*");
         
@@ -160,6 +160,18 @@ public class SourceFilesUtility
             
         name = regex.Match(text).Groups[1].Value;
         if (name == "CLASS_NAME") return false;
+
+        var indexesOfTemplates = text.AllIndexesOf("template <typename");
+        indexesOfTemplates.AddRange(text.AllIndexesOf("template<typename"));
+
+        // check that template is before class name and not inside over some method
+        if (indexesOfTemplates.Count != 0)
+        {
+            var firstTemplateIdx = indexesOfTemplates.First();
+            
+            var idxOfObjectName = text.IndexOf(" " + name, StringComparison.Ordinal);
+            isTemplate = firstTemplateIdx < idxOfObjectName;
+        }
 
         return true;
     }

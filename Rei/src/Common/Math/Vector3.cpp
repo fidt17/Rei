@@ -60,24 +60,6 @@ namespace rei::math
         return *this;
     }
 
-    Vector3& Vector3::operator*=(const float value)
-    {
-        x *= value;
-        y *= value;
-        z *= value;
-
-        return *this;
-    }
-
-    Vector3& Vector3::operator/=(const float value)
-    {
-        x /= value;
-        y /= value;
-        z /= value;
-
-        return *this;
-    }
-
     Vector3 Vector3::operator+(const Vector3& vec) const
     {
         return Vector3(x + vec.x, y + vec.y, z + vec.z);
@@ -86,16 +68,6 @@ namespace rei::math
     Vector3 Vector3::operator-(const Vector3& vec) const
     {
         return Vector3(x - vec.x, y - vec.y, z - vec.z);
-    }
-
-    Vector3 Vector3::operator*(const float value) const
-    {
-        return Vector3(x * value, y * value, z * value);
-    }
-
-    Vector3 Vector3::operator/(const float value) const
-    {
-        return Vector3(x / value, y / value, z / value);
     }
 
     Vector3 Vector3::operator*(const Vector3& vec) const

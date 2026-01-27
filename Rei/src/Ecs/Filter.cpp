@@ -67,6 +67,12 @@ namespace rei::ecs
         return _entitiesList.end();
     }
 
+    Entity Filter::First() const
+    {
+        if (_entitiesList.size() == 0) return NULL_ENTITY;
+        return _entitiesList[0];
+    }
+
     bool Filter::IsValid(const BitMask& mask) const
     {
         return _includeMask.All(mask) && !_excludeMask.Any(mask);

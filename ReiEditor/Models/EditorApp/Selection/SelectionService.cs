@@ -22,21 +22,26 @@ public class SelectionService : ISelectionService
 
     public void Select(ISelectable selectable)
     {
+        if (_activeSelection.Value == selectable) return;
+        
         _activeSelection.Value = selectable;
-
-        if (selectable is IEntitySelectable entitySelectable)
-        {
-            _entityApi.ResetEntitySelection();
-            _entityApi.SelectEntity(entitySelectable.Entity.Id);
-        }
+        selectable.Select();
     }
 
-    public void Select(GameEntity e)
+    public void Select(GameEntity e, bool sendToEngine)
     {
         var s = _selectables.OfType<IEntitySelectable>().FirstOrDefault(x => x.Entity == e);
         if (s == null) return;
+
+        if (_activeSelection.Value == s) return;
         
         Select(s);
+
+        if (sendToEngine)
+        {
+            _entityApi.ResetEntitySelection();
+            _entityApi.SelectEntity(e.Id);
+        }
     }
 
     public bool IsEntitySelected(GameEntity e)
@@ -49,10 +54,13 @@ public class SelectionService : ISelectionService
         return false;
     }
 
-    public void ResetSelection()
+    public void ResetSelection(bool sendToEngine)
     {
         _activeSelection.Value = null;
-        _entityApi.ResetEntitySelection();
+        if (sendToEngine)
+        {
+            _entityApi.ResetEntitySelection();
+        }
     }
 
     public void RegisterSelectable(ISelectable selectable) => _selectables.Add(selectable);

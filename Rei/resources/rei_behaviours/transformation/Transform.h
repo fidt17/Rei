@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "glm/detail/type_quat.hpp"
 
-namespace rei::transformation
+namespace rei
 {
     class Transform : public Behaviour
     {
@@ -40,4 +40,4 @@ namespace rei::transformation
         REI_API operator std::string() const;
     };
 }
-EXPORT_COMPONENT(rei::transformation::Transform)
+EXPORT_COMPONENT(rei::Transform)

@@ -4,7 +4,7 @@
 
 #include "glm/ext/quaternion_trigonometric.hpp"
 
-namespace rei::transformation
+namespace rei
 {
     void Transform::Reset()
     {

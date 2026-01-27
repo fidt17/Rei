@@ -9,12 +9,9 @@
 
 namespace rei::editor
 {
-    FlyCameraSystem::FlyCameraSystem(
-        const std::shared_ptr<ecs::EcsRegistry>& ecs,
-        const std::shared_ptr<ecs::FilterProvider>& filters)
-        : System(ecs, filters),
-          _f(filters->Get<transformation::Transform, render::Camera>())
+    FlyCameraSystem::FlyCameraSystem(const std::shared_ptr<ecs::World>& world) : System(world)
     {
+        _cameraFilter = FILTER(Transform, render::Camera);
     }
 
     f32 deltaTime = 0.0f; // Time between current frame and last frame
@@ -24,7 +21,7 @@ namespace rei::editor
     bool didSetCursorPos;
     int framesToSkip = 5;
 
-    void FlyCameraSystem::MoveCamera(transformation::Transform& transform, const f32 cameraSpeed) const
+    void FlyCameraSystem::MoveCamera(Transform& transform, const f32 cameraSpeed) const
     {
         const math::Vector3 cameraRight = transform.GetRight();
         const math::Vector3 cameraFront = transform.GetForward();
@@ -70,7 +67,7 @@ namespace rei::editor
         }
     }
 
-    void FlyCameraSystem::RotateCamera(transformation::Transform& transform) const
+    void FlyCameraSystem::RotateCamera(Transform& transform) const
     {
         f32 pointerXPos, pointerYPos;
         Input::GetMousePosition(pointerXPos, pointerYPos);
@@ -111,9 +108,9 @@ namespace rei::editor
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        FOR(e, _f)
+        FOR(e, _cameraFilter)
         {
-            auto& transform = GET(e, transformation::Transform);
+            auto& transform = GET(e, Transform);
 
             f32 cameraSpeed = 3.0f * deltaTime;
 

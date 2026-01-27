@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Ecs/System.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
 namespace rei::behaviour
@@ -7,8 +8,7 @@ namespace rei::behaviour
     {
     public:
         UpdateBehavioursSystem(
-            const std::shared_ptr<ecs::EcsRegistry>&,
-            const std::shared_ptr<ecs::FilterProvider>&,
+            const std::shared_ptr<ecs::World>&,
             const std::shared_ptr<EntityManager>&);
 
         void OnUpdate() override;

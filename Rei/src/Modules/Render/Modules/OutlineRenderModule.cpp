@@ -39,9 +39,9 @@ void rei::render::OutlineRenderModule::RenderOutlineFrame() const
 void rei::render::OutlineRenderModule::RenderOutlineObjects() const
 {
     ECS_WORLD(rei::GetInternalWorld());
-    const auto f = GetInternalWorld().GetFiltersRegistry()->Get<MeshRenderer, RenderOutlineTag>();
+    const auto meshRenderers = FILTER(MeshRenderer, RenderOutlineTag);
 
-    FOR(e, f)
+    FOR(e, meshRenderers)
     {
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
 

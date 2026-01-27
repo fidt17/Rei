@@ -35,8 +35,7 @@ namespace rei::ecs
             return GetFilter(Include<Ti...>(), excludeMask);
         }
 
-    protected:
-        virtual std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) = 0;
+        REI_API virtual std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) = 0;
     };
     
     class FiltersRegistry : public FilterProvider
@@ -49,9 +48,9 @@ namespace rei::ecs
         void HandleEntityChange(Entity e, const BitMask& mask) const;
         void ResizeMasks(size_t size) const;
 
+        REI_API std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;
+        
     private:
         std::vector<std::shared_ptr<Filter>> _filters;
-
-        REI_API std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;
     };
 }

@@ -23,6 +23,8 @@ namespace rei::ecs
         REI_API std::vector<Entity>::iterator begin();
         REI_API std::vector<Entity>::iterator end();
 
+        REI_API Entity First() const;
+
     private:
         BitMask _includeMask;
         BitMask _excludeMask;

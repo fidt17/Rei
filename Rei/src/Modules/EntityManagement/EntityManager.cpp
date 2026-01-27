@@ -8,133 +8,136 @@
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/Scenes/SceneManager.h"
 
-rei::EntityManager::EntityManager(const std::shared_ptr<ecs::World>& world)
-    : _ecs(world->GetRegistry()),
-      _entityInfoFilter(world->GetFiltersRegistry()->Get<EntityInfo>())
+namespace rei
 {
-}
-
-rei::ecs::Entity rei::EntityManager::GetBySceneId(const i32 id) const
-{
-    FOR(e, _entityInfoFilter)
+    EntityManager::EntityManager(const std::shared_ptr<ecs::World>& world)
+        : _ecs(world->GetRegistry()),
+          _entityInfoFilter(world->GetFiltersRegistry()->Get<EntityInfo>())
     {
-        if (GET(e, EntityInfo).Id == id)
-        {
-            return e;
-        }
     }
 
-    return ecs::NULL_ENTITY;
-}
-
-rei::ecs::Entity rei::EntityManager::CreateNewEntity(const std::string& name)
-{
-    ECS_WORLD(GetInternalWorld());
-
-    const auto e = NEW_ENTITY();
-    GET(e, EntityInfo) = {GenerateNewSceneEntityId(), name};
-
-    AddBehaviour<transformation::Transform>(e).Reset();
-
-    return e;
-}
-
-void rei::EntityManager::Create(const SceneEntity& sceneEntity) const
-{
-    time::ScopedTimer entityCreationTimer("Entity " + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + " creation");
-    ECS_WORLD(GetInternalWorld());
-
-    struct EntityToBehaviour
+    ecs::Entity EntityManager::GetBySceneId(const i32 id) const
     {
-        ecs::Entity Entity;
-        i32 BehaviourId;
-    };
-    auto behavioursToInit = std::vector<EntityToBehaviour>();
-
-    try
-    {
-        const auto e = NEW_ENTITY();
-        GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
-        auto& behavioursToAdd = sceneEntity.GetBehaviours();
-
-        for (auto behaviourData : behavioursToAdd)
+        FOR(e, _entityInfoFilter)
         {
-            const i32 behaviourId = behaviourData.at("Id");
-
-            const std::string SERIALIZE_DATA = "SerializedData";
-            nlohmann::json serializedData;
-            if (behaviourData.contains(SERIALIZE_DATA))
+            if (GET(e, EntityInfo).Id == id)
             {
-                serializedData = behaviourData.at(SERIALIZE_DATA);
+                return e;
             }
-
-            AddBehaviour(e, behaviourId, serializedData, false);
-            behavioursToInit.push_back({e, behaviourId});
         }
-    }
-    catch (std::exception& e)
-    {
-        LOG_ERROR("Scene entity creation exception. Entity Id {}. Exception: {}", sceneEntity.GetId(), e.what());
+
+        return ecs::NULL_ENTITY;
     }
 
-    for (const auto& [Entity, BehaviourId] : behavioursToInit)
+    ecs::Entity EntityManager::CreateNewEntity(const std::string& name)
     {
-        auto& b = GetBehaviour(Entity, BehaviourId);
-        InitBehaviour(Entity, b);
-    }
-}
+        ECS_WORLD(GetInternalWorld());
 
-rei::Behaviour& rei::EntityManager::GetBehaviour(const ecs::Entity e, const i32 behaviourId) const
-{
-    return _behaviourRegistry.GetBehaviour(e, behaviourId);
-}
+        const auto e = NEW_ENTITY();
+        GET(e, EntityInfo) = {GenerateNewSceneEntityId(), name};
 
-rei::Behaviour& rei::EntityManager::AddBehaviour(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
-{
-    auto& b = _behaviourRegistry.AddBehaviour(e, componentId, data);
+        AddBehaviour<Transform>(e).Reset();
 
-    if (init)
-    {
-        InitBehaviour(e, b);
+        return e;
     }
 
-    return b;
-}
-
-void rei::EntityManager::DeleteBehaviour(ecs::Entity e, i32 behaviourId)
-{
-    GetBehaviourRegistry().GetBehaviour(e, behaviourId).Dispose();
-    GetBehaviourRegistry().DeleteBehaviour(e, behaviourId);
-}
-
-void rei::EntityManager::Destroy(const ecs::Entity e) const
-{
-    for (const auto behaviour : GET(e, BehaviourCollection).Behaviours)
+    void EntityManager::Create(const SceneEntity& sceneEntity) const
     {
-        GetBehaviour(e, behaviour).Dispose();
-    }
-    DESTROY_ENTITY(e);
-}
+        time::ScopedTimer entityCreationTimer("Entity " + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + " creation");
+        ECS_WORLD(GetInternalWorld());
 
-void rei::EntityManager::InitBehaviour(const ecs::Entity e, Behaviour& b) const
-{
-    b.LoadAssets(GetAssetManager());
-    b.Init();
-
-    GET(e, StartBehavioursEvent).Behaviours.push_back(b.GetBehaviourId());
-}
-
-i32 rei::EntityManager::GenerateNewSceneEntityId() const
-{
-    i32 maxId = -1;
-    FOR(e, _entityInfoFilter)
-    {
-        const i32 id = GET(e, EntityInfo).Id;
-        if (id > maxId)
+        struct EntityToBehaviour
         {
-            maxId = id;
+            ecs::Entity Entity;
+            i32 BehaviourId;
+        };
+        auto behavioursToInit = std::vector<EntityToBehaviour>();
+
+        try
+        {
+            const auto e = NEW_ENTITY();
+            GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
+            auto& behavioursToAdd = sceneEntity.GetBehaviours();
+
+            for (auto behaviourData : behavioursToAdd)
+            {
+                const i32 behaviourId = behaviourData.at("Id");
+
+                const std::string SERIALIZE_DATA = "SerializedData";
+                nlohmann::json serializedData;
+                if (behaviourData.contains(SERIALIZE_DATA))
+                {
+                    serializedData = behaviourData.at(SERIALIZE_DATA);
+                }
+
+                AddBehaviour(e, behaviourId, serializedData, false);
+                behavioursToInit.push_back({e, behaviourId});
+            }
+        }
+        catch (std::exception& e)
+        {
+            LOG_ERROR("Scene entity creation exception. Entity Id {}. Exception: {}", sceneEntity.GetId(), e.what());
+        }
+
+        for (const auto& [Entity, BehaviourId] : behavioursToInit)
+        {
+            auto& b = GetBehaviour(Entity, BehaviourId);
+            InitBehaviour(Entity, b);
         }
     }
 
-    return maxId + 1;
+    Behaviour& EntityManager::GetBehaviour(const ecs::Entity e, const i32 behaviourId) const
+    {
+        return _behaviourRegistry.GetBehaviour(e, behaviourId);
+    }
+
+    Behaviour& EntityManager::AddBehaviour(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
+    {
+        auto& b = _behaviourRegistry.AddBehaviour(e, componentId, data);
+
+        if (init)
+        {
+            InitBehaviour(e, b);
+        }
+
+        return b;
+    }
+
+    void EntityManager::DeleteBehaviour(ecs::Entity e, i32 behaviourId)
+    {
+        GetBehaviourRegistry().GetBehaviour(e, behaviourId).Dispose();
+        GetBehaviourRegistry().DeleteBehaviour(e, behaviourId);
+    }
+
+    void EntityManager::Destroy(const ecs::Entity e) const
+    {
+        for (const auto behaviour : GET(e, BehaviourCollection).Behaviours)
+        {
+            GetBehaviour(e, behaviour).Dispose();
+        }
+        DESTROY_ENTITY(e);
+    }
+
+    void EntityManager::InitBehaviour(const ecs::Entity e, Behaviour& b) const
+    {
+        b.LoadAssets(GetAssetManager());
+        b.Init();
+
+        GET(e, StartBehavioursEvent).Behaviours.push_back(b.GetBehaviourId());
+    }
+
+    i32 EntityManager::GenerateNewSceneEntityId() const
+    {
+        i32 maxId = -1;
+        FOR(e, _entityInfoFilter)
+        {
+            const i32 id = GET(e, EntityInfo).Id;
+            if (id > maxId)
+            {
+                maxId = id;
+            }
+        }
+
+        return maxId + 1;
+    }
 }

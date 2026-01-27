@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "TransformationControlMovementArrow.h"
+#include "TransformationControlScaleArrow.h"
+#include "TransformationMode.h"
 
 namespace rei::editor
 {
@@ -7,11 +9,17 @@ namespace rei::editor
     {
         ecs::Entity TargetEntity = ecs::NULL_ENTITY;
 
-        TransformationControlMovementArrow RightArrow = {};
-        TransformationControlMovementArrow UpArrow = {};
-        TransformationControlMovementArrow ForwardArrow = {};
+        TransformationControlMovementArrow RightMovementArrow = {};
+        TransformationControlMovementArrow UpMovementArrow = {};
+        TransformationControlMovementArrow ForwardMovementArrow = {};
+        
+        TransformationControlScaleArrow RightScaleArrow = {};
+        TransformationControlScaleArrow UpScaleArrow = {};
+        TransformationControlScaleArrow ForwardScaleArrow = {};
+        TransformationControlScaleArrow RootScale = {};
 
-        bool UseWorldSpace = true;
+        TransformationMode Mode = Movement;
+        bool UseWorldSpace = false;
     };
 }
 

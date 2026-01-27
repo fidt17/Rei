@@ -8,7 +8,7 @@
 #include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
 #include "Modules/Editor/Systems/FlyCameraSystem.h"
 #include "Modules/Editor/Systems/PointerEntitySelectionSystem.h"
-#include "Modules/Editor/TransformationControls/UpdateTransformationControlSystem.h"
+#include "Modules/Editor/TransformationControls/Systems/TransformationControlsModule.h"
 #include "Modules/Physics/Systems/PointerCollisionSystem.h"
 #include "Modules/Render/Camera/AssignMainCameraSystem.h"
 #include "Modules/Window/WindowManager.h"
@@ -38,7 +38,8 @@ namespace rei::internal::engine
         {
             _world->AddSystem<editor::FlyCameraSystem>();
             _world->AddSystem<editor::PointerEntitySelectionSystem>();
-            _world->AddSystem<editor::UpdateTransformationControlSystem>();
+
+            _world->AddModule<editor::TransformationControlsModule>();
         }
 
         _world->AddSystem([&] { renderer->Render(); });

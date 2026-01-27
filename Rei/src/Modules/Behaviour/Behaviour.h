@@ -10,10 +10,7 @@ namespace rei
         class Gizmos;
     }
 
-    namespace transformation
-    {
-        class Transform;
-    }
+    class Transform;
 
     class Behaviour
     {
@@ -35,7 +32,7 @@ namespace rei
         REI_API i32 GetBehaviourId() const;
         
         REI_API ecs::Entity GetEntity() const;
-        REI_API transformation::Transform& GetTransform() const;
+        REI_API Transform& GetTransform() const;
 
         template <typename  T>
         REI_API ecs::RefComponent<T> GetComponent() const;
@@ -49,7 +46,7 @@ namespace rei
     private:
         i32 _id{};
         ecs::Entity _entity{-1, 0};
-        ecs::RefComponent<transformation::Transform> _transform;
+        ecs::RefComponent<Transform> _transform;
 
         bool _enabled = true;
     };

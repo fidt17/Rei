@@ -28,14 +28,40 @@ namespace rei::math
         REI_API Vector3& operator-=(const glm::vec<3, f32>& vec);
         REI_API Vector3& operator-=(const Vector3& vec);
 
-        REI_API Vector3& operator*=(f32 value);
-        REI_API Vector3& operator/=(f32 value);
+        template <typename T>
+        REI_API Vector3& operator*=(T value)
+        {
+            x *= value;
+            y *= value;
+            z *= value;
+
+            return *this;
+        }
+
+        template <typename T>
+        REI_API Vector3& operator/=(T value)
+        {
+            x /= value;
+            y /= value;
+            z /= value;
+
+            return *this;
+        }
 
         REI_API Vector3 operator+(const Vector3& vec) const;
         REI_API Vector3 operator-(const Vector3& vec) const;
 
-        REI_API Vector3 operator*(f32 value) const;
-        REI_API Vector3 operator/(f32 value) const;
+        template <typename T>
+        REI_API Vector3 operator*(const T value) const
+        {
+            return Vector3(x * value, y * value, z * value);
+        }
+
+        template <typename T>
+        REI_API Vector3 operator/(const T value) const
+        {
+            return Vector3(x / value, y / value, z / value);
+        }
 
         REI_API Vector3 operator*(const Vector3& vec) const;
         REI_API Vector3 operator/(const Vector3& vec) const;
@@ -70,4 +96,10 @@ namespace rei::math
         REI_API static Vector3 Abs(const Vector3& v);
         REI_API static Vector3 Projection(const Vector3& pointToProject, const Vector3& vectorToProjectOnto);
     };
+
+    template <typename T>
+    REI_API Vector3 operator*(T value, const Vector3& vector)
+    {
+        return vector * value;
+    }
 }

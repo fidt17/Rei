@@ -1,10 +1,8 @@
 ﻿#include "pch.h"
 #include "Camera.h"
 
-#include "Modules/Render/Camera/MainCameraTag.h"
-#include "../../transformation/Transform.h"
 #include "glm/ext/matrix_clip_space.hpp"
-#include "glm/ext/quaternion_common.hpp"
+#include "rei_behaviours/transformation/Transform.h"
 
 namespace rei::render
 {
@@ -99,6 +97,22 @@ namespace rei::render
         return GetOrhographicScreenPointToRay(xPos, yPos);
     }
 
+    math::Vector3 Camera::WorldToScreenPosition(const math::Vector3& pos) const
+    {
+        // Transform world point to clip space
+        const glm::vec4 clipSpacePos = GetProjectionMatrix() * GetViewMatrix() * glm::vec4(glm::vec3(pos), 1.0f);
+    
+        // Perspective divide to get normalized device coordinates (NDC)
+        const glm::vec3 ndc = glm::vec3(clipSpacePos) / clipSpacePos.w;
+    
+        // Convert NDC to screen coordinates
+        math::Vector3 screenPos;
+        screenPos.x = (ndc.x + 1.0f) * 0.5f * static_cast<f32>(_outputWidth);
+        screenPos.y = (1.0f - ndc.y) * 0.5f * static_cast<f32>(_outputHeight); // Flip Y-axis
+    
+        return screenPos;
+    }
+
     f32 Camera::CalculateConstantScale(const math::Vector3& targetPosition, f32 desiredSize) const
     {
         desiredSize = 10 / desiredSize;
@@ -122,9 +136,9 @@ namespace rei::render
     ecs::RefComponent<Camera> Camera::GetMainCamera()
     {
         ECS_WORLD(GetInternalWorld());
-        auto f = GetInternalWorld().GetFiltersRegistry()->Get<Camera, MainCameraTag>();
+        const auto mainCameraFilter = FILTER(Camera);
 
-        FOR(e, f)
+        FOR(e, mainCameraFilter)
         {
             return GET_REF(e, Camera);
         }

@@ -26,6 +26,16 @@ namespace rei::render
         _meshes.push_back(mesh);
     }
 
+    Model::Model(const std::string& name, std::vector<Mesh>& meshes)
+        : _name(name)
+    {
+        for (auto& mesh : meshes)
+        {
+            mesh.Setup();
+            _meshes.push_back(mesh);
+        }
+    }
+
     Model::~Model()
     {
         for (auto& value : _meshes)

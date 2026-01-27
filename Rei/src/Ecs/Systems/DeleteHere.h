@@ -7,10 +7,10 @@ namespace rei::ecs
     class DeleteHere final : public System
     {
     public:
-        DeleteHere(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters)
-            : System(ecs, filters)
+        DeleteHere(const std::shared_ptr<World>& world)
+            : System(world)
         {
-            _f = filters->Get<T>();
+            _f = FILTER(T);
         }
 
         void OnUpdate() override

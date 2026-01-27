@@ -87,10 +87,10 @@ public class BehaviourRegistrySourceGenerator
 
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
                            $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{ " +
-                           $"auto& b = rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e); " +
+                           $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e); " +
                            $"return b.REI_GET();" + " }, " +
                            $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " + 
-                           $"auto& b = rei::GetInternalWorld().GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
+                           $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
                            $"b.REI_SET(json); b.AfterREI_SET(); }});");
         }
         

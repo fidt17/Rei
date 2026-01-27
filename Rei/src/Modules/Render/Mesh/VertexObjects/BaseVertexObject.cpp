@@ -20,6 +20,11 @@ rei::render::Mesh rei::render::BaseVertexObject::GenerateMesh() const
     return Mesh(GetMeshName(), _vertices, _indices, _faces);
 }
 
+u32 rei::render::BaseVertexObject::AddVertex(math::Vector3 v)
+{
+    return AddVertex(v.x, v.y, v.z);
+}
+
 u32 rei::render::BaseVertexObject::AddVertex(const f32 x, const f32 y, const f32 z)
 {
     Vertex v;

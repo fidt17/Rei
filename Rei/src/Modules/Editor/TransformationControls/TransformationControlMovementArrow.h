@@ -9,7 +9,7 @@ namespace rei::editor
         math::Vector3 Direction = {};
         
         bool DragActive;
-        math::Vector3 DragStartPosition = {};
+        math::Vector3 PartDragStartPosition = {};
         math::Vector3 DragOffset = {};
         math::Plane DragPlane = {};
     };

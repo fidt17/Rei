@@ -1,15 +1,25 @@
 ﻿#include "pch.h"
 #include "EcsRegistry.h"
 
+#include "Modules/Components/ActiveTag.h"
+
 namespace rei::ecs
 {
     Entity EcsRegistry::NewEntity()
     {
+        Entity e = NULL_ENTITY;
         if (_deadEntitiesPool.empty())
         {
-            return AllocateNewEntity();
+            e = AllocateNewEntity();
         }
-        return GetFromPool();
+        else
+        {
+            e = GetFromPool();
+        }
+
+        Get<ActiveTag>(e);
+
+        return e;
     }
 
     BitMask& EcsRegistry::GetEntityMask(const Entity e)

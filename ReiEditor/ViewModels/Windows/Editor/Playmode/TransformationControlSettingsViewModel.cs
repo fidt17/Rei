@@ -4,7 +4,7 @@ using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
 
-public class TransformationSpaceSettingsViewModel : BaseViewModel
+public class TransformationControlSettingsViewModel : BaseViewModel
 {
     #region IsLocalSpace
 
@@ -28,6 +28,57 @@ public class TransformationSpaceSettingsViewModel : BaseViewModel
 
     #endregion
 
+    #region MovementMode
+
+    private bool _movementMode = true;
+    public bool MovementMode
+    {
+        get => _movementMode;
+        private set
+        {
+            if (SetField(ref _movementMode, value))
+            {
+                SetMovementMode();
+            }
+        }
+    }
+
+    #endregion
+    
+    #region ScaleMode
+
+    private bool _scaleMode;
+    public bool ScaleMode
+    {
+        get => _scaleMode;
+        private set
+        {
+            if (SetField(ref _scaleMode, value))
+            {
+                SetScaleMode();
+            }
+        }
+    }
+
+    #endregion
+    
+    #region RotationMode
+
+    private bool _rotationMode;
+    public bool RotationMode
+    {
+        get => _rotationMode;
+        private set
+        {
+            if (SetField(ref _rotationMode, value))
+            {
+                SetRotationMode();
+            }
+        }
+    }
+
+    #endregion
+    
     #region EngineRunning
 
     private bool _engineRunning = true;
@@ -43,10 +94,10 @@ public class TransformationSpaceSettingsViewModel : BaseViewModel
     private readonly IEngineRunner _engineRunner;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-    public TransformationSpaceSettingsViewModel() { }
+    public TransformationControlSettingsViewModel() { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    public TransformationSpaceSettingsViewModel(IEngineApi engineApi, IEngineRunner engineRunner)
+    public TransformationControlSettingsViewModel(IEngineApi engineApi, IEngineRunner engineRunner)
     {
         _engineApi = engineApi;
         _engineRunner = engineRunner;
@@ -83,5 +134,26 @@ public class TransformationSpaceSettingsViewModel : BaseViewModel
         IsWorldSpace = false;
         IsLocalSpace = true;
         _engineApi.ChangeTransformationMode(worldSpace: false);
+    }
+    
+    public void SetMovementMode()
+    {
+        MovementMode = true;
+        ScaleMode = false;
+        RotationMode = false;
+    }
+
+    public void SetScaleMode()
+    {
+        MovementMode = false;
+        ScaleMode = true;
+        RotationMode = false;
+    }
+
+    public void SetRotationMode()
+    {
+        MovementMode = false;
+        ScaleMode = false;
+        RotationMode = true;
     }
 }

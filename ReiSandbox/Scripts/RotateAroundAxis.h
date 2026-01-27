@@ -25,9 +25,9 @@ public:
 
             //g.DrawWireframeBox(position, {size, size, size}, GetTransform().GetRotation(), {1, 0, 0, 1});
 
-            g.DrawLine(position, position + transform.GetRight() * 3, rei::render::Color::Red(), false);
-            g.DrawLine(position, position + transform.GetUp() * 3, rei::render::Color::Green(), false);
-            g.DrawLine(position, position + transform.GetForward() * 3, rei::render::Color::Blue(), false);
+            g.DrawLine(position, position + transform.GetRight() * 1, rei::render::Color::Red(), false);
+            g.DrawLine(position, position + transform.GetUp() * 1, rei::render::Color::Green(), false);
+            g.DrawLine(position, position + transform.GetForward() * 1, rei::render::Color::Blue(), false);
 
             /*
             g.DrawCircle(position, GetTransform().GetForward(), GetTransform().GetUp(), size, rei::render::Color::Green(), 32);

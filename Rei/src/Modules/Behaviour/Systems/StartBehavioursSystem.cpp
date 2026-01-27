@@ -6,13 +6,11 @@
 
 namespace rei::behaviour
 {
-    StartBehavioursSystem::StartBehavioursSystem(const std::shared_ptr<ecs::EcsRegistry>& ecs,
-                                                 const std::shared_ptr<ecs::FilterProvider>& filters,
-                                                 const std::shared_ptr<EntityManager>& entityManager) :
-        System(ecs, filters),
+    StartBehavioursSystem::StartBehavioursSystem(const std::shared_ptr<ecs::World>& world, const std::shared_ptr<EntityManager>& entityManager) :
+        System(world),
         _entityManager(entityManager)
     {
-        _f = filters->Get<StartBehavioursEvent>();
+        _f = FILTER(StartBehavioursEvent);
     }
 
     void StartBehavioursSystem::OnUpdate()
