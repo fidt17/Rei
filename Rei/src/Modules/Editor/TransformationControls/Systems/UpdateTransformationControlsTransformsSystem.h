@@ -21,6 +21,9 @@ namespace rei::editor
         void UpdateScaleRoot(const ::rei::editor::TransformationControl& control, const ::rei::editor::TransformationControlScaleArrow& root, const ::rei::math::Vector3& targetPosition,
                              const glm::quat& targetRotation, f32 controlScale) const;
 
+        void UpdateRotationRing(const ::rei::editor::TransformationControl& control, const ::rei::editor::TransformationControlRotationRing& ring, const ::rei::math::Vector3& targetPosition,
+                                const glm::quat& targetRotation, f32 controlScale) const;
+
     private:
         std::shared_ptr<ecs::Filter> _controlFilter;
 

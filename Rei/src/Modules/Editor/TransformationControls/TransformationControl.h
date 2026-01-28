@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "TransformationControlMovementArrow.h"
+#include "TransformationControlRotationRing.h"
 #include "TransformationControlScaleArrow.h"
 #include "TransformationMode.h"
 
@@ -17,6 +18,10 @@ namespace rei::editor
         TransformationControlScaleArrow UpScaleArrow = {};
         TransformationControlScaleArrow ForwardScaleArrow = {};
         TransformationControlScaleArrow RootScale = {};
+
+        TransformationControlRotationRing RightRotationRing = {};
+        TransformationControlRotationRing UpRotationRing = {};
+        TransformationControlRotationRing ForwardRotationRing = {};
 
         TransformationMode Mode = Movement;
         bool UseWorldSpace = false;

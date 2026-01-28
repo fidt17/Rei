@@ -102,4 +102,29 @@ void rei::render::MeshBVHNode::CalculateBoundingBox(const std::vector<Face>& fac
             Max.z = std::max(Max.z, vertex.Position.z);
         }
     }
+
+    // Ensure non-zero extents so ray-box tests don't fail for flat meshes.
+    constexpr f32 MIN_EXTENT = 0.001f;
+    const math::Vector3 extent = Max - Min;
+
+    if (extent.x < MIN_EXTENT)
+    {
+        const f32 pad = (MIN_EXTENT - extent.x) * 0.5f;
+        Min.x -= pad;
+        Max.x += pad;
+    }
+
+    if (extent.y < MIN_EXTENT)
+    {
+        const f32 pad = (MIN_EXTENT - extent.y) * 0.5f;
+        Min.y -= pad;
+        Max.y += pad;
+    }
+
+    if (extent.z < MIN_EXTENT)
+    {
+        const f32 pad = (MIN_EXTENT - extent.z) * 0.5f;
+        Min.z -= pad;
+        Max.z += pad;
+    }
 }

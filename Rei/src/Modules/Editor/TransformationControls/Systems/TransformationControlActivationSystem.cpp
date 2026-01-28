@@ -28,7 +28,9 @@ namespace rei::editor
 
     void TransformationControlActivationSystem::DisableRotationControls(const TransformationControl& transformationControl) const
     {
-        // todo
+        DISABLE(transformationControl.RightRotationRing.Entity)
+        DISABLE(transformationControl.UpRotationRing.Entity)
+        DISABLE(transformationControl.ForwardRotationRing.Entity)
     }
 
     void TransformationControlActivationSystem::EnableMovementControls(const TransformationControl& transformationControl) const
@@ -48,7 +50,9 @@ namespace rei::editor
 
     void TransformationControlActivationSystem::EnableRotationControls(const TransformationControl& transformationControl) const
     {
-        // todo
+        ENABLE(transformationControl.RightRotationRing.Entity)
+        ENABLE(transformationControl.UpRotationRing.Entity)
+        ENABLE(transformationControl.ForwardRotationRing.Entity)
     }
 
     void TransformationControlActivationSystem::OnUpdate()

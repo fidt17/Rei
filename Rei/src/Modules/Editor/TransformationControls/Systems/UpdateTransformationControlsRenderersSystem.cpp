@@ -28,6 +28,10 @@ namespace rei::editor
         UpdateRenderer(control.UpScaleArrow.Entity, green, greenBright);
         UpdateRenderer(control.ForwardScaleArrow.Entity, blue, blueBright);
         UpdateRenderer(control.RootScale.Entity, grey, greyBright);
+
+        UpdateRenderer(control.RightRotationRing.Entity, red, redBright);
+        UpdateRenderer(control.UpRotationRing.Entity, green, greenBright);
+        UpdateRenderer(control.ForwardRotationRing.Entity, blue, blueBright);
     }
 
     void UpdateTransformationControlsRenderersSystem::UpdateRenderer(const ecs::Entity& e, const render::Color& defaultColor,

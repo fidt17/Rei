@@ -67,6 +67,26 @@ namespace rei::editor
         t.GetScale() = math::Vector3(controlScale, controlScale, controlScale);
     }
 
+    void UpdateTransformationControlsTransformsSystem::UpdateRotationRing(const TransformationControl& control, const TransformationControlRotationRing& ring,
+                                                                          const math::Vector3& targetPosition, const glm::quat& targetRotation,
+                                                                          f32 controlScale) const
+    {
+        const auto isPointerInside = GET(ring.Entity, physics::PointerCollisionListener).IsInside;
+        controlScale *= isPointerInside ? 1.01f : 1;
+
+        auto& t = GET(ring.Entity, Transform);
+        t.GetPosition() = targetPosition;
+
+        auto axisDirection = ring.Direction;
+        if (!control.UseWorldSpace)
+        {
+            axisDirection = axisDirection.Rotate(targetRotation);
+        }
+
+        t.SetRotation(LookAt(axisDirection, math::Vector3::Up()));
+        t.GetScale() = math::Vector3(controlScale, controlScale, controlScale);
+    }
+
     void UpdateTransformationControlsTransformsSystem::OnUpdate()
     {
         const auto mainCamera = render::Camera::GetMainCamera();
@@ -93,5 +113,9 @@ namespace rei::editor
         UpdateScaleArrow(control, control.ForwardScaleArrow, targetPosition, targetRotation, controlScale);
 
         UpdateScaleRoot(control, control.RootScale, targetPosition, targetRotation, controlScale);
+
+        UpdateRotationRing(control, control.RightRotationRing, targetPosition, targetRotation, controlScale);
+        UpdateRotationRing(control, control.UpRotationRing, targetPosition, targetRotation, controlScale);
+        UpdateRotationRing(control, control.ForwardRotationRing, targetPosition, targetRotation, controlScale);
     }
 }

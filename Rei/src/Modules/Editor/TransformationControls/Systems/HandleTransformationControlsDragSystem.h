@@ -15,6 +15,7 @@ namespace rei::editor
         void ResetDragState(TransformationControl& control) const;
         void HandleMovementDrag(TransformationControl& control) const;
         void HandleScaleDrag(TransformationControl& control) const;
+        void HandleRotationDrag(TransformationControl& control) const;
         
     private:
         std::shared_ptr<ecs::Filter> _controlFilter;

@@ -2,6 +2,7 @@
 #include "HandleTransformationControlsDragSystem.h"
 
 #include "Modules/Input/Input.h"
+#include <cmath>
 #include "Modules/Physics/PointerCollisionListener.h"
 #include "rei_behaviours/render/camera/Camera.h"
 #include "rei_behaviours/transformation/Transform.h"
@@ -30,9 +31,13 @@ namespace rei::editor
             {
                 HandleMovementDrag(control);
             }
-            else
+            else if (control.Mode == Scale)
             {
                 HandleScaleDrag(control);
+            }
+            else if (control.Mode == Rotation)
+            {
+                HandleRotationDrag(control);
             }
         }
     }
@@ -52,6 +57,18 @@ namespace rei::editor
         control.UpScaleArrow.CurrentScaleMlt = 0;
         control.ForwardScaleArrow.CurrentScaleMlt = 0;
         control.RootScale.CurrentScaleMlt = 0;
+
+        control.RightRotationRing.DragActive = false;
+        control.UpRotationRing.DragActive = false;
+        control.ForwardRotationRing.DragActive = false;
+
+        control.RightRotationRing.DragStartDirection = {};
+        control.UpRotationRing.DragStartDirection = {};
+        control.ForwardRotationRing.DragStartDirection = {};
+
+        control.RightRotationRing.DragAxis = {};
+        control.UpRotationRing.DragAxis = {};
+        control.ForwardRotationRing.DragAxis = {};
     }
 
     void HandleTransformationControlsDragSystem::HandleMovementDrag(TransformationControl& control) const
@@ -239,5 +256,79 @@ namespace rei::editor
         if (tryScale(control.ForwardScaleArrow)) return;
         if (tryScale(control.RightScaleArrow)) return;
         if (tryScale(control.UpScaleArrow)) return;
+    }
+
+    void HandleTransformationControlsDragSystem::HandleRotationDrag(TransformationControl& control) const
+    {
+        if (IS_DEAD(control.TargetEntity)) return;
+
+        const auto mainCamera = render::Camera::GetMainCamera();
+        if (mainCamera.IsNull()) return;
+
+        math::Vector3 pointerPos;
+        Input::GetMousePosition(pointerPos.x, pointerPos.y);
+
+        const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
+
+        auto& targetTransform = GET(control.TargetEntity, Transform);
+        const auto targetPosition = targetTransform.GetPosition();
+
+        auto tryRotate = [&](TransformationControlRotationRing& ring) -> bool
+        {
+            auto& ringTransform = GET(ring.Entity, Transform);
+            const auto& pointerListener = GET(ring.Entity, physics::PointerCollisionListener);
+
+            if (!ring.DragActive && pointerListener.IsInside)
+            {
+                ring.DragAxis = math::Vector3::Normalize(ringTransform.GetForward());
+                ring.DragPlane = math::Plane(ring.DragAxis, targetPosition);
+                ring.DragStartDirection = {};
+
+                math::Vector3 planeIntersectionPoint;
+                if (PlaneRayIntersection(ring.DragPlane, screenPointRay, planeIntersectionPoint))
+                {
+                    const auto startDir = planeIntersectionPoint - targetPosition;
+                    if (startDir.Length() > 0.0001f)
+                    {
+                        ring.DragActive = true;
+                        ring.TargetDragStartRotation = targetTransform.GetRotation();
+                        ring.DragStartDirection = math::Vector3::Normalize(startDir);
+                    }
+                }
+            }
+
+            if (ring.DragActive)
+            {
+                math::Vector3 planeIntersectionPoint;
+                if (!PlaneRayIntersection(ring.DragPlane, screenPointRay, planeIntersectionPoint)) return ring.DragActive;
+
+                auto currentDir = planeIntersectionPoint - targetPosition;
+                if (currentDir.Length() <= 0.0001f || ring.DragStartDirection.Length() <= 0.0001f) return ring.DragActive;
+
+                currentDir = math::Vector3::Normalize(currentDir);
+
+                f32 dotValue = math::Vector3::Dot(ring.DragStartDirection, currentDir);
+                if (dotValue > 1.0f) dotValue = 1.0f;
+                if (dotValue < -1.0f) dotValue = -1.0f;
+
+                const f32 signedArea = math::Vector3::Dot(ring.DragAxis, math::Vector3::Cross(ring.DragStartDirection, currentDir));
+                const f32 angleRad = std::atan2(signedArea, dotValue);
+                const f32 angleDeg = angleRad * (180.0f / PI);
+
+                targetTransform.SetRotation(ring.TargetDragStartRotation);
+                targetTransform.RotateWorld(angleDeg, ring.DragAxis);
+            }
+
+            return ring.DragActive;
+        };
+
+        // allow rotation only around 1 ring at a time
+        if (control.RightRotationRing.DragActive && tryRotate(control.RightRotationRing)) return;
+        if (control.UpRotationRing.DragActive && tryRotate(control.UpRotationRing)) return;
+        if (control.ForwardRotationRing.DragActive && tryRotate(control.ForwardRotationRing)) return;
+
+        if (tryRotate(control.RightRotationRing)) return;
+        if (tryRotate(control.UpRotationRing)) return;
+        if (tryRotate(control.ForwardRotationRing)) return;
     }
 }

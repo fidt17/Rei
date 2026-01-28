@@ -621,6 +621,7 @@
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\UpdateTransformationControlsTargetsSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationControl.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationControlMovementArrow.h" />
+    <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationControlRotationRing.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationControlScaleArrow.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationMode.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
@@ -647,6 +648,7 @@
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\GridVertexData.h" />
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\LineVertexData.h" />
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\QuadVertexData.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\RingVertexObject.h" />
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\Gizmos.h" />
@@ -774,6 +776,7 @@
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\BaseVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\CubeVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\GridVertexData.cpp" />
+    <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\RingVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\Gizmos.cpp" />
