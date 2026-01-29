@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Engine;
@@ -28,7 +29,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
     private readonly Observable<bool> _isActive = new(false);
     private readonly Observable<bool> _isPlaymodeActive = new(false);
     private readonly Observable<bool> _isEditormodeActive = new(false);
-	
+    
     private readonly IEngineApi _engineApi;
     private readonly ILogger<EngineRunner> _logger;
     private readonly IEngineLogger _engineLogger;
@@ -81,7 +82,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 ActiveMode = mode;
                 
-                _enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), "bin", "Resources"), mode);
+                _enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
 
                 _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
                 _engineLogger.SubscribeToClient();
@@ -142,7 +143,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 _clientDllManager.UnloadDll();
             }
-			
+            
             _clientDllManager.LoadDll();
 
             return true;

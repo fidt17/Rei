@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,6 +10,7 @@ using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Resources;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Build;
@@ -82,7 +83,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         var stopwatch = new Stopwatch();
         stopwatch.Start();
         
-        var buildFolder = Path.Combine(_resourceService.GetRootPath(), "bin");
+        var buildFolder = Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME);
         _discardBuild = false;
         _buildInProgress.Value = true;
         _isBuildReady.Value = false;

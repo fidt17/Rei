@@ -1,86 +1,97 @@
-﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Build.Assets.Cache;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Engine;
-using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
+using ReiEditor.Models.Resources;
+using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Build.Assets;
 
 public class AssetBuilder : IAssetBuilder
 {
-	private readonly IAssetRegistry _assetRegistry;
-	private readonly IBinarySerializer _binarySerializer;
-	private readonly IEngineApi _engineApi;
-	private readonly IClientDllManager _dllManager;
-	private readonly ILogger<AssetBuilder> _logger;
-	private readonly IEngineLogger _engineLogger;
+    private readonly IAssetRegistry _assetRegistry;
+    private readonly IAssetBuildCachePipeline _assetBuildCachePipeline;
+    private readonly IBinarySerializer _binarySerializer;
+    private readonly IClientDllManager _dllManager;
+    private readonly IEngineLogger _engineLogger;
+    private readonly ILogger<AssetBuilder> _logger;
 
-	public AssetBuilder(IBinarySerializer binarySerializer, IEngineApi engineApi, IClientDllManager dllManager, ILogger<AssetBuilder> logger, IEngineLogger engineLogger, IAssetRegistry assetRegistry)
-	{
-		_binarySerializer = binarySerializer;
-		_engineApi = engineApi;
-		_dllManager = dllManager;
-		_logger = logger;
-		_engineLogger = engineLogger;
-		_assetRegistry = assetRegistry;
-	}
+    public AssetBuilder(IBinarySerializer binarySerializer, IClientDllManager dllManager, IEngineLogger engineLogger, IAssetRegistry assetRegistry, IAssetBuildCachePipeline assetBuildCachePipeline, ILogger<AssetBuilder> logger)
+    {
+        _binarySerializer = binarySerializer;
+        _dllManager = dllManager;
+        _engineLogger = engineLogger;
+        _assetRegistry = assetRegistry;
+        _assetBuildCachePipeline = assetBuildCachePipeline;
+        _logger = logger;
+    }
 
-	public async Task BuildAssets(string buildFolder)
-	{
-		if (!_dllManager.DllLoaded.Value)
-		{
-			_dllManager.LoadDll();
-		}
-		
-		_engineLogger.SubscribeToClient();
+    public async Task BuildAssets(string buildFolder)
+    {
+        if (!_dllManager.DllLoaded.Value)
+        {
+            _dllManager.LoadDll();
+        }
+        
+        _engineLogger.SubscribeToClient();
 
-		var map = await Build(_assetRegistry.GetAllAssets(), buildFolder, "assets");
-		await Build(map, buildFolder, "map");
-		
-		_dllManager.UnloadDll();
-	}
+        var resourcesDir = Path.Combine(buildFolder, ResourceConstants.RESOURCES_DIR_NAME);
+        Directory.CreateDirectory(resourcesDir);
 
-	private async Task Build(BuildAssetMap map, string buildDir, string outputName)
-	{
-		var path = Path.Combine(buildDir, "Resources");
-		Directory.CreateDirectory(path);
-		path = Path.Combine(path, $"{outputName}.bin");
-		
-		await using var stream = File.Open(path, FileMode.Create, FileAccess.Write);
-		await using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
+        var assetsBinPath = Path.Combine(resourcesDir, "assets.bin");
+        Directory.CreateDirectory(Path.GetDirectoryName(assetsBinPath)!);
+        await using (File.Create(assetsBinPath)) { }
 
-		_binarySerializer.Serialize(map, writer);
-		await File.WriteAllTextAsync(path.Replace(".bin", ".json"), JsonConvert.SerializeObject(map, Formatting.Indented));
-	}
+        var assets = _assetRegistry.GetAllAssets().OrderBy(asset => asset.Meta.AssetId);
+        
+        var buildResult = _assetBuildCachePipeline.BuildAssets(assets, buildFolder, assetsBinPath);
+        LogBuildSummary(buildResult.Report);
+        
+        await SerializeAssetMap(buildResult.Map, buildFolder, "map");
+        
+        _dllManager.UnloadDll();
+    }
 
-	private async Task<BuildAssetMap> Build(IEnumerable<AssetInfo> assetInfos, string buildDir, string outputName)
-	{
-		var map = new BuildAssetMap();
+    private async Task SerializeAssetMap(BuildAssetMap map, string buildDir, string outputName)
+    {
+        var path = Path.Combine(buildDir, ResourceConstants.RESOURCES_DIR_NAME);
+        Directory.CreateDirectory(path);
+        path = Path.Combine(path, $"{outputName}.bin");
+        
+        await using var stream = File.Open(path, FileMode.Create, FileAccess.Write);
+        await using var writer = new BinaryWriter(stream, Encoding.UTF8, false);
 
-		var innerPath = $"{outputName}.bin";
-		var path = Path.Combine(buildDir, "Resources");
-		Directory.CreateDirectory(path);
-		path = Path.Combine(path, innerPath);
-		
-		long offset = 0L;
-		foreach (var assetInfo in assetInfos)
-		{
-			var buildTask = Task.Run(() =>
-			{
-				_logger.Log($"Building asset: {assetInfo.Meta.AssetId}");
-				var bytesWritten = _engineApi.BuildAsset(assetInfo.FullPath, path, offset);
-				map.Add(new BuildAssetMap.AssetBuildInfo(assetInfo.Meta.AssetId, Path.GetFileName(assetInfo.FullPath), assetInfo.FullPath, innerPath, offset));
-				offset += bytesWritten;
-			});
-			await buildTask;
-		}
+        _binarySerializer.Serialize(map, writer);
+        await File.WriteAllTextAsync(path.Replace(".bin", ".json"), JsonConvert.SerializeObject(map, Formatting.Indented));
+    }
 
-		return map;
-	}
+    private void LogBuildSummary(AssetsBuildCacheReport report)
+    {
+        var msg = new StringBuilder();
+        msg.AppendLine($"--- Asset build summary ---");
+        msg.AppendLine($"Asset build completed in {report.TotalBuildMs} ms");
+        msg.AppendLine($"Asset build size: {report.TotalBytes} bytes");
+
+        if (report.BuiltAssets.Count == 0)
+        {
+            msg.AppendLine("Asset build: no assets rebuilt");
+            _logger.Log(msg.ToString());
+            return;
+        }
+
+        msg.AppendLine("Asset build details:");
+        foreach (var built in report.BuiltAssets)
+        {
+            msg.AppendLine($"  {built.AssetPath} | {built.BuildMs} ms | {built.SizeBytes} bytes");
+        }
+        
+        _logger.Log(msg.ToString());
+    }
+
 }

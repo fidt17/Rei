@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Resources;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Engine.Dll;
@@ -11,7 +12,7 @@ namespace ReiEditor.Models.Services.Engine.Dll;
 public class ClientDllManager : IClientDllManager, IDisposable
 {
     public Utils.Common.IObservable<bool> DllLoaded => _dllLoaded;
-	
+    
     private IntPtr _loadedDllPtr;
 
     private readonly Observable<bool> _dllLoaded = new(false);
@@ -41,7 +42,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
             _logger.LogError("Dll is already loaded");
             return;
         }
-			
+            
         var dllPath = GetDllPath();
 
         SetDllDirectory(Path.GetDirectoryName(dllPath)!);
@@ -70,23 +71,23 @@ public class ClientDllManager : IClientDllManager, IDisposable
             return false;
         }
     }
-	
+    
     private string GetProjectDllName() => $"{_activeProjectService.GetActiveProject().ProjectName}.dll";
 
     private string GetDllPath()
     {
         var project = _activeProjectService.GetActiveProject();
         var root = project.GetDirectoryPath();
-        var buildDllPath = Path.Combine(root, "bin", "x64EditorDebug", project.ProjectName, $"{project.ProjectName}.dll");
+        var buildDllPath = Path.Combine(root, ResourceConstants.BIN_DIR_NAME, "x64EditorDebug", project.ProjectName, $"{project.ProjectName}.dll");
         return buildDllPath;
     }
-	
+    
     [DllImport("kernel32.dll")]
     private static extern bool SetDllDirectory(string lpPathName);
-	
+    
     [DllImport("kernel32.dll")]
     private static extern IntPtr LoadLibrary(string dllToLoad);
-	
+    
     [DllImport("kernel32.dll", SetLastError=true)]
     private static extern bool FreeLibrary(IntPtr hModule);
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +13,7 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
 {
     private EngineSettings _engineSettings = null!;
     private string _enginePath = null!;
-	
+    
     private readonly IEditorPreferencesService _preferences;
     private readonly ISerializer _serializer;
     private readonly ILogger<EngineSettingsProvider> _logger;
@@ -33,12 +33,12 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
     {
         _logger.Log("Initialize");
         if (!_editorSettingsService.IsEditorConfigurationValid()) return Task.CompletedTask;
-		
+        
         LoadEngineSettings();
-		
+        
         return Task.CompletedTask;
     }
-	
+    
     public void Dispose()
     {
         _editorSettingsService.ConfigurationSetEvent -= HandleEditorSettingsSetEvent;
@@ -56,20 +56,22 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
 
     public string GetEngineResourcesDir() => _enginePath + _engineSettings.RelativeResourcesDir;
     public string GetEngineBehavioursDir() => GetEngineResourcesDir() + "\\rei_behaviours";
+    public string GetEngineVersion() => _engineSettings.EngineVersion ?? "";
 
     private void HandleEditorSettingsSetEvent() => LoadEngineSettings();
 
     private void LoadEngineSettings()
     {
         _logger.Log("Load engine settings");
-		
+        
         try
         {
             var filePath = _preferences.GetEnginePath() ?? throw new Exception("Missing engine file");
             var file = File.ReadAllText(filePath);
-		
+        
             _engineSettings = _serializer.Deserialize<EngineSettings>(file);
             if (_engineSettings == null) throw new Exception("Could not deserialize engine settings file");
+            if (string.IsNullOrWhiteSpace(_engineSettings.EngineVersion)) throw new Exception("EngineVersion is missing in engine settings file");
             _enginePath = Path.GetDirectoryName(filePath) ?? throw new Exception("Could not get engine directory path");
         }
         catch (Exception e)
