@@ -8,6 +8,7 @@
         xmlns:statusBar="clr-namespace:ReiEditor.Views.Windows.Editor.StatusBar"
         xmlns:hierarchies="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
         xmlns:monitor="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor"
+        xmlns:tabs="clr-namespace:ReiEditor.Views.Windows.Editor.WindowTabs"
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
@@ -87,8 +88,8 @@
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
                 RowDefinitions="*, Auto">
-                <console:ConsoleEditorWindow
-                    DataContext="{Binding Console}" />
+                <tabs:WindowContainer
+                    DataContext="{Binding FooterWindowContainer}" />
 
                 <!-- Status Bar -->
                 <statusBar:StatusBarView 

@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:demo="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Demo"
+             mc:Ignorable="d"
+             d:DesignWidth="550" d:DesignHeight="200"
+             x:Class="ReiEditor.Views.Windows.Editor.Demo.DemoWindowView"
+             x:DataType="demo:DemoWindowViewModel">
+    <Design.DataContext>
+        <demo:DemoWindowViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, *">
+        <Border Grid.Row="1" Classes="WindowContent">
+            <TextBlock Text="Demo content" VerticalAlignment="Center" HorizontalAlignment="Center" />
+        </Border>
+    </Grid>
+</UserControl>

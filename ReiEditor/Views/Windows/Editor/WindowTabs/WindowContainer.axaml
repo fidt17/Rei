@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:tabs="clr-namespace:ReiEditor.ViewModels.Windows.Editor.WindowTabs"
+             mc:Ignorable="d"
+             d:DesignWidth="550" d:DesignHeight="200"
+             x:Class="ReiEditor.Views.Windows.Editor.WindowTabs.WindowContainer"
+             x:DataType="tabs:WindowContainerViewModel">
+    <Design.DataContext>
+        <tabs:WindowContainerViewModel />
+    </Design.DataContext>
+
+    <UserControl.Styles>
+        <Style Selector="ToggleButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="{StaticResource Dark_3}" />
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Dark_3}" />
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_4}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Dark_2}" />
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_4}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ToggleButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Dark_2}" />
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_4}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ToggleButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Dark_3}" />
+            <Setter Property="Foreground" Value="{StaticResource Gray_0}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Classes="Window">
+        <Grid RowDefinitions="Auto, *">
+            <!-- Tabs + Header -->
+            <Border>
+                <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto" MinHeight="26">
+                    <ItemsControl ItemsSource="{Binding Tabs}" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="tabs:WindowTabViewModel">
+                            <ToggleButton
+                                Content="{Binding Name}"
+                                IsChecked="{Binding IsActive}"
+                                Command="{Binding SelectCommand}"
+                                Height="24"
+                                MinWidth="60"
+                                Padding="8,0"
+                                VerticalContentAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ContentControl Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Content="{Binding ActiveTab.HeaderContent}" />
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <Border Grid.Row="1" Classes="WindowContent">
+                <ContentControl Content="{Binding ActiveTab.Content}" />
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

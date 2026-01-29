@@ -1,0 +1,50 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:console="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Console"
+             xmlns:converters="clr-namespace:ReiEditor.Views.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="550" d:DesignHeight="200"
+             x:Class="ReiEditor.Views.Windows.Editor.Console.ConsoleEditorWindowView"
+             x:DataType="console:ConsoleEditorWindowViewModel">
+    <Design.DataContext>
+        <console:ConsoleEditorWindowViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <converters:BoolToIntConverter x:Key="BoolToInt" />
+        <converters:BoolToDoubleConverter x:Key="BoolToDouble" />
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="2*, *">
+
+        <!-- Content -->
+        <Border x:Name="ConsoleContent"
+                Classes="WindowContent"
+                Grid.RowSpan="{Binding HasDetails, Converter={StaticResource BoolToInt}, ConverterParameter='1,2'}">
+            <ScrollViewer x:Name="ConsoleScrollViewer">
+                <ItemsControl
+                    ItemsSource="{Binding FilteredLogs}" />
+            </ScrollViewer>
+        </Border>
+
+        <!-- Details -->
+        <Border Grid.Row="1" Classes="WindowContent"
+                Opacity="{Binding HasDetails, Converter={StaticResource BoolToDouble}, ConverterParameter='1,0'}"
+                IsHitTestVisible="{Binding HasDetails}">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Border.Transitions>
+            <ScrollViewer>
+                <SelectableTextBlock
+                    Text="{Binding Details}"
+                    Classes="h5"
+                    VerticalAlignment="Center"
+                    TextWrapping="Wrap" />
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

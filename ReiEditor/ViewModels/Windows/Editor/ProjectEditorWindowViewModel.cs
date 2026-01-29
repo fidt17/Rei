@@ -1,4 +1,4 @@
-﻿using Avalonia.Threading;
+using Avalonia.Threading;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
@@ -10,6 +10,8 @@ using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 using ReiEditor.ViewModels.Windows.Editor.Monitor;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
+using ReiEditor.ViewModels.Windows.Editor.WindowTabs;
+using ReiEditor.ViewModels.Windows.Editor.Demo;
 
 namespace ReiEditor.ViewModels.Windows.Editor;
 
@@ -19,18 +21,23 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public BuildProjectCommand BuildProjectCommand { get; }
     public ImportEngineResourcesCommand ImportEngineResourcesCommand { get; }
     public OpenSettingsWindowCommand OpenSettingsCommand { get; }
-	
+    
     public PlaymodePanelViewModel PlaymodePanel { get; } = new();
     public ConsoleEditorWindowViewModel Console { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
+    public WindowContainerViewModel FooterWindowContainer { get; } = new();
 
     public HierarchyWindowViewModel Hierarchy { get; } = new();
     public MonitorWindowViewModel Monitor { get; } = new();
+    public DemoWindowViewModel DemoWindow { get; } = new();
 
     private readonly ISceneManagementService _sceneManagementService;
 
 #pragma warning disable CS8618
-    public ProjectEditorWindowViewModel() { }
+    public ProjectEditorWindowViewModel()
+    {
+        InitializeConsoleTabs();
+    }
 #pragma warning restore CS8618
 
     public ProjectEditorWindowViewModel(
@@ -50,14 +57,23 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         BuildProjectCommand = buildProjectCommandFactory.CreateInstance();
         ImportEngineResourcesCommand = importEngineResourcesCommandFactory.CreateInstance();
         OpenSettingsCommand = openSettingsCommandFactory.CreateInstance();
-		
+        
         PlaymodePanel = playmodePanel.CreateInstance();
         Console = console.CreateInstance();
         StatusBar = statusBarViewModelFactory.CreateInstance();
         Hierarchy = hierarchyFactory.CreateInstance(new Hierarchy<GameEntity>(""));
         Monitor = monitorWindowFactory.CreateInstance();
+        DemoWindow = new DemoWindowViewModel();
+        FooterWindowContainer = new WindowContainerViewModel();
+        InitializeConsoleTabs();
         
         _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
+    }
+
+    private void InitializeConsoleTabs()
+    {
+        FooterWindowContainer.AddTab("Console", Console, new ConsoleEditorWindowHeaderViewModel(Console));
+        FooterWindowContainer.AddTab("Demo", DemoWindow);
     }
 
     public override void Dispose()
@@ -69,6 +85,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         OpenSettingsCommand.Dispose();
         StatusBar.Dispose();
         Hierarchy.Dispose();
+        DemoWindow.Dispose();
+        FooterWindowContainer.Dispose();
         
         _sceneManagementService.CurrentScene.Unsubscribe(HandleCurrentSceneChangedEvent);
     }

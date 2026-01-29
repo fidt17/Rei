@@ -42,7 +42,10 @@
         <entry key="ReiEditor/Views/Resources/CustomTemplates/ComboBox.xaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/Styles.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindowHeaderView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleLogMessageView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Demo/DemoWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchies/HierarchyMoveTargetLine.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchies/HierarchyNode.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Hierarchies/HierarchyWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
@@ -80,6 +83,8 @@
         <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Settings/EditorSettingsWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/StatusBar/StatusBarView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/WindowTabs/AAA.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/WindowTabs/WindowContainer.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/EmptyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/EditorSetupTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/ProjectManagement/ProjectCreation/ProjectCreationTabView.axaml" value="ReiEditor/ReiEditor.csproj" />
