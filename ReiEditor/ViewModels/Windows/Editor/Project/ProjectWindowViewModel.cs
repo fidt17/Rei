@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReiEditor.Models.Resources.Client;
-using ReiEditor.Models.Services.Assets.Operations;
+using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;

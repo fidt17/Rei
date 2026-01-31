@@ -11,7 +11,7 @@ using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Serialization;
 
-namespace ReiEditor.Models.Services.Assets;
+namespace ReiEditor.Models.Services.Assets.Import;
 
 public class AssetImporter : IAssetImporter
 {

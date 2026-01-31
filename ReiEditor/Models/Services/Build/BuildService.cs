@@ -11,6 +11,7 @@ using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Resources;
+using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Build;

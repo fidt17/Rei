@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace ReiEditor.Models.Services.Assets;
+namespace ReiEditor.Models.Services.Assets.Import;
 
 public interface IAssetImporter
 {

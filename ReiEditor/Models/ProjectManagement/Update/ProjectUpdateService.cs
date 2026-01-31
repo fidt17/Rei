@@ -2,6 +2,7 @@
 using ReiEditor.Models.ProjectManagement.Template;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Import;
 
 namespace ReiEditor.Models.ProjectManagement.Update;
 

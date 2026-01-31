@@ -1,36 +1,35 @@
 using System;
 using System.IO;
-using ReiEditor.Utils.Extensions;
 
-namespace ReiEditor.Utils;
+namespace ReiEditor.Utils.Path;
 
 public static class PathNamingUtils
 {
     public static string GetDuplicatePath(string fullPath, bool isDirectory)
     {
-        var parent = Path.GetDirectoryName(fullPath) ?? "";
+        var parent = System.IO.Path.GetDirectoryName(fullPath) ?? "";
         string baseName;
         string extension;
 
         if (isDirectory)
         {
-            baseName = Path.GetFileName(fullPath);
+            baseName = System.IO.Path.GetFileName(fullPath);
             extension = "";
         }
         else
         {
-            baseName = Path.GetFileNameWithoutExtension(fullPath);
-            extension = Path.GetExtension(fullPath);
+            baseName = System.IO.Path.GetFileNameWithoutExtension(fullPath);
+            extension = System.IO.Path.GetExtension(fullPath);
         }
 
         var candidateName = $"{baseName} Copy";
-        var candidatePath = Path.Combine(parent, candidateName + extension);
+        var candidatePath = System.IO.Path.Combine(parent, candidateName + extension);
         var counter = 2;
 
         while (PathExtensions.PathExists(candidatePath, isDirectory))
         {
             candidateName = $"{baseName} Copy {counter}";
-            candidatePath = Path.Combine(parent, candidateName + extension);
+            candidatePath = System.IO.Path.Combine(parent, candidateName + extension);
             counter++;
         }
 
@@ -44,8 +43,8 @@ public static class PathNamingUtils
 
     public static string GetUniqueFilePath(string parentDirectory, string fileName)
     {
-        var baseName = Path.GetFileNameWithoutExtension(fileName);
-        var extension = Path.GetExtension(fileName);
+        var baseName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+        var extension = System.IO.Path.GetExtension(fileName);
         return GetUniquePath(parentDirectory, baseName, extension, File.Exists, Directory.Exists);
     }
 
@@ -56,12 +55,12 @@ public static class PathNamingUtils
         Func<string, bool> primaryExists,
         Func<string, bool> secondaryExists)
     {
-        var candidatePath = Path.Combine(parentDirectory, baseName + extension);
+        var candidatePath = System.IO.Path.Combine(parentDirectory, baseName + extension);
         var counter = 2;
 
         while (primaryExists(candidatePath) || secondaryExists(candidatePath))
         {
-            candidatePath = Path.Combine(parentDirectory, $"{baseName} {counter}{extension}");
+            candidatePath = System.IO.Path.Combine(parentDirectory, $"{baseName} {counter}{extension}");
             counter++;
         }
 

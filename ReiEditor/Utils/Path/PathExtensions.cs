@@ -1,30 +1,30 @@
 using System;
 using System.IO;
 
-namespace ReiEditor.Utils.Extensions;
+namespace ReiEditor.Utils.Path;
 
 public static class PathExtensions
 {
     public static string ToFullPath(this string path)
     {
-        return Path.GetFullPath(path);
+        return System.IO.Path.GetFullPath(path);
     }
 
     public static bool PathEquals(this string left, string right)
     {
-        return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(System.IO.Path.GetFullPath(left), System.IO.Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool IsUnderDirectory(this string path, string directory)
     {
-        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var fullDirectory = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullPath = System.IO.Path.GetFullPath(path).TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+        var fullDirectory = System.IO.Path.GetFullPath(directory).TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
 
         if (!fullPath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase)) return false;
         if (fullPath.Length == fullDirectory.Length) return true;
 
         var nextChar = fullPath[fullDirectory.Length];
-        return nextChar == Path.DirectorySeparatorChar || nextChar == Path.AltDirectorySeparatorChar;
+        return nextChar == System.IO.Path.DirectorySeparatorChar || nextChar == System.IO.Path.AltDirectorySeparatorChar;
     }
     
     public static bool PathExists(string path, bool isDirectory)

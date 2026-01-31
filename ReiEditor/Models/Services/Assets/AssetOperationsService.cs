@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils;
 using ReiEditor.Utils.Extensions;
+using ReiEditor.Utils.Path;
 
-namespace ReiEditor.Models.Services.Assets.Operations;
+namespace ReiEditor.Models.Services.Assets;
 
 public class AssetOperationsService : IAssetOperationsService
 {

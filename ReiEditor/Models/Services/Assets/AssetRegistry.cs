@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Extensions;
+using ReiEditor.Utils.Path;
 
 namespace ReiEditor.Models.Services.Assets;
 

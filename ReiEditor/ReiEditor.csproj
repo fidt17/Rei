@@ -151,6 +151,7 @@
 
   <ItemGroup>
     <Folder Include="Assets\" />
+    <Folder Include="Models\Services\Assets\Operations\" />
     <Folder Include="Utils\Factory\Custom" />
   </ItemGroup>
 

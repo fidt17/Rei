@@ -1,6 +1,6 @@
 ﻿using ReiEditor.Models.Services.FileSystem;
 
-namespace ReiEditor.Models.Services.Assets;
+namespace ReiEditor.Models.Services.Assets.Import;
 
 public static class AssetImportUtils
 {
