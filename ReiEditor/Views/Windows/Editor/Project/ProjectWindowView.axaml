@@ -1,0 +1,80 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:project="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project"
+             xmlns:path="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.Path"
+             xmlns:directories="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.Directories"
+             xmlns:directoriesView="clr-namespace:ReiEditor.Views.Windows.Editor.Project.Directories"
+             xmlns:assets="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.Assets"
+             xmlns:assetsView="clr-namespace:ReiEditor.Views.Windows.Editor.Project.Assets"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             mc:Ignorable="d"
+             d:DesignWidth="600" d:DesignHeight="300"
+             x:Class="ReiEditor.Views.Windows.Editor.Project.ProjectWindowView"
+             x:DataType="project:ProjectWindowViewModel">
+    <Design.DataContext>
+        <project:ProjectWindowViewModel />
+    </Design.DataContext>
+
+    <Grid ColumnDefinitions="220, *" RowDefinitions="*">
+        <Border Classes="WindowContent" Margin="0,4,4,0">
+            <Grid RowDefinitions="Auto, *">
+                <TextBlock Text="Directories" VerticalAlignment="Top" Margin="6" />
+                <ScrollViewer Grid.Row="1">
+                    <ItemsControl ItemsSource="{Binding RootDirectories}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="directories:ProjectDirectoryNodeViewModel">
+                                <directoriesView:ProjectDirectoryNode />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="1" Classes="WindowContent" Margin="4,4,0,0">
+            <Grid RowDefinitions="Auto, *">
+                <ItemsControl Margin="6,4,6,2"
+                              ItemsSource="{Binding PathSegments}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="path:ProjectPathSegmentViewModel">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding SeparatorText}" Foreground="{StaticResource Gray_2}" />
+                                <Button Classes="Clear" Command="{Binding NavigateCommand}">
+                                    <TextBlock Text="{Binding Name}" />
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ScrollViewer Grid.Row="1">
+                    <Grid x:Name="ActiveItemsDropTarget"
+                          Background="{StaticResource Clear}"
+                          Focusable="True"
+                          DragDrop.AllowDrop="True"
+                          PointerPressed="ActiveItemsDropTarget_OnPointerPressed"
+                          KeyDown="ActiveItemsDropTarget_OnKeyDown">
+                        <FlyoutBase.AttachedFlyout>
+                            <Flyout Placement="Pointer" FlyoutPresenterClasses="Clear">
+                                <contextMenu:ContextMenuView DataContext="{Binding ActiveFolderContextMenu}" />
+                            </Flyout>
+                        </FlyoutBase.AttachedFlyout>
+                        <ItemsControl ItemsSource="{Binding ActiveItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="assets:ProjectAssetItemViewModel">
+                                    <assetsView:ProjectAssetItemView />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

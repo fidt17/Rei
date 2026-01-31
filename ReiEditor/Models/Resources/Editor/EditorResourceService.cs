@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Models.Resources;
 
 namespace ReiEditor.Models.Resources.Editor;
 

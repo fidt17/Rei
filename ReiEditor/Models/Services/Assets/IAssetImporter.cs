@@ -9,4 +9,5 @@ public interface IAssetImporter
     event Action ImportedAssetsEvent;
     
     Task<List<AssetInfo>> ReimportAll();
+    Task<List<AssetInfo>> ReimportPaths(IEnumerable<string> paths);
 }

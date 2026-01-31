@@ -9,7 +9,6 @@ using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
-using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -20,12 +19,14 @@ public class BehaviourRegistry : IBehaviourRegistry
     public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours => _behaviours;
     
     private int _maxBehaviourId = -1;
+    private readonly object _behaviourIdLock = new();
     
     private readonly Dictionary<int, BehaviourAssetInfo> _behaviours = new();
     private readonly Dictionary<string, BehaviourAssetInfo> _behavioursByName = new();
     
-    private readonly BehaviourFileUtility _utility;
+    private readonly IBehaviourFileUtility _utility;
     private readonly IAssetCreator _assetCreator;
+    private readonly IMetaFilesService _metaFilesService;
     private readonly BehaviourRegistrySourceGenerator _behaviourRegistrySourceGenerator;
     private readonly ILogger<BehaviourRegistry> _logger;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
@@ -38,11 +39,12 @@ public class BehaviourRegistry : IBehaviourRegistry
         IAssetCreator assetCreator,
         IResourceService resourceService,
         ILogger<BehaviourRegistry> logger,
-        IEngineSettingsProvider engineSettingsProvider,
         ISerializableObjectsRegistry serializableObjectsRegistry,
         ISolutionGenerator solutionGenerator,
         IActiveProjectService activeProjectService, 
-        SourceFilesUtility sourceFilesUtility)
+        SourceFilesUtility sourceFilesUtility,
+        IBehaviourFileUtility behaviourFileUtility, 
+        IMetaFilesService metaFilesService)
     {
         _assetCreator = assetCreator;
         _resourceService = resourceService;
@@ -51,7 +53,8 @@ public class BehaviourRegistry : IBehaviourRegistry
         _solutionGenerator = solutionGenerator;
         _activeProjectService = activeProjectService;
         _sourceFilesUtility = sourceFilesUtility;
-        _utility = new BehaviourFileUtility(resourceService, engineSettingsProvider);
+        _utility = behaviourFileUtility;
+        _metaFilesService = metaFilesService;
         _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService, serializableObjectsRegistry);
     }
 
@@ -61,6 +64,15 @@ public class BehaviourRegistry : IBehaviourRegistry
     {
         if (_behavioursByName.TryGetValue(name, out var value)) return value.BehaviourId;
         return null;
+    }
+
+    public int AllocateBehaviourId()
+    {
+        lock (_behaviourIdLock)
+        {
+            _maxBehaviourId++;
+            return _maxBehaviourId;
+        }
     }
 
     public async Task RefreshBehaviours()
@@ -156,7 +168,8 @@ public class BehaviourRegistry : IBehaviourRegistry
     {
         var meta = new AssetMeta(_assetCreator.AllocateAssetId());
         meta.AddData(BehaviourMeta.Key, behaviourMeta);
-        return _assetCreator.CreateMetaFile(meta, behaviourFile.MetaPath.Replace(FileExtensions.META, ""));
+        
+        return _metaFilesService.CreateMetaFile(meta, behaviourFile.MetaPath.Replace(FileExtensions.META, ""));
     }
 
     private async Task UpdateSolutionFile()

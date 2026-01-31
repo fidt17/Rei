@@ -24,4 +24,16 @@ public class WindowsFileExplorerProvider : IFileExplorerProvider
 			_logger.LogException(e);
 		}
 	}
+
+	public void OpenAndSelect(string path)
+	{
+		try
+		{
+			Process.Start("explorer.exe", $@"/select,""{path}""");
+		}
+		catch (Exception e)
+		{
+			_logger.LogException(e);
+		}
+	}
 }

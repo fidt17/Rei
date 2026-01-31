@@ -11,7 +11,7 @@ using ReiEditor.Models.Services.FileSystem;
 
 namespace ReiEditor.Models.Services.Assets.Scripting;
 
-public class BehaviourFileUtility
+public class BehaviourFileUtility : IBehaviourFileUtility
 {
     public class BehaviourPathData
     {
@@ -83,7 +83,7 @@ public class BehaviourFileUtility
         {
             var meta = await _resourceService.TryLoad<AssetMeta>(metaFile);
             if (meta == null) continue;
-            if (!meta.TryGetData(BehaviourMeta.Key, out BehaviourMeta _)) continue;
+            if (!meta.TryGetData(BehaviourMeta.Key, out BehaviourMeta? _)) continue;
             
             metas.Add(new ObjectFile<AssetMeta>(meta, metaFile));
         }
@@ -100,5 +100,13 @@ public class BehaviourFileUtility
         name = regex.Match(text).Groups[1].Value;
 
         return true;
+    }
+
+    public bool IsBehaviourFile(string path)
+    {
+        if (!File.Exists(path)) return false;
+
+        var fileContents = File.ReadAllText(path);
+        return TryGetBehaviourNameFrom(fileContents, out _);
     }
 }

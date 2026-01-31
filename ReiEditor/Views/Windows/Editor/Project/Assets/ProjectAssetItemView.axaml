@@ -1,0 +1,79 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:assets="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.Assets"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Project.Assets.ProjectAssetItemView"
+             x:DataType="assets:ProjectAssetItemViewModel">
+    <Design.DataContext>
+        <assets:ProjectAssetItemViewModel />
+    </Design.DataContext>
+
+    <Border x:Name="RootBorder"
+            Padding="6,3"
+            Classes.IsSelected="{Binding Selected.Value}"
+            Cursor="Hand"
+            Focusable="True"
+            PointerPressed="RootBorder_OnPointerPressed"
+            DoubleTapped="RootBorder_OnDoubleTapped"
+            KeyDown="RootBorder_OnKeyDown">
+        <Border.Styles>
+            <Style Selector="Border#RootBorder">
+                <Setter Property="Background" Value="{StaticResource Dark_2}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{StaticResource Dark_2}" />
+            </Style>
+
+            <Style Selector="Border#RootBorder:pointerover">
+                <Setter Property="Background" Value="{StaticResource Dark_3}" />
+            </Style>
+
+            <Style Selector="Border#RootBorder.IsSelected">
+                <Setter Property="Background" Value="{StaticResource Dark_4}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+            </Style>
+        </Border.Styles>
+
+        <Grid ColumnDefinitions="16, *" VerticalAlignment="Center">
+            <Image Width="12"
+                   Height="12"
+                   Source="{Binding Icon}"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center" />
+            <Grid Grid.Column="1" HorizontalAlignment="Stretch">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Margin="6,0,0,0"
+                    Text="{Binding Name.Value}"
+                    FontSize="14" />
+
+                <TextBox
+                    x:Name="NameTextBox"
+                    KeyDown="NameTextBox_OnKeyDown"
+                    IsVisible="{Binding IsFocused, RelativeSource={RelativeSource Self}}"
+                    Text="{Binding RenameValue.Value}"
+                    Background="{StaticResource Gray_0}"
+                    CaretBrush="{StaticResource White}"
+                    SelectionBrush="{StaticResource Gray_2}"
+                    Padding="4,1,0,1"
+                    MinHeight="14"
+                    FontSize="14">
+                    <TextBox.Styles>
+                        <Style Selector="TextBox:focus">
+                            <Setter Property="Foreground" Value="{StaticResource White}" />
+                        </Style>
+                        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+                            <Setter Property="Background" Value="{StaticResource Gray_0}" />
+                        </Style>
+                    </TextBox.Styles>
+                </TextBox>
+
+                <contextMenu:ContextMenuButton
+                    IsVisible="{Binding !IsFocused, ElementName=NameTextBox}"
+                    ContextMenuData="{Binding ContextMenu}" />
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

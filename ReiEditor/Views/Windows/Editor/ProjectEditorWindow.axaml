@@ -83,7 +83,7 @@
 
             <!-- Footer -->
             <Grid 
-                Height="280"
+                Height="320"
                 Grid.Row="1"
                 Grid.Column="0"
                 Grid.ColumnSpan="2"

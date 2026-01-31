@@ -114,6 +114,28 @@ public class EditorPreferencesService : IEditorPreferencesService
         SavePreferences(_preferences);
     }
 
+    public string GetWindowContainerActiveTab(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return "";
+        
+        return _preferences.WindowContainerActiveTabs.TryGetValue(tag, out var value) ? value : "";
+    }
+
+    public void SetWindowContainerActiveTab(string tag, string tabName)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        
+        tabName ??= "";
+        if (_preferences.WindowContainerActiveTabs.TryGetValue(tag, out var current) &&
+            string.Equals(current, tabName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _preferences.WindowContainerActiveTabs[tag] = tabName;
+        SavePreferences(_preferences);
+    }
+
     private async Task<EditorPreferences> LoadPreferences()
     {
         var preferencesFile = await _storageService.ReadFromFile(PREFERENCES_FILE_NAME);

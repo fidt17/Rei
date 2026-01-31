@@ -9,7 +9,12 @@ public interface IAssetRegistry
     bool TryGetByPath(string fullPath, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo);
     bool TryGetLoadedAsset(string assetId, [NotNullWhen(returnValue: true)] out Asset? asset);
 
-    void RegisterAssets(IEnumerable<AssetInfo> assets);
+    void UpdateRegistry(IEnumerable<AssetInfo> assets);
+    void RegisterNewAssets(IEnumerable<AssetInfo> assets);
+
+    void UpdateRegistryPath(string oldPath, string newPath);
+    void UnregisterByPath(string fullPath);
+    void UnregisterUnderDirectory(string directoryPath);
     
     IEnumerable<Asset> GetDirtyAssets();
     IEnumerable<AssetInfo> GetAllAssets();

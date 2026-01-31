@@ -21,4 +21,7 @@ public interface IEditorPreferencesService : IAsyncInitializable
 
     ViewportGridSettings GetGridSettings();
     void SetGridSettings(ViewportGridSettings settings);
+
+    string GetWindowContainerActiveTab(string tag);
+    void SetWindowContainerActiveTab(string tag, string tabName);
 }

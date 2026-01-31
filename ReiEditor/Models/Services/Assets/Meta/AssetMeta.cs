@@ -18,6 +18,16 @@ public class AssetMeta
         AssetId = assetId;
     }
 
+    public AssetMeta CreateCopyWithId(string newId)
+    {
+        var meta = new AssetMeta(newId);
+        foreach (var entry in _data)
+        {
+            meta._data[entry.Key] = entry.Value;
+        }
+        return meta;
+    }
+
     public void AddData<T>(string key, T data)
     {
         _data[key] = data;

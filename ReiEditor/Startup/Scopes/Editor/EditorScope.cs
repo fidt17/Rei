@@ -8,6 +8,8 @@ using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Assets.Operations;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Startup.Common;
@@ -15,6 +17,7 @@ using ReiEditor.Startup.EntryPoints;
 using ReiEditor.Startup.Scopes.Editor.Modules;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor;
+using ReiEditor.ViewModels.Windows.Editor.Project;
 using ReiEditor.ViewModels.Windows.Editor.Commands;
 
 namespace ReiEditor.Startup.Scopes.Editor;
@@ -38,10 +41,13 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();
         b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
+        b.RegisterSingleton<MetaFilesService>().As<IMetaFilesService>();
         b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
+        b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();
         b.RegisterSingleton<EngineResourcesImporter>().As<IEngineResourcesImporter>();
         b.RegisterSingleton<AssetsService>().As<IAssetsService>();
         b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();
+        b.RegisterSingleton<BehaviourFileUtility>().As<IBehaviourFileUtility>();
         b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
         b.RegisterSingleton<SerializableObjectsRegistry>().As<ISerializableObjectsRegistry>();
         b.RegisterSingleton<SourceFilesUtility>();
@@ -63,5 +69,6 @@ public class EditorScope : BaseLifetimeScope
     private void ConfigureViewModules(ContainerBuilder b)
     {
         b.RegisterType<ProjectEditorWindowViewModel>();
+        b.RegisterType<ProjectWindowViewModel>();
     }
 }

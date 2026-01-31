@@ -1,6 +1,7 @@
-using Avalonia.Threading;
+﻿using Avalonia.Threading;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
+using ReiEditor.Models.Services.Preferences;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
@@ -9,9 +10,9 @@ using ReiEditor.ViewModels.Windows.Editor.Console;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 using ReiEditor.ViewModels.Windows.Editor.Monitor;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
+using ReiEditor.ViewModels.Windows.Editor.Project;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
 using ReiEditor.ViewModels.Windows.Editor.WindowTabs;
-using ReiEditor.ViewModels.Windows.Editor.Demo;
 
 namespace ReiEditor.ViewModels.Windows.Editor;
 
@@ -25,11 +26,11 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public PlaymodePanelViewModel PlaymodePanel { get; } = new();
     public ConsoleEditorWindowViewModel Console { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
-    public WindowContainerViewModel FooterWindowContainer { get; } = new();
+    public WindowContainerViewModel FooterWindowContainer { get; private set; } = new();
 
     public HierarchyWindowViewModel Hierarchy { get; } = new();
     public MonitorWindowViewModel Monitor { get; } = new();
-    public DemoWindowViewModel DemoWindow { get; } = new();
+    public ProjectWindowViewModel ProjectWindow { get; } = new();
 
     private readonly ISceneManagementService _sceneManagementService;
 
@@ -42,6 +43,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 
     public ProjectEditorWindowViewModel(
         ISceneManagementService sceneManagementService,
+        IEditorPreferencesService editorPreferencesService,
         IFactory<PlaymodePanelViewModel> playmodePanel,
         IFactory<ConsoleEditorWindowViewModel> console,
         IFactory<BuildProjectCommand> buildProjectCommandFactory,
@@ -50,7 +52,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         IFactory<StatusBarViewModel> statusBarViewModelFactory,
         IFactory<HierarchyWindowViewModel> hierarchyFactory,
         IFactory<SaveProjectCommand> saveProjectCommand,
-        IFactory<MonitorWindowViewModel> monitorWindowFactory)
+        IFactory<MonitorWindowViewModel> monitorWindowFactory,
+        IFactory<ProjectWindowViewModel> projectWindowFactory)
     {
         _sceneManagementService = sceneManagementService;
         SaveProjectCommand = saveProjectCommand.CreateInstance();
@@ -63,8 +66,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         StatusBar = statusBarViewModelFactory.CreateInstance();
         Hierarchy = hierarchyFactory.CreateInstance(new Hierarchy<GameEntity>(""));
         Monitor = monitorWindowFactory.CreateInstance();
-        DemoWindow = new DemoWindowViewModel();
-        FooterWindowContainer = new WindowContainerViewModel();
+        ProjectWindow = projectWindowFactory.CreateInstance();
+        FooterWindowContainer = new WindowContainerViewModel(editorPreferencesService, "FooterWindow");
         InitializeConsoleTabs();
         
         _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
@@ -73,7 +76,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     private void InitializeConsoleTabs()
     {
         FooterWindowContainer.AddTab("Console", Console, new ConsoleEditorWindowHeaderViewModel(Console));
-        FooterWindowContainer.AddTab("Demo", DemoWindow);
+        FooterWindowContainer.AddTab("Project", ProjectWindow);
     }
 
     public override void Dispose()
@@ -85,7 +88,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         OpenSettingsCommand.Dispose();
         StatusBar.Dispose();
         Hierarchy.Dispose();
-        DemoWindow.Dispose();
+        ProjectWindow.Dispose();
         FooterWindowContainer.Dispose();
         
         _sceneManagementService.CurrentScene.Unsubscribe(HandleCurrentSceneChangedEvent);

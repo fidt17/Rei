@@ -9,6 +9,7 @@ using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Models.Resources;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Build.Assets;
@@ -48,7 +49,9 @@ public class AssetBuilder : IAssetBuilder
         Directory.CreateDirectory(Path.GetDirectoryName(assetsBinPath)!);
         await using (File.Create(assetsBinPath)) { }
 
-        var assets = _assetRegistry.GetAllAssets().OrderBy(asset => asset.Meta.AssetId);
+        var assets = _assetRegistry.GetAllAssets()
+            .Where(ShouldBuild)
+            .OrderBy(asset => asset.Meta.AssetId);
         
         var buildResult = _assetBuildCachePipeline.BuildAssets(assets, buildFolder, assetsBinPath);
         LogBuildSummary(buildResult.Report);
@@ -94,4 +97,22 @@ public class AssetBuilder : IAssetBuilder
         _logger.Log(msg.ToString());
     }
 
+    private static bool ShouldBuild(AssetInfo assetInfo) => ShouldBuildPath(assetInfo.FullPath);
+
+    private static bool ShouldBuildPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        
+        var extension = Path.GetExtension(path);
+        return extension switch
+        {
+            FileExtensions.META => false,
+            FileExtensions.H => false,
+            FileExtensions.CPP => false,
+            FileExtensions.VS_PROJECT => false,
+            FileExtensions.VS_PROJECT_USER => false,
+            FileExtensions.VS_SOLUTION => false,
+            _ => true
+        };
+    }
 }

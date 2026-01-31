@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -19,38 +20,44 @@ public class AssetImporter : IAssetImporter
     private readonly ILogger<AssetImporter> _logger;
     private readonly IResourceService _resourceService;
     private readonly IAssetCreator _assetCreator;
+    private readonly IMetaFilesService _metaFilesService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetsService _assetsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly IBehaviourFileUtility _behaviourFileUtility;
     private readonly ISerializer _serializer;
 
     public AssetImporter(
         ILogger<AssetImporter> logger,
         IResourceService resourceService,
         IAssetCreator assetCreator,
+        IMetaFilesService metaFilesService,
         IBehaviourRegistry behaviourRegistry, 
         IAssetRegistry assetRegistry, 
         IBehaviourComponentsService behaviourComponentsService, 
+        IBehaviourFileUtility behaviourFileUtility,
         ISerializer serializer, 
         IAssetsService assetsService)
     {
         _logger = logger;
         _resourceService = resourceService;
         _assetCreator = assetCreator;
+        _metaFilesService = metaFilesService;
         _behaviourRegistry = behaviourRegistry;
         _assetRegistry = assetRegistry;
         _behaviourComponentsService = behaviourComponentsService;
+        _behaviourFileUtility = behaviourFileUtility;
         _serializer = serializer;
         _assetsService = assetsService;
     }
 
     public async Task<List<AssetInfo>> ReimportAll()
     {
-        await DeleteInvalidMetaFiles();
+        await _metaFilesService.DeleteInvalidMetaFiles();
         
         var assets = await ImportAssets();
-        _assetRegistry.RegisterAssets(assets);
+        _assetRegistry.UpdateRegistry(assets);
         
         await _behaviourRegistry.RefreshBehaviours();
         await ImportScenes();
@@ -60,29 +67,61 @@ public class AssetImporter : IAssetImporter
         return assets;
     }
 
-    private async Task DeleteInvalidMetaFiles()
+    public async Task<List<AssetInfo>> ReimportPaths(IEnumerable<string> paths)
     {
-        _logger.Log("Locating invalid meta files...");
-        
-        var deletedCounter = 0;
-        foreach (var file in Directory.EnumerateFiles(_resourceService.GetProjectPath(), $"*{FileExtensions.META}", SearchOption.AllDirectories))
+        var targetFiles = FileExtensions.FindAllFilesIn(paths);
+        if (targetFiles.Count == 0) return new List<AssetInfo>();
+
+        var importedAssets = new List<AssetInfo>();
+        foreach (var assetPath in targetFiles)
         {
             try
             {
-                var assetPath = file.Replace(FileExtensions.META, "");
-                if (File.Exists(assetPath) && await _resourceService.TryLoad<AssetMeta>(file) != null) continue;
-                
-                deletedCounter++;
-                File.Delete(file);
+                if (!AssetImportUtils.IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) continue;
+
+                var metaFilePath = assetPath + FileExtensions.META;
+                AssetMeta? meta;
+
+                if (File.Exists(metaFilePath))
+                {
+                    meta = await _resourceService.TryLoad<AssetMeta>(metaFilePath);
+                    if (meta is null)
+                    {
+                        File.Delete(metaFilePath);
+                        meta = new AssetMeta(_assetCreator.AllocateAssetId());
+                        await _metaFilesService.CreateMetaFile(meta, assetPath);
+                    }
+                }
+                else
+                {
+                    meta = new AssetMeta(_assetCreator.AllocateAssetId());
+                    await _metaFilesService.CreateMetaFile(meta, assetPath);
+                }
+
+                importedAssets.Add(new AssetInfo(meta, assetPath));
             }
             catch (Exception e)
             {
                 _logger.LogException(e);
             }
         }
-        
-        _logger.Log($"Total invalid meta files deleted: {deletedCounter}");
+
+        _assetRegistry.RegisterNewAssets(importedAssets);
+
+        if (targetFiles.Any(f => Path.GetExtension(f) == FileExtensions.SCENE))
+        {
+            await ImportScenes();
+        }
+
+        if (targetFiles.Any(_behaviourFileUtility.IsBehaviourFile))
+        {
+            await _behaviourRegistry.RefreshBehaviours();
+        }
+
+        ImportedAssetsEvent?.Invoke();
+        return importedAssets;
     }
+
 
     private async Task<List<AssetInfo>> ImportAssets()
     {
@@ -94,7 +133,7 @@ public class AssetImporter : IAssetImporter
         {
             try
             {
-                if (!IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) continue;
+                if (!AssetImportUtils.IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) continue;
                 
                 var metaFilePath = assetPath + FileExtensions.META;
                 var metaFileExists = File.Exists(metaFilePath);
@@ -102,7 +141,7 @@ public class AssetImporter : IAssetImporter
                 if (!metaFileExists)
                 {
                     var meta = new AssetMeta(_assetCreator.AllocateAssetId());
-                    await _assetCreator.CreateMetaFile(meta, assetPath);
+                    await _metaFilesService.CreateMetaFile(meta, assetPath);
                     importedAssets.Add(new AssetInfo(meta, assetPath));
                 }
                 else
@@ -119,15 +158,6 @@ public class AssetImporter : IAssetImporter
         }
 
         return importedAssets;
-    }
-
-    private bool IsValidAssetExtensionForMetaFile(string extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension)) return false;
-        return extension is not (
-            FileExtensions.META or 
-            FileExtensions.CPP or 
-            FileExtensions.VS_PROJECT);
     }
 
     private async Task ImportScenes()

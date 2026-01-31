@@ -1,0 +1,73 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
+             xmlns:converters="clr-namespace:ReiEditor.Views.Converters"
+             xmlns:directories="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.Directories"
+             xmlns:directoriesView="clr-namespace:ReiEditor.Views.Windows.Editor.Project.Directories"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Project.Directories.ProjectDirectoryNode"
+             x:DataType="directories:ProjectDirectoryNodeViewModel">
+    <Design.DataContext>
+        <directories:ProjectDirectoryNodeViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <converters:NotEmptyCollectionConverter x:Key="NotEmptyCollectionConverter" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid RowDefinitions="Auto, Auto">
+            <Border
+                x:Name="RootBorder"
+                Padding="4"
+                Classes.IsSelected="{Binding Selected.Value}"
+                Focusable="True"
+                Cursor="Hand"
+                PointerPressed="RootBorder_OnPointerPressed">
+                <Border.Styles>
+                    <Style Selector="Border#RootBorder">
+                        <Setter Property="Background" Value="{StaticResource Dark_2}" />
+                        <Setter Property="BorderThickness" Value="1" />
+                        <Setter Property="BorderBrush" Value="{StaticResource Dark_2}" />
+                    </Style>
+
+                    <Style Selector="Border#RootBorder:pointerover">
+                        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+                    </Style>
+
+                    <Style Selector="Border#RootBorder.IsSelected">
+                        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+                        <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+                    </Style>
+                </Border.Styles>
+
+                <Grid ColumnDefinitions="20, *">
+                    <buttons:HorizontalExpandToggle
+                        IsVisible="{Binding ChildNodes.Count, Converter={StaticResource NotEmptyCollectionConverter}}"
+                        IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
+
+                    <TextBlock
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Margin="4,0,0,0"
+                        Text="{Binding Name.Value}"
+                        FontSize="14" />
+                </Grid>
+            </Border>
+
+            <ItemsControl
+                Margin="10,0,0,0"
+                IsVisible="{Binding Expanded.Value}"
+                Grid.Row="1"
+                ItemsSource="{Binding ChildNodes}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="directories:ProjectDirectoryNodeViewModel">
+                        <directoriesView:ProjectDirectoryNode />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Grid>
+</UserControl>

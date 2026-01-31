@@ -10,5 +10,6 @@ public interface IBehaviourRegistry
 
     bool TryGetById(int id, [NotNullWhen(returnValue: true)] out BehaviourAssetInfo? behaviour);
     int? GetIdByName(string name);
+    int AllocateBehaviourId();
     Task RefreshBehaviours();
 }

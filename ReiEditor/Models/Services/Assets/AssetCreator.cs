@@ -1,10 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
-using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
@@ -15,14 +13,21 @@ public class AssetCreator : IAssetCreator
     private readonly IResourceService _resourceService;
     private readonly ISerializer _serializer;
     private readonly IAssetRegistry _assetRegistry;
+    private readonly IMetaFilesService _metaFilesService;
     private readonly ILogger<AssetCreator> _logger;
 
-    public AssetCreator(IResourceService resourceService, ISerializer serializer, ILogger<AssetCreator> logger, IAssetRegistry assetRegistry)
+    public AssetCreator(
+        IResourceService resourceService,
+        ISerializer serializer,
+        ILogger<AssetCreator> logger,
+        IAssetRegistry assetRegistry,
+        IMetaFilesService metaFilesService)
     {
         _resourceService = resourceService;
         _serializer = serializer;
         _logger = logger;
         _assetRegistry = assetRegistry;
+        _metaFilesService = metaFilesService;
     }
 
     public string AllocateAssetId()
@@ -48,7 +53,7 @@ public class AssetCreator : IAssetCreator
             if (!await _resourceService.Write(data, assetPath)) throw new Exception("Asset creation failed");
 
             var meta = new AssetMeta(id);
-            await CreateMetaFile(meta, assetPath);
+            await _metaFilesService.CreateMetaFile(meta, assetPath);
 			
             _assetRegistry.AddToLoadedAssets(new AssetInfo(meta, assetPath), asset);
 			
@@ -60,14 +65,5 @@ public class AssetCreator : IAssetCreator
         }
 		
         return false;
-    }
-
-    public async Task<ObjectFile<AssetMeta>> CreateMetaFile(AssetMeta meta, string assetPath)
-    {
-        var metaPath = assetPath + FileExtensions.META;
-        var didCreate = await _resourceService.Write(_serializer.Serialize(meta), metaPath);
-        if (!didCreate) throw new Exception("Asset Meta file creation failed");
-
-        return new ObjectFile<AssetMeta>(meta, metaPath);
     }
 }

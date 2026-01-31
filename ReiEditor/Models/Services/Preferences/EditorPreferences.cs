@@ -11,4 +11,5 @@ public class EditorPreferences
 
 	public ConsolePreferences ConsolePreferences { get; set; } = new();
 	public ViewportGridSettings GridSettings { get; set; } = new();
+	public Dictionary<string, string> WindowContainerActiveTabs { get; set; } = new();
 }

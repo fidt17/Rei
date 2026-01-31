@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using ReiEditor.Models.EditorApp.ViewportGrid;
+﻿using ReiEditor.Models.EditorApp.ViewportGrid;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.ViewModels.Common;
 

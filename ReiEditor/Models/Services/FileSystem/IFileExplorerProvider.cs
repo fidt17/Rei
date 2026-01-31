@@ -3,4 +3,5 @@
 public interface IFileExplorerProvider
 {
 	void OpenDirectory(string directoryPath);
+	void OpenAndSelect(string path);
 }
