@@ -14,7 +14,7 @@ public class ProjectAssetItemViewModel : BaseViewModel
 {
     public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; }
-    public ICommand ConfirmRenameCommand { get; }
+    public RelayCommand ConfirmRenameCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand DuplicateCommand { get; }
     public ICommand MoveCommand { get; }
@@ -54,7 +54,7 @@ public class ProjectAssetItemViewModel : BaseViewModel
         
         SelectCommand = ReactiveCommand.Create(Select);
         StartRenameCommand = new RelayCommand(StartRename);
-        ConfirmRenameCommand = ReactiveCommand.Create<string>(newName => renameAction(this, newName));
+        ConfirmRenameCommand = new RelayCommand(() => ConfirmRename(renameAction));
         DeleteCommand = ReactiveCommand.Create(() => deleteAction(this));
         DuplicateCommand = ReactiveCommand.Create(() => duplicateAction(this));
         MoveCommand = ReactiveCommand.Create(() => moveAction(this));
@@ -67,6 +67,13 @@ public class ProjectAssetItemViewModel : BaseViewModel
     public void Deselect() => Selected.Value = false;
 
     private void StartRename() => RenameValue.Value = Name.Value;
+
+    private void ConfirmRename(Action<ProjectAssetItemViewModel, string> renameAction)
+    {
+        var newName = RenameValue.Value;
+        if (string.IsNullOrWhiteSpace(newName)) return;
+        renameAction(this, newName);
+    }
 
     private void SetupContextMenu(IFileExplorerProvider fileExplorerProvider)
     {

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -11,11 +12,14 @@ namespace ReiEditor.Views.Windows.Editor.Project;
 
 public partial class ProjectWindowView : UserControl
 {
+    private ProjectWindowViewModel? _vm;
+
     public ProjectWindowView()
     {
         InitializeComponent();
         ActiveItemsDropTarget.AddHandler(DragDrop.DragEnterEvent, ActiveItemsDropTarget_OnDragEnter);
         ActiveItemsDropTarget.AddHandler(DragDrop.DropEvent, ActiveItemsDropTarget_OnDrop);
+        DataContextChanged += HandleDataContextChanged;
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -23,6 +27,28 @@ public partial class ProjectWindowView : UserControl
         base.OnUnloaded(e);
         ActiveItemsDropTarget.RemoveHandler(DragDrop.DragEnterEvent, ActiveItemsDropTarget_OnDragEnter);
         ActiveItemsDropTarget.RemoveHandler(DragDrop.DropEvent, ActiveItemsDropTarget_OnDrop);
+        UnsubscribeFromContextMenu();
+    }
+
+    private void HandleDataContextChanged(object? sender, System.EventArgs e)
+    {
+        UnsubscribeFromContextMenu();
+        _vm = DataContext as ProjectWindowViewModel;
+        if (_vm == null) return;
+
+        _vm.ActiveFolderContextMenu.AnyCommandExecutedEvent += HandleContextMenuCommandExecuted;
+    }
+
+    private void UnsubscribeFromContextMenu()
+    {
+        if (_vm == null) return;
+        _vm.ActiveFolderContextMenu.AnyCommandExecutedEvent -= HandleContextMenuCommandExecuted;
+    }
+
+    private void HandleContextMenuCommandExecuted()
+    {
+        var flyout = FlyoutBase.GetAttachedFlyout(ActiveItemsDropTarget);
+        flyout?.Hide();
     }
 
     private void ActiveItemsDropTarget_OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -117,3 +143,4 @@ public partial class ProjectWindowView : UserControl
         return false;
     }
 }
+

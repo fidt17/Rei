@@ -91,12 +91,23 @@ public partial class ProjectAssetItemView : UserControl
     {
         if (e.Key == Key.Escape)
         {
+            NameTextBox.IsVisible = false;
             RootBorder.Focus();
         }
         else if (e.Key == Key.Enter)
         {
-            _vm?.ConfirmRenameCommand.Execute(NameTextBox.Text);
+            if (_vm != null)
+            {
+                _vm.RenameValue.Value = NameTextBox.Text ?? "";
+            }
+            _vm?.ConfirmRenameCommand.Execute(null);
+            NameTextBox.IsVisible = false;
             RootBorder.Focus();
         }
+    }
+
+    private void NameTextBox_OnLostFocus(object? sender, RoutedEventArgs e)
+    {
+        NameTextBox.IsVisible = false;
     }
 }

@@ -17,7 +17,14 @@ public static class PathExtensions
 
     public static bool IsUnderDirectory(this string path, string directory)
     {
-        return Path.GetFullPath(path).StartsWith(Path.GetFullPath(directory), StringComparison.OrdinalIgnoreCase);
+        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullDirectory = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        if (!fullPath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase)) return false;
+        if (fullPath.Length == fullDirectory.Length) return true;
+
+        var nextChar = fullPath[fullDirectory.Length];
+        return nextChar == Path.DirectorySeparatorChar || nextChar == Path.AltDirectorySeparatorChar;
     }
     
     public static bool PathExists(string path, bool isDirectory)

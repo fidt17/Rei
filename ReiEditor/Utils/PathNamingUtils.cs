@@ -39,22 +39,27 @@ public static class PathNamingUtils
 
     public static string GetUniqueDirectoryPath(string parentDirectory, string baseName)
     {
-        return GetUniquePath(parentDirectory, baseName, "", Directory.Exists);
+        return GetUniquePath(parentDirectory, baseName, "", Directory.Exists, File.Exists);
     }
 
     public static string GetUniqueFilePath(string parentDirectory, string fileName)
     {
         var baseName = Path.GetFileNameWithoutExtension(fileName);
         var extension = Path.GetExtension(fileName);
-        return GetUniquePath(parentDirectory, baseName, extension, File.Exists);
+        return GetUniquePath(parentDirectory, baseName, extension, File.Exists, Directory.Exists);
     }
 
-    private static string GetUniquePath(string parentDirectory, string baseName, string extension, Func<string, bool> exists)
+    private static string GetUniquePath(
+        string parentDirectory,
+        string baseName,
+        string extension,
+        Func<string, bool> primaryExists,
+        Func<string, bool> secondaryExists)
     {
         var candidatePath = Path.Combine(parentDirectory, baseName + extension);
         var counter = 2;
 
-        while (exists(candidatePath))
+        while (primaryExists(candidatePath) || secondaryExists(candidatePath))
         {
             candidatePath = Path.Combine(parentDirectory, $"{baseName} {counter}{extension}");
             counter++;

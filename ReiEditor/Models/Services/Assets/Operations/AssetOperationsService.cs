@@ -43,29 +43,58 @@ public class AssetOperationsService : IAssetOperationsService
     {
         return RunWithErrorHandling(() =>
         {
-            if (!File.Exists(assetPath)) return Task.CompletedTask;
+            _logger.Log($"Rename requested. Path: {assetPath}. New name: {newName}");
+            var sourceIsFile = File.Exists(assetPath);
+            var sourceIsDirectory = Directory.Exists(assetPath);
+            if (!sourceIsFile && !sourceIsDirectory)
+            {
+                _logger.LogWarning($"Rename skipped: source path does not exist: {assetPath}");
+                return Task.CompletedTask;
+            }
             
             var trimmed = newName.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) return Task.CompletedTask;
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                _logger.LogWarning("Rename skipped: new name is empty.");
+                return Task.CompletedTask;
+            }
 
             var directoryName = Path.GetDirectoryName(assetPath);
-            if (string.IsNullOrWhiteSpace(directoryName)) return Task.CompletedTask;
+            if (string.IsNullOrWhiteSpace(directoryName))
+            {
+                _logger.LogWarning($"Rename skipped: could not resolve directory for {assetPath}");
+                return Task.CompletedTask;
+            }
 
             var targetPath = Path.Combine(directoryName, trimmed);
-            if (assetPath.PathEquals(targetPath)) return Task.CompletedTask;
-
-            if (Directory.Exists(assetPath))
+            if (assetPath.PathEquals(targetPath))
             {
-                if (Directory.Exists(targetPath)) return Task.CompletedTask;
+                _logger.Log("Rename skipped: target path is the same as source.");
+                return Task.CompletedTask;
+            }
+
+            if (sourceIsDirectory)
+            {
+                if (Directory.Exists(targetPath))
+                {
+                    _logger.LogWarning($"Rename skipped: target directory already exists at {targetPath}");
+                    return Task.CompletedTask;
+                }
                 
                 Directory.Move(assetPath, targetPath);
+                _logger.Log($"Renamed directory: {assetPath} -> {targetPath}");
             }
             else
             {
-                if (File.Exists(targetPath)) return Task.CompletedTask;
+                if (File.Exists(targetPath))
+                {
+                    _logger.LogWarning($"Rename skipped: target file already exists at {targetPath}");
+                    return Task.CompletedTask;
+                }
                 
                 File.Move(assetPath, targetPath);
                 _metaFilesService.MoveMetaFile(assetPath, targetPath);
+                _logger.Log($"Renamed file: {assetPath} -> {targetPath}");
             }
             
             _assetRegistry.UpdateRegistryPath(assetPath, targetPath);
