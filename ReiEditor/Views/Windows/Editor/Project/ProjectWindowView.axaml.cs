@@ -19,6 +19,7 @@ public partial class ProjectWindowView : UserControl
         InitializeComponent();
         ActiveItemsDropTarget.AddHandler(DragDrop.DragEnterEvent, ActiveItemsDropTarget_OnDragEnter);
         ActiveItemsDropTarget.AddHandler(DragDrop.DropEvent, ActiveItemsDropTarget_OnDrop);
+        AddHandler(KeyDownEvent, ProjectWindowView_OnKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += HandleDataContextChanged;
     }
 
@@ -79,6 +80,14 @@ public partial class ProjectWindowView : UserControl
         if (DataContext is not ProjectWindowViewModel vm) return;
 
         vm.ClearAssetSelection();
+        e.Handled = true;
+    }
+
+    private void ProjectWindowView_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F || e.KeyModifiers != KeyModifiers.Control) return;
+
+        SearchFieldControl.FocusInput();
         e.Handled = true;
     }
 

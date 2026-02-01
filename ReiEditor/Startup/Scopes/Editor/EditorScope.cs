@@ -10,6 +10,7 @@ using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Startup.Common;
@@ -44,6 +45,7 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<MetaFilesService>().As<IMetaFilesService>();
         b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
         b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();
+        b.RegisterSingleton<AssetSearchService>().As<IAssetSearchService>();
         b.RegisterSingleton<EngineResourcesImporter>().As<IEngineResourcesImporter>();
         b.RegisterSingleton<AssetsService>().As<IAssetsService>();
         b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();

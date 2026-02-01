@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:ReiEditor.ViewModels.Controls"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Controls.SearchField.SearchFieldView"
+             x:DataType="viewModels:SearchFieldViewModel">
+    <Border Padding="4,2">
+        <Grid VerticalAlignment="Center">
+            <TextBox Width="200"
+                     Height="22"
+                     x:Name="SearchTextBox"
+                     Padding="5,0,20,0"
+                     VerticalContentAlignment="Center"
+                     GotFocus="SearchTextBox_OnGotFocus"
+                     LostFocus="SearchTextBox_OnLostFocus"
+                     KeyDown="SearchTextBox_OnKeyDown"
+                     Text="{Binding Query.Value, Mode=TwoWay}" />
+            <TextBlock Margin="8,0,0,0"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource Gray_2}"
+                       IsHitTestVisible="False"
+                       IsVisible="{Binding ShowPlaceholder.Value}"
+                       Text="Search" />
+            <Button Classes="Clear"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Command="{Binding ClearCommand}"
+                    IsVisible="{Binding HasQuery.Value}"
+                    IsEnabled="{Binding HasQuery.Value}"
+                    Margin="0,0,6,0">
+                <TextBlock Text="x" />
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

@@ -9,6 +9,7 @@
              xmlns:assets="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.Assets"
              xmlns:assetsView="clr-namespace:ReiEditor.Views.Windows.Editor.Project.Assets"
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             xmlns:search="clr-namespace:ReiEditor.Views.Controls.SearchField"
              mc:Ignorable="d"
              d:DesignWidth="600" d:DesignHeight="300"
              x:Class="ReiEditor.Views.Windows.Editor.Project.ProjectWindowView"
@@ -35,24 +36,29 @@
 
         <Border Grid.Column="1" Classes="WindowContent" Margin="4,4,0,0">
             <Grid RowDefinitions="Auto, *">
-                <ItemsControl Margin="6,4,6,2"
-                              ItemsSource="{Binding PathSegments}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="path:ProjectPathSegmentViewModel">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding SeparatorText}" Foreground="{StaticResource Gray_2}" />
-                                <Button Classes="Clear" Command="{Binding NavigateCommand}">
-                                    <TextBlock Text="{Binding Name}" />
-                                </Button>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Grid Margin="6,4,6,2" ColumnDefinitions="*, Auto">
+                    <ItemsControl ItemsSource="{Binding PathSegments}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="path:ProjectPathSegmentViewModel">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SeparatorText}" Foreground="{StaticResource Gray_2}" />
+                                    <Button Classes="Clear" Command="{Binding NavigateCommand}">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <search:SearchFieldView Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            x:Name="SearchFieldControl"
+                                            DataContext="{Binding SearchField}" />
+                </Grid>
                 <ScrollViewer Grid.Row="1">
                     <Grid x:Name="ActiveItemsDropTarget"
                           Background="{StaticResource Clear}"

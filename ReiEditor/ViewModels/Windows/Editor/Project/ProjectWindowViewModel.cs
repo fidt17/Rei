@@ -9,6 +9,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
@@ -26,6 +27,7 @@ public class ProjectWindowViewModel : BaseViewModel
     public ObservableCollection<ProjectAssetItemViewModel> ActiveItems { get; } = new();
     public ObservableCollection<ProjectPathSegmentViewModel> PathSegments { get; } = new();
     public ObservableField<string> ActiveDirectoryPath { get; } = new("");
+    public SearchFieldViewModel SearchField { get; } = new();
 
     public ContextMenuViewModel ActiveFolderContextMenu { get; } = new();
 
@@ -38,7 +40,9 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IStorageProvider? _storageProvider;
     private readonly IAssetOperationsService? _assetOperationsService;
     private readonly IFileExplorerProvider? _fileExplorerProvider;
+    private readonly IAssetSearchService? _assetSearchService;
     private string _projectRootPath = "";
+    private string _pendingSearchSelectionPath = "";
 
 #pragma warning disable CS8618
     public ProjectWindowViewModel()
@@ -51,20 +55,24 @@ public class ProjectWindowViewModel : BaseViewModel
         IResourceService resourceService,
         IStorageProvider storageProvider,
         IAssetOperationsService assetOperationsService,
-        IFileExplorerProvider fileExplorerProvider)
+        IFileExplorerProvider fileExplorerProvider,
+        IAssetSearchService assetSearchService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
         _assetOperationsService = assetOperationsService;
         _fileExplorerProvider = fileExplorerProvider;
+        _assetSearchService = assetSearchService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
+        SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
     }
 
     public override void Dispose()
     {
         base.Dispose();
+        SearchField.Query.ChangedEvent -= HandleSearchQueryChanged;
         ResetDirectoryTree();
     }
 
@@ -140,6 +148,11 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void SelectDirectory(ProjectDirectoryNodeViewModel node)
     {
+        if (SearchField.HasQuery.Value)
+        {
+            SearchField.ResetSearch();
+        }
+
         _selectedDirectory = node;
         ActiveDirectoryPath.Value = node.FullPath;
         UpdatePathSegments(node.FullPath);
@@ -211,6 +224,13 @@ public class ProjectWindowViewModel : BaseViewModel
 
         if (!Directory.Exists(directoryPath)) return;
 
+        var query = SearchField.Query.Value;
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            ApplySearchResults(query);
+            return;
+        }
+
         foreach (var directory in Directory.EnumerateDirectories(directoryPath).OrderBy(IOPath.GetFileName))
         {
             var name = IOPath.GetFileName(directory);
@@ -221,7 +241,7 @@ public class ProjectWindowViewModel : BaseViewModel
 
         foreach (var file in Directory.EnumerateFiles(directoryPath).OrderBy(IOPath.GetFileName))
         {
-            if (ProjectWindowFileFilter.ShouldHide(file)) continue;
+            if (AssetFileFilter.ShouldHide(file)) continue;
 
             var name = IOPath.GetFileName(file);
             var assetType = GetAssetType(file);
@@ -255,6 +275,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private void SelectAsset(ProjectAssetItemViewModel item)
     {
         _selectedAsset = item;
+        TrackSearchSelection(item);
 
         foreach (var other in _allAssets)
         {
@@ -387,6 +408,59 @@ public class ProjectWindowViewModel : BaseViewModel
         {
             UpdateActiveItems(activePath);
         }
+    }
+
+    private void HandleSearchQueryChanged(string query)
+    {
+        if (SearchField.ShouldSuppressQueryRefresh()) return;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            if (!string.IsNullOrWhiteSpace(_pendingSearchSelectionPath))
+            {
+                NavigateToSearchSelection(_pendingSearchSelectionPath);
+                _pendingSearchSelectionPath = "";
+                return;
+            }
+        }
+        else
+        {
+            _pendingSearchSelectionPath = "";
+        }
+
+        if (string.IsNullOrWhiteSpace(ActiveDirectoryPath.Value)) return;
+        
+        UpdateActiveItems(ActiveDirectoryPath.Value);
+    }
+
+    private void ApplySearchResults(string query)
+    {
+        if (_assetSearchService == null) return;
+
+        var results = _assetSearchService.Search(query);
+        foreach (var result in results)
+        {
+            var assetType = result.IsDirectory ? ProjectAssetType.Directory : GetAssetType(result.FullPath);
+            var item = new ProjectAssetItemViewModel(result.Name, result.FullPath, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, _fileExplorerProvider!);
+            RegisterAsset(item);
+            ActiveItems.Add(item);
+        }
+    }
+
+    private void TrackSearchSelection(ProjectAssetItemViewModel item)
+    {
+        if (!SearchField.HasQuery.Value) return;
+        _pendingSearchSelectionPath = item.FullPath;
+    }
+
+    private void NavigateToSearchSelection(string targetPath)
+    {
+        if (string.IsNullOrWhiteSpace(targetPath)) return;
+
+        var targetDirectory = IOPath.GetDirectoryName(targetPath);
+        if (string.IsNullOrWhiteSpace(targetDirectory)) return;
+
+        OpenDirectory(targetDirectory);
+        SelectAssetByPath(targetPath);
     }
 
     private void SelectAssetByPath(string path)
