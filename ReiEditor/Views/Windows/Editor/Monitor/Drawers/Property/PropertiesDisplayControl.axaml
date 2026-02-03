@@ -37,6 +37,10 @@
             <DataTemplate DataType="custom:ColorPropertyViewModel">
                 <custom1:ColorPropertyView Margin="1" />
             </DataTemplate>
+
+            <DataTemplate DataType="custom:AssetPropertyViewModel">
+                <custom1:AssetPropertyView Margin="1" />
+            </DataTemplate>
         </ItemsControl.DataTemplates>
     </ItemsControl>
 </UserControl>

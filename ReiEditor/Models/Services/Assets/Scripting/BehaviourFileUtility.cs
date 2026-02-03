@@ -102,11 +102,12 @@ public class BehaviourFileUtility : IBehaviourFileUtility
         return true;
     }
 
-    public bool IsBehaviourFile(string path)
+    public async Task<bool> IsBehaviourFile(string path)
     {
+        if (Path.GetExtension(path) != FileExtensions.H) return false;
         if (!File.Exists(path)) return false;
 
-        var fileContents = File.ReadAllText(path);
+        var fileContents = await File.ReadAllTextAsync(path);
         return TryGetBehaviourNameFrom(fileContents, out _);
     }
 }

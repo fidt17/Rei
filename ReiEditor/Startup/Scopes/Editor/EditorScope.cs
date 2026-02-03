@@ -38,10 +38,14 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
         b.RegisterSingleton<ProjectUpdateService>().As<IProjectUpdateService>();
         b.RegisterSingleton<EditorRefreshService>().As<IEditorRefreshService>();
+        b.RegisterNonLazy<ProjectFilesWatcherService>();
+        b.RegisterSingleton<AssetImportEditorRefreshService>();
+        b.RegisterNonLazy<AssetImportEditorRefreshService>();
 		
         b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();
         b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
+        b.RegisterSingleton<AssetTypeMapper>().As<IAssetTypeMapper>();
         b.RegisterSingleton<MetaFilesService>().As<IMetaFilesService>();
         b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
         b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();

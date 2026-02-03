@@ -3,6 +3,7 @@
 
 #include <Modules/EntityManagement/EntityManager.h>
 #include <Modules/Behaviour/Behaviour.h>
+#include <Modules/Assets/AssetRefUtils.h>
 
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Assets\AssetRef.h"
@@ -20,6 +21,9 @@
 
 void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 {
+    rei::assets::RegisterAutoAssignHandler<rei::render::Model>();
+    rei::assets::RegisterAutoAssignHandler<rei::render::Material>();
+
     f.RegisterComponent<::ColorLerp>(6, [](const rei::ecs::Entity e) -> nlohmann::json
                                      {
                                          auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e);
@@ -284,7 +288,9 @@ void TestMovement::REI_SET(const nlohmann::json& data)
 void rei::render::MeshRenderer::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("_model")) _model.REI_SET(data.at("_model").at("Value"));
+    if (data.contains("_model")) rei::assets::SyncAfterExternalChange(_model);
     if (data.contains("_material")) _material.REI_SET(data.at("_material").at("Value"));
+    if (data.contains("_material")) rei::assets::SyncAfterExternalChange(_material);
 }
 
 void rei::Transform::REI_SET(const nlohmann::json& data)

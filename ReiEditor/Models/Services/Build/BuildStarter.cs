@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Utils.Common.Condition;
@@ -17,18 +18,26 @@ public class BuildStarter : IBuildStarter, IDisposable
     private readonly IAssetsService _assetsService;
     private readonly IEngineRunner _engineRunner;
     private readonly IClientDllManager _dllManager;
+    private readonly IAssetImporter _assetImporter;
 
-    public BuildStarter(IBuildService buildService, IAssetsService assetsService, IEngineRunner engineRunner, IClientDllManager dllManager)
+    public BuildStarter(
+        IBuildService buildService,
+        IAssetsService assetsService,
+        IEngineRunner engineRunner,
+        IClientDllManager dllManager,
+        IAssetImporter assetImporter)
     {
         _buildService = buildService;
         _assetsService = assetsService;
         _engineRunner = engineRunner;
         _dllManager = dllManager;
+        _assetImporter = assetImporter;
 
         _canStartBuildCondition = new ConditionGroup(
             new Condition(_buildService.BuildInProgress, target: false),
             new Condition(_engineRunner.IsPlaymodeActive, target: false),
-            new Condition(_assetsService.SaveInProcess, target: false));
+            new Condition(_assetsService.SaveInProcess, target: false),
+            new Condition(_assetImporter.IsImporting, target: false));
     }
 
     public void Dispose()

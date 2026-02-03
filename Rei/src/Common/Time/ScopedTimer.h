@@ -11,10 +11,9 @@ namespace rei::time
         bool _log = true;
  
     public:
-        explicit ScopedTimer(std::string msg, bool log = true);
-        
-        ~ScopedTimer();
+        REI_API explicit ScopedTimer(std::string msg, bool log = true);
+        REI_API ~ScopedTimer();
 
-        long long Stop();
+        REI_API long long Stop();
     };
 }

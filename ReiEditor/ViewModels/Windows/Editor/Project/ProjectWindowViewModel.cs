@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.FileSystem;
@@ -41,6 +42,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IAssetOperationsService? _assetOperationsService;
     private readonly IFileExplorerProvider? _fileExplorerProvider;
     private readonly IAssetSearchService? _assetSearchService;
+    private readonly IEditorRefreshService? _editorRefreshService;
     private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
@@ -56,25 +58,41 @@ public class ProjectWindowViewModel : BaseViewModel
         IStorageProvider storageProvider,
         IAssetOperationsService assetOperationsService,
         IFileExplorerProvider fileExplorerProvider,
-        IAssetSearchService assetSearchService)
+        IAssetSearchService assetSearchService,
+        IEditorRefreshService editorRefreshService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
         _assetOperationsService = assetOperationsService;
         _fileExplorerProvider = fileExplorerProvider;
         _assetSearchService = assetSearchService;
+        _editorRefreshService = editorRefreshService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
+        _editorRefreshService.RefreshedEvent += HandleEditorRefreshedEvent;
     }
 
     public override void Dispose()
     {
         base.Dispose();
         SearchField.Query.ChangedEvent -= HandleSearchQueryChanged;
+        if (_editorRefreshService != null)
+        {
+            _editorRefreshService.RefreshedEvent -= HandleEditorRefreshedEvent;
+        }
         ResetDirectoryTree();
     }
+
+    private void HandleEditorRefreshedEvent()
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            RefreshView(affectsTree: true);
+        });
+    }
+
 
     private void SetupContextMenus()
     {
@@ -383,8 +401,12 @@ public class ProjectWindowViewModel : BaseViewModel
         if (paths.Count == 0) return;
 
         await _assetOperationsService.ImportExternalAssets(paths, targetDirectory);
-        RefreshView(affectsTree: true);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            RefreshView(affectsTree: true);
+        });
     }
+
 
     public void ClearAssetSelection()
     {

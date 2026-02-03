@@ -10,12 +10,14 @@ public class SerializableObjectInfo
     {
         public SerializedTypeEnum Type { get; }
         public string SourceType { get; }
+        public string? TemplateTypeName { get; }
         public string? DefaultValue { get; }
 
-        public SerializedPropertyData(SerializedTypeEnum type, string sourceType, string? defaultValue)
+        public SerializedPropertyData(SerializedTypeEnum type, string sourceType, string? templateTypeName, string? defaultValue)
         {
             Type = type;
             SourceType = sourceType;
+            TemplateTypeName = templateTypeName;
             DefaultValue = defaultValue;
         }
     }

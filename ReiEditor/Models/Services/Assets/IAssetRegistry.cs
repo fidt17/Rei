@@ -18,6 +18,7 @@ public interface IAssetRegistry
     
     IEnumerable<Asset> GetDirtyAssets();
     IEnumerable<AssetInfo> GetAllAssets();
+    IEnumerable<AssetInfo> GetAllAssetsByExtensions(IReadOnlyCollection<string> extensions);
     
     void AddToLoadedAssets(AssetInfo assetInfo, Asset asset);
     void RemoveFromLoadedAssets(AssetInfo assetInfo);

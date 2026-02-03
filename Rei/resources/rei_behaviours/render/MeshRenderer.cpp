@@ -12,7 +12,7 @@ namespace rei::render
     {
         if (!_model.IsLoaded()) return;
 
-        ECS_WORLD(GetInternalWorld());
+        ECS_WORLD(GetInternalWorld())
 
         const auto meshCollider = std::make_shared<physics::ModelCollider>();
         meshCollider->SetModel(_model);
@@ -22,11 +22,17 @@ namespace rei::render
         GET(e, editor::SelectableByPointerTag);
     }
 
-
-    void MeshRenderer::LoadAssets(assets::AssetManager& assetManager)
+    void MeshRenderer::AfterREI_SET()
     {
-        assetManager.Load(_model);
-        assetManager.Load(_material);
+        if (_loadedModelId != _model.Id)
+        {
+            if (GetEngine().IsEditor())
+            {
+                ConfigureSelectionCollider();
+            }
+        }
+        
+        _loadedModelId = _model.Id;
     }
 
     void MeshRenderer::Init()
@@ -39,11 +45,7 @@ namespace rei::render
 
     void MeshRenderer::Render() const
     {
-        if (!_model.IsLoaded())
-        {
-            LOG_ERROR("Model {} is not loaded. Cannot render mesh.", _model.Id)
-            return;
-        }
+        if (!_model.IsLoaded()) return;
 
         GetRenderMaterial().Use();
 

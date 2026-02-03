@@ -33,5 +33,6 @@ const std::string LOG_SCOPE;
     #define LOG_ERROR(...) 
     #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
     #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
-    #define LOG_USE_COUNT(x) 
+#define LOG_USE_COUNT(x) 
 #endif
+

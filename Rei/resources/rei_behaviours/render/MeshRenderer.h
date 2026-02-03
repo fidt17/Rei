@@ -12,7 +12,7 @@ namespace rei::render
         SERIALIZE assets::AssetRef<Material> _material;
 
     public:
-        REI_API void LoadAssets(assets::AssetManager& assetManager) override;
+        REI_API void AfterREI_SET() override;
 
         REI_API void Init() override;
 
@@ -27,6 +27,7 @@ namespace rei::render
 
     private:
         void ConfigureSelectionCollider() const;
+        std::string _loadedModelId{};
     };
 }
 

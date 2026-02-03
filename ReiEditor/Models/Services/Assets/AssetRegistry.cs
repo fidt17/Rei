@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Utils.Extensions;
 using ReiEditor.Utils.Path;
 
 namespace ReiEditor.Models.Services.Assets;
@@ -43,6 +42,19 @@ public class AssetRegistry : IAssetRegistry
     }
 
     public IEnumerable<AssetInfo> GetAllAssets() => _idToAssetInfoMap.Values;
+
+    public IEnumerable<AssetInfo> GetAllAssetsByExtensions(IReadOnlyCollection<string> extensions)
+    {
+        if (extensions.Count == 0) yield break;
+
+        foreach (var asset in _idToAssetInfoMap.Values)
+        {
+            var extension = Path.GetExtension(asset.FullPath);
+            if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
+
+            yield return asset;
+        }
+    }
 
     public void UpdateRegistry(IEnumerable<AssetInfo> assets)
     {

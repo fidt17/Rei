@@ -61,6 +61,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Input/StringInputField.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Input/StringPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/BooleanPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/Custom/AssetPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/Custom/ColorPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/Custom/CustomPropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Monitor/Drawers/Property/Custom/Vector3PropertyView.axaml" value="ReiEditor/ReiEditor.csproj" />

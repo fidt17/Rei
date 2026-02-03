@@ -1,7 +1,11 @@
-﻿using System;
+using System;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using ReiEditor.Utils;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
 namespace ReiEditor.Views.Windows.Editor.Project.Assets;
@@ -14,6 +18,7 @@ public partial class ProjectAssetItemView : UserControl
     {
         InitializeComponent();
         DataContextChanged += HandleDataContextChangedEvent;
+        ConfigureDragAndDrop();
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -109,5 +114,49 @@ public partial class ProjectAssetItemView : UserControl
     private void NameTextBox_OnLostFocus(object? sender, RoutedEventArgs e)
     {
         NameTextBox.IsVisible = false;
+    }
+
+    private void ConfigureDragAndDrop()
+    {
+        var target = RootBorder;
+        bool pointerDown;
+
+        void DoDrag(object? sender, PointerPressedEventArgs e)
+        {
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                pointerDown = true;
+                if (_vm == null) return;
+                if (_vm.IsDirectory) return;
+                if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
+
+                if (!_vm.Selected.Value)
+                {
+                    await Task.Delay(100);
+                    _vm.SelectCommand.Execute(null);
+                }
+
+                await Task.Delay(100);
+                if (!pointerDown) return;
+
+                var dragData = new DataObject();
+                dragData.Set(DragDropDataKeys.AssetPath, _vm.FullPath);
+
+                try
+                {
+                    await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Copy);
+                }
+                catch (COMException)
+                {
+                    // ignore
+                }
+            });
+        }
+
+        target.PointerPressed += DoDrag;
+        target.PointerReleased += (_, _) =>
+        {
+            pointerDown = false;
+        };
     }
 }

@@ -43,7 +43,8 @@ public class EngineResourcesImporter : IEngineResourcesImporter
         var fromPaths = new List<string>
         {
             "/shaders",
-            "/textures"
+            "/textures",
+            "/meshes"
         };
         
         foreach (var dirName in fromPaths)

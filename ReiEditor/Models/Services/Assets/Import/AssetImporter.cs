@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -10,12 +11,18 @@ using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Serialization;
+using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Common.Procedures;
 
 namespace ReiEditor.Models.Services.Assets.Import;
 
 public class AssetImporter : IAssetImporter
 {
     public event Action? ImportedAssetsEvent;
+
+    public Utils.Common.IObservable<bool> IsImporting => _isImporting;
+
+    private readonly Observable<bool> _isImporting = new(false);
 
     private readonly ILogger<AssetImporter> _logger;
     private readonly IResourceService _resourceService;
@@ -27,6 +34,7 @@ public class AssetImporter : IAssetImporter
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourFileUtility _behaviourFileUtility;
     private readonly ISerializer _serializer;
+    private readonly IEditorProceduresService _editorProceduresService;
 
     public AssetImporter(
         ILogger<AssetImporter> logger,
@@ -38,7 +46,8 @@ public class AssetImporter : IAssetImporter
         IBehaviourComponentsService behaviourComponentsService, 
         IBehaviourFileUtility behaviourFileUtility,
         ISerializer serializer, 
-        IAssetsService assetsService)
+        IAssetsService assetsService,
+        IEditorProceduresService editorProceduresService)
     {
         _logger = logger;
         _resourceService = resourceService;
@@ -50,20 +59,33 @@ public class AssetImporter : IAssetImporter
         _behaviourFileUtility = behaviourFileUtility;
         _serializer = serializer;
         _assetsService = assetsService;
+        _editorProceduresService = editorProceduresService;
     }
 
     public async Task<List<AssetInfo>> ReimportAll()
     {
-        await _metaFilesService.DeleteInvalidMetaFiles();
-        
-        var assets = await ImportAssets();
-        _assetRegistry.UpdateRegistry(assets);
-        
-        await _behaviourRegistry.RefreshBehaviours();
-        await ImportScenes();
+        var procedure = TryBeginImportProcedure();
+        if (procedure == null) return new List<AssetInfo>();
 
-        ImportedAssetsEvent?.Invoke();
-
+        var assets = new List<AssetInfo>();
+        
+        try
+        {
+            await _metaFilesService.DeleteInvalidMetaFiles();
+            
+            assets = await ImportAssets();
+            _assetRegistry.UpdateRegistry(assets);
+            
+            await _behaviourRegistry.RefreshBehaviours();
+            await ImportScenes();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Caught exception during import: {e.Message}");
+        }
+        
+        EndImportProcedure(procedure);
+        
         return assets;
     }
 
@@ -72,56 +94,102 @@ public class AssetImporter : IAssetImporter
         var targetFiles = FileExtensions.FindAllFilesIn(paths);
         if (targetFiles.Count == 0) return new List<AssetInfo>();
 
+        var procedure = TryBeginImportProcedure();
+        if (procedure == null) return new List<AssetInfo>();
+        
         var importedAssets = new List<AssetInfo>();
-        foreach (var assetPath in targetFiles)
+
+        try
         {
-            try
+            foreach (var assetPath in targetFiles)
             {
-                if (!AssetImportUtils.IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) continue;
-
-                var metaFilePath = assetPath + FileExtensions.META;
-                AssetMeta? meta;
-
-                if (File.Exists(metaFilePath))
+                try
                 {
-                    meta = await _resourceService.TryLoad<AssetMeta>(metaFilePath);
-                    if (meta is null)
+                    if (!AssetImportUtils.IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) continue;
+
+                    var metaFilePath = assetPath + FileExtensions.META;
+                    AssetMeta? meta;
+
+                    if (File.Exists(metaFilePath))
                     {
-                        File.Delete(metaFilePath);
+                        meta = await _resourceService.TryLoad<AssetMeta>(metaFilePath);
+                        if (meta is null)
+                        {
+                            File.Delete(metaFilePath);
+                            meta = new AssetMeta(_assetCreator.AllocateAssetId());
+                            await _metaFilesService.CreateMetaFile(meta, assetPath);
+                        }
+                    }
+                    else
+                    {
                         meta = new AssetMeta(_assetCreator.AllocateAssetId());
                         await _metaFilesService.CreateMetaFile(meta, assetPath);
                     }
+
+                    importedAssets.Add(new AssetInfo(meta, assetPath));
                 }
-                else
+                catch (Exception e)
                 {
-                    meta = new AssetMeta(_assetCreator.AllocateAssetId());
-                    await _metaFilesService.CreateMetaFile(meta, assetPath);
+                    _logger.LogException(e);
                 }
-
-                importedAssets.Add(new AssetInfo(meta, assetPath));
             }
-            catch (Exception e)
+
+            _assetRegistry.RegisterNewAssets(importedAssets);
+
+            if (targetFiles.Any(f => Path.GetExtension(f) == FileExtensions.SCENE))
             {
-                _logger.LogException(e);
+                await ImportScenes();
+            }
+
+            bool isAnyBehaviour = false;
+            foreach (var targetFile in targetFiles)
+            {
+                if (!await _behaviourFileUtility.IsBehaviourFile(targetFile)) continue;
+                
+                isAnyBehaviour = true;
+                break;
+            }
+
+            if (isAnyBehaviour)
+            {
+                await _behaviourRegistry.RefreshBehaviours();
             }
         }
-
-        _assetRegistry.RegisterNewAssets(importedAssets);
-
-        if (targetFiles.Any(f => Path.GetExtension(f) == FileExtensions.SCENE))
+        catch (Exception e)
         {
-            await ImportScenes();
+            _logger.LogError($"Caught exception during import: {e.Message}");
         }
-
-        if (targetFiles.Any(_behaviourFileUtility.IsBehaviourFile))
-        {
-            await _behaviourRegistry.RefreshBehaviours();
-        }
-
-        ImportedAssetsEvent?.Invoke();
+        
+        EndImportProcedure(procedure);
+        
         return importedAssets;
     }
 
+    private Procedure? TryBeginImportProcedure()
+    {
+        if (_isImporting) return null;
+            
+        _logger.Log("Starting assets import");
+            
+        _isImporting.Value = true;
+        
+        var procedure = new Procedure("Importing assets");
+        _editorProceduresService.TrackProcedure(procedure);
+        
+        return procedure;
+    }
+
+    private void EndImportProcedure(Procedure procedure)
+    {
+        _logger.Log("Asset import complete");
+        
+        procedure.Complete();
+        
+        if (!_isImporting) return;
+        _isImporting.Value = false;
+        
+        ImportedAssetsEvent?.Invoke();
+    }
 
     private async Task<List<AssetInfo>> ImportAssets()
     {

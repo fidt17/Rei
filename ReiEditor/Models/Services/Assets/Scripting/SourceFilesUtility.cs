@@ -154,12 +154,21 @@ public class SourceFilesUtility
         name = "";
         isTemplate = false;
         
-        var regex = new Regex($".*{SourceFileMacrosConstants.SERIALIZABLE_BODY}\\((.*)\\).*");
-        
-        if (!regex.IsMatch(text)) return false;
+        var regex = new Regex($@"{SourceFileMacrosConstants.SERIALIZABLE_BODY}\((?<name>.*?)\)");
+        var matches = regex.Matches(text);
+        if (matches.Count == 0) return false;
+
+        Match? selectedMatch = null;
+        foreach (Match match in matches)
+        {
+            var matchName = match.Groups["name"].Value;
+            if (string.IsNullOrWhiteSpace(matchName) || matchName.Contains("CLASS_NAME")) continue;
+            selectedMatch = match;
+        }
+
+        if (selectedMatch == null) return false;
             
-        name = regex.Match(text).Groups[1].Value;
-        if (name == "CLASS_NAME") return false;
+        name = selectedMatch.Groups["name"].Value;
 
         var indexesOfTemplates = text.AllIndexesOf("template <typename");
         indexesOfTemplates.AddRange(text.AllIndexesOf("template<typename"));
@@ -242,10 +251,11 @@ public class SourceFilesUtility
 
                 var variableName = words[equalsIdx - 1];
                 var variableTypeWithoutNamespace = variableType.Split("::").Last();
+                var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
 
                 var defaultValue = words[equalsIdx + 1];
                 
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, defaultValue));
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, defaultValue));
             }
             else
             {
@@ -255,7 +265,8 @@ public class SourceFilesUtility
 
                 var variableName = words[^1];
                 var variableTypeWithoutNamespace = variableType.Split("::").Last();
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, null));
+                var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, null));
             }
         }
 
@@ -293,6 +304,18 @@ public class SourceFilesUtility
         }
         
         return SerializedTypeEnum.Custom;
+    }
+
+    public static string? GetTemplateTypeName(string type)
+    {
+        var startIndex = type.IndexOf('<');
+        if (startIndex == -1) return null;
+
+        var endIndex = type.LastIndexOf('>');
+        if (endIndex == -1 || endIndex <= startIndex) return null;
+
+        var templateType = type.Substring(startIndex + 1, endIndex - startIndex - 1);
+        return templateType.Split("::").Last().Trim();
     }
 
     private static string RemoveComments(string original)

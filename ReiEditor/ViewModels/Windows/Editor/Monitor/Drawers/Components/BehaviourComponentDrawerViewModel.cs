@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
@@ -25,6 +27,9 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IEntityManagementService _entityManagementService;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly IAssetSearchService _assetSearchService;
+    private readonly IAssetRegistry _assetRegistry;
+    private readonly IAssetTypeMapper _assetTypeMapper;
 
 #pragma warning disable CS8618
     public BehaviourComponentDrawerViewModel() { }
@@ -34,13 +39,20 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         GameEntity entity,
         BehaviourComponent behaviourComponent,
         IBehaviourRegistry behaviourRegistry, 
-        IEntityManagementService entityManagementService, ISerializableObjectsRegistry serializableObjectsRegistry)
+        IEntityManagementService entityManagementService,
+        ISerializableObjectsRegistry serializableObjectsRegistry,
+        IAssetSearchService assetSearchService,
+        IAssetRegistry assetRegistry,
+        IAssetTypeMapper assetTypeMapper)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
         _behaviourRegistry = behaviourRegistry;
         _entityManagementService = entityManagementService;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _assetSearchService = assetSearchService;
+        _assetRegistry = assetRegistry;
+        _assetTypeMapper = assetTypeMapper;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
         {
@@ -81,7 +93,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
                 throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
             
             var property = BehaviourComponent.GetProperty(propertyName);
-            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry));
+            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper));
         }
     }
 }

@@ -110,6 +110,10 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                     component.AddProperty(p);
                     SubscribeToPropertyChange(e, component, p);
                 }
+                else if (sp.Value.TemplateTypeName == null)
+                {
+                    sp.Value.SetTemplateTypeName(propertyType.TemplateTypeName ?? SourceFilesUtility.GetTemplateTypeName(propertyType.SourceType));
+                }
             }
         }
     }
@@ -143,7 +147,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             propertyValue = propertyData.Type.ParseDefaultValue(propertyData.DefaultValue);
         }
         
-        var property = new SerializedProperty(name, propertyData.Type, propertyValue, propertyData.SourceType, parentProperty);
+        var templateTypeName = propertyData.TemplateTypeName ?? SourceFilesUtility.GetTemplateTypeName(propertyData.SourceType);
+        var property = new SerializedProperty(name, propertyData.Type, propertyValue, propertyData.SourceType, parentProperty, templateTypeName);
         
         if (property.Type != SerializedTypeEnum.Custom) return property;
         
@@ -169,7 +174,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         var type = jObject[nameof(SerializedProperty.Type)]!.ToObject<SerializedTypeEnum>();
         var value = jObject[nameof(SerializedProperty.Value)]!.ToObject<object>();
         var sourceType = jObject[nameof(SerializedProperty.SourceType)]!.ToObject<string>() ?? "";
-        var property = new SerializedProperty(name, type, value, sourceType, parentProperty);
+        var templateTypeName = SourceFilesUtility.GetTemplateTypeName(sourceType);
+        var property = new SerializedProperty(name, type, value, sourceType, parentProperty, templateTypeName);
         
         ParseNestedProperties(property);
         
@@ -192,7 +198,14 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
         if (childObjects.Count == 0) return;
 
-        var requiredProperties = _serializableObjectsRegistry.GetObject(property.SourceType)!.SerializedProperties;
+        var serializableObject = _serializableObjectsRegistry.GetObject(property.SourceType);
+        if (serializableObject == null)
+        {
+            _logger.LogError($"Could not find serializable object info for property {property.Name} {property.SourceType} {property.Type}");
+            return;
+        }
+
+        var requiredProperties = serializableObject.SerializedProperties;
 
         var parsedValue = new Dictionary<string, SerializedProperty>();
         foreach (var token in childObjects)
@@ -210,6 +223,10 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                     parsedValue.Remove(targetProperty.Name);
                 }
                 parsedValue.Add(requiredProperty.Key, CreateSerializedProperty(requiredProperty.Key, requiredProperty.Value, property));
+            }
+            else
+            {
+                targetProperty.SetTemplateTypeName(requiredProperty.Value.TemplateTypeName);
             }
         }
 

@@ -33,6 +33,7 @@ public class BehaviourRegistrySourceGenerator
         var serializableObjectsAndBehaviours = new List<SerializableObjectInfo>();
         serializableObjectsAndBehaviours.AddRange(serializableObjectInfos);
         serializableObjectsAndBehaviours.AddRange(behaviours.Values);
+        var assetRefTypes = GetAssetRefTemplateTypes(serializableObjectsAndBehaviours).ToArray();
         
         var str = new StringBuilder();
 
@@ -42,10 +43,11 @@ public class BehaviourRegistrySourceGenerator
         
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Assets/AssetRefUtils.h>"));
         str.AppendLine();
         str.AppendLine(GenerateIncludes(serializableObjectsAndBehaviours));
         
-        str.AppendLine(GenerateRegistryMethod(behaviours));
+        str.AppendLine(GenerateRegistryMethod(behaviours, assetRefTypes));
 
         str.AppendLine(GenerateSerializationImplementation(serializableObjectsAndBehaviours));
         str.AppendLine(GenerateDeserializationImplementation(serializableObjectsAndBehaviours));
@@ -72,12 +74,22 @@ public class BehaviourRegistrySourceGenerator
         return str;
     }
 
-    private string GenerateRegistryMethod(Dictionary<int, BehaviourAssetInfo> behaviours)
+    private string GenerateRegistryMethod(Dictionary<int, BehaviourAssetInfo> behaviours, IReadOnlyList<string> assetRefTypes)
     {
         var str = new StringBuilder();
 
         str.AppendLine("void ConfigureComponentsFactory(rei::BehaviourRegistry& f)");
         str.AppendLine("{");
+
+        foreach (var assetRefType in assetRefTypes)
+        {
+            str.AppendLine($"    rei::assets::RegisterAutoAssignHandler<{assetRefType}>();");
+        }
+        
+        if (assetRefTypes.Count > 0)
+        {
+            str.AppendLine();
+        }
         
         foreach (var b in behaviours)
         {
@@ -132,6 +144,7 @@ public class BehaviourRegistrySourceGenerator
             for (var index = 0; index < serializedProperties.Count; index++)
             {
                 var p = serializedProperties[index];
+                var isAssetRef = IsAssetRefProperty(p.Value);
                 
                 var propertyType = p.Value.SourceType;
                 var indexOfTemplateStart = propertyType.IndexOf('<');
@@ -157,6 +170,11 @@ public class BehaviourRegistrySourceGenerator
                 else
                 {
                     str.AppendLine($"    if (data.contains(\"{p.Key}\")) {p.Key} = data.at(\"{p.Key}\").at(\"Value\");");
+                }
+
+                if (isAssetRef)
+                {
+                    str.AppendLine($"    if (data.contains(\"{p.Key}\")) rei::assets::SyncAfterExternalChange({p.Key});");
                 }
             }
             
@@ -245,5 +263,67 @@ public class BehaviourRegistrySourceGenerator
         }
         
         return str.ToString();
+    }
+
+    private static IEnumerable<string> GetAssetRefTemplateTypes(IEnumerable<SerializableObjectInfo> objects)
+    {
+        var result = new HashSet<string>();
+
+        foreach (var obj in objects)
+        {
+            foreach (var property in obj.SerializedProperties.Values)
+            {
+                if (!IsAssetRefProperty(property, out var templateType)) continue;
+                var qualifiedType = GetQualifiedTemplateType(templateType, obj.Namespace);
+                result.Add(qualifiedType);
+            }
+        }
+
+        return result;
+    }
+    
+    private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData)
+    {
+        return IsAssetRefProperty(propertyData, out _);
+    }
+
+    private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData, out string templateType)
+    {
+        templateType = propertyData.TemplateTypeName ?? GetTemplateTypeName(propertyData.SourceType);
+        if (string.IsNullOrWhiteSpace(templateType))
+        {
+            return false;
+        }
+
+        var sourceType = propertyData.SourceType;
+        var indexOfTemplateStart = sourceType.IndexOf('<');
+        if (indexOfTemplateStart != -1)
+        {
+            sourceType = sourceType.Remove(indexOfTemplateStart, sourceType.Length - indexOfTemplateStart);
+        }
+
+        return sourceType == "AssetRef";
+    }
+
+    private static string GetQualifiedTemplateType(string templateType, string objectNamespace)
+    {
+        if (templateType.Contains("::") || string.IsNullOrWhiteSpace(objectNamespace))
+        {
+            return templateType;
+        }
+
+        return $"{objectNamespace}::{templateType}";
+    }
+
+    private static string? GetTemplateTypeName(string type)
+    {
+        var startIndex = type.IndexOf('<');
+        if (startIndex == -1) return null;
+
+        var endIndex = type.LastIndexOf('>');
+        if (endIndex == -1 || endIndex <= startIndex) return null;
+
+        var templateType = type.Substring(startIndex + 1, endIndex - startIndex - 1);
+        return templateType.Split("::").Last().Trim();
     }
 }

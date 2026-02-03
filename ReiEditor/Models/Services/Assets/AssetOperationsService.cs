@@ -7,8 +7,6 @@ using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Utils;
-using ReiEditor.Utils.Extensions;
 using ReiEditor.Utils.Path;
 
 namespace ReiEditor.Models.Services.Assets;
@@ -142,7 +140,7 @@ public class AssetOperationsService : IAssetOperationsService
                 _resourceService.CopyFilesRecursively(assetPath, targetPath);
                 await _metaFilesService.RegenerateMetaFilesInDirectory(
                     targetPath,
-                    GetRegenerationPolicyForTargets(new[] { targetPath }));
+                    await GetRegenerationPolicyForTargets(new[] { targetPath }));
             }
             else
             {
@@ -151,7 +149,7 @@ public class AssetOperationsService : IAssetOperationsService
                 File.Copy(assetPath, targetPath);
                 await _metaFilesService.RegenerateMetaFileForAsset(
                     targetPath,
-                    GetRegenerationPolicyForTargets(new[] { targetPath }));
+                    await GetRegenerationPolicyForTargets(new[] { targetPath }));
             }
 
             await _assetImporter.ReimportPaths(new[] { targetPath });
@@ -223,13 +221,13 @@ public class AssetOperationsService : IAssetOperationsService
             {
                 await _metaFilesService.RegenerateMetaFilesForTargets(
                     createdPaths,
-                    GetRegenerationPolicyForTargets(createdPaths));
+                    await GetRegenerationPolicyForTargets(createdPaths));
                 await _assetImporter.ReimportPaths(createdPaths);
             }
         });
     }
 
-    private IMetaFileRegenerationPolicy GetRegenerationPolicyForTargets(IEnumerable<string> targets)
+    private async Task<IMetaFileRegenerationPolicy> GetRegenerationPolicyForTargets(IEnumerable<string> targets)
     {
         foreach (var target in targets)
         {
@@ -237,7 +235,7 @@ public class AssetOperationsService : IAssetOperationsService
             {
                 foreach (var file in Directory.EnumerateFiles(target, "*.*", SearchOption.AllDirectories))
                 {
-                    if (_behaviourFileUtility.IsBehaviourFile(file))
+                    if (await _behaviourFileUtility.IsBehaviourFile(file))
                     {
                         return new BehaviourMetaFileRegenerationPolicy(_behaviourRegistry.AllocateBehaviourId);
                     }
@@ -245,7 +243,7 @@ public class AssetOperationsService : IAssetOperationsService
                 continue;
             }
 
-            if (_behaviourFileUtility.IsBehaviourFile(target))
+            if (await _behaviourFileUtility.IsBehaviourFile(target))
             {
                 return new BehaviourMetaFileRegenerationPolicy(_behaviourRegistry.AllocateBehaviourId);
             }

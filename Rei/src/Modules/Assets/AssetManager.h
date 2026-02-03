@@ -33,6 +33,9 @@ namespace rei::assets
             if (loadedAsset != _loadedAssets.end())
             {
                 ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
+                ref.AssetSize = ((AssetRef<T>*)loadedAsset->second)->AssetSize;
+                ref.LoadedId = ref.Id;
+                IncrementRefCount(ref.Id);
                 return ref;
             }
 
@@ -55,13 +58,7 @@ namespace rei::assets
 
             i64 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
-            i64 assetSize;
-            ref.Asset = new T(Load<T>(dest, 0, assetSize));
-            ref.AssetSize = assetSize;
-            _loadedAssetsSize += assetSize;
-
-            _loadedAssets[ref.Id] = new AssetRef<T>(ref);
-            LOG("Loaded asset id={}, size={} Mb, total={} Mb", ref.Id, assetSize / 1024 / 1024.0, _loadedAssetsSize / 1024 / 1024.0)
+            Load(ref, dest, 0);
 
             return ref;
         }
@@ -72,7 +69,9 @@ namespace rei::assets
             AssetRef<T>* asset = new AssetRef<T>(id);
 
             asset->Asset = new T(args...);
+            asset->LoadedId = asset->Id;
             _loadedAssets[asset->Id] = asset;
+            _assetRefCounts[asset->Id] = 1;
 
             return *asset;
         }
@@ -88,12 +87,19 @@ namespace rei::assets
         REI_API bool Load(AssetRef<T>& ref)
         {
             if (ref.Id == "") return false;
-            if (ref.IsLoaded()) return true;
+            if (ref.IsLoaded())
+            {
+                IncrementRefCount(ref.Id);
+                return true;
+            }
 
             auto loadedAsset = _loadedAssets.find(ref.Id);
             if (loadedAsset != _loadedAssets.end())
             {
                 ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
+                ref.AssetSize = ((AssetRef<T>*)loadedAsset->second)->AssetSize;
+                ref.LoadedId = ref.Id;
+                IncrementRefCount(ref.Id);
                 return true;
             }
 
@@ -115,7 +121,7 @@ namespace rei::assets
             }
             catch (std::exception e)
             {
-                LOG_ERROR("Cought exception while trying to load asset id={}\n Exception: {}", ref.Id, e.what())
+                LOG_ERROR("Caught exception while trying to load asset id={}\n Exception: {}", ref.Id, e.what())
             }
 
             return false;
@@ -131,6 +137,24 @@ namespace rei::assets
                 loadedAsset.second->UnloadAsset();
                 delete loadedAsset.second;
             }
+
+            _assetRefCounts.clear();
+        }
+
+        template <typename T>
+        REI_API void ReleaseById(const std::string& id)
+        {
+            if (id == "") return;
+
+            if (!DecrementRefCount(id)) return;
+
+            auto loadedAsset = _loadedAssets.find(id);
+            if (loadedAsset == _loadedAssets.end()) return;
+
+            _loadedAssetsSize -= loadedAsset->second->GetAssetSize();
+            loadedAsset->second->UnloadAsset();
+            delete loadedAsset->second;
+            _loadedAssets.erase(id);
         }
 
         void DeleteTmpFiles() const
@@ -148,6 +172,7 @@ namespace rei::assets
         u32 _runtimeAssetCounter = 0;
         i64 _loadedAssetsSize = 0;
         std::unordered_map<std::string, IAssetRef*> _loadedAssets{};
+        std::unordered_map<std::string, i32> _assetRefCounts{};
 
         std::vector<std::string> _tmpFiles;
 
@@ -178,19 +203,55 @@ namespace rei::assets
             if (loadedAsset != _loadedAssets.end())
             {
                 ref.Asset = ((AssetRef<T>*)loadedAsset->second)->Asset;
+                ref.AssetSize = ((AssetRef<T>*)loadedAsset->second)->AssetSize;
+                ref.LoadedId = ref.Id;
+                IncrementRefCount(ref.Id);
                 return;
             }
 
-            i64 assetSize;
-            auto asset = Load<T>(path, offset, assetSize);
+            auto reader = resources::BinaryReader(path, offset);
+            ref.Asset = new T(reader);
+            ref.AssetSize = reader.GetPosition() - offset;
+            ref.LoadedId = ref.Id;
+            reader.Close();
 
-            _loadedAssets[ref.Id] = new AssetRef<T>(ref);
-            ref.Asset = new T(asset);
-            ref.AssetSize = assetSize;
+            auto storedRef = new AssetRef<T>(ref);
+            storedRef->Asset = ref.Asset;
+            storedRef->AssetSize = ref.AssetSize;
+            storedRef->LoadedId = ref.LoadedId;
+            _loadedAssets[ref.Id] = storedRef;
 
-            _loadedAssetsSize += assetSize;
+            _loadedAssetsSize += ref.AssetSize;
+            _assetRefCounts[ref.Id] = 1;
 
-            LOG("Loaded asset id={}, size={} b, total={} Mb", ref.Id, assetSize, _loadedAssetsSize / 1024 / 1024.0)
+            LOG("Loaded asset id={}, size={} b, total={} Mb", ref.Id, ref.AssetSize, _loadedAssetsSize / 1024 / 1024.0)
+        }
+
+        void IncrementRefCount(const std::string& id)
+        {
+            auto it = _assetRefCounts.find(id);
+            if (it == _assetRefCounts.end())
+            {
+                _assetRefCounts[id] = 1;
+                return;
+            }
+
+            it->second++;
+        }
+
+        bool DecrementRefCount(const std::string& id)
+        {
+            auto it = _assetRefCounts.find(id);
+            if (it == _assetRefCounts.end()) return true;
+
+            it->second--;
+            if (it->second <= 0)
+            {
+                _assetRefCounts.erase(it);
+                return true;
+            }
+
+            return false;
         }
     };
 }

@@ -166,11 +166,12 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
 
     FOR(e, meshRenderers)
     {
-        const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+        auto& meshRenderer = GET(e, rei::render::MeshRenderer);
         if (!meshRenderer.IsEnabled()) continue;
 
         auto& material = meshRenderer.GetRenderMaterial();
         const auto sortingOrder = material.GetSortingOrder();
+
         if (sortingOrder < minSortingOrder || sortingOrder > maxSortingOrder) continue;
 
         const Shader& shader = material.GetShader();

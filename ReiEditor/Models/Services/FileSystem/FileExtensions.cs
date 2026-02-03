@@ -20,6 +20,10 @@ public static class FileExtensions
     public const string META = ".meta";
     public const string CPP = ".cpp";
     public const string H = ".h";
+    public const string OBJ = ".obj";
+    public const string FBX = ".fbx";
+
+    public static readonly IReadOnlyList<string> ModelAssetExtensions = new[] { OBJ, FBX };
 
     public static FilePickerFileType GetFilePicker(string fileExtension)
     {

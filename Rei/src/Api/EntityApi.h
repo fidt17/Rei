@@ -85,18 +85,23 @@ REI_EXTERN_API inline void RenameEntity(const i32 sceneEntityId, const char* new
 
 REI_EXTERN_API inline void SetEntityData(const char* json)
 {
-    ECS_WORLD(rei::GetInternalWorld());
-
-    nlohmann::json data = nlohmann::json::parse(json);
-    const i32 sceneEntityId = data.at("SceneId");
-    const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
-    if (IS_DEAD(e)) return;
-
-    for (auto b : data.at("Behaviours"))
+    const std::string jsonStr = json;
+    
+    rei::GetEngine().ExecuteOnMainThread([=]
     {
-        const i32 behaviourId = b.at("REI_BEHAVIOUR_ID");
-        rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
-    }
+        ECS_WORLD(rei::GetInternalWorld());
+
+        nlohmann::json data = nlohmann::json::parse(jsonStr);
+        const i32 sceneEntityId = data.at("SceneId");
+        const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+        if (IS_DEAD(e)) return;
+
+        for (auto b : data.at("Behaviours"))
+        {
+            const i32 behaviourId = b.at("REI_BEHAVIOUR_ID");
+            rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
+        }
+    });
 }
 
 REI_EXTERN_API inline void AddBehaviour(const i32 sceneEntityId, const i32 behaviourId)

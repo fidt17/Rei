@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
@@ -19,17 +21,28 @@ public class CustomPropertyViewModel : BaseViewModel
     
     private readonly SerializedProperty _property;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly IAssetSearchService _assetSearchService;
+    private readonly IAssetRegistry _assetRegistry;
+    private readonly IAssetTypeMapper _assetTypeMapper;
 
 #pragma warning disable CS8618
     public CustomPropertyViewModel() { }
 #pragma warning restore CS8618
 
-    public CustomPropertyViewModel(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry)
+    public CustomPropertyViewModel(
+        SerializedProperty property,
+        ISerializableObjectsRegistry serializableObjectsRegistry,
+        IAssetSearchService assetSearchService,
+        IAssetRegistry assetRegistry,
+        IAssetTypeMapper assetTypeMapper)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
         
         _property = property;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _assetSearchService = assetSearchService;
+        _assetRegistry = assetRegistry;
+        _assetTypeMapper = assetTypeMapper;
 
         PropertyName = new(property);
         _property.ValueChangedEvent += HandlePropertyValueChangedEvent;
@@ -60,7 +73,7 @@ public class CustomPropertyViewModel : BaseViewModel
             
             foreach (var subProperty in subProperties)
             {
-                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry));
+                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper));
             }
         }
         else

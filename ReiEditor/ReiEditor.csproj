@@ -131,6 +131,10 @@
       <DependentUpon>Vector3PropertyView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Windows\Editor\Monitor\Drawers\Property\Custom\AssetPropertyView.axaml.cs">
+      <DependentUpon>AssetPropertyView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Windows\Editor\Monitor\Drawers\Property\Custom\ColorPropertyView.axaml.cs">
       <DependentUpon>ColorPropertyView.axaml</DependentUpon>
       <SubType>Code</SubType>

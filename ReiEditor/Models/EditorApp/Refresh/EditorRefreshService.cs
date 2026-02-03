@@ -1,5 +1,4 @@
 using System;
-using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Import;
 
 namespace ReiEditor.Models.EditorApp.Refresh;
@@ -23,6 +22,11 @@ public class EditorRefreshService : IEditorRefreshService, IDisposable
     }
 
     private void HandleImportedAssetsEvent()
+    {
+        NotifyRefreshed();
+    }
+
+    public void NotifyRefreshed()
     {
         RefreshedEvent?.Invoke();
     }

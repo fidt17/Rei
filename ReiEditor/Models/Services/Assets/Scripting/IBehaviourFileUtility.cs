@@ -10,5 +10,5 @@ public interface IBehaviourFileUtility
     List<BehaviourFileUtility.BehaviourPathData> GetAllBehaviours();
     Task<List<ObjectFile<AssetMeta>>> GetAllBehaviourMetas();
     bool TryGetBehaviourNameFrom(string text, out string name);
-    bool IsBehaviourFile(string path);
+    Task<bool> IsBehaviourFile(string path);
 }

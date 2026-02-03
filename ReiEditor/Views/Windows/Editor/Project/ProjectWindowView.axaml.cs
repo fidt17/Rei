@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
@@ -103,14 +102,14 @@ public partial class ProjectWindowView : UserControl
         e.Handled = true;
     }
 
-    private void ActiveItemsDropTarget_OnDrop(object? sender, DragEventArgs e)
+    private async void ActiveItemsDropTarget_OnDrop(object? sender, DragEventArgs e)
     {
         if (DataContext is not ProjectWindowViewModel vm) return;
 
         var paths = GetDroppedPaths(e);
         if (paths.Count == 0) return;
 
-        _ = vm.ImportExternalPathsAsync(paths);
+        await vm.ImportExternalPathsAsync(paths);
         e.Handled = true;
     }
 

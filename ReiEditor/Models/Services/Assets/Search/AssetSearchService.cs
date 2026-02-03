@@ -53,4 +53,16 @@ public sealed class AssetSearchService : IAssetSearchService
             .ThenBy(result => result.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    public IReadOnlyList<AssetSearchResult> SearchByExtensions(string query, IReadOnlyCollection<string> extensions)
+    {
+        if (extensions.Count == 0) return Array.Empty<AssetSearchResult>();
+
+        var results = Search(query);
+        if (results.Count == 0) return results;
+
+        return results
+            .Where(result => result.IsDirectory || extensions.Contains(IOPath.GetExtension(result.FullPath), StringComparer.OrdinalIgnoreCase))
+            .ToList();
+    }
 }

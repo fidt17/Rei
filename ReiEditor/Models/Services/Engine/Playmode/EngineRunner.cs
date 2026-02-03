@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Engine.Api;
@@ -10,6 +11,7 @@ using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Common.Procedures;
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
@@ -37,6 +39,9 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
     private readonly IEngineShutdownListener _shutdownListener;
     private readonly IResourceService _resourceService;
     private readonly IClientDllManager _clientDllManager;
+    private readonly IEditorProceduresService _editorProceduresService;
+
+    private Procedure? _startProcedure;
 
     public EngineRunner(
         IEngineApi engineApi,
@@ -45,7 +50,8 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         IEngineWindowController engineWindowController,
         IEngineShutdownListener shutdownListener, 
         IResourceService resourceService, 
-        IClientDllManager clientDllManager)
+        IClientDllManager clientDllManager,
+        IEditorProceduresService editorProceduresService)
     {
         _engineApi = engineApi;
         _logger = logger;
@@ -54,6 +60,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _shutdownListener = shutdownListener;
         _resourceService = resourceService;
         _clientDllManager = clientDllManager;
+        _editorProceduresService = editorProceduresService;
 
         _startCallbackDelegate = HandleEngineStartedEvent;
 
@@ -73,6 +80,8 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             _logger.LogError("Cannot start playmode because EnginePtr already exists");
             return false;
         }
+
+        BeginStartProcedure();
         
         Task.Run(() =>
         {
@@ -95,6 +104,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 _logger.LogError("Engine failure...");
                 _logger.LogException(e);
+                EndStartProcedure();
                 _ = StopEngine();
             }
         });
@@ -171,6 +181,24 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 _logger.LogException(e);
             }
+            finally
+            {
+                EndStartProcedure();
+            }
         });
+    }
+
+    private void BeginStartProcedure()
+    {
+        if (_startProcedure != null) return;
+        _startProcedure = new Procedure("Engine starting");
+        _editorProceduresService.TrackProcedure(_startProcedure);
+    }
+
+    private void EndStartProcedure()
+    {
+        if (_startProcedure == null) return;
+        _startProcedure.Complete();
+        _startProcedure = null;
     }
 }

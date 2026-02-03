@@ -2,6 +2,16 @@
 
 namespace rei::assets
 {
+#ifdef SERIALIZABLE_BODY
+    #pragma push_macro("SERIALIZABLE_BODY")
+    #undef SERIALIZABLE_BODY
+    #define SERIALIZABLE_BODY(CLASS_NAME)\
+        public:\
+        CLASS_NAME() = default;\
+        nlohmann::json REI_GET() const;\
+        void REI_SET(const nlohmann::json& data);
+#endif
+
     class IAssetRef
     {
     public:
@@ -17,9 +27,13 @@ namespace rei::assets
         SERIALIZABLE_BODY(AssetRef)
 
         SERIALIZE std::string Id = "";
+        std::string LoadedId = "";
 
         T* Asset = nullptr;
         i32 AssetSize = 0;
+        
+        using AssignHandler = void (*)(AssetRef<T>&, const AssetRef<T>&);
+        inline static AssignHandler AssignHandlerFunc = nullptr;
 
         REI_API AssetRef(std::string id) : Id(std::move(id))
         {
@@ -27,8 +41,30 @@ namespace rei::assets
 
         AssetRef(const AssetRef& other)
             : Id(other.Id),
-              Asset(other.Asset)
+              LoadedId(other.LoadedId),
+              Asset(other.Asset),
+              AssetSize(other.AssetSize)
         {
+        }
+        
+        AssetRef& operator=(const AssetRef& other)
+        {
+            if (this == &other)
+            {
+                return *this;
+            }
+
+            if (AssignHandlerFunc != nullptr)
+            {
+                AssignHandlerFunc(*this, other);
+                return *this;
+            }
+            
+            Id = other.Id;
+            LoadedId = other.LoadedId;
+            Asset = other.Asset;
+            AssetSize = other.AssetSize;
+            return *this;
         }
 
         T* operator->()
@@ -41,7 +77,7 @@ namespace rei::assets
 
         bool IsLoaded() const
         {
-            return Asset;
+            return Asset && LoadedId == Id;
         }
 
         void UnloadAsset() override
@@ -54,4 +90,8 @@ namespace rei::assets
             return AssetSize;
         }
     };
+
+#ifdef SERIALIZABLE_BODY
+    #pragma pop_macro("SERIALIZABLE_BODY")
+#endif
 }

@@ -12,6 +12,7 @@ public class SerializedProperty
     public string Name { get; }
     public SerializedTypeEnum Type { get; }
     public string SourceType { get; }
+    [JsonIgnore] public string? TemplateTypeName { get; private set; }
     [JsonIgnore] public SerializedProperty? ParentProperty { get; }
 
     [JsonIgnore]
@@ -58,13 +59,19 @@ public class SerializedProperty
     [JsonProperty("Value")]
     private object? _value;
 
-    public SerializedProperty(string name, SerializedTypeEnum type, object? value, string sourceType, SerializedProperty? parentProperty)
+    public SerializedProperty(string name, SerializedTypeEnum type, object? value, string sourceType, SerializedProperty? parentProperty, string? templateTypeName = null)
     {
         Name = name;
         Type = type;
         Value = value;
         SourceType = sourceType;
         ParentProperty = parentProperty;
+        TemplateTypeName = templateTypeName;
+    }
+
+    public void SetTemplateTypeName(string? templateTypeName)
+    {
+        TemplateTypeName = templateTypeName;
     }
 
     public void FillPropertyHierarchy(List<SerializedProperty> hierarchy)

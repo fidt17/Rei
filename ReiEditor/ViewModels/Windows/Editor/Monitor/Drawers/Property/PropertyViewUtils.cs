@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
@@ -10,7 +12,12 @@ namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 
 public static class PropertyViewUtils
 {
-    public static BaseViewModel CreatePropertyViewModel(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry)
+    public static BaseViewModel CreatePropertyViewModel(
+        SerializedProperty property,
+        ISerializableObjectsRegistry serializableObjectsRegistry,
+        IAssetSearchService assetSearchService,
+        IAssetRegistry assetRegistry,
+        IAssetTypeMapper assetTypeMapper)
     {
         return property.Type switch
         {
@@ -19,7 +26,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -38,7 +45,12 @@ public static class PropertyViewUtils
         return new string(charList.ToArray());
     }
 
-    private static BaseViewModel GetPropertyViewModelForCustomType(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry)
+    private static BaseViewModel GetPropertyViewModelForCustomType(
+        SerializedProperty property,
+        ISerializableObjectsRegistry serializableObjectsRegistry,
+        IAssetSearchService assetSearchService,
+        IAssetRegistry assetRegistry,
+        IAssetTypeMapper assetTypeMapper)
     {
         if (property.SourceType == "Vector3")
         {
@@ -48,7 +60,11 @@ public static class PropertyViewUtils
         {
             return new ColorPropertyViewModel(property);
         }
+        else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
+        {
+            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper);
+        }
 
-        return new CustomPropertyViewModel(property, serializableObjectsRegistry);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper);
     }
 }
