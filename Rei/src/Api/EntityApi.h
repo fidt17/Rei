@@ -3,6 +3,7 @@
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "rei_behaviours/render/RenderOutlineTag.h"
+#include "rei_behaviours/transformation/Transform.h"
 
 REI_EXTERN_API inline void CreateNewEntity(const char* name)
 {
@@ -81,6 +82,45 @@ REI_EXTERN_API inline void RenameEntity(const i32 sceneEntityId, const char* new
     if (IS_DEAD(e)) return;
 
     GET(e, EntityInfo).Name = newName;
+}
+
+REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 parentSceneEntityId, const i32 order)
+{
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+
+        const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+        if (IS_DEAD(e)) return;
+
+        const auto& parent = parentSceneEntityId == 0
+            ? rei::ecs::NULL_ENTITY
+            : rei::GetEntityManager().GetBySceneId(parentSceneEntityId);
+
+        if (!HAS(e, rei::Transform)) return;
+
+        GET(e, rei::Transform).SetParent(parent, order);
+    });
+}
+
+REI_EXTERN_API inline void InstantiateEntity(const char* json)
+{
+    const std::string jsonStr = json;
+
+    rei::GetEngine().ExecuteOnMainThread([=]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+
+        nlohmann::json data = nlohmann::json::parse(jsonStr);
+        const i32 sourceEntityId = data.at("SourceEntityId");
+        const std::string requestedName = data.value("RequestedName", "");
+        const bool includeChildren = data.value("IncludeChildren", true);
+
+        const auto& sourceEntity = rei::GetEntityManager().GetBySceneId(sourceEntityId);
+        if (IS_DEAD(sourceEntity)) return;
+
+        rei::GetEntityManager().Instantiate(sourceEntity, requestedName, includeChildren);
+    });
 }
 
 REI_EXTERN_API inline void SetEntityData(const char* json)

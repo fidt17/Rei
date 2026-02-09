@@ -3,7 +3,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:editor="clr-namespace:ReiEditor.ViewModels.Windows.Editor"
-        xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
         xmlns:playmode="clr-namespace:ReiEditor.Views.Windows.Editor.Playmode"
         xmlns:statusBar="clr-namespace:ReiEditor.Views.Windows.Editor.StatusBar"
         xmlns:hierarchies="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"

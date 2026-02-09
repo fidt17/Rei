@@ -17,7 +17,7 @@ public class GameEntity
     [JsonProperty]
     public string Name { get; private set; }
 
-    [JsonProperty]
+    [JsonIgnore]
     public TransformComponent Transform { get; private set; }
 
     public IEnumerable<BehaviourComponent> Behaviours => _behaviours;

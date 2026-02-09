@@ -19,6 +19,7 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
     public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; } = new();
     public ICommand ConfirmRenameCommand { get; }
+    public ICommand DuplicateCommand { get; }
     public ICommand DeleteCommand { get; }
     public MoveNodeCommand MoveNodeCommand { get; }
 
@@ -52,6 +53,7 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         Name.Value = node.Content.Name;
 
         SelectCommand = ReactiveCommand.Create(Select);
+        DuplicateCommand = ReactiveCommand.Create(Duplicate);
         DeleteCommand = ReactiveCommand.Create(Delete);
 
         StartRenameCommand = new RelayCommand(StartRename);
@@ -59,14 +61,19 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         MoveNodeCommand = new MoveNodeCommand(Node, _entityManagementService);
 
         ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete", Delete));
         
         _selectionService.RegisterSelectable(this);
+        _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
+        HandleActiveSelectionChangedEvent(_selectionService.ActiveSelection.Value);
     }
 
     public override void Dispose()
     {
         _selectionService.UnregisterSelectable(this);
+        _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
+        
         Node.Content.NameChangedEvent -= HandleNameChangedEvent;
     }
 
@@ -90,9 +97,27 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
     public IEnumerable<HierarchyNodeViewModel> GetAllChildNodesRecursive() => ChildNodes.SelectMany(node => node.GetAllChildNodesRecursive());
 
-    public void Select() => Selected.Value = true;
-    public void Deselect() => Selected.Value = false;
-    
+    public void Select()
+    {
+        _selectionService.Select(Node.Content);
+    }
+
+    public void Deselect()
+    {
+        _selectionService.Deselect(Node.Content);
+    }
+
+    private void HandleActiveSelectionChangedEvent(ISelectable? value)
+    {
+        if (value is IEntitySelectable selectable)
+        {
+            Selected.Value = selectable.Entity.Id == Node.Content.Id;
+            return;
+        }
+
+        Selected.Value = false;
+    }
+
     private void Delete()
     {
         if (Selected.Value)
@@ -102,6 +127,11 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         }
         
         _entityManagementService.DestroyEntity(Node.Content);
+    }
+
+    private void Duplicate()
+    {
+        _entityManagementService.InstantiateEntity(Node.Content);
     }
 
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;

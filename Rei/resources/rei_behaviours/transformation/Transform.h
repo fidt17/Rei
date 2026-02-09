@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+#include <vector>
+
 #include "glm/detail/type_quat.hpp"
 
 namespace rei
@@ -10,8 +12,11 @@ namespace rei
         SERIALIZE math::Vector3 _position;
         SERIALIZE math::Vector3 _rotation;
         SERIALIZE math::Vector3 _scale;
+        HIDE_IN_EDITOR SERIALIZE i32 _parent = 0;
+        HIDE_IN_EDITOR SERIALIZE i32 _order = 0;
 
         glm::quat _quaternion;
+        ecs::Entity _parentEntity = ecs::NULL_ENTITY;
 
     public:
         REI_API void Reset();
@@ -22,6 +27,16 @@ namespace rei
         REI_API math::Vector3& GetPosition();
         REI_API math::Vector3& GetScale();
         REI_API const glm::quat& GetRotation() const;
+
+        REI_API ecs::Entity GetParent() const;
+        REI_API void SetParent(ecs::Entity parent);
+        REI_API void SetParent(ecs::Entity parent, i32 order);
+
+        REI_API i32 GetChildOrder() const;
+        REI_API void SetChildOrder(i32 order);
+
+        REI_API std::vector<ecs::Entity> GetChildren() const;
+        REI_API i32 GetMaxChildOrder() const;
 
         REI_API void Translate(const math::Vector3& translation);
 
@@ -40,4 +55,5 @@ namespace rei
         REI_API operator std::string() const;
     };
 }
+
 EXPORT_COMPONENT(rei::Transform)

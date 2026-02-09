@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -32,6 +33,7 @@ public partial class HierarchyNode : UserControl
     {
         if (_vm == null) return;
         _vm.StartRenameCommand.ExecutedEvent -= EnableNameTextBox;
+        _vm.ContextMenu.AnyCommandExecutedEvent -= HandleAnyContextMenuCommandExecuted;
     }
 
     private void HandleDataContextChangedEvent(object? sender, EventArgs e)
@@ -41,6 +43,7 @@ public partial class HierarchyNode : UserControl
         _vm = vm;
 
         _vm.StartRenameCommand.ExecutedEvent += EnableNameTextBox;
+        _vm.ContextMenu.AnyCommandExecutedEvent += HandleAnyContextMenuCommandExecuted;
     }
 
     private void EnableNameTextBox()
@@ -55,25 +58,19 @@ public partial class HierarchyNode : UserControl
     {
         if (_vm == null) return;
         if (!_vm.Selected.Value) return;
-        if (e.Key != Key.Delete) return;
-		
-        _vm.DeleteCommand.Execute(null);
-    }
-
-    // ReSharper disable once UnusedParameter.Local
-    private void InputElement_OnTapped(object? obj, TappedEventArgs _)
-    {
-        if (_vm == null) return;
-        if (!_vm.Selected.Value) return;
-
-        Dispatcher.UIThread.InvokeAsync(async () =>
+        
+        if (e.Key == Key.Delete)
         {
-            const int DELAY = 300;
-            await Task.Delay(DELAY);
-            
-            if (!_vm.Selected.Value) return;
+            _vm.DeleteCommand.Execute(null);
+        }
+        else if (e.Key == Key.F2)
+        {
             _vm.StartRenameCommand.Execute(null);
-        });
+        }
+        else if (e.Key == Key.D && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            _vm.DuplicateCommand.Execute(null);
+        }
     }
 
     // ReSharper disable once UnusedParameter.Local
@@ -132,7 +129,6 @@ public partial class HierarchyNode : UserControl
             
             var nodeToMove = e.Data.Get("Node") as HierarchyNodeViewModel;
             if (nodeToMove == null) return;
-            
             nodeToMove.MoveNodeCommand.Execute(new MoveNodeCommand.MoveArgs(_vm.Node, _vm.ChildNodes.Count));
             e.Handled = true;
         }
@@ -143,5 +139,28 @@ public partial class HierarchyNode : UserControl
             pointerDown = false;
         };
         AddHandler(DragDrop.DropEvent, Drop);
+    }
+
+    private void RootBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control control) return;
+
+        if (e.GetCurrentPoint(control).Properties.IsRightButtonPressed)
+        {
+            FlyoutBase.ShowAttachedFlyout(control);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        {
+            _vm?.SelectCommand.Execute(null);
+        }
+    }
+
+    private void HandleAnyContextMenuCommandExecuted()
+    {
+        var flyout = FlyoutBase.GetAttachedFlyout(RootBorder);
+        flyout?.Hide();
     }
 }

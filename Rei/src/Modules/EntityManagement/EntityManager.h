@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <typeindex>
+#include <vector>
 
 #include "Engine/Services.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
@@ -146,7 +147,12 @@ namespace rei
 
         REI_API void DeleteBehaviour(ecs::Entity e, i32 behaviourId);
 
+        REI_API std::vector<ecs::Entity> GetRootEntities() const;
+
+        REI_API ecs::Entity Instantiate(ecs::Entity source, const std::string& requestedName = "", bool includeChildren = true) const;
+
         REI_API void Destroy(ecs::Entity e) const;
+        REI_API void ResolveTransformParents() const;
 
         void InitBehaviour(ecs::Entity e, Behaviour& b) const;
 

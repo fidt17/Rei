@@ -104,6 +104,21 @@ public class EntityApi : IEntityApi
             // ignore
         }
     }
+
+    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order);
+    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+
+        try
+        {
+            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
     
     private delegate void SetEntityDataDelegate(string json);
     public void SetData(SetEntityDataRequest request)
@@ -114,6 +129,22 @@ public class EntityApi : IEntityApi
         {
             // ReSharper disable once RedundantArgumentDefaultValue
             _engineApi.Invoke(typeof(SetEntityDataDelegate), "SetEntityData", JsonConvert.SerializeObject(request));
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
+
+    private delegate void InstantiateEntityDelegate(string json);
+    public void InstantiateEntity(InstantiateEntityRequest request)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+
+        try
+        {
+            // ReSharper disable once RedundantArgumentDefaultValue
+            _engineApi.Invoke(typeof(InstantiateEntityDelegate), "InstantiateEntity", JsonConvert.SerializeObject(request));
         }
         catch (Exception)
         {

@@ -68,6 +68,8 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     public void SetHierarchy(Hierarchy<GameEntity> hierarchy)
     {
+        var expandedEntityIds = CaptureExpandedEntityIds();
+        
         ResetHierarchy();
         
         _activeHierarchy = hierarchy;
@@ -77,11 +79,13 @@ public class HierarchyWindowViewModel : BaseViewModel
         
         SceneName.Set(hierarchy.Name);
         UpdateEntitiesList(_activeHierarchy);
+        RestoreExpandedState(expandedEntityIds);
     }
 
     private void ResetHierarchy()
     {
         Nodes.ClearAndDispose();
+        _nodeMap.Clear();
 
         if (_activeHierarchy != null)
         {
@@ -89,7 +93,7 @@ public class HierarchyWindowViewModel : BaseViewModel
             _activeHierarchy.NodeRemovedEvent -= HandleNodeRemovedEvent;
             _activeHierarchy.NodeMovedEvent -= HandleNodeMovedEvent;
         }
-        
+
         _activeHierarchy = null;
     }
 
@@ -103,28 +107,7 @@ public class HierarchyWindowViewModel : BaseViewModel
         }
     }
 
-    private void ResetSelection()
-    {
-        foreach (var n in GetAllNodes())
-        {
-            n.Deselect();
-        }
-        
-        _selectionService.ResetSelection();
-    }
-	
-    private void HandleNodeSelectedChangedEvent(HierarchyNodeViewModel node, bool isSelected)
-    {
-        if (!isSelected) return;
-
-        _selectionService.Select(node.Node.Content);
-		
-        foreach (var n in GetAllNodes())
-        {
-            if (n == node) continue;
-            n.Deselect();
-        }
-    }
+    private void ResetSelection() => _selectionService.ResetSelection();
 
     private IEnumerable<HierarchyNodeViewModel> GetAllNodes() => _nodeMap.Values;
     
@@ -132,13 +115,11 @@ public class HierarchyWindowViewModel : BaseViewModel
     {
         var node = _hierarchyElementFactory.CreateInstance(n);
         _nodeMap.Add(n, node);
-        node.Selected.ChangedEvent += (b) => HandleNodeSelectedChangedEvent(node, b);
         Nodes.Add(node);
 			
         foreach (var childNode in node.CreateChildNodes(_hierarchyElementFactory))
         {
             _nodeMap.Add(childNode.Node, childNode);
-            childNode.Selected.ChangedEvent += b => HandleNodeSelectedChangedEvent(childNode, b);
         }
     }
 
@@ -219,5 +200,25 @@ public class HierarchyWindowViewModel : BaseViewModel
                     
             node.StartRenameCommand.Execute(null);
         });
+    }
+
+    private HashSet<int> CaptureExpandedEntityIds()
+    {
+        var expandedEntityIds = new HashSet<int>();
+        foreach (var node in _nodeMap.Values)
+        {
+            if (!node.Expanded.Value) continue;
+            expandedEntityIds.Add(node.Node.Content.Id);
+        }
+
+        return expandedEntityIds;
+    }
+
+    private void RestoreExpandedState(IReadOnlySet<int> expandedEntityIds)
+    {
+        foreach (var node in _nodeMap.Values)
+        {
+            node.Expanded.Value = expandedEntityIds.Contains(node.Node.Content.Id);
+        }
     }
 }

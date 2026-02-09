@@ -36,7 +36,6 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly Dictionary<string, ProjectDirectoryNodeViewModel> _nodeByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ProjectAssetItemViewModel> _allAssets = new();
     private ProjectDirectoryNodeViewModel? _selectedDirectory;
-    private ProjectAssetItemViewModel? _selectedAsset;
     private readonly IResourceService? _resourceService;
     private readonly IStorageProvider? _storageProvider;
     private readonly IAssetOperationsService? _assetOperationsService;
@@ -238,7 +237,6 @@ public class ProjectWindowViewModel : BaseViewModel
     {
         ActiveItems.ClearAndDispose();
         _allAssets.Clear();
-        _selectedAsset = null;
 
         if (!Directory.Exists(directoryPath)) return;
 
@@ -292,7 +290,6 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void SelectAsset(ProjectAssetItemViewModel item)
     {
-        _selectedAsset = item;
         TrackSearchSelection(item);
 
         foreach (var other in _allAssets)
@@ -410,7 +407,6 @@ public class ProjectWindowViewModel : BaseViewModel
 
     public void ClearAssetSelection()
     {
-        _selectedAsset = null;
         foreach (var asset in _allAssets)
         {
             asset.Deselect();
@@ -501,7 +497,6 @@ public class ProjectWindowViewModel : BaseViewModel
         _nodeByPath.Clear();
         _allAssets.Clear();
         _selectedDirectory = null;
-        _selectedAsset = null;
         ActiveDirectoryPath.Value = "";
         _projectRootPath = "";
     }

@@ -124,8 +124,7 @@ public class EditorPreferencesService : IEditorPreferencesService
     public void SetWindowContainerActiveTab(string tag, string tabName)
     {
         if (string.IsNullOrWhiteSpace(tag)) return;
-        
-        tabName ??= "";
+
         if (_preferences.WindowContainerActiveTabs.TryGetValue(tag, out var current) &&
             string.Equals(current, tabName, StringComparison.Ordinal))
         {

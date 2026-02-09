@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;

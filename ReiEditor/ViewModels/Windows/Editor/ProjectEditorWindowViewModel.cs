@@ -32,6 +32,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public MonitorWindowViewModel Monitor { get; } = new();
     public ProjectWindowViewModel ProjectWindow { get; } = new();
 
+    private Scene? _activeScene;
+    
     private readonly ISceneManagementService _sceneManagementService;
 
 #pragma warning disable CS8618
@@ -69,8 +71,6 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         ProjectWindow = projectWindowFactory.CreateInstance();
         FooterWindowContainer = new WindowContainerViewModel(editorPreferencesService, "FooterWindow");
         InitializeConsoleTabs();
-        
-        _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
     }
 
     private void InitializeConsoleTabs()
@@ -93,12 +93,36 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         
         _sceneManagementService.CurrentScene.Unsubscribe(HandleCurrentSceneChangedEvent);
     }
+
+    public void OnProjectLoaded()
+    {
+        _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
+        
+        HandleCurrentSceneChangedEvent(_sceneManagementService.CurrentScene.Value);
+    }
     
     private void HandleCurrentSceneChangedEvent(Scene? scene)
     {
+        if (_activeScene != null)
+        {
+            _activeScene.HierarchyRebuiltEvent -= HandleSceneHierarchyRebuiltEvent;
+        }
+        
+        _activeScene = scene;
+        
+        if (_activeScene != null)
+        {
+            _activeScene.HierarchyRebuiltEvent += HandleSceneHierarchyRebuiltEvent;
+        }
+        
+        HandleSceneHierarchyRebuiltEvent();
+    }
+
+    private void HandleSceneHierarchyRebuiltEvent()
+    {
         Dispatcher.UIThread.Invoke(() =>
         {
-            Hierarchy.SetHierarchy(scene == null ? new Hierarchy<GameEntity>("") : scene.Hierarchy);
+            Hierarchy.SetHierarchy(_activeScene == null ? new Hierarchy<GameEntity>("") : _activeScene.Hierarchy);
         });
     }
 }

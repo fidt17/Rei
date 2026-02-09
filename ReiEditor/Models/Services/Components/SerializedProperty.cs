@@ -79,4 +79,44 @@ public class SerializedProperty
         hierarchy.Insert(0, this);
         ParentProperty?.FillPropertyHierarchy(hierarchy);
     }
+
+    public void SetValueWithoutTriggeringChangedEvent(object value)
+    {
+        try
+        {
+            if (_value == value || (_value != null && _value.Equals(value))) return;
+                
+            if (Type.IsValidValue(value))
+            {
+                if (value is Dictionary<string, object?> valueDict)
+                {
+                    var nestedProperties = Value as Dictionary<string, SerializedProperty>;
+                    foreach (var (k, v) in valueDict)
+                    {
+                        if (nestedProperties!.TryGetValue(k, out var property))
+                        {
+                            property.Value = v;
+                        }
+                    }
+                }
+                else
+                {
+                    _value = value;
+                }
+            }
+            else
+            {
+                throw new Exception($"Cannot assign value of type {value?.GetType()} to property {Type}");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    public void TriggerChangedEvent()
+    {
+        ValueChangedEvent?.Invoke(_value);
+    }
 }

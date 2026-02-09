@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.Update;
+using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Build;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Scenes.Templates;
 using ReiEditor.Utils.Common.Procedures;
+using ReiEditor.Utils.Path;
 
 namespace ReiEditor.Models.ProjectManagement.Setup;
 
@@ -22,6 +26,7 @@ public class ProjectSetupService : IProjectSetupService
     private readonly IProjectUpdateService _projectUpdateService;
     private readonly DefaultSceneTemplate _defaultSceneTemplate;
     private readonly IBuildStarter _buildStarter;
+    private readonly IResourceService _resourceService;
 
     public ProjectSetupService(
         ILogger<ProjectSetupService> logger, 
@@ -31,7 +36,8 @@ public class ProjectSetupService : IProjectSetupService
         IEditorProceduresService editorProceduresService, 
         IProjectUpdateService projectUpdateService, 
         DefaultSceneTemplate defaultSceneTemplate, 
-        IBuildStarter buildStarter)
+        IBuildStarter buildStarter, 
+        IResourceService resourceService)
     {
         _logger = logger;
         _sceneManagementService = sceneManagementService;
@@ -41,6 +47,7 @@ public class ProjectSetupService : IProjectSetupService
         _projectUpdateService = projectUpdateService;
         _defaultSceneTemplate = defaultSceneTemplate;
         _buildStarter = buildStarter;
+        _resourceService = resourceService;
     }
 
     public async Task PrepareProject()
@@ -73,7 +80,7 @@ public class ProjectSetupService : IProjectSetupService
     {
         _logger.Log("Setup new project");
 		
-        var defaultScene = await CreateDefaultScene();
+        var defaultScene = await CreateAndLoadDefaultScene();
         if (defaultScene != null)
         {
             _sceneManagementService.SetBuildSceneId(defaultScene, 0);
@@ -88,16 +95,25 @@ public class ProjectSetupService : IProjectSetupService
 
         if (lastScene == null)
         {
-            _logger.LogWarning("Last scene is missing. Creating default one");
-            lastScene = await CreateDefaultScene();
+            var sceneFromBuildConfig = _sceneManagementService.GetBuildConfiguration().Scenes.First().Value;
+            lastScene = await _assetsService.Load<Scene>(sceneFromBuildConfig);
+
+            if (lastScene == null)
+            {
+                _logger.LogWarning("Last scene is missing. Creating default one");
+                await CreateAndLoadDefaultScene();
+                return;
+            }
         }
 
         await _sceneManagementService.LoadScene(lastScene ?? throw new NullReferenceException("last scene is missing"));
     }
 
-    private async Task<Scene?> CreateDefaultScene()
+    private async Task<Scene?> CreateAndLoadDefaultScene()
     {
-        var scene = await _sceneManagementService.CreateScene("New Scene", "Scenes");
+        var sceneName = PathNamingUtils.GetUniqueAssetName(_resourceService.GetProjectPath("Scenes"), "New Scene", FileExtensions.SCENE);
+        var scene = await _sceneManagementService.CreateScene(sceneName, "Scenes");
+        
         if (scene == null)
         {
             _logger.LogError("Default scene creation failed");
@@ -106,6 +122,7 @@ public class ProjectSetupService : IProjectSetupService
         {
             await _sceneManagementService.LoadScene(scene);
             _defaultSceneTemplate.SetupScene();
+            _sceneManagementService.SetBuildSceneId(scene, 0);
         }
 
         return scene;

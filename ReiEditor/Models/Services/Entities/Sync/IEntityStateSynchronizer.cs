@@ -1,4 +1,4 @@
-﻿namespace ReiEditor.Models.Services.Entities;
+﻿namespace ReiEditor.Models.Services.Entities.Sync;
 
 public interface IEntityStateSynchronizer
 {

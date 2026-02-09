@@ -34,7 +34,7 @@ public class WindowContainerViewModel : BaseViewModel
     public WindowContainerViewModel(IEditorPreferencesService preferencesService, string containerTag)
     {
         _preferencesService = preferencesService;
-        _containerTag = containerTag ?? "";
+        _containerTag = containerTag;
         _preferredTabName = _preferencesService.GetWindowContainerActiveTab(_containerTag);
     }
 

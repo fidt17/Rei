@@ -8,6 +8,9 @@ public interface ISelectionService
 
     void Select(ISelectable selectable);
     void Select(GameEntity e, bool sendToEngine = true);
+    
+    void Deselect(ISelectable selectable, bool sendToEngine = true);
+    void Deselect(GameEntity e, bool sendToEngine = true);
 
     bool IsEntitySelected(GameEntity e);
     

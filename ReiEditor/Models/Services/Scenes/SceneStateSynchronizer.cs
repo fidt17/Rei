@@ -1,4 +1,4 @@
-﻿using ReiEditor.Models.Services.Entities;
+﻿using ReiEditor.Models.Services.Entities.Sync;
 
 namespace ReiEditor.Models.Services.Scenes;
 

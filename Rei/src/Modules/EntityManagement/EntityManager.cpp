@@ -1,7 +1,11 @@
 ﻿#include "pch.h"
 #include "EntityManager.h"
 
+#include <algorithm>
+
+
 #include "rei_behaviours/transformation/Transform.h"
+#include "rei_behaviours/transformation/TransformHierarchyUtility.h"
 #include "Common/Time/ScopedTimer.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
@@ -31,12 +35,16 @@ namespace rei
 
     ecs::Entity EntityManager::CreateNewEntity(const std::string& name)
     {
-        ECS_WORLD(GetInternalWorld());
+        ECS_WORLD(GetInternalWorld())
 
         const auto e = NEW_ENTITY();
-        GET(e, EntityInfo) = {GenerateNewSceneEntityId(), name};
+        GET(e, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = name};
 
-        AddBehaviour<Transform>(e).Reset();
+        auto& transform = AddBehaviour<Transform>(e);
+        transform.Reset();
+        
+        const i32 maxRootOrder = transform_utility::GetMaxOrderForParent(ecs::NULL_ENTITY);
+        transform.SetChildOrder(maxRootOrder + 1);
 
         return e;
     }
@@ -44,7 +52,7 @@ namespace rei
     void EntityManager::Create(const SceneEntity& sceneEntity) const
     {
         time::ScopedTimer entityCreationTimer("Entity " + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + " creation");
-        ECS_WORLD(GetInternalWorld());
+        ECS_WORLD(GetInternalWorld())
 
         struct EntityToBehaviour
         {
@@ -56,7 +64,7 @@ namespace rei
         try
         {
             const auto e = NEW_ENTITY();
-            GET(e, EntityInfo) = {sceneEntity.GetId(), sceneEntity.GetName()};
+            GET(e, EntityInfo) = {.Id = sceneEntity.GetId(), .Name = sceneEntity.GetName()};
             auto& behavioursToAdd = sceneEntity.GetBehaviours();
 
             for (auto behaviourData : behavioursToAdd)
@@ -71,12 +79,12 @@ namespace rei
                 }
 
                 AddBehaviour(e, behaviourId, serializedData, false);
-                behavioursToInit.push_back({e, behaviourId});
+                behavioursToInit.push_back({.Entity = e, .BehaviourId = behaviourId});
             }
         }
         catch (std::exception& e)
         {
-            LOG_ERROR("Scene entity creation exception. Entity Id {}. Exception: {}", sceneEntity.GetId(), e.what());
+            LOG_ERROR("Scene entity creation exception. Entity Id {}. Exception: {}", sceneEntity.GetId(), e.what())
         }
 
         for (const auto& [Entity, BehaviourId] : behavioursToInit)
@@ -91,9 +99,9 @@ namespace rei
         return _behaviourRegistry.GetBehaviour(e, behaviourId);
     }
 
-    Behaviour& EntityManager::AddBehaviour(const ecs::Entity e, const i32 componentId, const nlohmann::json& data, const bool init) const
+    Behaviour& EntityManager::AddBehaviour(const ecs::Entity e, const i32 behaviourId, const nlohmann::json& data, const bool init) const
     {
-        auto& b = _behaviourRegistry.AddBehaviour(e, componentId, data);
+        auto& b = _behaviourRegistry.AddBehaviour(e, behaviourId, data);
 
         if (init)
         {
@@ -103,19 +111,185 @@ namespace rei
         return b;
     }
 
-    void EntityManager::DeleteBehaviour(ecs::Entity e, i32 behaviourId)
+    void EntityManager::DeleteBehaviour(const ecs::Entity e, const i32 behaviourId)
     {
         GetBehaviourRegistry().GetBehaviour(e, behaviourId).Dispose();
         GetBehaviourRegistry().DeleteBehaviour(e, behaviourId);
     }
 
+    std::vector<ecs::Entity> EntityManager::GetRootEntities() const
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        std::vector<ecs::Entity> roots;
+
+        FOR(e, _entityInfoFilter)
+        {
+            if (IS_DEAD(e) || !HAS(e, Transform)) continue;
+
+            const auto& transform = GET(e, Transform);
+            const ecs::Entity parent = transform.GetParent();
+            
+            if (parent != ecs::NULL_ENTITY && !IS_DEAD(parent) && HAS(parent, EntityInfo)) continue;
+
+            roots.push_back(e);
+        }
+
+        return roots;
+    }
+
     void EntityManager::Destroy(const ecs::Entity e) const
     {
-        for (const auto behaviour : GET(e, BehaviourCollection).Behaviours)
+        // recursively collects all nested entities (and root)
+        auto collectEntitiesForDestroy = [&](auto&& self, const ecs::Entity current,
+                                             std::vector<ecs::Entity>& result) -> void
         {
-            GetBehaviour(e, behaviour).Dispose();
+            if (IS_DEAD(current)) return;
+
+            if (HAS(current, Transform))
+            {
+                for (const auto child : GET(current, Transform).GetChildren())
+                {
+                    self(self, child, result);
+                }
+            }
+
+            result.push_back(current);
+        };
+
+        std::vector<ecs::Entity> entitiesToDestroy;
+        collectEntitiesForDestroy(collectEntitiesForDestroy, e, entitiesToDestroy);
+
+        for (const auto entity : entitiesToDestroy)
+        {
+            if (IS_DEAD(entity)) continue;
+
+            if (HAS(entity, BehaviourCollection))
+            {
+                for (const auto behaviour : GET(entity, BehaviourCollection).Behaviours)
+                {
+                    GetBehaviour(entity, behaviour).Dispose();
+                }
+            }
+
+            DESTROY_ENTITY(entity);
         }
-        DESTROY_ENTITY(e);
+    }
+
+    void EntityManager::ResolveTransformParents() const
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        const auto& entityInfoFilter = FILTER(EntityInfo);
+        
+        FOR(e, entityInfoFilter)
+        {
+            if (IS_DEAD(e) || !HAS(e, Transform)) continue;
+
+            GET(e, Transform).AfterREI_SET();
+        }
+    }
+
+    ecs::Entity EntityManager::Instantiate(const ecs::Entity source, const std::string& requestedName, const bool includeChildren) const
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        if (IS_DEAD(source) || !HAS(source, EntityInfo) || !HAS(source, Transform))
+        {
+            REI_THROW("Cannot instantiate from NULL entity, source={}, requestedName={}", std::string(source), requestedName)
+        }
+
+        // json work-around
+        auto wrapValueForSet = [&](const nlohmann::json& value, auto&& wrapValueForSetRef) -> nlohmann::json
+        {
+            if (value.is_object())
+            {
+                nlohmann::json obj = nlohmann::json::object();
+                for (const auto& item : value.items())
+                {
+                    if (item.key() == "REI_TYPE")
+                    {
+                        obj[item.key()] = item.value();
+                    }
+                    else
+                    {
+                        obj[item.key()] = wrapValueForSetRef(item.value(), wrapValueForSetRef);
+                    }
+                }
+
+                return nlohmann::json { { "Value", obj } };
+            }
+
+            return nlohmann::json { { "Value", value } };
+        };
+
+        // recursively creates entities and required children
+        auto instantiateRecursive = [&](auto&& self, const ecs::Entity src, const std::string& nameOverride,
+                                        const ecs::Entity parent, const i32 order) -> ecs::Entity
+        {
+            if (IS_DEAD(src) || !HAS(src, EntityInfo) || !HAS(src, Transform))
+            {
+                REI_THROW("Cannot instantiate from NULL entity, source={}, nameOverride={}", std::string(src), nameOverride)
+            }
+
+            const auto& srcInfo = GET(src, EntityInfo);
+            const auto& srcTransform = GET(src, Transform);
+
+            const auto clone = NEW_ENTITY();
+            GET(clone, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = nameOverride.empty() ? srcInfo.Name : nameOverride};
+
+            for (const auto behaviourId : GET(src, BehaviourCollection).Behaviours)
+            {
+                const auto behaviourData = _behaviourRegistry.GetBehaviourData(src, behaviourId);
+                nlohmann::json behaviourSetData = nlohmann::json::object();
+
+                for (const auto& item : behaviourData.items())
+                {
+                    if (item.key() == "REI_TYPE")
+                    {
+                        behaviourSetData[item.key()] = item.value();
+                    }
+                    else
+                    {
+                        behaviourSetData[item.key()] = wrapValueForSet(item.value(), wrapValueForSet);
+                    }
+                }
+
+                AddBehaviour(clone, behaviourId, behaviourSetData, true);
+            }
+
+            auto& transform = GET(clone, Transform);
+            transform.Reset();
+            transform.SetChildOrder(transform_utility::GetMaxOrderForParent(ecs::NULL_ENTITY) + 1);
+            transform.SetParent(parent, order);
+
+            if (includeChildren)
+            {
+                auto children = srcTransform.GetChildren();
+                std::ranges::sort(children, [&](const ecs::Entity& a, const ecs::Entity& b)
+                {
+                    const auto& aTransform = GET(a, Transform);
+                    const auto& bTransform = GET(b, Transform);
+                    return aTransform.GetChildOrder() < bTransform.GetChildOrder();
+                });
+
+                for (const auto child : children)
+                {
+                    const auto& childTransform = GET(child, Transform);
+                    self(self, child, "", clone, childTransform.GetChildOrder());
+                }
+            }
+
+            return clone;
+        };
+
+        const auto& sourceTransform = GET(source, Transform);
+
+        return instantiateRecursive(instantiateRecursive,
+            source,
+            requestedName,
+            sourceTransform.GetParent(),
+            sourceTransform.GetChildOrder() + 1);
     }
 
     void EntityManager::InitBehaviour(const ecs::Entity e, Behaviour& b) const
@@ -128,16 +302,16 @@ namespace rei
 
     i32 EntityManager::GenerateNewSceneEntityId() const
     {
+        GetInternalWorld()->RefreshAll(); // force refresh filters in case we are creating multiple entities in one frame
+        
         i32 maxId = -1;
         FOR(e, _entityInfoFilter)
         {
             const i32 id = GET(e, EntityInfo).Id;
-            if (id > maxId)
-            {
-                maxId = id;
-            }
+            maxId = std::max(id, maxId);
         }
 
         return maxId + 1;
     }
+
 }

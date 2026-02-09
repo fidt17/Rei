@@ -25,6 +25,7 @@
             <Border
                 x:Name="RootBorder"
                 KeyDown="RootBorder_OnKeyDown"
+                PointerPressed="RootBorder_OnPointerPressed"
                 Padding="4"
                 DragDrop.AllowDrop="True"
                 Classes.IsSelected="{Binding Selected.Value}"
@@ -37,15 +38,22 @@
                         <Setter Property="BorderBrush" Value="{StaticResource Dark_2}" />
                     </Style>
 
-                    <Style Selector="Border#RootBorder:pointerover">
-                        <Setter Property="Background" Value="{StaticResource Dark_3}" />
-                    </Style>
 
                     <Style Selector="Border#RootBorder.IsSelected">
                         <Setter Property="Background" Value="{StaticResource Dark_4}" />
                         <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
                     </Style>
+                    
+                    <Style Selector="Border#RootBorder:pointerover">
+                        <Setter Property="Background" Value="{StaticResource Dark_3}" />
+                    </Style>
                 </Border.Styles>
+                
+                <FlyoutBase.AttachedFlyout>
+                    <Flyout Placement="Pointer" FlyoutPresenterClasses="Clear">
+                        <contextMenu:ContextMenuView DataContext="{Binding ContextMenu}" />
+                    </Flyout>
+                </FlyoutBase.AttachedFlyout>
 
                 <Grid ColumnDefinitions="20, *">
 
@@ -82,11 +90,6 @@
                                 </Style>
                             </TextBox.Styles>
                         </TextBox>
-
-                        <contextMenu:ContextMenuButton
-                            IsVisible="{Binding !IsFocused, ElementName=NameTextBox}"
-                            ContextMenuData="{Binding ContextMenu}"
-                            Tapped="InputElement_OnTapped" />
                     </Grid>
 
                 </Grid>

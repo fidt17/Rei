@@ -100,6 +100,7 @@ public class BehaviourRegistrySourceGenerator
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
                            $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{ " +
                            $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e); " +
+                           $"b.BeforeREI_GET(); " +
                            $"return b.REI_GET();" + " }, " +
                            $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " + 
                            $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
@@ -289,7 +290,7 @@ public class BehaviourRegistrySourceGenerator
 
     private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData, out string templateType)
     {
-        templateType = propertyData.TemplateTypeName ?? GetTemplateTypeName(propertyData.SourceType);
+        templateType = (propertyData.TemplateTypeName ?? GetTemplateTypeName(propertyData.SourceType)) ?? string.Empty;
         if (string.IsNullOrWhiteSpace(templateType))
         {
             return false;

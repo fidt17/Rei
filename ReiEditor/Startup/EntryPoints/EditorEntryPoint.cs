@@ -16,6 +16,8 @@ public class EditorEntryPoint
     private readonly IFactory<ProjectEditorWindowViewModel> _projectEditorWindowViewModelFactory;
     private readonly IProjectSetupService _projectSetupService;
     private readonly IEditorModeStarter _editorModeStarter;
+    
+    private ProjectEditorWindowViewModel? _projectEditorWindowViewModel;
 
     public EditorEntryPoint(
         ILogger<EditorEntryPoint> logger, 
@@ -37,14 +39,16 @@ public class EditorEntryPoint
         SetupEditorWindow();
 
         await _projectSetupService.PrepareProject();
+        _projectEditorWindowViewModel!.OnProjectLoaded();
+        
         _editorModeStarter.Start();
     }
 
     private void SetupEditorWindow()
     {
         var window = new ProjectEditorWindow();
-        var vm = _projectEditorWindowViewModelFactory.CreateInstance();
-        window.DataContext = vm;
+        _projectEditorWindowViewModel = _projectEditorWindowViewModelFactory.CreateInstance();
+        window.DataContext = _projectEditorWindowViewModel;
 		
         _mainWindowService.ShowMainWindow(window);
     }

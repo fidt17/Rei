@@ -5,7 +5,7 @@ namespace ReiEditor.Models.Services.Build.Assets;
 
 public class BuildAssetMap
 {
-	public struct AssetBuildInfo
+	public record struct AssetBuildInfo
 	{
 		public string Id { get; }
 		public string Name { get; }

@@ -1,8 +1,10 @@
 ﻿using Avalonia;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
@@ -63,7 +65,8 @@ public partial class HierarchyMoveTargetLine : UserControl
             return;
         }
 
-        if (IsTopLine && NodeData.Node.Content.Transform.Order != 0)
+        var nodeIndex = GetNodeIndexInParent(NodeData);
+        if (IsTopLine && nodeIndex != 0)
         {
             IsOver = false;
             return;
@@ -82,7 +85,15 @@ public partial class HierarchyMoveTargetLine : UserControl
 
         var thisNode = NodeData.Node;
         var thisNodeParent = thisNode.Parent;
-        var moveIdx = thisNode.Content.Transform.Order + (IsTopLine ? 0 : 1);
+        var targetIndex = GetNodeIndexInParent(NodeData);
+        var moveIdx = targetIndex + (IsTopLine ? 0 : 1);
+        var sourceIndex = GetNodeIndexInParent(nodeToMove);
+
+        if (nodeToMove.Node.Parent == thisNodeParent && sourceIndex < moveIdx)
+        {
+            moveIdx -= 1;
+        }
+
         nodeToMove.MoveNodeCommand.Execute(new MoveNodeCommand.MoveArgs(thisNodeParent, moveIdx));
     }
 
@@ -91,5 +102,32 @@ public partial class HierarchyMoveTargetLine : UserControl
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+
+    private int GetNodeIndexInParent(HierarchyNodeViewModel node)
+    {
+        var parent = node.Node.Parent;
+        if (parent != null)
+        {
+            return parent.GetChildIdx(node.Node);
+        }
+
+        var hierarchyWindowVm = GetHierarchyWindowViewModel();
+        if (hierarchyWindowVm != null)
+        {
+            var rootIndex = hierarchyWindowVm.Nodes.IndexOf(node);
+            if (rootIndex >= 0)
+            {
+                return rootIndex;
+            }
+        }
+
+        return node.Node.Content.Transform.Order;
+    }
+
+    private HierarchyWindowViewModel? GetHierarchyWindowViewModel()
+    {
+        var hierarchyWindow = this.GetVisualAncestors().OfType<HierarchyWindow>().FirstOrDefault();
+        return hierarchyWindow?.DataContext as HierarchyWindowViewModel;
     }
 }

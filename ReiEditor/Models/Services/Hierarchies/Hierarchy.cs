@@ -79,6 +79,9 @@ public class Hierarchy<T> where T : notnull
             }
         }
 
+        var targetListCount = parent == null ? _rootNodes.Count : parent.ChildNodes.Count();
+        order = Math.Clamp(order, 0, targetListCount);
+
         if (node.Parent == null)
         {
             _rootNodes.Remove(node);

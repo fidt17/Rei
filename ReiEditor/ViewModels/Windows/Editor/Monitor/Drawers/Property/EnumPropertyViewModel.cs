@@ -8,16 +8,7 @@ namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 
 public class EnumPropertyViewModel : BasePropertyViewModel<int>
 {
-    #region Options
-
-    private ObservableCollection<string> _options = new();
-    public ObservableCollection<string> Options
-    {
-        get => _options;
-        private set => SetField(ref _options, value);
-    }
-
-    #endregion
+    public ObservableCollection<string> Options { get; } = new();
     
     #region SelectedValue
 

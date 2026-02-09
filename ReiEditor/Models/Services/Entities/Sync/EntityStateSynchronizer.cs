@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -13,10 +12,10 @@ using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
-using ReiEditor.Utils.Extensions;
 
-namespace ReiEditor.Models.Services.Entities;
+namespace ReiEditor.Models.Services.Entities.Sync;
 
 public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
 {
@@ -30,6 +29,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     private readonly ISelectionService _selectionService;
     private readonly ILogger<EntityStateSynchronizer> _logger;
     private readonly ISceneManagementService _sceneManagement;
+    private readonly EntityStateApplier _stateApplier;
     
     public EntityStateSynchronizer(
         IBehaviourRegistry behaviourRegistry,
@@ -47,6 +47,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         _sceneManagement = sceneManagement;
         _engineRunner = engineRunner;
         _behaviourComponentsService = behaviourComponentsService;
+        _stateApplier = new EntityStateApplier(_logger, _behaviourRegistry, _behaviourComponentsService);
 
         _behaviourComponentsService.BehaviourPropertyChangedEvent += HandleEntityBehaviourPropertyChangedEvent;
         _engineRunner.IsActive.Subscribe(HandleEngineRunningValueChangedEvent, invoke: false);
@@ -54,6 +55,10 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     
     public void Dispose()
     {
+        _sceneUpdateTaskCTS?.Cancel();
+        _sceneUpdateTaskCTS?.Dispose();
+        _sceneUpdateTaskCTS = null;
+
         _behaviourComponentsService.BehaviourPropertyChangedEvent -= HandleEntityBehaviourPropertyChangedEvent;
         _engineRunner.IsActive.Unsubscribe(HandleEngineRunningValueChangedEvent);
     }
@@ -62,68 +67,18 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     {
         if (!_engineRunner.IsActive.Value) return;
         
-        var state =_entityApi.GetEntityData(e.Id);
-        //_logger.LogWarning($"State: {JsonConvert.SerializeObject(state, Formatting.Indented)}");
-        if (state == null) return;
+        var state = _entityApi.GetEntityData(e.Id);
+        var needsHierarchyRefresh = UpdateEntityStateFromEngineState(e, state);
         
-        _ignorePropertyChanges = true;
-        
-        e.SetName(state.Name);
-        var behaviourIds = new List<int>();
-        foreach (var behaviourState in state.Behaviours)
+        if (needsHierarchyRefresh)
         {
-            try
-            {
-                var reiType = (string)behaviourState["REI_TYPE"];
-                var behaviourId = _behaviourRegistry.GetIdByName(reiType);
-                if (behaviourId == null) throw new Exception($"Could not find behaviour by REI_TYPE: {reiType}");
-                behaviourIds.Add(behaviourId.Value);
-                
-                // try to add new behaviour
-                var behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
-                if (behaviour == null)
-                {
-                    _behaviourComponentsService.AddComponent(e, behaviourId.Value);
-                    behaviour = e.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
-                    if (behaviour == null)
-                    {
-                        throw new Exception($"Entity is missing a behaviour with id={behaviourId}");
-                    }
-                }
-                
-                // update behaviour properties
-                foreach (var (propertyName, value) in behaviourState)
-                {
-                    try
-                    {
-                        var map = value is JObject jObject ? jObject.ToDictionary() : value;
-                        
-                        if (behaviour.HasProperty(propertyName))
-                        {
-                            var p = behaviour.GetProperty(propertyName);
-                            p.Value = map;
-                        }
-                    }
-                    catch (Exception exception)
-                    {
-                        _logger.LogError($"Exception while parsing property({propertyName}) in behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError($"Exception while parsing behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
-            }
+            _sceneManagement.CurrentScene.Value!.RebuildHierarchy();
+            _logger.Log($"[EntitySync] Hierarchy rebuilt.");
         }
-        
-        // delete behaviours that no longer exist on this entity
-        foreach (var b in e.Behaviours.ToList())
+        else
         {
-            if (behaviourIds.Contains(b.Id)) continue;
-            _behaviourComponentsService.DeleteComponent(e, b);
+            _logger.Log($"[EntitySync] Hierarchy rebuilt is not needed.");
         }
-        
-        _ignorePropertyChanges = false;
     }
     
     private void HandleEntityBehaviourPropertyChangedEvent(EntityBehaviourPropertyChangeEventArgs args)
@@ -184,7 +139,6 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             if (request.Behaviours.Count == 0) return;
 
             _entityApi.SetData(request);
-            //_logger.LogWarning($"Request: {JsonConvert.SerializeObject(request, Formatting.Indented)}");
         }
         catch (Exception e)
         {
@@ -208,7 +162,6 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
 
                     UpdateSceneEntitiesFromEngine();
                 }
-                // ReSharper disable once FunctionNeverReturns
             }, token);
         }
         else
@@ -231,33 +184,88 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
 
             var currentSceneEntities = scene.Entities.ToList();
             //_logger.LogWarning($"Scene entities: {JsonConvert.SerializeObject(entities)}");
-            
-            foreach (var e in entities.Entities)
+            var needsHierarchyRefresh = false;
+
+            var entityStates = new Dictionary<int, GetEntityDataResponse?>();
+            var parentByEntityId = new Dictionary<int, int>();
+            var orderByEntityId = new Dictionary<int, int>();
+
+            foreach (var entity in entities.Entities)
             {
+                var state = _entityApi.GetEntityData(entity.Id);
+                entityStates[entity.Id] = state;
+
+                var parentId = 0;
+                var order = 0;
+                if (state != null && EntityStateSyncUtility.TryGetTransformData(state.Behaviours, out var transformParent, out var transformOrder))
+                {
+                    parentId = transformParent ?? 0;
+                    order = transformOrder ?? 0;
+                }
+
+                parentByEntityId[entity.Id] = parentId;
+                orderByEntityId[entity.Id] = order;
+            }
+
+            var orderedEntityIds = EntityStateSyncUtility.BuildOrderedEntityIds(parentByEntityId, orderByEntityId);
+            _logger.Log($"[EntitySync] Engine entities: {BuildEngineEntitiesDebugString(scene, parentByEntityId, orderByEntityId, orderedEntityIds)}");
+
+            foreach (var entityId in orderedEntityIds)
+            {
+                var e = entities.Entities.Find(x => x.Id == entityId);
+                if (e == null) continue;
+
                 var gameEntity = currentSceneEntities.Find(x => x.Id == e.Id);
                 // Create missing entities
                 if (gameEntity == null)
                 {
                     gameEntity = new GameEntity(e.Id, $"Entity {e}");
                     scene.AddEntity(gameEntity);
-                    UpdateEntityState(gameEntity);
-                    //_logger.LogWarning($"Add new entity: {entityId}");
+                    needsHierarchyRefresh |= UpdateEntityStateFromEngineState(gameEntity, entityStates[entityId]);
                 }
-                
-                // Update selection 
+                else
+                {
+                    needsHierarchyRefresh |= UpdateEntityStateFromEngineState(gameEntity, entityStates[entityId]);
+                }
+
                 UpdateEntitySelection(e, gameEntity);
             }
             
             // Delete invalid entities
             foreach (var gameEntity in currentSceneEntities.Where(x => !entities.Entities.Exists(y => y.Id == x.Id)))
             {
-                scene.DeleteEntity(gameEntity);
-                //_logger.LogWarning($"Delete invalid entity: {gameEntity.Name}");
+                scene.DeleteEntity(gameEntity, refreshTransforms: false);
+                needsHierarchyRefresh = true;
+            }
+
+            if (needsHierarchyRefresh)
+            {
+                scene.RebuildHierarchy();
+                _logger.Log($"[EntitySync] Hierarchy rebuilt. {BuildHierarchyDebugString(scene)}");
+            }
+            else
+            {
+                _logger.Log($"[EntitySync] Hierarchy rebuilt is not needed.");
             }
         }
         catch (Exception e)
         {
             _logger.LogException(e);
+        }
+    }
+
+    private bool UpdateEntityStateFromEngineState(GameEntity e, GetEntityDataResponse? state)
+    {
+        if (state == null) return false;
+
+        _ignorePropertyChanges = true;
+        try
+        {
+            return _stateApplier.Apply(e, state);
+        }
+        finally
+        {
+            _ignorePropertyChanges = false;
         }
     }
 
@@ -271,5 +279,77 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         {
             _selectionService.ResetSelection(sendToEngine: false);
         }
+    }
+
+    private static string BuildEngineEntitiesDebugString(
+        Scene scene,
+        IReadOnlyDictionary<int, int> parentByEntityId,
+        IReadOnlyDictionary<int, int> orderByEntityId,
+        IReadOnlyList<int> orderedEntityIds)
+    {
+        var builder = new StringBuilder();
+        builder.Append("Ordered=");
+        builder.Append(string.Join(", ", orderedEntityIds));
+        builder.Append(" | Values=");
+        var first = true;
+        foreach (var entityId in orderedEntityIds)
+        {
+            if (!parentByEntityId.TryGetValue(entityId, out var parentId)) continue;
+            if (!orderByEntityId.TryGetValue(entityId, out var order)) continue;
+
+            if (!first)
+            {
+                builder.Append("; ");
+            }
+
+            var entityName = scene.GetById(entityId)?.Name ?? "missing";
+            builder.Append(entityId);
+            builder.Append("(");
+            builder.Append(entityName);
+            builder.Append(",p=");
+            builder.Append(parentId);
+            builder.Append(",o=");
+            builder.Append(order);
+            builder.Append(")");
+            first = false;
+        }
+
+        return builder.ToString();
+    }
+
+    private static string BuildHierarchyDebugString(Scene scene)
+    {
+        var builder = new StringBuilder();
+        builder.Append("Hierarchy=");
+        var first = true;
+
+        void appendNode(HierarchyNode<GameEntity> node, int depth)
+        {
+            if (!first)
+            {
+                builder.Append("; ");
+            }
+
+            builder.Append(new string('-', depth));
+            builder.Append(node.Content.Id);
+            builder.Append("(p=");
+            builder.Append(node.Content.Transform.Parent);
+            builder.Append(",o=");
+            builder.Append(node.Content.Transform.Order);
+            builder.Append(")");
+            first = false;
+
+            foreach (var child in node.ChildNodes)
+            {
+                appendNode(child, depth + 1);
+            }
+        }
+
+        foreach (var root in scene.Hierarchy.RootNodes)
+        {
+            appendNode(root, 0);
+        }
+
+        return builder.ToString();
     }
 }

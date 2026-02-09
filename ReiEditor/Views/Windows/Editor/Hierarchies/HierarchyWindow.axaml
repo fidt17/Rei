@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
-             xmlns:behaviours="clr-namespace:ReiEditor.Views.Behaviours"
              xmlns:hierarchies="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Hierarchies"
              xmlns:hierarchies1="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
              mc:Ignorable="d"
@@ -19,7 +18,7 @@
 
             <!-- Header -->
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Hierarchy — "
+                <TextBlock Text="Hierarchy "
                            VerticalAlignment="Center"
                            Classes="h5" Foreground="white" />
 
@@ -29,25 +28,28 @@
             </StackPanel>
 
             <!-- Content -->
-            <Border Grid.Row="1" Classes="WindowContent">
-                <Grid RowDefinitions="Auto, *">
-
-                    <ScrollViewer>
-                        <ItemsControl
-                            ItemsSource="{Binding Nodes}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="hierarchies:HierarchyNodeViewModel">
-                                    <hierarchies1:HierarchyNode />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
-                    <contextMenu:ContextMenuButton
-                        behaviours:TappedBehaviour.Command="{Binding ResetSelectionCommand}"
-                        Grid.Row="1"
-                        ContextMenuData="{Binding RootContextMenu}" />
-                </Grid>
+            <Border Grid.Row="1" 
+                    Name="RootBorder"
+                    PointerPressed="HierarchyContentBorder_OnPointerPressed"
+                    Classes="WindowContent">
+                <FlyoutBase.AttachedFlyout>
+                    <Flyout Placement="Pointer" FlyoutPresenterClasses="Clear">
+                        <contextMenu:ContextMenuView DataContext="{Binding RootContextMenu}" />
+                    </Flyout>
+                </FlyoutBase.AttachedFlyout>
+                <ScrollViewer x:Name="HierarchyScrollViewer"
+                              Background="Transparent"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl
+                        ItemsSource="{Binding Nodes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="hierarchies:HierarchyNodeViewModel">
+                                <hierarchies1:HierarchyNode />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Border>
 
         </Grid>

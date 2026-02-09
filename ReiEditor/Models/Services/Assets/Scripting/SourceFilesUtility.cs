@@ -236,8 +236,12 @@ public class SourceFilesUtility
 
         foreach (var serializedIndex in serializedIndexes)
         {
+            var lineStartIdx = text.LastIndexOf('\n', serializedIndex);
+            lineStartIdx = lineStartIdx == -1 ? 0 : lineStartIdx + 1;
             var endIdx = text.IndexOf(';', serializedIndex);
             var substring = text.Substring(serializedIndex, endIdx - serializedIndex);
+            var lineSubstring = text.Substring(lineStartIdx, endIdx - lineStartIdx);
+            var hideInEditor = lineSubstring.Contains(SourceFileMacrosConstants.HIDE_IN_EDITOR);
             var words = substring.Split().ToList();
             words.RemoveAll(string.IsNullOrWhiteSpace);
 
@@ -255,7 +259,7 @@ public class SourceFilesUtility
 
                 var defaultValue = words[equalsIdx + 1];
                 
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, defaultValue));
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, defaultValue, hideInEditor));
             }
             else
             {
@@ -266,7 +270,7 @@ public class SourceFilesUtility
                 var variableName = words[^1];
                 var variableTypeWithoutNamespace = variableType.Split("::").Last();
                 var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, null));
+                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, null, hideInEditor));
             }
         }
 

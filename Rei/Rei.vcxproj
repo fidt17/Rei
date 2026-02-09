@@ -568,6 +568,7 @@
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
+    <ClInclude Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.h" />
     <ClInclude Include="src\Api\EditorEventsRelay.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
@@ -715,6 +716,7 @@
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\MeshRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
+    <ClCompile Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
     <ClCompile Include="src\Common\Math\math.cpp" />
     <ClCompile Include="src\Common\Math\Plane.cpp" />

@@ -4,6 +4,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -24,6 +25,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
     private readonly IActiveProjectService _projectService;
     private readonly ISelectionService _selectionService;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IEngineRunner _engineRunner;
 
     public SceneManagementService(
@@ -32,7 +34,8 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         IActiveProjectService projectService,
         IAssetCreator assetCreator,
         ISelectionService selectionService, 
-        IBehaviourComponentsService behaviourComponentsService, 
+        IBehaviourComponentsService behaviourComponentsService,
+        IBehaviourRegistry behaviourRegistry,
         IEngineRunner engineRunner)
     {
         _logger = logger;
@@ -41,6 +44,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         _assetCreator = assetCreator;
         _selectionService = selectionService;
         _behaviourComponentsService = behaviourComponentsService;
+        _behaviourRegistry = behaviourRegistry;
         _engineRunner = engineRunner;
 
         _engineRunner.IsActive.Subscribe(HandleEngineIsRunningValueChangedEvent, invoke: false);
@@ -93,6 +97,10 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         {
             _behaviourComponentsService.RefreshComponents(sceneEntity);
         }
+
+        SceneTransformDataApplier.Apply(scene, _behaviourRegistry);
+        scene.RebuildHierarchy();
+        scene.NormalizeTransformOrders();
         
         _projectService.GetActiveProject().SetLastScene(scene.AssetId);
         _currentScene.SetAndInvoke(scene);
@@ -138,4 +146,5 @@ public class SceneManagementService : ISceneManagementService, IDisposable
 
         Task.Run(ReloadCurrentScene);
     }
+
 }

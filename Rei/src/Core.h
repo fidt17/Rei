@@ -6,6 +6,7 @@
 #define STRING(x) std::to_string(x)
 
 #define SERIALIZE
+#define HIDE_IN_EDITOR
 #define SERIALIZABLE_BODY(CLASS_NAME)\
     public:\
     CLASS_NAME() = default;\

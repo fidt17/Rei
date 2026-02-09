@@ -12,7 +12,7 @@ public class SelectionService : ISelectionService
 
     private readonly Observable<ISelectable?> _activeSelection = new(null);
     private readonly List<ISelectable> _selectables = new();
-    
+
     private readonly IEntityApi _entityApi;
 
     public SelectionService(IEntityApi entityApi)
@@ -35,13 +35,33 @@ public class SelectionService : ISelectionService
 
         if (_activeSelection.Value == s) return;
         
-        Select(s);
-
         if (sendToEngine)
         {
             _entityApi.ResetEntitySelection();
             _entityApi.SelectEntity(e.Id);
         }
+        else
+        {
+            Select(s);
+        }
+    }
+
+    public void Deselect(ISelectable selectable, bool sendToEngine = true)
+    {
+        if (_activeSelection.Value == selectable)
+        {
+            ResetSelection(sendToEngine);
+        }
+    }
+
+    public void Deselect(GameEntity e, bool sendToEngine = true)
+    {
+        var s = _selectables.OfType<IEntitySelectable>().FirstOrDefault(x => x.Entity == e);
+        if (s == null) return;
+
+        if (_activeSelection.Value != s) return;
+        
+        ResetSelection(sendToEngine);
     }
 
     public bool IsEntitySelected(GameEntity e)
@@ -56,10 +76,13 @@ public class SelectionService : ISelectionService
 
     public void ResetSelection(bool sendToEngine)
     {
-        _activeSelection.Value = null;
-        if (sendToEngine)
+        if (sendToEngine && _activeSelection.Value is IEntitySelectable)
         {
             _entityApi.ResetEntitySelection();
+        }
+        else
+        {
+            _activeSelection.Value = null;
         }
     }
 

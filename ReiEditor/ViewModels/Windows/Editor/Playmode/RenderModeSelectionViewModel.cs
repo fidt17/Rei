@@ -21,16 +21,7 @@ public class RenderModeSelectionViewModel : BaseViewModel
 
     #endregion
     
-    #region Options
-
-    private ObservableCollection<string> _options = new();
-    public ObservableCollection<string> Options
-    {
-        get => _options;
-        private set => SetField(ref _options, value);
-    }
-
-    #endregion
+    public ObservableCollection<string> Options { get; } = new();
     
     #region SelectedRenderMode
 

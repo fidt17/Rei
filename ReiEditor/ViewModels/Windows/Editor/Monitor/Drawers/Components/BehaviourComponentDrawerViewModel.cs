@@ -89,6 +89,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         
         foreach (var (propertyName, propertyType) in _behaviourRegistry.Behaviours[BehaviourComponent.Id].SerializedProperties)
         {
+            if (propertyType.HideInEditor) continue;
             if (!BehaviourComponent.HasProperty(propertyName))
                 throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
             

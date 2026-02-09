@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Scenes.Templates;
 using ReiEditor.Utils.Extensions;

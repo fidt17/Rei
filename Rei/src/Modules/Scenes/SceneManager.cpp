@@ -33,6 +33,9 @@ namespace rei::scenes
         {
             _entityManager->Create(sceneEntity);
         }
+        GetInternalWorld()->RefreshAll();
+        
+        _entityManager->ResolveTransformParents();
 
         LOG("Loaded scene {}", _activeScene->GetName())
     }

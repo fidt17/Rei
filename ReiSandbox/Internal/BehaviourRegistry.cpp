@@ -198,6 +198,8 @@ nlohmann::json rei::Transform::REI_GET() const
         {"_position", _position.REI_GET()},
         {"_rotation", _rotation.REI_GET()},
         {"_scale", _scale.REI_GET()},
+        {"_parent", _parent},
+        {"_order", _order},
     };
 }
 
@@ -298,6 +300,8 @@ void rei::Transform::REI_SET(const nlohmann::json& data)
     if (data.contains("_position")) _position.REI_SET(data.at("_position").at("Value"));
     if (data.contains("_rotation")) _rotation.REI_SET(data.at("_rotation").at("Value"));
     if (data.contains("_scale")) _scale.REI_SET(data.at("_scale").at("Value"));
+    if (data.contains("_parent")) _parent = data.at("_parent").at("Value");
+    if (data.contains("_order")) _order = data.at("_order").at("Value");
 }
 
 void rei::render::Camera::REI_SET(const nlohmann::json& data)

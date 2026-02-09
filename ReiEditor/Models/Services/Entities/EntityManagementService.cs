@@ -2,9 +2,12 @@
 using System.Linq;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Entities;
 
@@ -51,8 +54,20 @@ public class EntityManagementService : IEntityManagementService
                 if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
             
                 var s = _sceneManagement.CurrentScene.Value;
+                s.NormalizeTransformOrders();
+                var maxRootOrder = s.Entities
+                    .Where(x => !x.Transform.HasParent())
+                    .Select(x => x.Transform.Order)
+                    .DefaultIfEmpty(-1)
+                    .Max();
+                
                 var e = new GameEntity(s.AllocateEntityId(), name);
-                AddBehaviour(e, _behaviourRegistry.GetIdByName("Transform")!.Value);
+                var transformBehaviourId = _behaviourRegistry.GetIdByName("Transform")!.Value;
+                AddBehaviour(e, transformBehaviourId);
+                
+                e.Transform.SetParent(0);
+                e.Transform.SetOrder(maxRootOrder + 1);
+                e.GetBehaviour(transformBehaviourId)!.GetProperty("_order").Value = e.Transform.Order;
             
                 s.AddEntity(e);
                 return e;
@@ -95,12 +110,13 @@ public class EntityManagementService : IEntityManagementService
 
     public void SetParent(GameEntity e, GameEntity? parent, int idx)
     {
-        var scene = _sceneManagement.CurrentScene.Value;
-        if (scene == null) return;
+        if (e == parent) return;
         
+        if (!_engineRunner.IsActive.Value) return;
+
         try
         {
-            scene.MoveEntity(e, parent, idx);
+            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx);
         }
         catch (Exception exception)
         {
@@ -149,6 +165,34 @@ public class EntityManagementService : IEntityManagementService
         }
     }
 
+    public void InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true)
+    {
+        try
+        {
+            if (!_engineRunner.IsActive.Value)
+            {
+                throw new Exception("Instantiate entity requires engine to be running");
+            }
+
+            var baseName = string.IsNullOrWhiteSpace(requestedName) ? sourceEntity.Name : requestedName;
+            var scene = _sceneManagement.CurrentScene.Value;
+            var uniqueName = scene == null
+                ? baseName
+                : NamingUtils.GetUniqueName(baseName, scene.Entities.Select(x => x.Name));
+
+            _entityApi.InstantiateEntity(new InstantiateEntityRequest
+            {
+                SourceEntityId = sourceEntity.Id,
+                RequestedName = uniqueName,
+                IncludeChildren = includeChildren
+            });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+        }
+    }
+
     public void DestroyEntity(GameEntity e)
     {
         try
@@ -162,7 +206,11 @@ public class EntityManagementService : IEntityManagementService
                 if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
 
                 var s = _sceneManagement.CurrentScene.Value;
-                s.DeleteEntity(e);
+                var entitiesToDestroy = EntityUtils.GetEntitiesForRecursiveDestroy(s, e);
+                foreach (var entity in entitiesToDestroy)
+                {
+                    s.DeleteEntity(entity);
+                }
             }
         }
         catch (Exception exception)
