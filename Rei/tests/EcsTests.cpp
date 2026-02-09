@@ -1,9 +1,12 @@
 ﻿#include "pch.h"
 #include "catch_amalgamated.hpp"
 #include "Ecs/FiltersRegistry.h"
+#include "Ecs/System.h"
 #include "Ecs/World.h"
 
 using namespace rei::ecs;
+
+#define ECS_WORLD_LOCAL(w) auto _ecs = (w).GetRegistry(); auto _ecsWorld = w;
 
 struct C1
 {
@@ -23,7 +26,7 @@ struct C3
 TEST_CASE("Add Single Component")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w)
     const auto r = w.GetRegistry();
     const auto e = NEW_ENTITY();
 
@@ -36,7 +39,7 @@ TEST_CASE("Add Single Component")
 TEST_CASE("Add Multiple Components")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto e = NEW_ENTITY();
     GET(e, C1) = C1{7};
     GET(e, C2) = C2{14};
@@ -48,7 +51,7 @@ TEST_CASE("Add Multiple Components")
 TEST_CASE("Delete One Component")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto e = NEW_ENTITY();
 
     GET(e, C1);
@@ -60,7 +63,7 @@ TEST_CASE("Delete One Component")
 TEST_CASE("Delete Multiple Components")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     auto e = NEW_ENTITY();
 
     GET(e, C1);
@@ -81,7 +84,7 @@ TEST_CASE("Delete Multiple Components")
 TEST_CASE("Single Include Filter")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto f = w.GetFiltersRegistry()->Get<C1>();
 
     const auto e = NEW_ENTITY();
@@ -96,7 +99,7 @@ TEST_CASE("Single Include Filter")
 TEST_CASE("Multiple Include Filter")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto f = w.GetFiltersRegistry()->Get<C1, C2, C3>();
 
     const auto e = NEW_ENTITY();
@@ -121,7 +124,7 @@ TEST_CASE("Multiple Include Filter")
 TEST_CASE("Multiple Include & Exclude Filter")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto f = w.GetFiltersRegistry()->Get<C1, C2>(Exclude<C3>());
 
     const auto e = NEW_ENTITY();
@@ -165,7 +168,7 @@ TEST_CASE("Filters with same mask are the same")
 TEST_CASE("Destroyed entity gets removed from filters")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
 
     const auto f = w.GetFiltersRegistry()->Get<C1>();
     const auto e = NEW_ENTITY();
@@ -184,7 +187,7 @@ TEST_CASE("Destroyed entity gets removed from filters")
 TEST_CASE("Destroyed entity Id is reserved for future entities")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
 
     auto e0 = NEW_ENTITY();
     GET(e0, C1);
@@ -209,7 +212,7 @@ TEST_CASE("Destroyed entity Id is reserved for future entities")
 TEST_CASE("Destroyed entity is marked as dead")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto e = NEW_ENTITY();
 
     REQUIRE(IS_ALIVE(e));
@@ -223,7 +226,7 @@ TEST_CASE("Destroyed entity is marked as dead")
 TEST_CASE("Cannot get component on dead entity")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto e = NEW_ENTITY();
 
     DESTROY_ENTITY(e);
@@ -237,7 +240,7 @@ TEST_CASE("Cannot get component on dead entity")
 TEST_CASE("Cannot delete component on dead entity")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto e = NEW_ENTITY();
     DESTROY_ENTITY(e);
     w.Refresh();
@@ -250,7 +253,7 @@ TEST_CASE("Cannot delete component on dead entity")
 TEST_CASE("Cannot check if dead entity has component")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto e = NEW_ENTITY();
     DESTROY_ENTITY(e);
     w.Refresh();
@@ -263,7 +266,7 @@ TEST_CASE("Cannot check if dead entity has component")
 TEST_CASE("Cannot get mask of dead entity")
 {
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     const auto ecs = w.GetRegistry();
     const auto e = NEW_ENTITY();
 
@@ -285,10 +288,11 @@ TEST_CASE("Counter system")
     class CounterSystem : public System
     {
     public:
-        CounterSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters, const int step)
-            : System(ecs, filters), _step(step)
+        CounterSystem(const std::shared_ptr<World>& ecsWorld, const int step)
+            : System(ecsWorld),
+              _step(step)
         {
-            _filter = filters->Get<Counter>();
+            _filter = FILTER(Counter);
         }
 
         void OnUpdate() override
@@ -305,7 +309,7 @@ TEST_CASE("Counter system")
     };
 
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
 
     w.AddSystem<CounterSystem>(2);
 
@@ -336,10 +340,10 @@ TEST_CASE("Entity Creation Destruction Systems")
     class EntityCreationSystem : public System
     {
     public:
-        EntityCreationSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters)
-            : System(ecs, filters)
+        
+        EntityCreationSystem(const std::shared_ptr<World>& ecsWorld) : System(ecsWorld)
         {
-            _counterFilter = filters->Get<Counter>();
+            _counterFilter = FILTER(Counter);
         }
 
         void OnUpdate() override
@@ -360,11 +364,12 @@ TEST_CASE("Entity Creation Destruction Systems")
     class HandleDestroyEntityEventSystem : public System
     {
     public:
-        HandleDestroyEntityEventSystem(const std::shared_ptr<EcsRegistry>& ecs, const std::shared_ptr<FilterProvider>& filters)
-            : System(ecs, filters)
+        
+        HandleDestroyEntityEventSystem(const std::shared_ptr<World>& ecsWorld)
+            : System(ecsWorld)
         {
-            _destroyFilter = filters->Get<DestroyEntityEvent>();
-            _counterFilter = filters->Get<Counter>();
+            _destroyFilter = FILTER(DestroyEntityEvent);
+            _counterFilter = FILTER(Counter);
         }
 
         void OnUpdate() override
@@ -386,7 +391,7 @@ TEST_CASE("Entity Creation Destruction Systems")
     };
 
     World w;
-    ECS_WORLD(w);
+    ECS_WORLD_LOCAL(w);
     w.AddSystem<EntityCreationSystem>();
     w.AddSystem<HandleDestroyEntityEventSystem>();
 

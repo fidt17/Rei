@@ -696,17 +696,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="tests\render\hello_triangle\hello_triangle.h" />
-    <ClInclude Include="tests\render\hello_triangle\hello_triangle_e1.h" />
-    <ClInclude Include="tests\render\hello_triangle\hello_triangle_e2.h" />
-    <ClInclude Include="tests\render\hello_triangle\hello_triangle_e3.h" />
-    <ClInclude Include="tests\render\hello_triangle\hello_triangle_indexed.h" />
-    <ClInclude Include="tests\render\light\light_e0.h" />
-    <ClInclude Include="tests\render\model\model_e0.h" />
-    <ClInclude Include="tests\render\textures\texture_e0.h" />
-    <ClInclude Include="tests\render\textures\texture_e1.h" />
-    <ClInclude Include="tests\render\transform\transform_e0.h" />
-    <ClInclude Include="tests\render\transform\transform_e1.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
@@ -941,7 +930,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)resources;</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>

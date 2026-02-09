@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Selection;
@@ -12,7 +11,6 @@ using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
 
 namespace ReiEditor.Models.Services.Entities.Sync;
@@ -73,11 +71,6 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         if (needsHierarchyRefresh)
         {
             _sceneManagement.CurrentScene.Value!.RebuildHierarchy();
-            _logger.Log($"[EntitySync] Hierarchy rebuilt.");
-        }
-        else
-        {
-            _logger.Log($"[EntitySync] Hierarchy rebuilt is not needed.");
         }
     }
     
@@ -208,7 +201,6 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             }
 
             var orderedEntityIds = EntityStateSyncUtility.BuildOrderedEntityIds(parentByEntityId, orderByEntityId);
-            _logger.Log($"[EntitySync] Engine entities: {BuildEngineEntitiesDebugString(scene, parentByEntityId, orderByEntityId, orderedEntityIds)}");
 
             foreach (var entityId in orderedEntityIds)
             {
@@ -241,11 +233,6 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             if (needsHierarchyRefresh)
             {
                 scene.RebuildHierarchy();
-                _logger.Log($"[EntitySync] Hierarchy rebuilt. {BuildHierarchyDebugString(scene)}");
-            }
-            else
-            {
-                _logger.Log($"[EntitySync] Hierarchy rebuilt is not needed.");
             }
         }
         catch (Exception e)
@@ -279,77 +266,5 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         {
             _selectionService.ResetSelection(sendToEngine: false);
         }
-    }
-
-    private static string BuildEngineEntitiesDebugString(
-        Scene scene,
-        IReadOnlyDictionary<int, int> parentByEntityId,
-        IReadOnlyDictionary<int, int> orderByEntityId,
-        IReadOnlyList<int> orderedEntityIds)
-    {
-        var builder = new StringBuilder();
-        builder.Append("Ordered=");
-        builder.Append(string.Join(", ", orderedEntityIds));
-        builder.Append(" | Values=");
-        var first = true;
-        foreach (var entityId in orderedEntityIds)
-        {
-            if (!parentByEntityId.TryGetValue(entityId, out var parentId)) continue;
-            if (!orderByEntityId.TryGetValue(entityId, out var order)) continue;
-
-            if (!first)
-            {
-                builder.Append("; ");
-            }
-
-            var entityName = scene.GetById(entityId)?.Name ?? "missing";
-            builder.Append(entityId);
-            builder.Append("(");
-            builder.Append(entityName);
-            builder.Append(",p=");
-            builder.Append(parentId);
-            builder.Append(",o=");
-            builder.Append(order);
-            builder.Append(")");
-            first = false;
-        }
-
-        return builder.ToString();
-    }
-
-    private static string BuildHierarchyDebugString(Scene scene)
-    {
-        var builder = new StringBuilder();
-        builder.Append("Hierarchy=");
-        var first = true;
-
-        void appendNode(HierarchyNode<GameEntity> node, int depth)
-        {
-            if (!first)
-            {
-                builder.Append("; ");
-            }
-
-            builder.Append(new string('-', depth));
-            builder.Append(node.Content.Id);
-            builder.Append("(p=");
-            builder.Append(node.Content.Transform.Parent);
-            builder.Append(",o=");
-            builder.Append(node.Content.Transform.Order);
-            builder.Append(")");
-            first = false;
-
-            foreach (var child in node.ChildNodes)
-            {
-                appendNode(child, depth + 1);
-            }
-        }
-
-        foreach (var root in scene.Hierarchy.RootNodes)
-        {
-            appendNode(root, 0);
-        }
-
-        return builder.ToString();
     }
 }
