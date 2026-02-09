@@ -7,6 +7,7 @@
         x:Class="ReiEditor.Views.Windows.ShellWindow"
         x:DataType="windows:ShellWindowViewModel"
         Title="Rei Engine"
+        Icon="/Assets/Images/Rei Icon.png"
         SizeToContent="WidthAndHeight"
         CanResize="False"
         Focusable="True">
