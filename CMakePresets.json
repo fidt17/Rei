@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "vs2022-debug",
+      "displayName": "VS2022 Debug x64",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "REI_BUILD_SANDBOX": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vs2022-debug-rei",
+      "configurePreset": "vs2022-debug",
+      "configuration": "Debug",
+      "targets": ["Rei"]
+    },
+    {
+      "name": "vs2022-debug-sandbox",
+      "configurePreset": "vs2022-debug",
+      "configuration": "Debug",
+      "targets": ["ReiSandbox"]
+    }
+  ]
+}

@@ -287,7 +287,33 @@ Sandbox app and example gameplay scripts.
 </details>
 
 ## Build And Run
-This project is currently **not portable** and is tightly tied to my local environment. A public build guide will be added once the setup is cleaned up and documented.
+### Requirements
+- Windows
+- Visual Studio 2022 (MSVC v143)
+- CMake 3.22+
+
+### CMake (Recommended)
+Use the root `CMakePresets.json`:
+
+```bash
+cmake --preset vs2022-debug
+cmake --build --preset vs2022-debug-rei
+cmake --build --preset vs2022-debug-sandbox
+```
+
+Build output:
+- Engine DLL: `out/build/vs2022-debug/Rei/Debug/Rei.dll`
+- Sandbox app: `out/build/vs2022-debug/ReiSandbox/Debug/ReiSandbox.exe`
+
+### MSBuild (Legacy / Existing)
+```powershell
+& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe" `
+  Rei.sln "/t:Rei;ReiSandbox" /p:Configuration=Debug /p:Platform=x64 /m:1
+```
+
+### Notes
+- Third-party binaries are currently resolved from the repository (`Rei/external/...`).
+- `ReiSandbox/Internal/BehaviourRegistry.cpp` is generated and may contain machine-specific include paths, depending on generation context.
 
 ## License
 Licensed under the Apache License 2.0.  
