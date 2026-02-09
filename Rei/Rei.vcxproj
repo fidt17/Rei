@@ -596,6 +596,7 @@
     <ClInclude Include="src\Ecs\World.h" />
     <ClInclude Include="src\Engine\InternalEngineWorld.h" />
     <ClInclude Include="src\Engine\Services.h" />
+    <ClInclude Include="src\Modules\Assets\AssetIds.h" />
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
@@ -814,19 +815,19 @@
     <Content Include="resources\meshes\cube.obj" />
     <Content Include="resources\shaders\color.rshader" />
     <Content Include="resources\shaders\editor\editor_grid.rshader" />
-    <Content Include="resources\shaders\includes\ambient_light.rshader_include" />
-    <Content Include="resources\shaders\includes\fragment_common.rshader_include" />
-    <Content Include="resources\shaders\includes\point_light.rshader_include" />
-    <Content Include="resources\shaders\includes\shader_common.rshader_include" />
-    <Content Include="resources\shaders\includes\vertex_common.rshader_include" />
+    <Content Include="resources\shaders\includes\include_ambient_light.rshader_include" />
+    <Content Include="resources\shaders\includes\include_fragment_common.rshader_include" />
+    <Content Include="resources\shaders\includes\include_point_light.rshader_include" />
+    <Content Include="resources\shaders\includes\include_shader_common.rshader_include" />
+    <Content Include="resources\shaders\includes\include_vertex_common.rshader_include" />
     <Content Include="resources\shaders\light_source.rshader" />
     <Content Include="resources\shaders\lit.rshader" />
-    <Content Include="resources\shaders\post_processing\alpha_outline.rshader" />
-    <Content Include="resources\shaders\post_processing\grayscale.rshader" />
-    <Content Include="resources\shaders\post_processing\inversion.rshader" />
-    <Content Include="resources\shaders\post_processing\overlay_texture.rshader" />
+    <Content Include="resources\shaders\post_processing\post_processing_alpha_outline.rshader" />
+    <Content Include="resources\shaders\post_processing\post_processing_grayscale.rshader" />
+    <Content Include="resources\shaders\post_processing\post_processing_inversion.rshader" />
+    <Content Include="resources\shaders\post_processing\post_processing_overlay_texture.rshader" />
     <Content Include="resources\shaders\simple_lit.rshader" />
-    <Content Include="resources\shaders\special\depth.rshader" />
+    <Content Include="resources\shaders\special\special_depth.rshader" />
     <Content Include="resources\shaders\special\error.rshader" />
     <Content Include="resources\shaders\test\test.rshader" />
     <Content Include="resources\shaders\test\test_2.rshader" />
@@ -986,3 +987,5 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+
+

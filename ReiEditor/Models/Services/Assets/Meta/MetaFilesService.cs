@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -134,7 +135,9 @@ public class MetaFilesService : IMetaFilesService
         if (!AssetImportUtils.IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) return;
 
         var existingMeta = await _resourceService.TryLoad<AssetMeta>(assetPath + FileExtensions.META);
-        var newAssetId = Guid.NewGuid().ToString();
+        var newAssetId = ReiAssetIdUtility.TryCreateFromAssetPath(assetPath, _resourceService, out var engineResourceAssetId)
+            ? engineResourceAssetId
+            : Guid.NewGuid().ToString();
         var meta = existingMeta?.CreateCopyWithId(newAssetId) ?? new AssetMeta(newAssetId);
 
         policy.Apply(meta, assetPath);

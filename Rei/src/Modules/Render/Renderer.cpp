@@ -74,37 +74,34 @@ namespace rei::render
 
     void Renderer::PrepareMaterials() const
     {
-        // todo: put in engine resources
-        //const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/special/error.rshader");
-        
-        const auto fallbackShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/simple_lit.rshader");
+        const auto fallbackShader = GetAssetManager().GetById<Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
         auto fallbackMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_FALLBACK_MATERIAL_ID,fallbackShader);
         fallbackMaterial->GetShader().SetFloat("_Shininess", 0.5);
         fallbackMaterial->GetShader().SetColor("_Color", Color(1,1,1,1));
 
-        const auto lightSourceShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/light_source.rshader");
+        const auto lightSourceShader = GetAssetManager().GetById<Shader>(REI_SHADER_LIGHT_SOURCE_ASSET_ID);
         GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);
         
-        const auto outlineShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/alpha_outline.rshader");
+        const auto outlineShader = GetAssetManager().GetById<Shader>(REI_SHADER_ALPHA_OUTLINE_ASSET_ID);
         auto outlineMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OUTLINE_MATERIAL_ID,outlineShader);
         outlineMaterial->GetShader().SetColor("_Color", Color(1, 0.35f, 0.2f, 1));
         
-        const auto overlayTextureShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/overlay_texture.rshader");
+        const auto overlayTextureShader = GetAssetManager().GetById<Shader>(REI_SHADER_OVERLAY_TEXTURE_ASSET_ID);
         auto overlayTextureMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_TEXTURE_MATERIAL_ID,overlayTextureShader);
         
-        const auto grayscaleShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/grayscale.rshader");
+        const auto grayscaleShader = GetAssetManager().GetById<Shader>(REI_SHADER_GRAYSCALE_ASSET_ID);
         auto grayscaleMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_GRAYSCALE_MATERIAL_ID,grayscaleShader);
         
-        const auto inversionShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/post_processing/inversion.rshader");
+        const auto inversionShader = GetAssetManager().GetById<Shader>(REI_SHADER_INVERSION_ASSET_ID);
         auto inversionMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OVERLAY_INVERSION_MATERIAL_ID,inversionShader);
         
-        const auto depthShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/special/depth.rshader");
+        const auto depthShader = GetAssetManager().GetById<Shader>(REI_SHADER_DEPTH_ASSET_ID);
         auto depthMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_DEPTH_MATERIAL_ID,depthShader);
         
-        const auto colorShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/color.rshader");
+        const auto colorShader = GetAssetManager().GetById<Shader>(REI_SHADER_COLOR_ASSET_ID);
         auto colorMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_COLOR_MATERIAL_ID,colorShader);
         
-        const auto editorGridShader = GetAssetManager().GetByPath<Shader>("C:/Repos/Rei/Rei/resources/shaders/editor/editor_grid.rshader");
+        const auto editorGridShader = GetAssetManager().GetById<Shader>(REI_SHADER_EDITOR_GRID_ASSET_ID);
         auto editorGridMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_EDITOR_GRID_MATERIAL_ID,editorGridShader);
     }
 }

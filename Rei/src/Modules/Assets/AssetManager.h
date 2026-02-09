@@ -105,7 +105,7 @@ namespace rei::assets
 
             try
             {
-                time::ScopedTimer timer(std::format("Asset {0} loading", ref.Id));
+                //time::ScopedTimer timer(std::format("Asset {0} loading", ref.Id));
 
                 // if an absolute path to the asset is used instead
                 if (ref.Id.rfind("@", 0) == 0)

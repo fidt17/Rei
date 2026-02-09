@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.FileSystem;
@@ -116,13 +117,17 @@ public class AssetImporter : IAssetImporter
                         if (meta is null)
                         {
                             File.Delete(metaFilePath);
-                            meta = new AssetMeta(_assetCreator.AllocateAssetId());
+                            meta = new AssetMeta(ResolveAssetId(assetPath));
                             await _metaFilesService.CreateMetaFile(meta, assetPath);
+                        }
+                        else
+                        {
+                            meta = await EnsureEngineResourceAssetId(meta, assetPath);
                         }
                     }
                     else
                     {
-                        meta = new AssetMeta(_assetCreator.AllocateAssetId());
+                        meta = new AssetMeta(ResolveAssetId(assetPath));
                         await _metaFilesService.CreateMetaFile(meta, assetPath);
                     }
 
@@ -208,7 +213,7 @@ public class AssetImporter : IAssetImporter
                 
                 if (!metaFileExists)
                 {
-                    var meta = new AssetMeta(_assetCreator.AllocateAssetId());
+                    var meta = new AssetMeta(ResolveAssetId(assetPath));
                     await _metaFilesService.CreateMetaFile(meta, assetPath);
                     importedAssets.Add(new AssetInfo(meta, assetPath));
                 }
@@ -216,6 +221,7 @@ public class AssetImporter : IAssetImporter
                 {
                     var meta = await _resourceService.TryLoad<AssetMeta>(metaFilePath);
                     if (meta == null) throw new Exception($"Tried to load invalid meta at {metaFilePath}");
+                    meta = await EnsureEngineResourceAssetId(meta, assetPath);
                     importedAssets.Add(new AssetInfo(meta, assetPath));
                 }
             }
@@ -226,6 +232,23 @@ public class AssetImporter : IAssetImporter
         }
 
         return importedAssets;
+    }
+
+    private string ResolveAssetId(string assetPath)
+    {
+        return ReiAssetIdUtility.TryCreateFromAssetPath(assetPath, _resourceService, out var engineResourceAssetId)
+            ? engineResourceAssetId
+            : _assetCreator.AllocateAssetId();
+    }
+
+    private async Task<AssetMeta> EnsureEngineResourceAssetId(AssetMeta meta, string assetPath)
+    {
+        if (!ReiAssetIdUtility.TryCreateFromAssetPath(assetPath, _resourceService, out var expectedAssetId)) return meta;
+        if (meta.AssetId == expectedAssetId) return meta;
+
+        var updatedMeta = meta.CreateCopyWithId(expectedAssetId);
+        await _metaFilesService.CreateMetaFile(updatedMeta, assetPath);
+        return updatedMeta;
     }
 
     private async Task ImportScenes()

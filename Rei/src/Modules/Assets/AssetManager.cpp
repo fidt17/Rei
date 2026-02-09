@@ -2,18 +2,23 @@
 #include "AssetManager.h"
 
 #include "Engine/Services.h"
+#include <cstdlib>
 
 namespace rei::assets
 {
     AssetManager::AssetManager()
     {
         const std::string currentPath = std::filesystem::current_path().string();
-
+        
         std::vector<std::string> checkPaths;
+        char * resourcesPathOverride = getenv( "REI_RESOURCES_PATH" );
+        if (resourcesPathOverride != nullptr && resourcesPathOverride[0] != '\0')
+        {
+            checkPaths.emplace_back(resourcesPathOverride);
+        }
         checkPaths.push_back(currentPath);
         checkPaths.push_back(currentPath + "/Resources");
         checkPaths.push_back(currentPath + "/../Resources");
-        checkPaths.push_back("C:/Repos/Rei Projects/New Project/New Project/bin/Resources"); // path for sandbox testing
 
         bool didFindResources = false;
         for (auto& checkPath : checkPaths)

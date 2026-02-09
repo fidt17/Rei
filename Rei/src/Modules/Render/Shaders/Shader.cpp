@@ -20,16 +20,15 @@ namespace rei::render
 
         shader_includes += "\n#define NR_POINT_LIGHTS " + STRING(REI_MAX_POINT_LIGHTS_COUNT);
 
-        // todo: need to load by ID instead
         std::vector<std::string> includes{};
-        includes.emplace_back("C:/Repos/Rei/Rei/resources/shaders/includes/ambient_light.rshader_include");
-        includes.emplace_back("C:/Repos/Rei/Rei/resources/shaders/includes/point_light.rshader_include");
-        includes.emplace_back("C:/Repos/Rei/Rei/resources/shaders/includes/shader_common.rshader_include");
+        includes.emplace_back(REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID);
+        includes.emplace_back(REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID);
+        includes.emplace_back(REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID);
 
         shader_includes += "\n";
         for (const auto& include : includes)
         {
-            const auto i = GetAssetManager().GetByPath<assets::TextAsset>(include);
+            const auto i = GetAssetManager().GetById<assets::TextAsset>(include);
             shader_includes += "\n" + i.Asset->GetValue();
         }
         shader_includes += "\n// --- SHADER INCLUDES END ---\n";
@@ -41,13 +40,12 @@ namespace rei::render
 
         shader_vertex_includes = "\n// --- SHADER VERTEX INCLUDES START ---\n";
 
-        // todo: need to load by ID instead
         std::vector<std::string> includes{};
-        includes.emplace_back("C:/Repos/Rei/Rei/resources/shaders/includes/vertex_common.rshader_include");
+        includes.emplace_back(REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID);
 
         for (const auto& include : includes)
         {
-            const auto i = GetAssetManager().GetByPath<assets::TextAsset>(include);
+            const auto i = GetAssetManager().GetById<assets::TextAsset>(include);
             shader_vertex_includes += "\n" + i.Asset->GetValue();
         }
         shader_vertex_includes += "\n// --- SHADER VERTEX INCLUDES END ---\n";
@@ -59,13 +57,12 @@ namespace rei::render
 
         shader_fragment_includes = "\n// --- SHADER FRAGMENT INCLUDES START ---\n";
 
-        // todo: need to load by ID instead
         std::vector<std::string> includes{};
-        includes.emplace_back("C:/Repos/Rei/Rei/resources/shaders/includes/fragment_common.rshader_include");
+        includes.emplace_back(REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID);
 
         for (const auto& include : includes)
         {
-            const auto i = GetAssetManager().GetByPath<assets::TextAsset>(include);
+            const auto i = GetAssetManager().GetById<assets::TextAsset>(include);
             shader_fragment_includes += "\n" + i.Asset->GetValue();
         }
         shader_fragment_includes += "\n// --- SHADER FRAGMENT INCLUDES END ---\n";

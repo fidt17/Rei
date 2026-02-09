@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
@@ -37,7 +38,12 @@ public class AssetCreator : IAssetCreator
 
     public Task<bool> Create(Asset asset, string projectPath)
     {
-        return Create(asset, AllocateAssetId(), projectPath);
+        var assetPath = _resourceService.GetProjectPath(projectPath);
+        var assetId = ReiAssetIdUtility.TryCreateFromAssetPath(assetPath, _resourceService, out var engineResourceAssetId)
+            ? engineResourceAssetId
+            : AllocateAssetId();
+
+        return Create(asset, assetId, projectPath);
     }
 
     public async Task<bool> Create(Asset asset, string id, string projectPath)
