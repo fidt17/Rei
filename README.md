@@ -6,7 +6,7 @@
 ![.NET](https://img.shields.io/badge/.NET-10.0-512bd4)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
-![Rei Engine Logo](docs/images/Big Logo.png)
+![Rei Engine Logo](docs/images/BigLogo.png)
 
 Rei Engine is a custom game engine built from scratch.
 The core engine is written in **C++** with **OpenGL**, and the editor is written in **C#** with **Avalonia UI**. It targets a complete engine/editor workflow with a custom sparse-set ECS, rendering, assets, and tooling.
