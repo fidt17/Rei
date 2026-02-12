@@ -4,7 +4,6 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
-using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;

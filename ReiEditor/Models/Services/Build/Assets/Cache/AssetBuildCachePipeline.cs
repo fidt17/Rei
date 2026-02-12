@@ -64,7 +64,6 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
             }
             
             cacheMisses++;
-            _logger.Log($"Building asset: {assetInfo.Meta.AssetId}");
 
             var cacheFileName = _cacheService.GetCacheFileName(assetInfo, contentHash);
             var cacheFile = _cacheService.GetCacheFilePath(buildFolder, cacheFileName);

@@ -11,23 +11,26 @@ namespace rei::render
         time::ScopedTimer timer(std::format("Model {} loading", _name));
 
         const i32 meshCount = reader.GetI32();
+
         for (int i = 0; i < meshCount; i++)
         {
             Mesh mesh(reader);
-            mesh.Setup();
+            {
+                mesh.Setup();
+            }
             _meshes.push_back(mesh);
         }
     }
 
-    Model::Model(const std::string& name, Mesh mesh)
-        : _name(name)
+    Model::Model(std::string name, Mesh mesh)
+        : _name(std::move(name))
     {
         mesh.Setup();
         _meshes.push_back(mesh);
     }
 
-    Model::Model(const std::string& name, std::vector<Mesh>& meshes)
-        : _name(name)
+    Model::Model(std::string name, std::vector<Mesh>& meshes)
+        : _name(std::move(name))
     {
         for (auto& mesh : meshes)
         {

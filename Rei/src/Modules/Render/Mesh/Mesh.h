@@ -27,6 +27,8 @@ namespace rei::render
         REI_API void Render() const;
 
     private:
+        bool _didSetupBvh = false;
+
         void SetupOpenGlObjects();
         void SetupBVH();
     };

@@ -43,8 +43,6 @@ namespace rei::resources
 
     i64 AssetBuilder::Build(const std::filesystem::path& filePath, BinaryWriter& writer) const
     {
-        time::ScopedTimer timer("Asset " + filePath.string() + " building");
-        
         const i64 offset = writer.GetPosition();
 
         LOG("Building asset: {}", filePath.string())

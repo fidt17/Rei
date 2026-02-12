@@ -27,6 +27,21 @@ namespace rei::resources
         REI_API f32 GetF32();
 
         REI_API std::string GetStr();
+        
+        template <typename T>
+        REI_API std::vector<T> GetVector()
+        {
+            const i32 count = GetI32();
+            std::vector<T> vec;
+            vec.reserve(count);
+
+            for (i32 i = 0; i < count; ++i)
+            {
+                vec.emplace_back(GetByType<T>());
+            }
+
+            return vec;
+        }
 
         template <typename T>
         REI_API T Get()

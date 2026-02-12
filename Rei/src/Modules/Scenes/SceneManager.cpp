@@ -20,10 +20,10 @@ namespace rei::scenes
 
     void SceneManager::LoadScene(const int id)
     {
-        LOG("Loading scene {}", id);
-        REI_ASSERT(_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
+        time::ScopedTimer timer("Scene " + STRING(id) + " load duration");
+        LOG("Loading scene {}", id)
         
-        time::ScopedTimer timer("Scene " + STRING(id) + " loading");
+        REI_ASSERT(_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
         REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
 
         _activeScene = _buildScenesConfig->GetScene(id);

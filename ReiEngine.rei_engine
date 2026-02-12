@@ -1,5 +1,5 @@
 {
-    "EngineVersion": "0.1.0",
+    "EngineVersion": "0.1.1",
     "RelativeDebugIncludeDir": "\\bin\\x64Debug\\Rei",
     "RelativeReleaseIncludeDir": "\\bin\\x64Release\\Rei",
     "RelativeSourceIncludes": "\\Rei\\src;\\Rei\\external;\\Rei\\resources;",

@@ -4,6 +4,43 @@
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 
+namespace
+{
+    void WriteFaces(const std::vector<rei::render::Face>& faces, rei::resources::BinaryWriter& writer)
+    {
+        writer.WriteI32(static_cast<i32>(faces.size()));
+        for (const auto& face : faces)
+        {
+            writer.WriteI32(static_cast<i32>(face.Vertices.size()));
+            for (const auto& vertex : face.Vertices)
+            {
+                writer.Write(vertex);
+            }
+        }
+    }
+
+    void WriteBVHNode(const rei::render::MeshBVHNode& node, rei::resources::BinaryWriter& writer)
+    {
+        writer.Write(node.Min);
+        writer.Write(node.Max);
+        WriteFaces(node.Faces, writer);
+
+        const bool hasLeft = node.Left != nullptr;
+        writer.WriteU8(hasLeft ? 1 : 0);
+        if (hasLeft)
+        {
+            WriteBVHNode(*node.Left, writer);
+        }
+
+        const bool hasRight = node.Right != nullptr;
+        writer.WriteU8(hasRight ? 1 : 0);
+        if (hasRight)
+        {
+            WriteBVHNode(*node.Right, writer);
+        }
+    }
+}
+
 rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
 {
     std::vector<rei::render::Vertex> vertices;
@@ -71,35 +108,30 @@ void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::
 
     writer.WriteStr(assetPath.filename().generic_string());
 
-    writer.WriteI32(meshes.size());
+    writer.WriteI32(static_cast<i32>(meshes.size()));
     i32 meshCounter = 0;
-    for (const auto& mesh : meshes)
+    for (auto& mesh : meshes)
     {
         writer.WriteStr(assetPath.filename().generic_string() + ":" + STRING(meshCounter++));
 
         // vertices
-        writer.WriteI32(mesh.Vertices.size());
+        writer.WriteI32(static_cast<i32>(mesh.Vertices.size()));
         for (const auto& vertex : mesh.Vertices)
         {
             writer.Write(vertex);
         }
 
         // indices
-        writer.WriteI32(mesh.Indices.size());
+        writer.WriteI32(static_cast<i32>(mesh.Indices.size()));
         for (const auto& index : mesh.Indices)
         {
             writer.Write(index);
         }
 
         // faces
-        writer.WriteI32(mesh.Faces.size());
-        for (auto& face : mesh.Faces)
-        {
-            writer.WriteI32(face.Vertices.size());
-            for (int i = 0; i < face.Vertices.size(); i++)
-            {
-                writer.Write(face.Vertices[i]);
-            }
-        }
+        WriteFaces(mesh.Faces, writer);
+
+        mesh.BVHRoot.BuildBVH(mesh.BVHRoot, mesh.Faces);
+        WriteBVHNode(mesh.BVHRoot, writer);
     }
 }

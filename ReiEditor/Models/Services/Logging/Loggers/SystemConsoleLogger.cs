@@ -12,6 +12,8 @@ public class SystemConsoleLogger<T> : ILogger<T>
 		_name = name ?? typeof(T).ExpandTypeName();
 	}
 
+	public void AddEmptyLine() => Console.WriteLine("");
+
 	public void Log(string message) => WriteToConsole(message);
 
 	public void LogWarning(string message) => WriteToConsole(message, ConsoleColor.Yellow);

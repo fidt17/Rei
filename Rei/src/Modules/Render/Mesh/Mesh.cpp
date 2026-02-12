@@ -1,36 +1,67 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Mesh.h"
 
 #include "glad/glad.h"
+
+namespace
+{
+    void ReadFaceVertices(std::vector<rei::render::Face>& faces, rei::resources::BinaryReader& reader)
+    {
+        for (auto& face : faces)
+        {
+            const i32 verticesCount = reader.GetI32();
+            face.Vertices.reserve(verticesCount);
+            for (i32 i = 0; i < verticesCount; i++)
+            {
+                face.Vertices.emplace_back(reader.GetByType<rei::render::Vertex>());
+            }
+        }
+    }
+
+    void ReadBVHNode(rei::resources::BinaryReader& reader, rei::render::MeshBVHNode& node)
+    {
+        node.Min = reader.GetByType<rei::math::Vector3>();
+        node.Max = reader.GetByType<rei::math::Vector3>();
+
+        node.Faces = std::vector<rei::render::Face>(reader.GetI32());
+        ReadFaceVertices(node.Faces, reader);
+
+        const bool hasLeft = reader.GetU8() != 0;
+        if (hasLeft)
+        {
+            node.Left = std::make_shared<rei::render::MeshBVHNode>();
+            ReadBVHNode(reader, *node.Left);
+        }
+        else
+        {
+            node.Left = nullptr;
+        }
+
+        const bool hasRight = reader.GetU8() != 0;
+        if (hasRight)
+        {
+            node.Right = std::make_shared<rei::render::MeshBVHNode>();
+            ReadBVHNode(reader, *node.Right);
+        }
+        else
+        {
+            node.Right = nullptr;
+        }
+    }
+}
 
 rei::render::Mesh::Mesh(resources::BinaryReader& reader)
     : VAO(0), VBO(0), EBO(0)
 {
     Name = reader.GetStr();
+    Vertices = reader.GetVector<Vertex>();
+    Indices = reader.GetVector<u32>();
 
-    Vertices = std::vector<Vertex>(reader.GetI32());
-    for (auto& vertex : Vertices)
-    {
-        vertex = reader.GetByType<Vertex>();
-    }
-
-    Indices = std::vector<u32>(reader.GetI32());
-    for (auto& vertex : Indices)
-    {
-        vertex = reader.GetByType<u32>();
-    }
-
-    int totalVertices = 0;
     Faces = std::vector<Face>(reader.GetI32());
-    for (auto& face : Faces)
-    {
-        const auto verticesCount = reader.GetI32();
-        for (int i = 0; i < verticesCount; i++)
-        {
-            face.Vertices.emplace_back(reader.GetByType<Vertex>());
-            totalVertices++;
-        }
-    }
+    ReadFaceVertices(Faces, reader);
+    
+    ReadBVHNode(reader, BVHRoot);
+    _didSetupBvh = true;
 }
 
 rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
@@ -74,7 +105,10 @@ void rei::render::Mesh::SetupOpenGlObjects()
 
 void rei::render::Mesh::SetupBVH()
 {
+    if (_didSetupBvh) return;
+    
     BVHRoot.BuildBVH(BVHRoot, Faces);
+    _didSetupBvh = true;
 }
 
 void rei::render::Mesh::Setup()

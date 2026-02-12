@@ -77,6 +77,7 @@ public class AssetBuilder : IAssetBuilder
     private void LogBuildSummary(AssetsBuildCacheReport report)
     {
         var msg = new StringBuilder();
+        msg.AppendLine();
         msg.AppendLine($"--- Asset build summary ---");
         msg.AppendLine($"Asset build completed in {report.TotalBuildMs} ms");
         msg.AppendLine($"Asset build size: {report.TotalBytes} bytes");

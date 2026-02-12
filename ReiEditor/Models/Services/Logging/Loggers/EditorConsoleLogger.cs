@@ -19,6 +19,11 @@ public class EditorConsoleLogger<T> : ILogger<T>
 		_name = typeof(T).ExpandTypeName();
 	}
 
+	public void AddEmptyLine()
+	{
+		// not needed
+	}
+
 	public void Log(string message)
 	{
 		_systemConsoleLogger.Log(message);
