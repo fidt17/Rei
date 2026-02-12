@@ -14,6 +14,7 @@ namespace rei::math
 
     REI_API glm::quat LookAt(Vector3 direction, Vector3 up);
     REI_API Vector3 GetEulerAngles(const glm::quat& rotation);
+    REI_API Vector3 GetEulerAngles(const glm::quat& rotation, const Vector3& referenceEulerAngles);
     REI_API glm::quat GetQuaternion(const Vector3& eulerAngles);
     REI_API glm::quat GetQuaternion(const glm::mat4& rotationMatrix);
 

@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 
 #include "glm/gtx/euler_angles.hpp"
+#include <array>
 #include <glm/gtc/quaternion.hpp>
 
 namespace rei::math
@@ -62,9 +63,84 @@ namespace rei::math
 
     Vector3 GetEulerAngles(const glm::quat& q)
     {
-        glm::vec3 euler = eulerAngles(q); 
-        euler = degrees(euler);
+        f32 yaw = 0.0f;
+        f32 pitch = 0.0f;
+        f32 roll = 0.0f;
+        extractEulerAngleYXZ(mat4_cast(q), yaw, pitch, roll);
+
+        const glm::vec3 euler = degrees(glm::vec3(pitch, yaw, roll));
         return Vector3(euler.x, euler.y, euler.z);
+    }
+
+    Vector3 GetEulerAngles(const glm::quat& q, const Vector3& referenceEulerAngles)
+    {
+        auto wrapAngleNear = [](f32 angle, const f32 reference)
+        {
+            constexpr f32 fullCircleDegrees = 360.0f;
+            constexpr f32 halfTurnDegrees = 180.0f;
+
+            while (angle - reference > halfTurnDegrees)
+            {
+                angle -= fullCircleDegrees;
+            }
+
+            while (angle - reference < -halfTurnDegrees)
+            {
+                angle += fullCircleDegrees;
+            }
+
+            return angle;
+        };
+
+        auto wrapAnglesNear = [&](const Vector3& eulerAngles)
+        {
+            return Vector3(
+                wrapAngleNear(eulerAngles.x, referenceEulerAngles.x),
+                wrapAngleNear(eulerAngles.y, referenceEulerAngles.y),
+                wrapAngleNear(eulerAngles.z, referenceEulerAngles.z));
+        };
+
+        auto rotationDistanceSquared = [](const Vector3& a, const Vector3& b)
+        {
+            const Vector3 delta = a - b;
+            return delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+        };
+
+        auto isEquivalentRotation = [](const glm::quat& first, const glm::quat& second)
+        {
+            constexpr f32 quaternionEquivalenceEpsilon = 1e-4f;
+            const f32 dot = glm::abs(glm::dot(glm::normalize(first), glm::normalize(second)));
+            return (1.0f - dot) <= quaternionEquivalenceEpsilon;
+        };
+
+        const Vector3 base = GetEulerAngles(q);
+        std::array<Vector3, 4> variants = {
+            base,
+            Vector3(base.x + 180.0f, 180.0f - base.y, base.z + 180.0f),
+            Vector3(base.x + 180.0f, -base.y, base.z + 180.0f),
+            Vector3(base.x, -base.y, base.z),
+        };
+
+        Vector3 best = wrapAnglesNear(base);
+        f32 bestDistance = rotationDistanceSquared(best, referenceEulerAngles);
+
+        for (const auto& variant : variants)
+        {
+            const Vector3 wrapped = wrapAnglesNear(variant);
+            if (!isEquivalentRotation(q, GetQuaternion(wrapped)))
+            {
+                continue;
+            }
+
+            const f32 distance = rotationDistanceSquared(wrapped, referenceEulerAngles);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = wrapped;
+            }
+        }
+
+        return best;
     }
 
     glm::quat GetQuaternion(const Vector3& eulerAngles)

@@ -45,7 +45,7 @@ namespace rei
 
     void Transform::BeforeREI_GET()
     {
-        _rotation = math::GetEulerAngles(_quaternion);
+        _rotation = math::GetEulerAngles(_quaternion, _rotation);
 
         ECS_WORLD(GetInternalWorld())
         if (IS_DEAD(_parentEntity) || !HAS(_parentEntity, EntityInfo))
@@ -124,7 +124,7 @@ namespace rei
     void Transform::SetRotation(const glm::quat& quaternion)
     {
         _quaternion = quaternion;
-        _rotation = math::GetEulerAngles(_quaternion);
+        _rotation = math::GetEulerAngles(_quaternion, _rotation);
     }
 
     void Transform::SetParent(const ecs::Entity parent)
@@ -183,7 +183,7 @@ namespace rei
         _quaternion = delta * _quaternion;
 
         _quaternion = normalize(_quaternion);
-        _rotation = math::GetEulerAngles(_quaternion);
+        _rotation = math::GetEulerAngles(_quaternion, _rotation);
     }
 
     void Transform::RotateLocal(const f32 angle, const math::Vector3& axis)
@@ -195,7 +195,7 @@ namespace rei
         _quaternion = _quaternion * delta;
 
         _quaternion = normalize(_quaternion);
-        _rotation = math::GetEulerAngles(_quaternion);
+        _rotation = math::GetEulerAngles(_quaternion, _rotation);
     }
 
     glm::mat4 Transform::CalculateModelMatrix() const
