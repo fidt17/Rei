@@ -1,5 +1,3 @@
-# Rei Engine
-
 ![C++](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![OpenGL](https://img.shields.io/badge/OpenGL-3.3%2B-informational)
 ![Editor](https://img.shields.io/badge/Editor-Avalonia%20UI-2ea44f)
