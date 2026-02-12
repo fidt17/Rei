@@ -15,9 +15,6 @@ namespace rei::render
         for (int i = 0; i < meshCount; i++)
         {
             Mesh mesh(reader);
-            {
-                mesh.Setup();
-            }
             _meshes.push_back(mesh);
         }
     }
@@ -25,7 +22,7 @@ namespace rei::render
     Model::Model(std::string name, Mesh mesh)
         : _name(std::move(name))
     {
-        mesh.Setup();
+        mesh.PostLoad();
         _meshes.push_back(mesh);
     }
 
@@ -34,7 +31,7 @@ namespace rei::render
     {
         for (auto& mesh : meshes)
         {
-            mesh.Setup();
+            mesh.PostLoad();
             _meshes.push_back(mesh);
         }
     }
@@ -44,6 +41,14 @@ namespace rei::render
         for (auto& value : _meshes)
         {
             value.Dispose();
+        }
+    }
+
+    void Model::PostLoad()
+    {
+        for (auto& mesh : _meshes)
+        {
+            mesh.PostLoad();
         }
     }
 

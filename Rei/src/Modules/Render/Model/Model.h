@@ -10,6 +10,7 @@ namespace rei::render
         REI_API Model(std::string name, Mesh mesh);
         REI_API Model(std::string name, std::vector<Mesh>& meshes);
         REI_API ~Model();
+        REI_API void PostLoad();
 
         const std::vector<Mesh>& GetMeshes() const;
 

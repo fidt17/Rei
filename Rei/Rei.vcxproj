@@ -598,6 +598,7 @@
     <ClInclude Include="src\Engine\Services.h" />
     <ClInclude Include="src\Modules\Assets\AssetIds.h" />
     <ClInclude Include="src\Modules\Assets\AssetManager.h" />
+    <ClInclude Include="src\Modules\Assets\AssetManager.inl" />
     <ClInclude Include="src\Modules\Assets\AssetRef.h" />
     <ClInclude Include="src\Modules\Assets\AssetsMap.h" />
     <ClInclude Include="src\Modules\Assets\TextAsset.h" />

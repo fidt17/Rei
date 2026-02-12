@@ -1,0 +1,95 @@
+#pragma once
+
+#include <algorithm>
+#include <atomic>
+#include <future>
+#include <thread>
+#include <unordered_map>
+#include <vector>
+
+#include "Modules/Assets/AssetDependency.h"
+#include "Modules/Assets/AssetManager.h"
+
+namespace rei::scenes
+{
+    class SceneAssetPreloader
+    {
+    public:
+        explicit SceneAssetPreloader(const std::shared_ptr<assets::AssetManager>& assetManager)
+            : _assetManager(assetManager)
+        {
+        }
+
+        void Preload(const std::vector<assets::AssetDependency>& dependencies) const
+        {
+            const auto uniqueDependencies = GetUniqueDependencies(dependencies);
+            if (uniqueDependencies.empty())
+            {
+                LOG("Scene asset dependencies loaded: 0")
+                return;
+            }
+
+            std::vector<std::future<void>> loadFutures;
+            const u32 hardwareConcurrency = std::thread::hardware_concurrency();
+            const std::size_t suggestedWorkerCount = std::max(1u, hardwareConcurrency);
+            const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
+            LOG("Scene preload hardware_concurrency: {}, worker_count: {}", hardwareConcurrency, workerCount)
+            loadFutures.reserve(workerCount);
+        
+            std::atomic<std::size_t> nextDependencyIndex = 0;
+            for (std::size_t i = 0; i < workerCount; ++i)
+            {
+                loadFutures.push_back(std::async(std::launch::async, [this, &uniqueDependencies, &nextDependencyIndex]
+                {
+                    while (true)
+                    {
+                        const std::size_t index = nextDependencyIndex.fetch_add(1);
+                        if (index >= uniqueDependencies.size())
+                        {
+                            break;
+                        }
+
+                        uniqueDependencies[index].LoadData(*_assetManager);
+                    }
+                }));
+            }
+
+            for (auto& loadFuture : loadFutures)
+            {
+                loadFuture.get();
+            }
+
+            for (const auto& dependency : uniqueDependencies)
+            {
+                dependency.PostLoad(*_assetManager);
+            }
+
+            LOG("Scene asset dependencies loaded: {}, workers: {}", uniqueDependencies.size(), workerCount)
+        }
+
+    private:
+        static std::vector<assets::AssetDependency> GetUniqueDependencies(const std::vector<assets::AssetDependency>& dependencies)
+        {
+            std::unordered_map<std::string, std::size_t> seenIds;
+            seenIds.reserve(dependencies.size());
+
+            std::vector<assets::AssetDependency> uniqueDependencies;
+            uniqueDependencies.reserve(dependencies.size());
+
+            for (const auto& dependency : dependencies)
+            {
+                if (seenIds.find(dependency.Id) != seenIds.end())
+                {
+                    continue;
+                }
+
+                seenIds[dependency.Id] = uniqueDependencies.size();
+                uniqueDependencies.push_back(dependency);
+            }
+
+            return uniqueDependencies;
+        }
+
+        std::shared_ptr<assets::AssetManager> _assetManager;
+    };
+}

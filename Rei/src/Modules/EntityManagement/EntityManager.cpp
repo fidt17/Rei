@@ -51,7 +51,6 @@ namespace rei
 
     void EntityManager::Create(const SceneEntity& sceneEntity) const
     {
-        time::ScopedTimer entityCreationTimer("Entity " + STRING(sceneEntity.GetId()) + ", " + sceneEntity.GetName() + " creation");
         ECS_WORLD(GetInternalWorld())
 
         struct EntityToBehaviour

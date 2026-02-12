@@ -70,18 +70,12 @@ namespace rei::render
 
     Shader::Shader(resources::BinaryReader& reader)
     {
-        GenerateShaderIncludes();
-        GenerateShaderVertexIncludes();
-        GenerateShaderFragmentIncludes();
-
         const auto content = reader.GetStr();
 
         const std::string version = "#version 330 core\n";
 
         _vertexSource = version + shader_includes + shader_vertex_includes + "\n#define VERTEX;\n" + content;
         _fragmentSource = version + shader_includes + shader_fragment_includes + "\n#define FRAGMENT;\n" + content;
-        
-        _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
     }
 
     Shader::Shader(const char* vertexSource, const char* fragmentSource)
@@ -97,6 +91,30 @@ namespace rei::render
     void Shader::Delete() const
     {
         glDeleteProgram(_id);
+    }
+
+    void Shader::PostLoad()
+    {
+        GenerateShaderIncludes();
+        GenerateShaderVertexIncludes();
+        GenerateShaderFragmentIncludes();
+
+        if (_vertexSource.find("NaN") != std::string::npos)
+        {
+            _vertexSource.replace(_vertexSource.find("NaN"), 3, shader_includes);
+            _vertexSource.replace(_vertexSource.find("NaN"), 3, shader_vertex_includes);
+        }
+
+        if (_fragmentSource.find("NaN") != std::string::npos)
+        {
+            _fragmentSource.replace(_fragmentSource.find("NaN"), 3, shader_includes);
+            _fragmentSource.replace(_fragmentSource.find("NaN"), 3, shader_fragment_includes);
+        }
+
+        if (_id == 0)
+        {
+            _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
+        }
     }
 
     i32 Shader::GetLocation(const std::string& name) const

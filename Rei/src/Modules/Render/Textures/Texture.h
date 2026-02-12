@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+
+#include <vector>
 
 namespace rei::render
 {
@@ -14,6 +16,7 @@ namespace rei::render
     {
     public:
         explicit Texture(resources::BinaryReader& reader);
+        REI_API void PostLoad();
 
         void Use(i32 idx = 0) const;
 
@@ -25,7 +28,11 @@ namespace rei::render
         std::string GetTag() const;
 
     private:
-        u32 _id;
+        u32 _id = 0;
+        i32 _width = 0;
+        i32 _height = 0;
+        i32 _format = 0;
+        std::vector<u8> _rawData{};
         std::string _textureTag;
         TextureType _type = Diffuse;
     };

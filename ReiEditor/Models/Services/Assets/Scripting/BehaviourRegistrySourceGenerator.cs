@@ -96,15 +96,18 @@ public class BehaviourRegistrySourceGenerator
             var behaviourNamespace = b.Value.Namespace;
             var behaviourName = b.Value.ObjectName;
             var behaviourId = b.Value.BehaviourId;
+            var collectAssetDependenciesLambda = GenerateAssetDependenciesCollector(b.Value);
 
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
                            $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{ " +
                            $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e); " +
                            $"b.BeforeREI_GET(); " +
                            $"return b.REI_GET();" + " }, " +
-                           $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " + 
+                           $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " +
                            $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
-                           $"b.REI_SET(json); b.AfterREI_SET(); }});");
+                           $"b.REI_SET(json); b.AfterREI_SET(); }}, " +
+                           collectAssetDependenciesLambda +
+                           ");");
         }
         
         str.AppendLine("}");
@@ -326,5 +329,43 @@ public class BehaviourRegistrySourceGenerator
 
         var templateType = type.Substring(startIndex + 1, endIndex - startIndex - 1);
         return templateType.Split("::").Last().Trim();
+    }
+
+    private static string GenerateAssetDependenciesCollector(BehaviourAssetInfo behaviour)
+    {
+        var assetRefProperties = behaviour.SerializedProperties
+            .Where(x => IsAssetRefProperty(x.Value, out _))
+            .ToArray();
+
+        if (assetRefProperties.Length == 0)
+        {
+            return "nullptr";
+        }
+
+        var str = new StringBuilder();
+        str.Append("[](const nlohmann::json& data, std::vector<rei::assets::AssetDependency>& outDependencies) { ");
+
+        foreach (var property in assetRefProperties)
+        {
+            var propertyName = property.Key;
+            IsAssetRefProperty(property.Value, out var templateType);
+            var qualifiedType = GetQualifiedTemplateType(templateType, behaviour.Namespace);
+
+            str.Append($"if (data.contains(\"{propertyName}\")) {{ ");
+            str.Append($"const auto& rawValue = data.at(\"{propertyName}\"); ");
+            str.Append("const auto& assetRefValue = rawValue.contains(\"Value\") ? rawValue.at(\"Value\") : rawValue; ");
+            str.Append("if (assetRefValue.contains(\"Id\")) { ");
+            str.Append("const auto& rawId = assetRefValue.at(\"Id\"); ");
+            str.Append("const auto& idValue = rawId.is_object() && rawId.contains(\"Value\") ? rawId.at(\"Value\") : rawId; ");
+            str.Append("const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : \"\"; ");
+            str.Append("if (!assetId.empty()) { ");
+            str.Append($"outDependencies.push_back(rei::assets::CreateTypedAssetDependency<{qualifiedType}>(assetId)); ");
+            str.Append("} ");
+            str.Append("} ");
+            str.Append("} ");
+        }
+
+        str.Append("}");
+        return str.ToString();
     }
 }

@@ -63,6 +63,39 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
                                                        auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e);
                                                        b.REI_SET(json);
                                                        b.AfterREI_SET();
+                                                   }, [](const nlohmann::json& data, std::vector<rei::assets::AssetDependency>& outDependencies)
+                                                   {
+                                                       if (data.contains("_model"))
+                                                       {
+                                                           const auto& rawValue = data.at("_model");
+                                                           const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue;
+                                                           if (assetRefValue.contains("Id"))
+                                                           {
+                                                               const auto& rawId = assetRefValue.at("Id");
+                                                               const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId;
+                                                               const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : "";
+                                                               if (!assetId.empty())
+                                                               {
+                                                                   outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Model>(assetId));
+                                                               }
+                                                           }
+                                                       }
+
+                                                       if (data.contains("_material"))
+                                                       {
+                                                           const auto& rawValue = data.at("_material");
+                                                           const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue;
+                                                           if (assetRefValue.contains("Id"))
+                                                           {
+                                                               const auto& rawId = assetRefValue.at("Id");
+                                                               const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId;
+                                                               const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : "";
+                                                               if (!assetId.empty())
+                                                               {
+                                                                   outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Material>(assetId));
+                                                               }
+                                                           }
+                                                       }
                                                    });
     f.RegisterComponent<rei::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json
                                                         {

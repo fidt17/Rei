@@ -6,23 +6,36 @@
 
 rei::render::Texture::Texture(resources::BinaryReader& reader)
 {
-    i32 width = reader.GetI32();
-    i32 height = reader.GetI32();
-    i32 format = reader.GetI32();
+    _width = reader.GetI32();
+    _height = reader.GetI32();
+    _format = reader.GetI32();
 
-    i32 length;
-    unsigned char* data = reader.GetBytes(length);
+    i32 length = 0;
+    u8* data = reader.GetBytes(length);
+    _rawData = std::vector<u8>(data, data + length);
+    delete[] data;
+}
+
+void rei::render::Texture::PostLoad()
+{
+    if (_id != 0)
+    {
+        return;
+    }
 
     glGenTextures(1, &_id);
     glBindTexture(GL_TEXTURE_2D, _id);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, _format, _width, _height, 0, _format, GL_UNSIGNED_BYTE, _rawData.data());
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    _rawData.clear();
+    _rawData.shrink_to_fit();
 }
 
 void rei::render::Texture::Use(const i32 idx) const

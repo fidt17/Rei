@@ -14,6 +14,7 @@ namespace rei::scenes
     SceneManager::SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager)
         : _buildScenesConfig(assetManager->GetById<BuildScenesConfig>("0")),
           _assetManager(assetManager),
+          _sceneAssetPreloader(assetManager),
           _entityManager(entityManager)
     {
     }
@@ -29,6 +30,9 @@ namespace rei::scenes
         _activeScene = _buildScenesConfig->GetScene(id);
         _assetManager->Load(_activeScene);
 
+        const auto sceneAssetDependencies = CollectSceneAssetDependencies();
+        _sceneAssetPreloader.Preload(sceneAssetDependencies);
+
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {
             _entityManager->Create(sceneEntity);
@@ -38,5 +42,26 @@ namespace rei::scenes
         _entityManager->ResolveTransformParents();
 
         LOG("Loaded scene {}", _activeScene->GetName())
+    }
+
+    std::vector<assets::AssetDependency> SceneManager::CollectSceneAssetDependencies()
+    {
+        std::vector<assets::AssetDependency> dependencies{};
+
+        for (const auto& sceneEntity : _activeScene->GetEntities())
+        {
+            for (const auto& behaviourData : sceneEntity.GetBehaviours())
+            {
+                if (!behaviourData.contains("Id")) continue;
+
+                const i32 behaviourId = behaviourData.at("Id");
+                if (!behaviourData.contains("SerializedData")) continue;
+
+                const auto& serializedData = behaviourData.at("SerializedData");
+                _entityManager->GetBehaviourRegistry().CollectAssetDependencies(behaviourId, serializedData, dependencies);
+            }
+        }
+
+        return dependencies;
     }
 }

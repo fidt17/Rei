@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Engine/Services.h"
+#include "Modules/Assets/AssetDependency.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Scenes/SceneEntity.h"
 
@@ -11,9 +12,14 @@ namespace rei
     class BehaviourRegistry
     {
     public:
+        using GetBehaviourDataMethod = std::function<nlohmann::json(ecs::Entity)>;
+        using SetBehaviourDataMethod = std::function<void(ecs::Entity, const nlohmann::json&)>;
+        using CollectAssetDependenciesMethod = std::function<void(const nlohmann::json&, std::vector<assets::AssetDependency>&)>;
+
         template <typename T>
-        void RegisterComponent(i32 id, std::function<nlohmann::json(ecs::Entity)> getJsonFunc,
-                               std::function<void(ecs::Entity, const nlohmann::json&)> setFromJsonFunc)
+        void RegisterComponent(i32 id, GetBehaviourDataMethod getJsonFunc,
+                               SetBehaviourDataMethod setFromJsonFunc,
+                               CollectAssetDependenciesMethod collectAssetDependenciesMethod = nullptr)
         {
             _addMethods.insert({
                 id, [=](const ecs::Entity e, const nlohmann::json& data) -> T& {
@@ -67,6 +73,13 @@ namespace rei
                 id, setFromJsonFunc
             });
 
+            if (collectAssetDependenciesMethod != nullptr)
+            {
+                _collectAssetDependenciesMethods.insert({
+                    id, collectAssetDependenciesMethod
+                });
+            }
+
             _behaviourIdMap[std::type_index(typeid(T))] = id;
         }
 
@@ -110,6 +123,13 @@ namespace rei
             return _setFromJsonMethods.at(id)(e, data);
         }
 
+        void CollectAssetDependencies(const i32 id, const nlohmann::json& data, std::vector<assets::AssetDependency>& outDependencies) const
+        {
+            if (!_collectAssetDependenciesMethods.contains(id)) return;
+
+            _collectAssetDependenciesMethods.at(id)(data, outDependencies);
+        }
+
         template <typename R>
         i32 GetId()
         {
@@ -120,8 +140,9 @@ namespace rei
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity, const nlohmann::json&)>> _addMethods{};
         std::unordered_map<i32, std::function<void(ecs::Entity)>> _deleteMethods{};
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _getMethods{};
-        std::unordered_map<i32, std::function<nlohmann::json(ecs::Entity)>> _getJsonMethods{};
-        std::unordered_map<i32, std::function<void(ecs::Entity, const nlohmann::json&)>> _setFromJsonMethods{};
+        std::unordered_map<i32, GetBehaviourDataMethod> _getJsonMethods{};
+        std::unordered_map<i32, SetBehaviourDataMethod> _setFromJsonMethods{};
+        std::unordered_map<i32, CollectAssetDependenciesMethod> _collectAssetDependenciesMethods{};
         std::map<std::type_index, i32> _behaviourIdMap;
     };
 

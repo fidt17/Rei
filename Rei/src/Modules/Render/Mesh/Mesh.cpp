@@ -76,6 +76,8 @@ rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, c
 
 void rei::render::Mesh::SetupOpenGlObjects()
 {
+    if (_didSetupOpenGlObjects) return;
+
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -101,6 +103,7 @@ void rei::render::Mesh::SetupOpenGlObjects()
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, TexCoords)));
 
     glBindVertexArray(0);
+    _didSetupOpenGlObjects = true;
 }
 
 void rei::render::Mesh::SetupBVH()
@@ -111,7 +114,7 @@ void rei::render::Mesh::SetupBVH()
     _didSetupBvh = true;
 }
 
-void rei::render::Mesh::Setup()
+void rei::render::Mesh::PostLoad()
 {
     SetupBVH();
     SetupOpenGlObjects();
@@ -119,6 +122,8 @@ void rei::render::Mesh::Setup()
 
 void rei::render::Mesh::Dispose() const
 {
+    if (!_didSetupOpenGlObjects) return;
+
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
