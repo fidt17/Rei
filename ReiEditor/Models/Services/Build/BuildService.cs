@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Console;
+using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -13,6 +14,7 @@ using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Common.Procedures;
 
 namespace ReiEditor.Models.Services.Build;
 
@@ -36,6 +38,7 @@ public class BuildService : IBuildService, IAsyncDisposable
     private readonly IEditorConsoleService _editorConsoleService;
     private readonly SourceFilesUtility _sourceFilesUtility;
     private readonly ILogger<BuildService> _logger;
+    private readonly IEditorProceduresService _editorProceduresService;
 
     public BuildService(
         IResourceService resourceService,
@@ -47,7 +50,8 @@ public class BuildService : IBuildService, IAsyncDisposable
         ILogger<BuildService> logger,
         IEditorConsoleService editorConsoleService,
         IAssetImporter assetImporter,
-        SourceFilesUtility sourceFilesUtility)
+        SourceFilesUtility sourceFilesUtility, 
+        IEditorProceduresService editorProceduresService)
     {
         _resourceService = resourceService;
         _assetsService = assetsService;
@@ -59,6 +63,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         _editorConsoleService = editorConsoleService;
         _assetImporter = assetImporter;
         _sourceFilesUtility = sourceFilesUtility;
+        _editorProceduresService = editorProceduresService;
     }
 
     public async ValueTask DisposeAsync()
@@ -80,6 +85,9 @@ public class BuildService : IBuildService, IAsyncDisposable
             _logger.LogError("Another build in progress");
             return false;
         }
+
+        Procedure buildProcedure = new("Building project");
+        _editorProceduresService.TrackProcedure(buildProcedure);
 
         var stopwatch = new Stopwatch();
         stopwatch.Start();
@@ -122,6 +130,8 @@ public class BuildService : IBuildService, IAsyncDisposable
         _logger.Log($"Build Complete in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
         _isBuildReady.Value = true;
         _buildInProgress.Value = false;
+        
+        buildProcedure.Complete();
         
         return false;
     }
