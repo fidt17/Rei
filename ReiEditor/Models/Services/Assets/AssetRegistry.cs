@@ -84,6 +84,8 @@ public class AssetRegistry : IAssetRegistry
         {
             _idToAssetInfoMap[asset.Meta.AssetId] = asset;
         }
+
+        PruneLoadedAssetsWithoutRegistryEntries();
     }
     
     public void RegisterNewAssets(IEnumerable<AssetInfo> assets)
@@ -172,5 +174,18 @@ public class AssetRegistry : IAssetRegistry
         var updated = assets.Where(keepPredicate).ToList();
         if (updated.Count == assets.Count) return;
         UpdateRegistry(updated);
+    }
+
+    private void PruneLoadedAssetsWithoutRegistryEntries()
+    {
+        if (_loadedAssets.Count == 0) return;
+
+        var loadedAssetIds = _loadedAssets.Keys.ToList();
+        foreach (var assetId in loadedAssetIds)
+        {
+            if (_idToAssetInfoMap.ContainsKey(assetId)) continue;
+
+            _loadedAssets.Remove(assetId);
+        }
     }
 }
