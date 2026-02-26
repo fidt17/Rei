@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -83,6 +84,11 @@ public class ViewportGridService : IViewportGridService, IDisposable
     
     private void HandleEngineStartedEvent()
     {
-        SendSettingsToEngine();
+        Task.Run(async () =>
+        {
+            SendSettingsToEngine();
+            await Task.Delay(1000); // for some reason sometimes settings are not applied correctly when engine starts
+            SendSettingsToEngine();
+        });
     }
 }

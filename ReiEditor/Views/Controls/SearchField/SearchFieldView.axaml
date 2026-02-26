@@ -6,9 +6,9 @@
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Controls.SearchField.SearchFieldView"
              x:DataType="viewModels:SearchFieldViewModel">
-    <Border Padding="4,2">
+    <Border>
         <Grid VerticalAlignment="Center">
-            <TextBox Width="200"
+            <TextBox MinWidth="200"
                      Height="22"
                      x:Name="SearchTextBox"
                      Padding="5,0,20,0"

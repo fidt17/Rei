@@ -1,0 +1,111 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:ReiEditor.ViewModels.Controls.Assets"
+             xmlns:search="clr-namespace:ReiEditor.Views.Controls.SearchField"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Controls.Assets.AssetPickerView"
+             x:DataType="vm:AssetPickerViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.asset-name">
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.asset-name.missing">
+            <Setter Property="BorderBrush" Value="{StaticResource Error}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Padding="1"
+            DragDrop.AllowDrop="True">
+        <Grid ColumnDefinitions="*, Auto" VerticalAlignment="Center">
+            <Border
+                x:Name="LabelBorder"
+                Classes="asset-name"
+                Grid.Column="0"
+                Height="26"
+                Margin="0,0,6,0"
+                VerticalAlignment="Center"
+                Background="{StaticResource Dark_3}"
+                CornerRadius="2"
+                Focusable="True"
+                Cursor="Hand"
+                PointerPressed="LabelBorder_OnPointerPressed"
+                KeyDown="LabelBorder_OnKeyDown"
+                Classes.missing="{Binding IsMissingAsset}">
+                <Border.Styles>
+                    <Style Selector="Border:pointerover">
+                        <Setter Property="BorderBrush" Value="{StaticResource Gray_3}"></Setter>
+                    </Style>
+                    <Style Selector="Border:focus">
+                        <Setter Property="BorderBrush" Value="{StaticResource Gray_3}"></Setter>
+                    </Style>
+                </Border.Styles>
+                <Label
+                    HorizontalContentAlignment="Center"
+                    Background="{StaticResource Clear}"
+                    Foreground="{StaticResource Gray_3}"
+                    VerticalContentAlignment="Center"
+                    Margin="15,0"
+                    Content="{Binding AssetName}" />
+            </Border>
+
+            <Button x:Name="SelectButton"
+                    Grid.Column="1"
+                    Width="26"
+                    Height="26"
+                    Padding="0"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    IsEnabled="{Binding IsSelectionSupported}"
+                    ToolTip.Tip="Select asset">
+                <Grid Width="16" Height="16">
+                    <Ellipse
+                        Width="14"
+                        Height="14"
+                        StrokeThickness="2"
+                        Stroke="White"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                    <Ellipse
+                        Width="6"
+                        Height="6"
+                        StrokeThickness="2"
+                        Stroke="White"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                </Grid>
+                <Button.Flyout>
+                    <Flyout FlyoutPresenterClasses="Default"
+                            Opened="SearchFlyout_OnOpened">
+                        <StackPanel Spacing="6">
+                            <search:SearchFieldView
+                                x:Name="SearchFieldControl"
+                                DataContext="{Binding SearchField}" />
+                            <ScrollViewer MaxHeight="260">
+                                <ItemsControl ItemsSource="{Binding SearchResults}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:AssetSearchItemViewModel">
+                                            <Button
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Height="28"
+                                                Margin="0, 1"
+                                                Command="{Binding SelectCommand}" >
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    Text="{Binding Name}"/>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

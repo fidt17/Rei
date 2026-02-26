@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
-             xmlns:search="clr-namespace:ReiEditor.Views.Controls.SearchField"
+             xmlns:assets="clr-namespace:ReiEditor.Views.Controls.Assets"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.AssetPropertyView"
              x:DataType="custom:AssetPropertyViewModel">
@@ -12,19 +12,8 @@
         <custom:AssetPropertyViewModel />
     </Design.DataContext>
 
-    <UserControl.Styles>
-        <Style Selector="Border.asset-name">
-            <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style Selector="Border.asset-name.missing">
-            <Setter Property="BorderBrush" Value="{StaticResource Error}" />
-        </Style>
-    </UserControl.Styles>
-
-    <Border Padding="1"
-            DragDrop.AllowDrop="True">
-        <Grid ColumnDefinitions="Auto, *, Auto" VerticalAlignment="Center">
+    <Border Padding="1">
+        <Grid ColumnDefinitions="Auto, *" VerticalAlignment="Center">
             <TextBlock
                 Grid.Column="0"
                 Width="120"
@@ -33,77 +22,9 @@
                 Foreground="{StaticResource Gray_4}"
                 Text="{Binding PropertyName.Value}" />
 
-            <Border Classes="asset-name"
+            <assets:AssetPickerView
                 Grid.Column="1"
-                Height="26"
-                Margin="0,0,6,0"
-                VerticalAlignment="Center"
-                Background="{StaticResource Dark_3}"
-                CornerRadius="2"
-                Classes.missing="{Binding IsMissingAsset}">
-                <TextBox
-                    x:Name="AssetNameTextBox"
-                    Padding="5,0,0,5"
-                    HorizontalContentAlignment="Center"
-                    Background="{StaticResource Clear}"
-                    BorderThickness="0"
-                    Foreground="{StaticResource Gray_3}"
-                    IsReadOnly="True"
-                    VerticalContentAlignment="Center"
-                    Cursor="Hand"
-                    CaretBrush="{StaticResource Clear}"
-                    Text="{Binding AssetName}"
-                    PointerPressed="AssetNameTextBox_OnPointerPressed"
-                    KeyDown="AssetNameTextBox_OnKeyDown" />
-            </Border>
-
-            <Button x:Name="SelectButton"
-                Grid.Column="2"
-                Width="26"
-                Height="26"
-                Padding="0"
-                HorizontalContentAlignment="Center"
-                VerticalContentAlignment="Center"
-                IsEnabled="{Binding IsSelectionSupported.Value}"
-                ToolTip.Tip="Select asset">
-                <Grid Width="16" Height="16">
-                    <Ellipse
-                        Width="14"
-                        Height="14"
-                        StrokeThickness="2"
-                        Stroke="White"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center" />
-                    <Ellipse
-                        Width="6"
-                        Height="6"
-                        StrokeThickness="2"
-                        Stroke="White"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center" />
-                </Grid>
-                <Button.Flyout>
-                    <Flyout FlyoutPresenterClasses="Default"
-                            Opened="SearchFlyout_OnOpened">
-                        <StackPanel Spacing="6" Margin="6">
-                            <search:SearchFieldView
-                                x:Name="SearchFieldControl"
-                                DataContext="{Binding SearchField}" />
-                            <ScrollViewer MaxHeight="240">
-                                <ItemsControl ItemsSource="{Binding SearchResults}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="custom:AssetSearchItemViewModel">
-                                            <Button Classes="Clear" Command="{Binding SelectCommand}" HorizontalAlignment="Stretch">
-                                                <TextBlock Text="{Binding Name}" />
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
+                DataContext="{Binding AssetPicker}" />
         </Grid>
     </Border>
 </UserControl>

@@ -1,16 +1,16 @@
 using System;
 using ReiEditor.Utils;
 
-namespace ReiEditor.ViewModels.Windows.Editor.Project.AssetCreation;
+namespace ReiEditor.ViewModels.Controls.Assets;
 
-public class ShaderAssetSearchItemViewModel
+public class AssetSearchItemViewModel
 {
     public string Name { get; }
     public string FullPath { get; }
     public string AssetId { get; }
     public RelayCommand SelectCommand { get; }
 
-    public ShaderAssetSearchItemViewModel(string name, string fullPath, string assetId, Action selectAction)
+    public AssetSearchItemViewModel(string name, string fullPath, string assetId, Action selectAction)
     {
         Name = name;
         FullPath = fullPath;

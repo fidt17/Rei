@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.AssetCreation"
-        xmlns:search="clr-namespace:ReiEditor.Views.Controls.SearchField"
+        xmlns:assets="clr-namespace:ReiEditor.Views.Controls.Assets"
         mc:Ignorable="d"
         Width="520"
         Height="500"
@@ -29,33 +29,16 @@
                 <TextBox Text="{Binding MaterialName}" />
             </StackPanel>
 
-            <StackPanel Spacing="6">
-                <TextBlock Text="Shader" />
-                <TextBlock Text="{Binding SelectedShaderName}" Foreground="{StaticResource Gray_3}" />
-                <search:SearchFieldView DataContext="{Binding SearchField}" />
-                <Border BorderBrush="{StaticResource Gray_1}" BorderThickness="1" CornerRadius="4" Padding="8" MaxHeight="220">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding ShaderSearchResults}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ShaderAssetSearchItemViewModel">
-                                    <Border Padding="6">
-                                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                                            <TextBlock Text="{Binding Name}" />
-                                            <Button Grid.Column="1" Content="Select" Command="{Binding SelectCommand}" />
-                                            <TextBlock Grid.Row="1"
-                                                       Grid.ColumnSpan="2"
-                                                       Text="{Binding FullPath}"
-                                                       Foreground="{StaticResource Gray_3}"
-                                                       FontSize="11"
-                                                       TextTrimming="CharacterEllipsis" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0"
+                           Width="120"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                           Foreground="{StaticResource Gray_4}"
+                           Text="Shader" />
+                <assets:AssetPickerView Grid.Column="1"
+                                        DataContext="{Binding ShaderPicker}" />
+            </Grid>
 
             <TextBlock Foreground="{StaticResource Error}"
                        TextWrapping="Wrap"
