@@ -10,7 +10,7 @@ namespace ReiEditor.Models.Services.Assets.Creation.Material;
 
 public class MaterialCreationUtility : IMaterialCreationUtility
 {
-    public static readonly Regex ValidMaterialNameRegex = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+    public static readonly Regex ValidMaterialNameRegex = new("^[A-Za-z_][A-Za-z0-9_ ]*$", RegexOptions.Compiled);
     
     private readonly IResourceService _resourceService;
     private readonly IAssetCreator _assetCreator;
