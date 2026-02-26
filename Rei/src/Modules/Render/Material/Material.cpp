@@ -7,7 +7,43 @@ namespace rei::render
 {
     Material::Material(resources::BinaryReader& reader)
     {
-        // todo 
+        auto assignFallbackShader = [this]()
+        {
+            _shader = GetAssetManager().GetById<Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        };
+
+        try
+        {
+            const auto rawData = reader.GetStr();
+            const auto data = nlohmann::json::parse(rawData);
+
+            if (!data.contains("ShaderAssetId") || !data.at("ShaderAssetId").is_string())
+            {
+                LOG_ERROR("Material asset is missing valid 'ShaderAssetId'. Falling back to {}", REI_SHADER_SIMPLE_LIT_ASSET_ID)
+                assignFallbackShader();
+                return;
+            }
+
+            const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
+            if (shaderAssetId.empty())
+            {
+                LOG_ERROR("Material asset has empty 'ShaderAssetId'. Falling back to {}", REI_SHADER_SIMPLE_LIT_ASSET_ID)
+                assignFallbackShader();
+                return;
+            }
+
+            _shader = GetAssetManager().GetById<Shader>(shaderAssetId);
+            if (!_shader.IsLoaded())
+            {
+                LOG_ERROR("Failed to load shader '{}' for material. Falling back to {}", shaderAssetId, REI_SHADER_SIMPLE_LIT_ASSET_ID)
+                assignFallbackShader();
+            }
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("Failed to parse material asset. Falling back to {}. Error: {}", REI_SHADER_SIMPLE_LIT_ASSET_ID, e.what())
+            assignFallbackShader();
+        }
     }
 
     Material::Material(assets::AssetRef<Shader> shader)
