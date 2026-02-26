@@ -51,7 +51,7 @@ public class HierarchyWindowViewModel : BaseViewModel
         SetHierarchy(hierarchy);
 
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
-        RootContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("New Entity", ExecuteCreateNewEntityContextMenu));
+        RootContextMenu.AddOption(new ContextMenuOption("New Entity", ExecuteCreateNewEntityContextMenu));
     }
 
     public override void Dispose()

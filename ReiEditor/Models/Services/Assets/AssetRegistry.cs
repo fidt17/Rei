@@ -23,6 +23,21 @@ public class AssetRegistry : IAssetRegistry
     public bool Exists<T>(string assetId) where T : Asset => _idToAssetInfoMap.ContainsKey(assetId) && _idToAssetInfoMap[assetId].GetType() == typeof(T);
 
     public bool TryGetById(string assetId, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo) => _idToAssetInfoMap.TryGetValue(assetId, out assetInfo);
+
+    public bool TryGetByIdAndExtensions(string assetId, IReadOnlyCollection<string> extensions, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo)
+    {
+        assetInfo = null;
+
+        if (string.IsNullOrWhiteSpace(assetId)) return false;
+        if (extensions.Count == 0) return false;
+        if (!_idToAssetInfoMap.TryGetValue(assetId, out var resolvedAssetInfo)) return false;
+
+        var extension = Path.GetExtension(resolvedAssetInfo.FullPath);
+        if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) return false;
+
+        assetInfo = resolvedAssetInfo;
+        return true;
+    }
     
     public bool TryGetByPath(string fullPath, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo)
     {
@@ -54,6 +69,12 @@ public class AssetRegistry : IAssetRegistry
 
             yield return asset;
         }
+    }
+
+    public bool IsUniqueAssetName(string assetName, string assetExtension)
+    {
+        return !GetAllAssetsByExtensions(new [] { assetExtension} )
+            .Any(x => string.Equals(Path.GetFileNameWithoutExtension(x.FullPath), assetName, StringComparison.OrdinalIgnoreCase));
     }
 
     public void UpdateRegistry(IEnumerable<AssetInfo> assets)

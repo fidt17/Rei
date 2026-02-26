@@ -60,9 +60,9 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         ConfirmRenameCommand = ReactiveCommand.Create<string>(ConfirmRename);
         MoveNodeCommand = new MoveNodeCommand(Node, _entityManagementService);
 
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete", Delete));
+        ContextMenu.AddOption(new ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuOption("Delete", Delete));
         
         _selectionService.RegisterSelectable(this);
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);

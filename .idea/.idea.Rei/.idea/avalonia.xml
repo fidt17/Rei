@@ -33,6 +33,7 @@
         <entry key="ReiEditor/Views/Controls/Buttons/HorizontalExpandToggle.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/Buttons/Toggles/TreeToggle.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuButton.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuOptionView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenu/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/ContextMenuView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Controls/Effects/RingSpinner.axaml" value="ReiEditor/ReiEditor.csproj" />
@@ -80,6 +81,7 @@
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/PlaymodePanelView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/RenderModeSelectionView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Playmode/TransformationSpaceSettingsView.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/Project/AssetCreation/CreateBehaviourAssetWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Project/Directories/ProjectDirectoryNode.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Project/ProjectWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/ProjectEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />

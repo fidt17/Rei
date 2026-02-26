@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
+             xmlns:controls="clr-namespace:ReiEditor.ViewModels.Controls"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Controls.ContextMenu.ContextMenuOptionView"
+             x:DataType="controls:ContextMenuOption">
+    <UserControl.Styles>
+        <Style Selector="Button.SubmenuOpen /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Dark_3}" />
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_4}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="*,Auto">
+        <Button x:Name="OptionButton"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"
+                Margin="1"
+                Command="{Binding Command}"
+                Content="{Binding Text}"
+                Click="OptionButton_OnClick">
+            <FlyoutBase.AttachedFlyout>
+                <Flyout Placement="RightEdgeAlignedTop"
+                        FlyoutPresenterClasses="Clear">
+                    <contextMenu:ContextMenuView x:Name="NestedMenuView"
+                                                 DataContext="{Binding NestedMenu}"
+                                                 PointerEntered="HoverRegion_OnPointerEntered"
+                                                 PointerExited="HoverRegion_OnPointerExited" />
+                </Flyout>
+            </FlyoutBase.AttachedFlyout>
+        </Button>
+
+        <TextBlock Grid.Column="1"
+                   Margin="8,0,4,0"
+                   VerticalAlignment="Center"
+                   Text=">"
+                   IsVisible="{Binding HasNestedMenu}" />
+    </Grid>
+</UserControl>

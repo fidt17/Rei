@@ -1,7 +1,8 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:contextMenu="clr-namespace:ReiEditor.Views.Controls.ContextMenu"
              xmlns:controls="clr-namespace:ReiEditor.ViewModels.Controls"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Controls.ContextMenu.ContextMenuView"
@@ -14,10 +15,7 @@
         <ItemsControl ItemsSource="{Binding Options}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Button HorizontalAlignment="Stretch"
-                            Margin="1"
-                            Command="{Binding Command}"
-                            Content="{Binding Text}" />
+                    <contextMenu:ContextMenuOptionView />
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

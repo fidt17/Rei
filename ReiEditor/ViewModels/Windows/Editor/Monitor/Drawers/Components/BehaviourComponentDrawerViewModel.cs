@@ -79,7 +79,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private ContextMenuViewModel SetupContextMenu()
     {
         var contextMenu = new ContextMenuViewModel();
-        contextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete Component", DeleteComponent));
+        contextMenu.AddOption(new ContextMenuOption("Delete Component", DeleteComponent));
         return contextMenu;
     }
     

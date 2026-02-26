@@ -7,6 +7,7 @@ using IOPath = System.IO.Path;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Services.Assets;
@@ -42,6 +43,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IFileExplorerProvider? _fileExplorerProvider;
     private readonly IAssetSearchService? _assetSearchService;
     private readonly IEditorRefreshService? _editorRefreshService;
+    private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
     private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
@@ -58,7 +60,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IAssetOperationsService assetOperationsService,
         IFileExplorerProvider fileExplorerProvider,
         IAssetSearchService assetSearchService,
-        IEditorRefreshService editorRefreshService)
+        IEditorRefreshService editorRefreshService,
+        IBehaviourCreationWindowService behaviourCreationWindowService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
@@ -66,6 +69,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _fileExplorerProvider = fileExplorerProvider;
         _assetSearchService = assetSearchService;
         _editorRefreshService = editorRefreshService;
+        _behaviourCreationWindowService = behaviourCreationWindowService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
@@ -95,8 +99,14 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void SetupContextMenus()
     {
-        ActiveFolderContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Show in Explorer", OpenActiveFolderInExplorer));
-        ActiveFolderContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Create Folder", CreateFolder));
+        var createMenu = new ContextMenuViewModel();
+        createMenu.AddOption(new ContextMenuOption("Folder", CreateFolder));
+        createMenu.AddOption(new ContextMenuOption("Behaviour", OpenCreateBehaviourOverlay));
+        createMenu.AddOption(new ContextMenuOption("Shader", OpenCreateShaderOverlay));
+        createMenu.AddOption(new ContextMenuOption("Material", OpenCreateMaterialOverlay));
+
+        ActiveFolderContextMenu.AddOption(new ContextMenuOption("Show in Explorer", OpenActiveFolderInExplorer));
+        ActiveFolderContextMenu.AddOption(new ContextMenuOption("Create", createMenu));
     }
 
     private void OpenActiveFolderInExplorer()
@@ -373,22 +383,6 @@ public class ProjectWindowViewModel : BaseViewModel
         });
     }
 
-    private void CreateFolder()
-    {
-        var baseDirectory = ActiveDirectoryPath.Value;
-        if (_assetOperationsService == null) return;
-        
-        if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory)) return;
-
-        _ = _assetOperationsService.CreateFolderAsync(baseDirectory, "New Folder").ContinueWith(_ =>
-        {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                RefreshView(affectsTree: true);
-            });
-        });
-    }
-
     public async Task ImportExternalPathsAsync(IReadOnlyCollection<string> paths)
     {
         var targetDirectory = ActiveDirectoryPath.Value;
@@ -499,5 +493,44 @@ public class ProjectWindowViewModel : BaseViewModel
         _selectedDirectory = null;
         ActiveDirectoryPath.Value = "";
         _projectRootPath = "";
+    }
+
+    private void CreateFolder()
+    {
+        var baseDirectory = ActiveDirectoryPath.Value;
+        if (_assetOperationsService == null) return;
+        
+        if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory)) return;
+
+        _ = _assetOperationsService.CreateFolderAsync(baseDirectory, "New Folder").ContinueWith(_ =>
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                RefreshView(affectsTree: true);
+            });
+        });
+    }
+
+    private void OpenCreateBehaviourOverlay()
+    {
+        if (_behaviourCreationWindowService == null) return;
+
+        var targetDirectory = ActiveDirectoryPath.Value;
+        if (string.IsNullOrWhiteSpace(targetDirectory) || !Directory.Exists(targetDirectory)) return;
+
+        _behaviourCreationWindowService.OpenBehaviourCreationWindow(targetDirectory, () =>
+        {
+            Dispatcher.UIThread.InvokeAsync(() => RefreshView(affectsTree: false));
+        });
+    }
+
+    private void OpenCreateShaderOverlay()
+    {
+        // todo
+    }
+
+    private void OpenCreateMaterialOverlay()
+    {
+        // todo
     }
 }

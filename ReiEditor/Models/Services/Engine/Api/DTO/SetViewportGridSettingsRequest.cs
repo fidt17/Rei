@@ -9,7 +9,7 @@ public struct SetViewportGridSettingsRequest
     [MarshalAs(UnmanagedType.I1)] public bool RenderXZ;
     [MarshalAs(UnmanagedType.I1)] public bool RenderXY;
     [MarshalAs(UnmanagedType.I1)] public bool RenderYZ;
-    public float Opacity;
+    public float Opacity = 0.25f;
 
     public SetViewportGridSettingsRequest(ViewportGridSettings s)
     {

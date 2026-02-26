@@ -39,8 +39,8 @@ public class ProjectsListElementViewModel : BaseViewModel
 		_bookmarkedProjectsService = bookmarkedProjectsService;
 		
 		Project = project;
-		ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Reveal in File Explorer", RevealInFileExplorer));
-		ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete Project", DeleteProject));
+		ContextMenu.AddOption(new ContextMenuOption("Reveal in File Explorer", RevealInFileExplorer));
+		ContextMenu.AddOption(new ContextMenuOption("Delete Project", DeleteProject));
 
 		OpenProjectCommand = new RelayCommand(() => activeProjectService.OpenProject(Project));
 

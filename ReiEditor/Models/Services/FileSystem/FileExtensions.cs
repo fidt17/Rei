@@ -22,6 +22,8 @@ public static class FileExtensions
     public const string H = ".h";
     public const string OBJ = ".obj";
     public const string FBX = ".fbx";
+    public const string RSHADER = ".rshader";
+    public const string MATERIAL = ".mat";
 
     public static readonly IReadOnlyList<string> ModelAssetExtensions = new[] { OBJ, FBX };
 

@@ -6,6 +6,7 @@ namespace ReiEditor.Models.Services.Assets;
 public interface IAssetRegistry
 {
     bool TryGetById(string assetId, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo);
+    bool TryGetByIdAndExtensions(string assetId, IReadOnlyCollection<string> extensions, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo);
     bool TryGetByPath(string fullPath, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo);
     bool TryGetLoadedAsset(string assetId, [NotNullWhen(returnValue: true)] out Asset? asset);
 
@@ -19,6 +20,7 @@ public interface IAssetRegistry
     IEnumerable<Asset> GetDirtyAssets();
     IEnumerable<AssetInfo> GetAllAssets();
     IEnumerable<AssetInfo> GetAllAssetsByExtensions(IReadOnlyCollection<string> extensions);
+    bool IsUniqueAssetName(string assetName, string assetExtension);
     
     void AddToLoadedAssets(AssetInfo assetInfo, Asset asset);
     void RemoveFromLoadedAssets(AssetInfo assetInfo);

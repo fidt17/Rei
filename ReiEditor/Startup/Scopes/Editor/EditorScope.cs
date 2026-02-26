@@ -3,11 +3,15 @@ using Autofac;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Creation;
+using ReiEditor.Models.Services.Assets.Creation.Behaviour;
+using ReiEditor.Models.Services.Assets.Creation.Material;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Search;
@@ -20,6 +24,7 @@ using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor;
 using ReiEditor.ViewModels.Windows.Editor.Project;
 using ReiEditor.ViewModels.Windows.Editor.Commands;
+using ReiEditor.ViewModels.Windows.Editor.Project.AssetCreation;
 
 namespace ReiEditor.Startup.Scopes.Editor;
 
@@ -44,19 +49,25 @@ public class EditorScope : BaseLifetimeScope
 		
         b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();
-        b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
+        b.RegisterSingleton<AssetsService>().As<IAssetsService>();
         b.RegisterSingleton<AssetTypeMapper>().As<IAssetTypeMapper>();
         b.RegisterSingleton<MetaFilesService>().As<IMetaFilesService>();
         b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
         b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();
         b.RegisterSingleton<AssetSearchService>().As<IAssetSearchService>();
+        
+        b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
+        b.RegisterSingleton<BehaviourCreationUtility>().As<IBehaviourCreationUtility>();
+        b.RegisterSingleton<MaterialCreationUtility>().As<IMaterialCreationUtility>();
+        b.RegisterSingleton<BehaviourCreationWindowService>().As<IBehaviourCreationWindowService>();
+        
         b.RegisterSingleton<EngineResourcesImporter>().As<IEngineResourcesImporter>();
-        b.RegisterSingleton<AssetsService>().As<IAssetsService>();
+        b.RegisterSingleton<SerializableObjectsRegistry>().As<ISerializableObjectsRegistry>();
+        
         b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();
         b.RegisterSingleton<BehaviourFileUtility>().As<IBehaviourFileUtility>();
-        b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
-        b.RegisterSingleton<SerializableObjectsRegistry>().As<ISerializableObjectsRegistry>();
         b.RegisterSingleton<SourceFilesUtility>();
+        b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
 
         b.RegisterSingleton<SelectionService>().As<ISelectionService>();
 
@@ -76,5 +87,6 @@ public class EditorScope : BaseLifetimeScope
     {
         b.RegisterType<ProjectEditorWindowViewModel>();
         b.RegisterType<ProjectWindowViewModel>();
+        b.RegisterType<CreateBehaviourAssetWindowViewModel>();
     }
 }

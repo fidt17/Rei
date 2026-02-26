@@ -7,7 +7,7 @@ using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
-namespace ReiEditor.Models.Services.Assets;
+namespace ReiEditor.Models.Services.Assets.Creation;
 
 public class AssetCreator : IAssetCreator
 {

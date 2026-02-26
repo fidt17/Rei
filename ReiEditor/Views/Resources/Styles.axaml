@@ -46,6 +46,21 @@
         <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#B8BFC5" />
         <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#B8BFC5" />
         <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
+
+        <SolidColorBrush x:Key="CheckBoxForegroundUnchecked" Color="#8E969D" />
+        <SolidColorBrush x:Key="CheckBoxForegroundUncheckedPointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="CheckBoxForegroundUncheckedPressed" Color="#8E969D" />
+        <SolidColorBrush x:Key="CheckBoxForegroundUncheckedDisabled" Color="#7C848B" />
+
+        <SolidColorBrush x:Key="CheckBoxForegroundChecked" Color="#8E969D" />
+        <SolidColorBrush x:Key="CheckBoxForegroundCheckedPointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="CheckBoxForegroundCheckedPressed" Color="#8E969D" />
+        <SolidColorBrush x:Key="CheckBoxForegroundCheckedDisabled" Color="#7C848B" />
+
+        <SolidColorBrush x:Key="CheckBoxForegroundIndeterminate" Color="#8E969D" />
+        <SolidColorBrush x:Key="CheckBoxForegroundIndeterminatePointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="CheckBoxForegroundIndeterminatePressed" Color="#8E969D" />
+        <SolidColorBrush x:Key="CheckBoxForegroundIndeterminateDisabled" Color="#7C848B" />
         
         <SolidColorBrush x:Key="SliderTrackValueFill" Color="#60686F" />
         <SolidColorBrush x:Key="SliderThumbBackground" Color="#8e969d" />
@@ -203,7 +218,7 @@
     </Style>
 
     <!-- END ComboBox Styles -->
-
+    
     <!-- Flayout Styles -->
     <Style Selector="FlyoutPresenter.Default">
         <Setter Property="Background" Value="{StaticResource Dark_4}" />

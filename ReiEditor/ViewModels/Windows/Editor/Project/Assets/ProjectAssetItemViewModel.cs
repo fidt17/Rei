@@ -77,10 +77,10 @@ public class ProjectAssetItemViewModel : BaseViewModel
 
     private void SetupContextMenu(IFileExplorerProvider fileExplorerProvider)
     {
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Show in Explorer", () => fileExplorerProvider.OpenAndSelect(FullPath)));
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Move", () => MoveCommand.Execute(null)));
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
-        ContextMenu.AddOption(new ContextMenuViewModel.ContextMenuOption("Delete", () => DeleteCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuOption("Show in Explorer", () => fileExplorerProvider.OpenAndSelect(FullPath)));
+        ContextMenu.AddOption(new ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuOption("Move", () => MoveCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
+        ContextMenu.AddOption(new ContextMenuOption("Delete", () => DeleteCommand.Execute(null)));
     }
 }
