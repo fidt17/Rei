@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
+using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Services.Assets;
@@ -44,6 +45,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IAssetSearchService? _assetSearchService;
     private readonly IEditorRefreshService? _editorRefreshService;
     private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
+    private readonly IMaterialCreationWindowService? _materialCreationWindowService;
     private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
@@ -61,7 +63,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IFileExplorerProvider fileExplorerProvider,
         IAssetSearchService assetSearchService,
         IEditorRefreshService editorRefreshService,
-        IBehaviourCreationWindowService behaviourCreationWindowService)
+        IBehaviourCreationWindowService behaviourCreationWindowService,
+        IMaterialCreationWindowService materialCreationWindowService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
@@ -70,6 +73,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _assetSearchService = assetSearchService;
         _editorRefreshService = editorRefreshService;
         _behaviourCreationWindowService = behaviourCreationWindowService;
+        _materialCreationWindowService = materialCreationWindowService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
@@ -531,6 +535,14 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void OpenCreateMaterialOverlay()
     {
-        // todo
+        if (_materialCreationWindowService == null) return;
+
+        var targetDirectory = ActiveDirectoryPath.Value;
+        if (string.IsNullOrWhiteSpace(targetDirectory) || !Directory.Exists(targetDirectory)) return;
+
+        _materialCreationWindowService.OpenMaterialCreationWindow(targetDirectory, () =>
+        {
+            Dispatcher.UIThread.InvokeAsync(() => RefreshView(affectsTree: false));
+        });
     }
 }

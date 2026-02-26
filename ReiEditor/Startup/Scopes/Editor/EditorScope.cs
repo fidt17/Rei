@@ -4,6 +4,7 @@ using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
+using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
@@ -60,6 +61,7 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<BehaviourCreationUtility>().As<IBehaviourCreationUtility>();
         b.RegisterSingleton<MaterialCreationUtility>().As<IMaterialCreationUtility>();
         b.RegisterSingleton<BehaviourCreationWindowService>().As<IBehaviourCreationWindowService>();
+        b.RegisterSingleton<MaterialCreationWindowService>().As<IMaterialCreationWindowService>();
         
         b.RegisterSingleton<EngineResourcesImporter>().As<IEngineResourcesImporter>();
         b.RegisterSingleton<SerializableObjectsRegistry>().As<ISerializableObjectsRegistry>();
@@ -88,5 +90,6 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterType<ProjectEditorWindowViewModel>();
         b.RegisterType<ProjectWindowViewModel>();
         b.RegisterType<CreateBehaviourAssetWindowViewModel>();
+        b.RegisterType<CreateMaterialAssetWindowViewModel>();
     }
 }

@@ -26,6 +26,7 @@ public static class FileExtensions
     public const string MATERIAL = ".mat";
 
     public static readonly IReadOnlyList<string> ModelAssetExtensions = new[] { OBJ, FBX };
+    public static readonly IReadOnlyList<string> MaterialAssetExtensions = new[] { MATERIAL };
 
     public static FilePickerFileType GetFilePicker(string fileExtension)
     {
