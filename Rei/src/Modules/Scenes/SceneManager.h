@@ -3,7 +3,7 @@
 #include "BuildScenesConfig.h"
 #include "Scene.h"
 #include "SceneAssetPreloader.h"
-#include "Modules/Assets/AssetDependency.h"
+#include "Modules/Assets/Core/AssetDependency.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
 namespace rei::scenes

@@ -43,7 +43,7 @@ public class BehaviourRegistrySourceGenerator
         
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
-        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Assets/AssetRefUtils.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Assets/Core/AssetRefUtils.h>"));
         str.AppendLine();
         str.AppendLine(GenerateIncludes(serializableObjectsAndBehaviours));
         

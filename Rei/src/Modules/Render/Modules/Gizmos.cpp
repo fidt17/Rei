@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Gizmos.h"
 
 #include "glad/glad.h"
@@ -47,7 +47,7 @@ void rei::render::Gizmos::DrawLine(const math::Vector3& start, const math::Vecto
     model = scale(model, vec3(distance, distance, distance));
     model = model * rotation;
 
-    const auto& shader = _gizmosMaterial.Asset->GetShader();
+    const auto& shader = _gizmosMaterial->GetShader();
     shader.SetColor("_Color", color);
     shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), model);
 
@@ -133,7 +133,7 @@ void rei::render::Gizmos::DrawCircle(const math::Vector3& center, const math::Ve
     model = model * math::GetRotationMatrix(LookAt(forward, up));
     model = scale(model, {radius, radius, radius});
 
-    const auto& shader = _gizmosMaterial.Asset->GetShader();
+    const auto& shader = _gizmosMaterial->GetShader();
     shader.SetColor("_Color", color);
     shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), model);
 
@@ -202,7 +202,7 @@ void rei::render::Gizmos::DrawBox(const glm::mat4& transformation, const Color& 
         glEnable(GL_DEPTH_TEST);
     }
 
-    const auto& shader = _gizmosMaterial.Asset->GetShader();
+    const auto& shader = _gizmosMaterial->GetShader();
     shader.SetColor("_Color", color);
     shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), transformation);
 

@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "BuildScenesConfig.h"
 
-#include "Modules/Assets/AssetRef.h"
+#include "Modules/Assets/Core/AssetRef.h"
 #include "../external/json.hpp"
 
 using json = nlohmann::json;

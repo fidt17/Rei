@@ -8,11 +8,15 @@ namespace rei::render
     public:
 
         REI_API Shader() = default;
-        explicit Shader(resources::BinaryReader& reader);
-        Shader(const char* vertexSource, const char* fragmentSource);
+        REI_API explicit Shader(resources::BinaryReader& reader);
+        Shader(const Shader& other) = delete;
+        Shader& operator=(const Shader& other) = delete;
+        REI_API Shader(Shader&& other) noexcept;
+        REI_API Shader& operator=(Shader&& other) noexcept;
+        REI_API ~Shader();
 
-        void Use() const;
-        void Delete() const;
+        REI_API void Use() const;
+        REI_API void Delete() const;
 
         REI_API i32 GetLocation(const std::string& name) const;
         REI_API void SetInt(const std::string& name, int value) const;

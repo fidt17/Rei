@@ -19,9 +19,12 @@ namespace rei::common::logging
 
         void Enable();
         void Disable();
+        void SetMinLogLevel(LogLevelEnum level);
+        LogLevelEnum GetMinLogLevel() const;
         
     private:
         std::string _loggerScope;
         bool _enabled = true;
+        LogLevelEnum _minLogLevel = Info;
     };
 }

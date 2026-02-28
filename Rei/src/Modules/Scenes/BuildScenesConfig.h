@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Scene.h"
-#include "Modules/Assets/AssetRef.h"
+#include "Modules/Assets/Core/AssetRef.h"
 
 namespace rei::scenes
 {

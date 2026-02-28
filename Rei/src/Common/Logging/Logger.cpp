@@ -21,6 +21,9 @@ namespace rei::common::logging
     {
         switch (logLevel)
         {
+        case Debug:
+            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 8);
+            break;
         case Info:
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
             break;
@@ -36,6 +39,7 @@ namespace rei::common::logging
     void Logger::Log(const std::string& scope, const LogLevelEnum logLevel, const std::string& message, const std::string& details) const
     {
         if (!_enabled) return;
+        if (logLevel < _minLogLevel) return;
 
         const auto logMessage = LogMessage(scope.c_str(), logLevel, message.c_str(), details.c_str());
         UpdateConsoleColor(logLevel);
@@ -58,5 +62,15 @@ namespace rei::common::logging
     void Logger::Disable()
     {
         _enabled = false;
+    }
+
+    void Logger::SetMinLogLevel(const LogLevelEnum level)
+    {
+        _minLogLevel = level;
+    }
+
+    LogLevelEnum Logger::GetMinLogLevel() const
+    {
+        return _minLogLevel;
     }
 }

@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "PostProcessingModule.h"
 
 #include "glad/glad.h"
@@ -30,7 +30,7 @@ void rei::render::PostProcessingModule::Render(const FrameBuffer& frameBuffer) c
         material = _inversionMaterial;
     }
 
-    material.Asset->GetShader().Use();
+    material->GetShader().Use();
 
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, frameBuffer.GetColorTexture());

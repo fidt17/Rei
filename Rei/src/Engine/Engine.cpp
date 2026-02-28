@@ -4,7 +4,7 @@
 #include <utility>
 
 #include "Services.h"
-#include "Modules/Assets/AssetManager.h"
+#include "Modules/Assets/Core/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Scenes/SceneManager.h"

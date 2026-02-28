@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Engine/Services.h"
-#include "Modules/Assets/AssetDependency.h"
+#include "Modules/Assets/Core/AssetDependency.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Scenes/SceneEntity.h"
 

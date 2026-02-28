@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Modules/Assets/AssetDependency.h"
-#include "Modules/Assets/AssetManager.h"
+#include "Modules/Assets/Core/AssetDependency.h"
+#include "Modules/Assets/Core/AssetManager.h"
 
 namespace rei::scenes
 {
@@ -49,7 +49,7 @@ namespace rei::scenes
                             break;
                         }
 
-                        uniqueDependencies[index].LoadData(*_assetManager);
+                        uniqueDependencies[index].LoadData(*this);
                     }
                 }));
             }
@@ -61,7 +61,7 @@ namespace rei::scenes
 
             for (const auto& dependency : uniqueDependencies)
             {
-                dependency.PostLoad(*_assetManager);
+                dependency.PostLoad(*this);
             }
 
             LOG("Scene asset dependencies loaded: {}, workers: {}", uniqueDependencies.size(), workerCount)
@@ -91,5 +91,35 @@ namespace rei::scenes
         }
 
         std::shared_ptr<assets::AssetManager> _assetManager;
+
+    public:
+        template <typename T>
+        bool PreloadById(const std::string& id) const
+        {
+            auto ref = assets::AssetRef<T>(id);
+            return _assetManager->EnsureAssetDataLoaded(ref, false);
+        }
+
+        template <typename T>
+        bool FinalizeById(const std::string& id) const
+        {
+            auto ref = assets::AssetRef<T>(id);
+            return _assetManager->RunPostLoad(ref);
+        }
     };
+}
+
+namespace rei::assets
+{
+    template <typename T>
+    bool PreloadSceneDependency(const scenes::SceneAssetPreloader& preloader, const std::string& id)
+    {
+        return preloader.PreloadById<T>(id);
+    }
+
+    template <typename T>
+    bool FinalizeSceneDependency(const scenes::SceneAssetPreloader& preloader, const std::string& id)
+    {
+        return preloader.FinalizeById<T>(id);
+    }
 }

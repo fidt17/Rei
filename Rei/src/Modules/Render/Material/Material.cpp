@@ -1,10 +1,12 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Material.h"
 
 #include "glad/glad.h"
 
 namespace rei::render
 {
+    SET_LOG_SCOPE("Material")
+
     Material::Material(resources::BinaryReader& reader)
     {
         auto assignFallbackShader = [this]()
@@ -44,16 +46,20 @@ namespace rei::render
             LOG_ERROR("Failed to parse material asset. Falling back to {}. Error: {}", REI_SHADER_SIMPLE_LIT_ASSET_ID, e.what())
             assignFallbackShader();
         }
+        
+        LOG_DEBUG("Created material: {}", _shader.Id);
     }
 
-    Material::Material(assets::AssetRef<Shader> shader)
+    Material::Material(const assets::AssetRef<Shader>& shader)
         : _shader(shader)
     {
+        LOG_DEBUG("Created material: {}", _shader.Id);
     }
 
     Material::~Material()
     {
-        _shader->Delete();
+        LOG_DEBUG("Deleting material: {}", _shader.Id);
+        GetAssetManager().Release(_shader);
     }
 
     void Material::Use() const
@@ -64,7 +70,7 @@ namespace rei::render
             return;
         }
 
-        _shader.Asset->Use();
+        _shader->Use();
         BindTextures();
 
         if (UseDepth())
@@ -84,7 +90,7 @@ namespace rei::render
 
     const Shader& Material::GetShader() const
     {
-        return *_shader.Asset;
+        return *_shader.Get();
     }
 
     std::vector<assets::AssetRef<Texture>>& Material::GetTextures()
@@ -104,10 +110,12 @@ namespace rei::render
 
     assets::AssetRef<Material> Material::CreateInstanceFrom(const Material& source)
     {
-        auto material = GetAssetManager().CreateAsset<Material>(GetAssetManager().CreateAsset<Shader>(Shader::CreateInstanceFrom(*source._shader.Asset)));
-        material.Asset->_useDepth = source._useDepth;
-        material.Asset->_sortingOrder = source._sortingOrder;
-        material.Asset->_textures = source._textures;
+        auto material = GetAssetManager().CreateAsset<Material>(GetAssetManager().CreateAsset<Shader>(Shader::CreateInstanceFrom(*source._shader.Get())));
+        material->_useDepth = source._useDepth;
+        material->_sortingOrder = source._sortingOrder;
+        material->_textures = source._textures;
+        
+        LOG_DEBUG("Created material instance id={}, shader={}", material.Id, material->_shader.Id)
 
         return material;
     }
@@ -126,7 +134,7 @@ namespace rei::render
                 LOG_ERROR("Texture {} is not loaded", _textures[i].Id)
                 continue;
             }
-            const auto texturePtr = _textures[i].Asset;
+            const auto texturePtr = _textures[i].Get();
 
             std::string number;
             std::string textureName;
@@ -153,7 +161,7 @@ namespace rei::render
                 continue;
             }
 
-            _shader.Asset->SetInt(textureName + number, i);
+            _shader->SetInt(textureName + number, i);
             texturePtr->Use(i);
         }
     }

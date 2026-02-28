@@ -4,7 +4,7 @@
 #include "BuildScenesConfig.h"
 #include "Scene.h"
 #include "Common/Time/ScopedTimer.h"
-#include "Modules/Assets/AssetManager.h"
+#include "Modules/Assets/Core/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
 namespace rei::scenes

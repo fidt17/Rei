@@ -3,10 +3,10 @@
 
 #include <Modules/EntityManagement/EntityManager.h>
 #include <Modules/Behaviour/Behaviour.h>
-#include <Modules/Assets/AssetRefUtils.h>
+#include <Modules/Assets/Core/AssetRefUtils.h>
 
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
-#include "C:\Repos\Rei\Rei\src\Modules\Assets\AssetRef.h"
+#include "C:\Repos\Rei\Rei\src\Modules\Assets\Core\AssetRef.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Physics\ModelCollider.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Physics\SphereCollider.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Render\Color\Color.h"

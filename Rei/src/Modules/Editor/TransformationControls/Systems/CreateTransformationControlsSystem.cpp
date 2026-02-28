@@ -64,7 +64,7 @@ namespace rei::editor
         auto& meshRenderer = ADD_BEHAVIOUR(arrow.Entity, render::MeshRenderer);
         meshRenderer.SetModel(_movementArrowModel);
 
-        auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Asset);
+        auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         arrowMaterial->SetDepth(false);
         arrowMaterial->SetSortingOrder(SORTING_ORDER_POST_PROCESSING + 1);
         arrowMaterial->GetShader().SetColor("_Color", render::Color::White());
@@ -85,7 +85,7 @@ namespace rei::editor
         auto& meshRenderer = ADD_BEHAVIOUR(arrow.Entity, render::MeshRenderer);
         meshRenderer.SetModel(_cubeModel);
 
-        auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Asset);
+        auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         arrowMaterial->SetDepth(false);
         arrowMaterial->SetSortingOrder(SORTING_ORDER_POST_PROCESSING + 1);
         arrowMaterial->GetShader().SetColor("_Color", render::Color::White());
@@ -106,7 +106,7 @@ namespace rei::editor
         auto& meshRenderer = ADD_BEHAVIOUR(ring.Entity, render::MeshRenderer);
         meshRenderer.SetModel(_rotationRingModel);
 
-        auto ringMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Asset);
+        auto ringMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         ringMaterial->SetDepth(false);
         ringMaterial->SetSortingOrder(SORTING_ORDER_POST_PROCESSING + 1);
         ringMaterial->GetShader().SetColor("_Color", render::Color::White());
@@ -127,7 +127,7 @@ namespace rei::editor
         auto& meshRenderer = ADD_BEHAVIOUR(arrow.Entity, render::MeshRenderer);
         meshRenderer.SetModel(_scaleArrowModel);
 
-        auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Asset);
+        auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         arrowMaterial->SetDepth(false);
         arrowMaterial->SetSortingOrder(SORTING_ORDER_POST_PROCESSING + 1);
         arrowMaterial->GetShader().SetColor("_Color", render::Color::White());

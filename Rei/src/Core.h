@@ -41,13 +41,13 @@
 #include "Common/Logging/Log.h"
 #include "Common/Assert.h"
 #include "Common/ExitCodes.h"
-#include "Modules/Assets/AssetIds.h"
+#include "Modules/Assets/Core/AssetIds.h"
 
 #include "glm/ext/matrix_transform.hpp"
 
 #include "Ecs/Ecs.h"
 
-#include "Modules/Assets/AssetManager.h"
+#include "Modules/Assets/Core/AssetManager.h"
 #include "Modules/Behaviour/Behaviour.h"
 
 // Force include components (needed for ecs component registry to initialize correctly across different DLLs)

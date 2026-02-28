@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "MeshRenderer.h"
 
 #include "Engine/Engine.h"
@@ -49,7 +49,7 @@ namespace rei::render
 
         GetRenderMaterial().Use();
 
-        for (const auto& mesh : _model.Asset->GetMeshes())
+        for (const auto& mesh : _model->GetMeshes())
         {
             mesh.Render();
         }
@@ -82,8 +82,9 @@ namespace rei::render
 
     const Material& MeshRenderer::GetRenderMaterial() const
     {
-        if (_material.IsLoaded()) return *_material.Asset;
+        if (_material.IsLoaded()) return *_material.Get();
 
-        return *GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID).Asset;
+        static assets::AssetRef<Material> fallbackMaterial = GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID);
+        return *fallbackMaterial.Get();
     }
 }

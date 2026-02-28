@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "OutlineRenderModule.h"
 
 #include "rei_behaviours/render/MeshRenderer.h"
@@ -25,7 +25,7 @@ void rei::render::OutlineRenderModule::RenderPass()
 
 void rei::render::OutlineRenderModule::RenderOutlineFrame() const
 {
-    _outlineQuadMaterial.Asset->GetShader().Use();
+    _outlineQuadMaterial->GetShader().Use();
 
     glDisable(GL_DEPTH_TEST);
 

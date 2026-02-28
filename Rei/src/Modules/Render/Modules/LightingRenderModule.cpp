@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "LightingRenderModule.h"
 
 #include "rei_behaviours/transformation/Transform.h"
@@ -88,7 +88,7 @@ void rei::render::LightingRenderModule::RenderPointLights() const
     {
         if (light.IsNull()) return;
 
-        const auto& shader = _lightSourceMaterial.Asset->GetShader();
+        const auto& shader = _lightSourceMaterial->GetShader();
         shader.SetColor("_Color", light.Get().GetColor());
         shader.SetFloat("_Strength", light.Get().GetStrength());
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), light.Get().GetTransform().CalculateModelMatrix());

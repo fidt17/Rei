@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ModelCollider.h"
 
 namespace rei::physics
@@ -19,7 +19,7 @@ namespace rei::physics
 
         if (!_model.IsLoaded()) return false;
 
-        const auto& meshes = _model.Asset->GetMeshes();
+        const auto& meshes = _model->GetMeshes();
         return std::ranges::any_of(meshes, [&](const render::Mesh& m) { return m.BVHRoot.IsRayIntersecting(ray, model, out_intersectionPoint); });
     }
 }

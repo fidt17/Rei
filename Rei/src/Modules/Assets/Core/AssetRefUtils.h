@@ -8,26 +8,27 @@ namespace rei::assets
     template <typename T>
     void SyncAfterExternalChange(AssetRef<T>& ref)
     {
-        if (ref.LoadedId == ref.Id)
+        const auto boundId = ref.GetBoundId();
+        if (boundId == ref.Id)
         {
             return;
         }
 
+        LOG_DEBUG("SyncAfterExternalChange type={}, boundId={}, targetId={}", typeid(T).name(), boundId, ref.Id)
         auto& assetManager = GetAssetManager();
 
-        if (!ref.LoadedId.empty())
+        if (!boundId.empty())
         {
-            assetManager.ReleaseById<T>(ref.LoadedId);
+            assetManager.ReleaseById<T>(boundId);
         }
 
-        ref.Asset = nullptr;
-        ref.AssetSize = 0;
-        ref.LoadedId.clear();
+        ref.Record = nullptr;
 
         if (!ref.Id.empty())
         {
             assetManager.Load(ref);
         }
+        LOG_DEBUG("SyncAfterExternalChange complete type={}, id={}", typeid(T).name(), ref.Id)
     }
 
     template <typename T>
@@ -38,22 +39,23 @@ namespace rei::assets
             return;
         }
 
+        LOG_DEBUG("AssetRef Assign type={}, targetId={}, otherId={}", typeid(T).name(), target.Id, other.Id)
         auto& assetManager = GetAssetManager();
 
-        if (!target.LoadedId.empty())
+        const auto targetBoundId = target.GetBoundId();
+        if (!targetBoundId.empty())
         {
-            assetManager.ReleaseById<T>(target.LoadedId);
+            assetManager.ReleaseById<T>(targetBoundId);
         }
 
         target.Id = other.Id;
-        target.Asset = other.Asset;
-        target.AssetSize = other.AssetSize;
-        target.LoadedId = other.LoadedId;
+        target.Record = other.Record;
 
         if (!target.Id.empty())
         {
             assetManager.Load(target);
         }
+        LOG_DEBUG("AssetRef Assign complete type={}, targetId={}", typeid(T).name(), target.Id)
     }
 
     template <typename T>
@@ -68,3 +70,4 @@ namespace rei::assets
         AssetRef<T>::AssignHandlerFunc = &AutoAssignHandler<T>;
     }
 }
+

@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "BVHRenderModule.h"
 
 #include "Modules/Render/Color/Color.h"
@@ -45,7 +45,7 @@ void rei::render::BVHRenderModule::Render() const
         auto& meshRenderer = GET(e, rei::render::MeshRenderer);
         if (!meshRenderer.GetModel().IsLoaded()) continue;
 
-        for (const auto& mesh : meshRenderer.GetModel().Asset->GetMeshes())
+        for (const auto& mesh : meshRenderer.GetModel()->GetMeshes())
         {
             auto& transform = meshRenderer.GetTransform();
             RenderBVH(mesh.BVHRoot, transform.CalculateModelMatrix());
