@@ -5,6 +5,7 @@ using ReactiveUI;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Path;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls;
 
@@ -66,13 +67,14 @@ public class ProjectAssetItemViewModel : BaseViewModel
     public void Select() => Selected.Value = true;
     public void Deselect() => Selected.Value = false;
 
-    private void StartRename() => RenameValue.Value = Name.Value;
+    private void StartRename() => RenameValue.Value = PathNamingUtils.GetRenameValue(Name.Value, IsDirectory);
 
     private void ConfirmRename(Action<ProjectAssetItemViewModel, string> renameAction)
     {
-        var newName = RenameValue.Value;
+        var newName = RenameValue.Value.Trim();
         if (string.IsNullOrWhiteSpace(newName)) return;
-        renameAction(this, newName);
+
+        renameAction(this, PathNamingUtils.GetRenamedName(Name.Value, newName, IsDirectory));
     }
 
     private void SetupContextMenu(IFileExplorerProvider fileExplorerProvider)

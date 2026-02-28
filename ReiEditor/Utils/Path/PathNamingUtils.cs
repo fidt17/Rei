@@ -8,6 +8,20 @@ namespace ReiEditor.Utils.Path;
 
 public static class PathNamingUtils
 {
+    public static string GetRenameValue(string name, bool isDirectory)
+    {
+        if (isDirectory) return name;
+        return System.IO.Path.GetFileNameWithoutExtension(name);
+    }
+
+    public static string GetRenamedName(string originalName, string renamedValue, bool isDirectory)
+    {
+        if (isDirectory) return renamedValue;
+
+        var extension = System.IO.Path.GetExtension(originalName);
+        return renamedValue + extension;
+    }
+
     public static string GetUniqueAssetName(string parentDirectory, string baseName, string extension)
     {
         var files = Directory
