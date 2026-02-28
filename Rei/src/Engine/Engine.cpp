@@ -7,6 +7,7 @@
 #include "Modules/Assets/Core/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
+#include "Modules/Render/Shaders/ShaderGenerator.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Startup/App.h"
 
@@ -34,6 +35,8 @@ namespace rei::internal::engine
         Services::GetInstance()->SetEntityManager(_entityManager);
         Services::GetInstance()->SetWindowManager(_windowManager);
         Services::GetInstance()->SetEditorEventsRelay(_editorEventsRelay);
+
+        render::ShaderGenerator::GetInstance().Initialize();
     }
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow(const WindowCreationSettings& settings)

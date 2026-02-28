@@ -33,7 +33,7 @@ namespace rei::scenes
             const u32 hardwareConcurrency = std::thread::hardware_concurrency();
             const std::size_t suggestedWorkerCount = std::max(1u, hardwareConcurrency);
             const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
-            LOG("Scene preload hardware_concurrency: {}, worker_count: {}", hardwareConcurrency, workerCount)
+            LOG_DEBUG("Scene preload hardware_concurrency: {}, worker_count: {}", hardwareConcurrency, workerCount)
             loadFutures.reserve(workerCount);
         
             std::atomic<std::size_t> nextDependencyIndex = 0;
@@ -64,7 +64,7 @@ namespace rei::scenes
                 dependency.PostLoad(*this);
             }
 
-            LOG("Scene asset dependencies loaded: {}, workers: {}", uniqueDependencies.size(), workerCount)
+            LOG_DEBUG("Scene asset dependencies loaded: {}, workers: {}", uniqueDependencies.size(), workerCount)
         }
 
     private:

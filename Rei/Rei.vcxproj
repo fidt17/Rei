@@ -673,6 +673,7 @@
     <ClInclude Include="src\Modules\Render\RenderScenario\DefaultRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\FrameBuffer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\RenderMode.h" />
+    <ClInclude Include="src\Modules\Render\Shaders\ShaderGenerator.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
@@ -794,6 +795,7 @@
     <ClCompile Include="src\Modules\Render\RenderScenario\CameraModule.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\DefaultRenderScenario.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\FrameBuffer.cpp" />
+    <ClCompile Include="src\Modules\Render\Shaders\ShaderGenerator.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
     <ClCompile Include="src\Modules\Render\Textures\Texture.cpp" />

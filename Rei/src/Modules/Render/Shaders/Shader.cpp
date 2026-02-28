@@ -1,83 +1,20 @@
 #include "pch.h"
 #include "Shader.h"
 
+#include "ShaderGenerator.h"
 #include "ShaderUtility.h"
 #include "glad/glad.h"
 #include "glm/gtc/type_ptr.hpp"
-#include "Modules/Assets/Types/TextAsset.h"
 
 namespace rei::render
 {
     SET_LOG_SCOPE("Shader")
 
-    static std::string shader_includes = "NaN";
-    static std::string shader_vertex_includes = "NaN";
-    static std::string shader_fragment_includes = "NaN";
-
-    void GenerateShaderIncludes()
-    {
-        if (shader_includes != "NaN") return;
-
-        shader_includes = "\n// --- SHADER INCLUDES START ---\n";
-
-        shader_includes += "\n#define NR_POINT_LIGHTS " + STRING(REI_MAX_POINT_LIGHTS_COUNT);
-
-        std::vector<std::string> includes{};
-        includes.emplace_back(REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID);
-        includes.emplace_back(REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID);
-        includes.emplace_back(REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID);
-
-        shader_includes += "\n";
-        for (const auto& include : includes)
-        {
-            const auto i = GetAssetManager().GetById<assets::TextAsset>(include);
-            shader_includes += "\n" + i->GetValue();
-        }
-        shader_includes += "\n// --- SHADER INCLUDES END ---\n";
-    }
-
-    void GenerateShaderVertexIncludes()
-    {
-        if (shader_vertex_includes != "NaN") return;
-
-        shader_vertex_includes = "\n// --- SHADER VERTEX INCLUDES START ---\n";
-
-        std::vector<std::string> includes{};
-        includes.emplace_back(REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID);
-
-        for (const auto& include : includes)
-        {
-            const auto i = GetAssetManager().GetById<assets::TextAsset>(include);
-            shader_vertex_includes += "\n" + i->GetValue();
-        }
-        shader_vertex_includes += "\n// --- SHADER VERTEX INCLUDES END ---\n";
-    }
-    
-    void GenerateShaderFragmentIncludes()
-    {
-        if (shader_fragment_includes != "NaN") return;
-
-        shader_fragment_includes = "\n// --- SHADER FRAGMENT INCLUDES START ---\n";
-
-        std::vector<std::string> includes{};
-        includes.emplace_back(REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID);
-
-        for (const auto& include : includes)
-        {
-            const auto i = GetAssetManager().GetById<assets::TextAsset>(include);
-            shader_fragment_includes += "\n" + i->GetValue();
-        }
-        shader_fragment_includes += "\n// --- SHADER FRAGMENT INCLUDES END ---\n";
-    }
-
     Shader::Shader(resources::BinaryReader& reader)
     {
         const auto content = reader.GetStr();
-
-        const std::string version = "#version 330 core\n";
-
-        _vertexSource = version + shader_includes + shader_vertex_includes + "\n#define VERTEX;\n" + content;
-        _fragmentSource = version + shader_includes + shader_fragment_includes + "\n#define FRAGMENT;\n" + content;
+        _vertexSource = ShaderGenerator::GetInstance().ComposeVertexSource(content);
+        _fragmentSource = ShaderGenerator::GetInstance().ComposeFragmentSource(content);
         LOG_DEBUG("Shader deserialized vertexLen={}, fragmentLen={}", _vertexSource.size(), _fragmentSource.size())
     }
 
@@ -172,21 +109,6 @@ namespace rei::render
     void Shader::PostLoad()
     {
         LOG_DEBUG("Shader PostLoad start id={}", _id)
-        GenerateShaderIncludes();
-        GenerateShaderVertexIncludes();
-        GenerateShaderFragmentIncludes();
-
-        if (_vertexSource.find("NaN") != std::string::npos)
-        {
-            _vertexSource.replace(_vertexSource.find("NaN"), 3, shader_includes);
-            _vertexSource.replace(_vertexSource.find("NaN"), 3, shader_vertex_includes);
-        }
-
-        if (_fragmentSource.find("NaN") != std::string::npos)
-        {
-            _fragmentSource.replace(_fragmentSource.find("NaN"), 3, shader_includes);
-            _fragmentSource.replace(_fragmentSource.find("NaN"), 3, shader_fragment_includes);
-        }
 
         if (_id == 0)
         {

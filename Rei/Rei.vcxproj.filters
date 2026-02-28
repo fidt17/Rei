@@ -42,6 +42,7 @@
     <ClCompile Include="src\Ecs\Systems\CallbackSystem.cpp" />
     <ClCompile Include="src\Modules\Input\Input.cpp" />
     <ClCompile Include="src\Modules\Render\Color\Color.cpp" />
+    <ClCompile Include="src\Modules\Render\Shaders\ShaderGenerator.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\AssignMainCameraSystem.cpp" />
@@ -659,6 +660,7 @@
     <ClInclude Include="src\Ecs\Systems\DeleteHere.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
     <ClInclude Include="src\Modules\Render\Color\Color.h" />
+    <ClInclude Include="src\Modules\Render\Shaders\ShaderGenerator.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\Systems\AssignMainCameraSystem.h" />
