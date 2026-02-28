@@ -19,6 +19,11 @@
             PointerPressed="RootBorder_OnPointerPressed"
             DoubleTapped="RootBorder_OnDoubleTapped"
             KeyDown="RootBorder_OnKeyDown">
+        <FlyoutBase.AttachedFlyout>
+            <Flyout Placement="Pointer" FlyoutPresenterClasses="Clear">
+                <contextMenu:ContextMenuView DataContext="{Binding CombinedContextMenu}" />
+            </Flyout>
+        </FlyoutBase.AttachedFlyout>
         <Border.Styles>
             <Style Selector="Border#RootBorder">
                 <Setter Property="Background" Value="{StaticResource Dark_2}" />
@@ -74,7 +79,7 @@
 
                 <contextMenu:ContextMenuButton
                     IsVisible="{Binding !IsFocused, ElementName=NameTextBox}"
-                    ContextMenuData="{Binding ContextMenu}" />
+                    ContextMenuData="{Binding CombinedContextMenu}" />
             </Grid>
         </Grid>
     </Border>

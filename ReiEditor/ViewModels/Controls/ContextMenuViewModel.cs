@@ -13,6 +13,7 @@ public class ContextMenuViewModel : BaseViewModel
     public void AddOption(ContextMenuOption option)
     {
         Options.Add(option);
+        if (option.IsSeparator) return;
 
         if (option.ShouldCloseOnExecute)
         {
@@ -23,5 +24,16 @@ public class ContextMenuViewModel : BaseViewModel
         {
             option.NestedMenu.AnyCommandExecutedEvent += () => AnyCommandExecutedEvent?.Invoke();
         }
+    }
+
+    public ContextMenuViewModel Clone()
+    {
+        var clone = new ContextMenuViewModel();
+        foreach (var option in Options)
+        {
+            clone.AddOption(option.Clone());
+        }
+
+        return clone;
     }
 }

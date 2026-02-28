@@ -264,7 +264,7 @@ public class ProjectWindowViewModel : BaseViewModel
         foreach (var directory in Directory.EnumerateDirectories(directoryPath).OrderBy(IOPath.GetFileName))
         {
             var name = IOPath.GetFileName(directory);
-            var item = new ProjectAssetItemViewModel(name, directory, ProjectAssetType.Directory, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, _fileExplorerProvider!);
+            var item = new ProjectAssetItemViewModel(name, directory, ProjectAssetType.Directory, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, ActiveFolderContextMenu, _fileExplorerProvider!);
             RegisterAsset(item);
             ActiveItems.Add(item);
         }
@@ -275,7 +275,7 @@ public class ProjectWindowViewModel : BaseViewModel
 
             var name = IOPath.GetFileName(file);
             var assetType = GetAssetType(file);
-            var item = new ProjectAssetItemViewModel(name, file, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, _fileExplorerProvider!);
+            var item = new ProjectAssetItemViewModel(name, file, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, ActiveFolderContextMenu, _fileExplorerProvider!);
             RegisterAsset(item);
             ActiveItems.Add(item);
         }
@@ -456,7 +456,7 @@ public class ProjectWindowViewModel : BaseViewModel
         foreach (var result in results)
         {
             var assetType = result.IsDirectory ? ProjectAssetType.Directory : GetAssetType(result.FullPath);
-            var item = new ProjectAssetItemViewModel(result.Name, result.FullPath, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, _fileExplorerProvider!);
+            var item = new ProjectAssetItemViewModel(result.Name, result.FullPath, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, ActiveFolderContextMenu, _fileExplorerProvider!);
             RegisterAsset(item);
             ActiveItems.Add(item);
         }

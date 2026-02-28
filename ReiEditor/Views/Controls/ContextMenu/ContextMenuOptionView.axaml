@@ -16,30 +16,38 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="*,Auto">
-        <Button x:Name="OptionButton"
-                Grid.Column="0"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Left"
-                Margin="1"
-                Command="{Binding Command}"
-                Content="{Binding Text}"
-                Click="OptionButton_OnClick">
-            <FlyoutBase.AttachedFlyout>
-                <Flyout Placement="RightEdgeAlignedTop"
-                        FlyoutPresenterClasses="Clear">
-                    <contextMenu:ContextMenuView x:Name="NestedMenuView"
-                                                 DataContext="{Binding NestedMenu}"
-                                                 PointerEntered="HoverRegion_OnPointerEntered"
-                                                 PointerExited="HoverRegion_OnPointerExited" />
-                </Flyout>
-            </FlyoutBase.AttachedFlyout>
-        </Button>
+    <Grid>
+        <Border Height="1"
+                Margin="6,4"
+                Background="{StaticResource Gray_4}"
+                IsVisible="{Binding IsSeparator}" />
 
-        <TextBlock Grid.Column="1"
-                   Margin="8,0,4,0"
-                   VerticalAlignment="Center"
-                   Text=">"
-                   IsVisible="{Binding HasNestedMenu}" />
+        <Grid ColumnDefinitions="*,Auto"
+              IsVisible="{Binding !IsSeparator}">
+            <Button x:Name="OptionButton"
+                    Grid.Column="0"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Margin="1"
+                    Command="{Binding Command}"
+                    Content="{Binding Text}"
+                    Click="OptionButton_OnClick">
+                <FlyoutBase.AttachedFlyout>
+                    <Flyout Placement="RightEdgeAlignedTop"
+                            FlyoutPresenterClasses="Clear">
+                        <contextMenu:ContextMenuView x:Name="NestedMenuView"
+                                                     DataContext="{Binding NestedMenu}"
+                                                     PointerEntered="HoverRegion_OnPointerEntered"
+                                                     PointerExited="HoverRegion_OnPointerExited" />
+                    </Flyout>
+                </FlyoutBase.AttachedFlyout>
+            </Button>
+
+            <TextBlock Grid.Column="1"
+                       Margin="8,0,4,0"
+                       VerticalAlignment="Center"
+                       Text=">"
+                       IsVisible="{Binding HasNestedMenu}" />
+        </Grid>
     </Grid>
 </UserControl>

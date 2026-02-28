@@ -44,6 +44,7 @@ public partial class ContextMenuButton : UserControl
 		if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
 		{
 			FlyoutBase.ShowAttachedFlyout((sender as Control)!);
+			e.Handled = true;
 		}
 	}
 

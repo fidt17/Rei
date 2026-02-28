@@ -75,7 +75,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="assets:ProjectAssetItemViewModel">
                                     <assetsView:ProjectAssetItemView 
-                                        Margin="0,1"/>
+                                        Margin="0,1" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

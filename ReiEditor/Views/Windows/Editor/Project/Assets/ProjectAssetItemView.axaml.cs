@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -32,6 +33,7 @@ public partial class ProjectAssetItemView : UserControl
         if (_vm == null) return;
         
         _vm.StartRenameCommand.ExecutedEvent -= EnableNameTextBox;
+        _vm.CombinedContextMenu.AnyCommandExecutedEvent -= HandleContextMenuCommandExecuted;
     }
 
     private void HandleDataContextChangedEvent(object? sender, EventArgs e)
@@ -41,6 +43,13 @@ public partial class ProjectAssetItemView : UserControl
         if (_vm == null) return;
 
         _vm.StartRenameCommand.ExecutedEvent += EnableNameTextBox;
+        _vm.CombinedContextMenu.AnyCommandExecutedEvent += HandleContextMenuCommandExecuted;
+    }
+
+    private void HandleContextMenuCommandExecuted()
+    {
+        var flyout = FlyoutBase.GetAttachedFlyout(RootBorder);
+        flyout?.Hide();
     }
 
     private void EnableNameTextBox()
@@ -55,6 +64,11 @@ public partial class ProjectAssetItemView : UserControl
         if (_vm == null) return;
         _vm.SelectCommand.Execute(null);
         RootBorder.Focus();
+
+        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
+
+        FlyoutBase.ShowAttachedFlyout(RootBorder);
+        e.Handled = true;
     }
 
     private void RootBorder_OnKeyDown(object? sender, KeyEventArgs e)

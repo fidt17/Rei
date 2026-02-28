@@ -5,15 +5,19 @@ namespace ReiEditor.ViewModels.Controls;
 
 public class ContextMenuOption
 {
+    private readonly Action? _callback;
+
     public RelayCommand Command { get; }
     public string Text { get; }
     public ContextMenuViewModel? NestedMenu { get; }
     public bool HasNestedMenu => NestedMenu != null;
     public bool ShouldCloseOnExecute { get; }
+    public bool IsSeparator { get; }
 
     public ContextMenuOption(string text, Action? callback = null)
     {
         Text = text;
+        _callback = callback;
 
         Command = new RelayCommand();
         if (callback != null)
@@ -29,5 +33,25 @@ public class ContextMenuOption
         NestedMenu = nestedMenu;
         Command = new RelayCommand();
         ShouldCloseOnExecute = false;
+    }
+
+    private ContextMenuOption(bool isSeparator)
+    {
+        IsSeparator = isSeparator;
+        Text = "";
+        Command = new RelayCommand();
+        ShouldCloseOnExecute = false;
+    }
+
+    public static ContextMenuOption Separator()
+    {
+        return new ContextMenuOption(isSeparator: true);
+    }
+
+    public ContextMenuOption Clone()
+    {
+        if (IsSeparator) return Separator();
+        if (NestedMenu != null) return new ContextMenuOption(Text, NestedMenu.Clone());
+        return new ContextMenuOption(Text, _callback);
     }
 }

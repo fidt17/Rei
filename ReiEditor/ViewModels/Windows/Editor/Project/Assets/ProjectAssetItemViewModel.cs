@@ -31,6 +31,7 @@ public class ProjectAssetItemViewModel : BaseViewModel
     public IImage Icon { get; }
 
     public ContextMenuViewModel ContextMenu { get; } = new();
+    public ContextMenuViewModel CombinedContextMenu { get; } = new();
 
 #pragma warning disable CS8618
     public ProjectAssetItemViewModel() { }
@@ -45,6 +46,7 @@ public class ProjectAssetItemViewModel : BaseViewModel
         Action<ProjectAssetItemViewModel, string> renameAction,
         Action<ProjectAssetItemViewModel> moveAction,
         Action<ProjectAssetItemViewModel> openAction,
+        ContextMenuViewModel activeFolderContextMenu,
         IFileExplorerProvider fileExplorerProvider)
     {
         Name = new ObservableField<string>(name);
@@ -62,6 +64,7 @@ public class ProjectAssetItemViewModel : BaseViewModel
         OpenCommand = ReactiveCommand.Create(() => openAction(this));
 
         SetupContextMenu(fileExplorerProvider);
+        SetupCombinedContextMenu(activeFolderContextMenu);
     }
 
     public void Select() => Selected.Value = true;
@@ -84,5 +87,23 @@ public class ProjectAssetItemViewModel : BaseViewModel
         ContextMenu.AddOption(new ContextMenuOption("Move", () => MoveCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Delete", () => DeleteCommand.Execute(null)));
+    }
+
+    private void SetupCombinedContextMenu(ContextMenuViewModel activeFolderContextMenu)
+    {
+        var assetContextMenuClone = ContextMenu.Clone();
+        foreach (var option in assetContextMenuClone.Options)
+        {
+            CombinedContextMenu.AddOption(option);
+        }
+
+        if (activeFolderContextMenu.Options.Count == 0) return;
+
+        CombinedContextMenu.AddOption(ContextMenuOption.Separator());
+        var activeFolderContextMenuClone = activeFolderContextMenu.Clone();
+        foreach (var option in activeFolderContextMenuClone.Options)
+        {
+            CombinedContextMenu.AddOption(option);
+        }
     }
 }
