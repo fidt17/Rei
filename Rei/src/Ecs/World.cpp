@@ -45,11 +45,7 @@ namespace rei::ecs
         {
             for (auto& set : sets)
             {
-                if (!set)
-                {
-                    LOG_ERROR("ComponentSet is null")
-                    continue;
-                }
+                if (!set) continue;
                 set->Delete(e);
             }
             _ecsRegistry->HandleDeadEntity(e);
