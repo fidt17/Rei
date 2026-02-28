@@ -25,6 +25,6 @@ namespace rei::common::logging
     private:
         std::string _loggerScope;
         bool _enabled = true;
-        LogLevelEnum _minLogLevel = Info;
+        LogLevelEnum _minLogLevel = Debug;
     };
 }

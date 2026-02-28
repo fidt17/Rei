@@ -13,9 +13,18 @@ public class EditorConsolePreferencesService : IEditorConsolePreferencesService
 		_consolePreferences = _preferencesService.GetConsolePreferences();
 	}
 
+	public bool DebugEnabled() => _consolePreferences.DisplayDebugLogs;
 	public bool InfoEnabled() => _consolePreferences.DisplayInfoLogs;
 	public bool WarningEnabled() => _consolePreferences.DisplayWarningLogs;
 	public bool ErrorEnabled() => _consolePreferences.DisplayErrorLogs;
+
+	public void SetDebug(bool enabled)
+	{
+		if (_consolePreferences.DisplayDebugLogs == enabled) return;
+
+		_consolePreferences.DisplayDebugLogs = enabled;
+		_preferencesService.SetConsolePreferences(_consolePreferences);
+	}
 
 	public void SetInfo(bool enabled)
 	{

@@ -26,6 +26,7 @@
         <SolidColorBrush x:Key="White" Color="#e6edf3" />
         <SolidColorBrush x:Key="Clear" Color="#00000000" />
 
+        <SolidColorBrush x:Key="Debug" Color="#7C848B" />
         <SolidColorBrush x:Key="Info" Color="#e6edf3" />
         <SolidColorBrush x:Key="Warning" Color="#fcc943" />
         <SolidColorBrush x:Key="Error" Color="#F76F58" />

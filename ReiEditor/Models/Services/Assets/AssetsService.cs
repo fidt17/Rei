@@ -90,7 +90,7 @@ public class AssetsService : IAssetsService
     {
         if (_saveInProcess) return;
 		
-        _logger.Log("Save project");
+        _logger.Log("Saving project");
         _saveInProcess.Value = true;
         var saveProcedure = new Procedure("Saving project");
         _editorProceduresService.TrackProcedure(saveProcedure);

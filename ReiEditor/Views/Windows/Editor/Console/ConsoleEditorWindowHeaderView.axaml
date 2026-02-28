@@ -21,6 +21,10 @@
     </UserControl.Styles>
 
     <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+        <ToggleButton IsChecked="{Binding ConsoleFilter.DebugEnabled}" Height="26" Width="26" MinHeight="0" Padding="4,0" VerticalAlignment="Center">
+            <Ellipse Fill="{StaticResource Debug}" Width="10" Height="10" />
+        </ToggleButton>
+
         <ToggleButton IsChecked="{Binding ConsoleFilter.InfoEnabled}" Height="26" Width="26" MinHeight="0" Padding="4,0" VerticalAlignment="Center">
             <Ellipse Fill="{StaticResource Info}" Width="10" Height="10" />
         </ToggleButton>

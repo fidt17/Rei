@@ -13,6 +13,7 @@
     </Design.DataContext>
 
     <UserControl.Resources>
+        <converters:LogLevelEnumToBoolConverter Level="Debug" x:Key="IsDebug" />
         <converters:LogLevelEnumToBoolConverter Level="Info" x:Key="IsInfo" />
         <converters:LogLevelEnumToBoolConverter Level="Warning" x:Key="IsWarning" />
         <converters:LogLevelEnumToBoolConverter Level="Error" x:Key="IsError" />
@@ -26,34 +27,49 @@
             Height="28">
         <Border.Styles>
             <Style Selector="Border:pointerover">
-                <Setter Property="Background" Value="{StaticResource Dark_4}"/>
+                <Setter Property="Background" Value="{StaticResource Dark_4}" />
             </Style>
-            
+
             <Style Selector="Border.Highlighted">
                 <Setter Property="BorderBrush" Value="{StaticResource White}" />
                 <Setter Property="BorderThickness" Value="1" />
             </Style>
         </Border.Styles>
-        <TextBlock
-            Margin="2"
-            Text="{Binding Message}"
-            VerticalAlignment="Center"
-            Classes="h5"
-            Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
-            Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
-            Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
 
-            <TextBlock.Styles>
-                <Style Selector="TextBlock.info">
-                    <Setter Property="Foreground" Value="{StaticResource Info}" />
-                </Style>
-                <Style Selector="TextBlock.warning">
-                    <Setter Property="Foreground" Value="{StaticResource Warning}" />
-                </Style>
-                <Style Selector="TextBlock.error">
-                    <Setter Property="Foreground" Value="{StaticResource Error}" />
-                </Style>
-            </TextBlock.Styles>
-        </TextBlock>
+        <StackPanel
+            Margin="8,0,0,0"
+            Orientation="Horizontal"
+            Spacing="6">
+            <TextBlock
+                Text="{Binding Time}"
+                VerticalAlignment="Center"
+                Classes="h5"
+                Foreground="{StaticResource Debug}" />
+
+            <TextBlock
+                Text="{Binding Message}"
+                VerticalAlignment="Center"
+                Classes="h5"
+                Classes.debug="{Binding LogLevel, Converter={StaticResource IsDebug}}"
+                Classes.info="{Binding LogLevel, Converter={StaticResource IsInfo}}"
+                Classes.warning="{Binding LogLevel, Converter={StaticResource IsWarning}}"
+                Classes.error="{Binding LogLevel, Converter={StaticResource IsError}}">
+
+                <TextBlock.Styles>
+                    <Style Selector="TextBlock.debug">
+                        <Setter Property="Foreground" Value="{StaticResource Debug}" />
+                    </Style>
+                    <Style Selector="TextBlock.info">
+                        <Setter Property="Foreground" Value="{StaticResource Info}" />
+                    </Style>
+                    <Style Selector="TextBlock.warning">
+                        <Setter Property="Foreground" Value="{StaticResource Warning}" />
+                    </Style>
+                    <Style Selector="TextBlock.error">
+                        <Setter Property="Foreground" Value="{StaticResource Error}" />
+                    </Style>
+                </TextBlock.Styles>
+            </TextBlock>
+        </StackPanel>
     </Border>
 </UserControl>

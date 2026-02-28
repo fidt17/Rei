@@ -9,6 +9,24 @@ namespace ReiEditor.ViewModels.Windows.Editor.Console;
 public class ConsoleFilterViewModel : BaseViewModel
 {
 	public event Action? FilterChangedEvent;
+
+	#region DebugEnabled
+
+	private bool _debugEnabled = true;
+	public bool DebugEnabled
+	{
+		get => _debugEnabled;
+		set
+		{
+			if (SetField(ref _debugEnabled, value))
+			{
+				_editorConsolePreferencesService.SetDebug(DebugEnabled);
+				FilterChangedEvent?.Invoke();
+			}
+		}
+	}
+
+	#endregion
 	
 	#region InfoEnabled
 
@@ -69,6 +87,7 @@ public class ConsoleFilterViewModel : BaseViewModel
 	public ConsoleFilterViewModel(IEditorConsolePreferencesService editorConsolePreferencesService)
 	{
 		_editorConsolePreferencesService = editorConsolePreferencesService;
+		DebugEnabled = _editorConsolePreferencesService.DebugEnabled();
 		InfoEnabled = _editorConsolePreferencesService.InfoEnabled();
 		WarningEnabled = _editorConsolePreferencesService.WarningEnabled();
 		ErrorEnabled = _editorConsolePreferencesService.ErrorEnabled();
@@ -76,6 +95,7 @@ public class ConsoleFilterViewModel : BaseViewModel
 
 	public bool IsValidLog(LogMessage logMessage)
 	{
+		if (logMessage.Level == LogLevelEnum.Debug && DebugEnabled) return true;
 		if (logMessage.Level == LogLevelEnum.Info && InfoEnabled) return true;
 		if (logMessage.Level == LogLevelEnum.Warning && WarningEnabled) return true;
 		if (logMessage.Level == LogLevelEnum.Error && ErrorEnabled) return true;

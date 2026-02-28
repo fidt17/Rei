@@ -7,18 +7,18 @@ namespace rei::common::logging
     {
         if (value == "debug" || value == "DEBUG")
         {
-            return LogLevelEnum::Debug;
+            return Debug;
         }
         if (value == "warning" || value == "WARNING" || value == "warn" || value == "WARN")
         {
-            return LogLevelEnum::Warning;
+            return Warning;
         }
         if (value == "error" || value == "ERROR")
         {
-            return LogLevelEnum::Error;
+            return Error;
         }
 
-        return LogLevelEnum::Info;
+        return Debug;
     }
 
     void Log::Initialize()
