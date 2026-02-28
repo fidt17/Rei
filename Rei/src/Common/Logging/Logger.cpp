@@ -1,8 +1,14 @@
 ﻿#include "Logger.h"
 #include "windows.h"
+#include <mutex>
 
 namespace rei::common::logging
 {
+    namespace
+    {
+        std::mutex g_consoleWriteMutex;
+    }
+
     Logger::Logger(std::string loggerScope): _loggerScope(std::move(loggerScope))
     {
     }
@@ -37,14 +43,17 @@ namespace rei::common::logging
         if (logLevel < _minLogLevel) return;
 
         const auto logMessage = LogMessage("Engine", logLevel, message.c_str(), details.c_str());
-        UpdateConsoleColor(logLevel);
-
-        if (logLevel == Error)
         {
-            std::cout << "\n";
-        }
+            const std::lock_guard lock(g_consoleWriteMutex);
+            UpdateConsoleColor(logLevel);
 
-        std::cout << logMessage << "\n";
+            if (logLevel == Error)
+            {
+                std::cout << "\n";
+            }
+
+            std::cout << logMessage << "\n";
+        }
 
         NewLogEvent(logMessage);
     }
