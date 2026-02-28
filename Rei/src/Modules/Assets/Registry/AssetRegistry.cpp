@@ -114,17 +114,11 @@ namespace rei::assets
 
     std::shared_ptr<AssetRecord> AssetRegistry::FindRecord(const std::string& id) const
     {
-        if (id.empty())
-        {
-            return nullptr;
-        }
+        if (id.empty()) return nullptr;
 
         std::scoped_lock lock(_recordsMutex);
         const auto it = _records.find(id);
-        if (it == _records.end())
-        {
-            return nullptr;
-        }
+        if (it == _records.end()) return nullptr;
 
         return it->second;
     }
@@ -197,6 +191,7 @@ namespace rei::assets
 
         result.ReleasedSize = record->AssetSize;
         SubtractLoadedAssetsSize(record->AssetSize);
+        
         MarkForDestruction(id);
         CollectGarbage();
         PumpDestroyQueue();

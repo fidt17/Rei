@@ -3,7 +3,7 @@
 namespace rei::assets
 {
     template <typename T>
-    void AssetRegistry::CreateAssetRecord(AssetRef<T> assetRef, T* value, const i32 assetSize, const AssetState state)
+    void AssetRegistry::CreateAssetRecord(AssetRef<T>& assetRef, T* value, const i32 assetSize, const AssetState state)
     {
         const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
         if (assetRef.Id.empty())
@@ -27,22 +27,38 @@ namespace rei::assets
             return;
         }
 
-        std::scoped_lock lock(_recordsMutex);
-        record->Value = std::shared_ptr<void>(
-            value,
-            [](void* ptr)
-            {
-                delete static_cast<T*>(ptr);
-            });
-        record->AssetSize = assetSize;
-        record->State = value != nullptr ? state : AssetState::Unloaded;
+        {
+            std::scoped_lock lock(_recordsMutex);
+            record->Value = std::shared_ptr<void>(
+                value,
+                [](void* ptr)
+                {
+                    delete static_cast<T*>(ptr);
+                });
+            record->AssetSize = assetSize;
+            record->State = value != nullptr ? state : AssetState::Unloaded;
+            assetRef.Record = record;
+        }
+
+        AddLoadedAssetsSize(assetSize);
     }
 
     template <typename T>
-    std::shared_ptr<AssetRecord> AssetRegistry::GetRecord(const std::string& id)
+    std::shared_ptr<AssetRecord> AssetRegistry::FindRecord(const std::string& id) const
     {
-        if (id.empty()) return nullptr;
+        const auto record = FindRecord(id);
+        if (record == nullptr) return nullptr;
 
-        return GetOrCreateRecord(id, typeid(T));
+        if (record->Type == typeid(T))
+        {
+            return record;
+        }
+
+        LOG_ERROR(
+            "Asset type mismatch id={}, existingType={}, requestedType={}",
+            id,
+            rei::common::logging::utility::SimplifyTypeName(record->Type.name()),
+            rei::common::logging::utility::SimplifyTypeName(typeid(T).name()))
+        return nullptr;
     }
 }

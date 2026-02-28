@@ -54,9 +54,7 @@ namespace rei::assets
             }
         }
 
-        {
-            _registry.ResetRuntimeTracking();
-        }
+        _registry.ResetRuntimeTracking();
 
         for (const auto& asset : assetsToDestroy)
         {

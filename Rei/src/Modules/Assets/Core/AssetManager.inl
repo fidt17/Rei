@@ -17,7 +17,7 @@ namespace rei::assets
     AssetRef<T> AssetManager::GetByPath(const std::string& path)
     {
         AssetRef<T> ref(path);
-        ref.Record = _registry.GetRecord<T>(ref.Id);
+        ref.Record = _registry.FindRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
             _registry.IncrementRefCount(ref.Id);
@@ -47,9 +47,7 @@ namespace rei::assets
         const auto loadedAsset = new T(std::forward<Args>(args)...);
         constexpr i32 runtimeAssetSize = 0;
         _registry.CreateAssetRecord<T>(asset, loadedAsset, runtimeAssetSize, AssetState::Loaded);
-        _registry.AddLoadedAssetsSize(runtimeAssetSize);
         _registry.SetRefCount(asset.Id, 1);
-        asset.Record = _registry.GetRecord<T>(asset.Id);
 
         return asset;
     }
@@ -131,7 +129,7 @@ namespace rei::assets
             return true;
         }
 
-        ref.Record = _registry.GetRecord<T>(ref.Id);
+        ref.Record = _registry.FindRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
             if (incrementRefCount)
@@ -165,7 +163,7 @@ namespace rei::assets
     template <typename T>
     void AssetManager::LoadAndCreateRecord(AssetRef<T>& ref, const std::string& path, const i64 offset, const bool incrementRefCount)
     {
-        ref.Record = _registry.GetRecord<T>(ref.Id);
+        ref.Record = _registry.FindRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
             if (incrementRefCount)
@@ -183,7 +181,7 @@ namespace rei::assets
         const auto assetSize = static_cast<i32>(loadedAssetSize);
         {
             std::lock_guard lock(_assetsMutex);
-            ref.Record = _registry.GetRecord<T>(ref.Id);
+            ref.Record = _registry.FindRecord<T>(ref.Id);
             if (ref.IsLoaded())
             {
                 delete loadedAssetPtr;
@@ -196,9 +194,7 @@ namespace rei::assets
         }
 
         _registry.CreateAssetRecord<T>(ref, loadedAssetPtr, assetSize, AssetState::Loaded);
-        _registry.AddLoadedAssetsSize(assetSize);
         _registry.SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
-        ref.Record = _registry.GetRecord<T>(ref.Id);
     }
 
     template <typename T>
@@ -206,7 +202,7 @@ namespace rei::assets
     {
         if (ref.Record == nullptr)
         {
-            ref.Record = _registry.GetRecord<T>(ref.Id);
+            ref.Record = _registry.FindRecord<T>(ref.Id);
         }
 
         if (!ref.IsLoaded())
@@ -229,4 +225,3 @@ namespace rei::assets
         }
     }
 }
-
