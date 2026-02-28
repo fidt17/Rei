@@ -162,11 +162,15 @@ namespace rei::common::logging
             return std::format("{} | {}", sourceDetails, extraDetails);
         }
 
+    }
+
+    namespace utility
+    {
         std::string SimplifyTypeName(const std::string_view rawTypeName)
         {
             std::string typeName(rawTypeName);
-            typeName = EraseAll(typeName, "class ");
-            typeName = EraseAll(typeName, "struct ");
+            typeName = internal::EraseAll(typeName, "class ");
+            typeName = internal::EraseAll(typeName, "struct ");
 
             const size_t templatePos = typeName.find('<');
             if (templatePos != std::string::npos)
@@ -181,6 +185,34 @@ namespace rei::common::logging
             }
 
             return typeName;
+        }
+        
+        std::string FormatSize(const i64 bytes)
+        {
+            if (bytes < 1024)
+            {
+                return std::format("{} B", bytes);
+            }
+
+            const double kb = static_cast<double>(bytes) / 1024.0;
+            if (kb < 1024.0)
+            {
+                return std::format("{:.2f} KB", kb);
+            }
+
+            const double mb = kb / 1024.0;
+            return std::format("{:.2f} MB", mb);
+        }
+
+        std::string FormatDurationMs(const i64 durationMs)
+        {
+            if (durationMs < 1000)
+            {
+                return std::format("{} ms", durationMs);
+            }
+
+            const double seconds = static_cast<double>(durationMs) / 1000.0;
+            return std::format("{:.2f} sec", seconds);
         }
     }
 

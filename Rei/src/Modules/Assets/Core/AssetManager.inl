@@ -4,42 +4,12 @@
 
 namespace rei::assets
 {
-    namespace internal
-    {
-        inline std::string FormatSize(const i64 bytes)
-        {
-            if (bytes < 1024)
-            {
-                return std::format("{} B", bytes);
-            }
-
-            const double kb = static_cast<double>(bytes) / 1024.0;
-            if (kb < 1024.0)
-            {
-                return std::format("{:.2f} KB", kb);
-            }
-
-            const double mb = kb / 1024.0;
-            return std::format("{:.2f} MB", mb);
-        }
-
-        inline std::string FormatDurationMs(const i64 durationMs)
-        {
-            if (durationMs < 1000)
-            {
-                return std::format("{} ms", durationMs);
-            }
-
-            const double seconds = static_cast<double>(durationMs) / 1000.0;
-            return std::format("{:.2f} sec", seconds);
-        }
-    }
-
     template <typename T>
     AssetRef<T> AssetManager::GetById(const std::string& id)
     {
         auto asset = AssetRef<T>(id);
         Load(asset);
+        
         return asset;
     }
 
@@ -64,7 +34,7 @@ namespace rei::assets
 
         i64 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
-        LoadAndBindFromPath(ref, dest, 0, true);
+        LoadAndCreateRecord(ref, dest, 0, true);
         RunPostLoad(ref);
 
         return ref;
@@ -76,7 +46,8 @@ namespace rei::assets
         AssetRef<T> asset(id);
         const auto loadedAsset = new T(std::forward<Args>(args)...);
         constexpr i32 runtimeAssetSize = 0;
-        _registry.BindOwned<T>(asset.Id, loadedAsset, runtimeAssetSize, AssetState::Loaded);
+        _registry.CreateAssetRecord<T>(asset, loadedAsset, runtimeAssetSize, AssetState::Loaded);
+        _registry.AddLoadedAssetsSize(runtimeAssetSize);
         _registry.SetRefCount(asset.Id, 1);
         asset.Record = _registry.GetRecord<T>(asset.Id);
 
@@ -87,6 +58,7 @@ namespace rei::assets
     AssetRef<T> AssetManager::CreateAsset(Args&&... args)
     {
         std::string id("runtime_asset_" + STRING(_runtimeAssetCounter++));
+        
         return CreateAssetWithId<T>(id, std::forward<Args>(args)...);
     }
 
@@ -95,25 +67,22 @@ namespace rei::assets
     {
         const bool wasLoadedBefore = ref.IsLoaded();
         const auto startedAt = std::chrono::high_resolution_clock::now();
-        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
-        if (!EnsureAssetDataLoaded(ref, true))
+        const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
+        if (!LoadInternal(ref, true))
         {
-            LOG_ERROR_D(std::format("id={}, type={}", ref.Id, typeName), "EnsureAssetDataLoaded failed")
+            LOG_ERROR("Failed to load asset id={}, type={}", ref.Id, typeName)
             return false;
         }
 
         const bool loaded = RunPostLoad(ref);
-        if (!loaded)
-        {
-            return false;
-        }
+        if (!loaded) return false;
 
         if (!wasLoadedBefore)
         {
             const auto finishedAt = std::chrono::high_resolution_clock::now();
             const auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(finishedAt - startedAt).count();
             const i32 size = ref.Record != nullptr ? ref.Record->AssetSize : 0;
-            LOG_DEBUG("Asset loaded id={} type={} size={} duration={}", ref.Id, typeName, internal::FormatSize(size), internal::FormatDurationMs(durationMs))
+            LOG_DEBUG("Asset loaded id={} type={} size={} duration={}", ref.Id, typeName, common::logging::utility::FormatSize(size), common::logging::utility::FormatDurationMs(durationMs))
         }
 
         return true;
@@ -122,42 +91,19 @@ namespace rei::assets
     template <typename T>
     void AssetManager::ReleaseById(const std::string& id)
     {
-        if (id == "")
+        if (id == "") return;
+        if (_isUnloadingAllAssets.load()) return;
+
+        const auto releaseResult = _registry.ReleaseAssetWithId(id);
+        if (!releaseResult.RefCountReachedZero) return;
+        if (releaseResult.MissingLoadedRecord)
         {
-            return;
-        }
-        if (_isUnloadingAllAssets.load())
-        {
+            LOG_WARNING("Cannot release asset id={} because it's record is missing", id)
             return;
         }
 
-        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
-        if (!_registry.DecrementRefCount(id))
-        {
-            return;
-        }
-
-        const auto record = _registry.FindRecord(id);
-        if (record == nullptr || record->State == AssetState::Unloaded)
-        {
-            LOG_WARNING_D(std::format("id={}", id), "ReleaseById missing loaded asset")
-            return;
-        }
-
-        const i32 size = record->AssetSize;
-        _registry.SubtractLoadedAssetsSize(record->AssetSize);
-        _registry.MarkForDestruction(id);
-        _registry.CollectGarbage();
-        _registry.PumpDestroyQueue();
-        if (_registry.FindRecord(id) == nullptr)
-        {
-            LOG_DEBUG("Asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
-        }
-        else
-        {
-            _registry.SetUnloaded(id);
-            LOG_DEBUG("Asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
-        }
+        const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG("Asset unloaded id={} type={} size={}", id, typeName, common::logging::utility::FormatSize(releaseResult.ReleasedSize))
     }
 
     template <typename T>
@@ -167,12 +113,12 @@ namespace rei::assets
     }
 
     template <typename T>
-    bool AssetManager::EnsureAssetDataLoaded(AssetRef<T>& ref, const bool incrementRefCount)
+    bool AssetManager::LoadInternal(AssetRef<T>& ref, const bool incrementRefCount)
     {
         if (ref.Id == "")
         {
-            const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
-            LOG_WARNING_D(std::format("type={}", typeName), "EnsureAssetDataLoaded skipped empty id")
+            const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
+            LOG_ERROR("Cannot load asset since it has empty Id, type={}", typeName)
             return false;
         }
 
@@ -203,21 +149,21 @@ namespace rei::assets
                 return true;
             }
 
-            const auto assetInfo = _map->GetAssetInfo(ref.Id);
+            const auto assetInfo = _map.GetAssetInfo(ref.Id);
 
-            LoadAndBindFromPath(ref, assetInfo.Path, assetInfo.Offset, incrementRefCount);
+            LoadAndCreateRecord(ref, assetInfo.Path, assetInfo.Offset, incrementRefCount);
             return true;
         }
         catch (std::exception e)
         {
-            LOG_ERROR_D(std::format("id={}", ref.Id), "EnsureAssetDataLoaded exception: {}", e.what())
+            LOG_ERROR("Failed to load asset id={}\n exception: {}", ref.Id, e.what())
         }
 
         return false;
     }
 
     template <typename T>
-    void AssetManager::LoadAndBindFromPath(AssetRef<T>& ref, const std::string& path, const i64 offset, const bool incrementRefCount)
+    void AssetManager::LoadAndCreateRecord(AssetRef<T>& ref, const std::string& path, const i64 offset, const bool incrementRefCount)
     {
         ref.Record = _registry.GetRecord<T>(ref.Id);
         if (ref.IsLoaded())
@@ -249,7 +195,7 @@ namespace rei::assets
             }
         }
 
-        _registry.BindOwned<T>(ref.Id, loadedAssetPtr, assetSize, AssetState::Loaded);
+        _registry.CreateAssetRecord<T>(ref, loadedAssetPtr, assetSize, AssetState::Loaded);
         _registry.AddLoadedAssetsSize(assetSize);
         _registry.SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
         ref.Record = _registry.GetRecord<T>(ref.Id);
@@ -265,8 +211,8 @@ namespace rei::assets
 
         if (!ref.IsLoaded())
         {
-            const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
-            LOG_WARNING_D(std::format("id={}, type={}", ref.Id, typeName), "RunPostLoad skipped for unloaded ref")
+            const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
+            LOG_WARNING("Cannot run post load for unloaded asset id={}, type={}", ref.Id, typeName)
             return false;
         }
 
@@ -283,6 +229,4 @@ namespace rei::assets
         }
     }
 }
-
-
 

@@ -11,8 +11,6 @@ namespace rei::render
         REI_API Material(resources::BinaryReader& reader);
         REI_API Material(const assets::AssetRef<Shader>& shader);
 
-        REI_API ~Material();
-
         REI_API void Use() const;
 
         REI_API assets::AssetRef<Shader>& GetShaderAsset();

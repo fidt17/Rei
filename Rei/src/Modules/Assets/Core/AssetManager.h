@@ -56,9 +56,9 @@ namespace rei::assets
         REI_API void DeleteTmpFiles();
 
     private:
-        friend class ::rei::scenes::SceneAssetPreloader;
+        friend class scenes::SceneAssetPreloader;
 
-        std::unique_ptr<AssetsMap> _map;
+        AssetsMap _map;
         AssetRegistry _registry = {};
         AssetTmpStorage _tmpStorage = {};
         std::atomic<bool> _isUnloadingAllAssets = false;
@@ -67,10 +67,10 @@ namespace rei::assets
         mutable std::mutex _assetsMutex;
         
         template <typename T>
-        REI_API bool EnsureAssetDataLoaded(AssetRef<T>& ref, bool incrementRefCount);
+        REI_API bool LoadInternal(AssetRef<T>& ref, bool incrementRefCount);
 
         template <typename T>
-        REI_API void LoadAndBindFromPath(AssetRef<T>& ref, const std::string& path, i64 offset, bool incrementRefCount);
+        REI_API void LoadAndCreateRecord(AssetRef<T>& ref, const std::string& path, i64 offset, bool incrementRefCount);
 
         template <typename T>
         REI_API bool RunPostLoad(AssetRef<T>& ref);

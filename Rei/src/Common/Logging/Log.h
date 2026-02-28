@@ -23,6 +23,12 @@ namespace rei::common::logging
         REI_API std::string BuildFunctionName(std::string_view signature);
         REI_API std::string BuildSourceDetails(std::source_location location = std::source_location::current());
         REI_API std::string BuildDetails(std::string_view extraDetails, std::source_location location = std::source_location::current());
+    }
+
+    namespace utility
+    {
+        REI_API std::string FormatSize(i64 bytes);
+        REI_API std::string FormatDurationMs(i64 durationMs);
         REI_API std::string SimplifyTypeName(std::string_view rawTypeName);
     }
 }

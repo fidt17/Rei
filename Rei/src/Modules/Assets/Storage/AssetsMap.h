@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace rei::resources
 {
@@ -22,11 +22,11 @@ namespace rei::assets
     class AssetsMap
     {
     public:
-        explicit AssetsMap(resources::BinaryReader& reader);
-
+        REI_API void Initialize();
         REI_API BuildAssetInfo GetAssetInfo(const std::string& id) const;
 
     private:
+        bool _initialized = false;
         std::unordered_map<std::string, BuildAssetInfo> _assets;
     };
 }

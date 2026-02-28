@@ -1,21 +1,24 @@
 #include "pch.h"
 #include "AssetRegistry.h"
 
+#include <algorithm>
+
 namespace rei::assets
 {
-    void AssetRegistry::BindExternal(const std::string& id, const std::type_index& type, void* value, const AssetState state)
+    void AssetRegistry::CreateRecordFor(const std::string& id, const std::type_index& type, void* value, const AssetState state)
     {
-        const auto typeName = rei::common::logging::internal::SimplifyTypeName(type.name());
+        const auto typeName = common::logging::utility::SimplifyTypeName(type.name());
+        
         if (id.empty())
         {
-            LOG_WARNING_D(std::format("type={}", typeName), "BindExternal skipped: empty id")
+            LOG_WARNING("Cannot create record for asset with empty id, type={}", typeName)
             return;
         }
 
         const auto record = GetOrCreateRecord(id, type);
         if (record == nullptr)
         {
-            LOG_ERROR_D(std::format("id={}, type={}", id, typeName), "BindExternal failed: record creation failed")
+            LOG_ERROR("Failed to create asset record. Id={}, type={}", id, typeName)
             return;
         }
 
@@ -36,7 +39,7 @@ namespace rei::assets
             const auto existing = _records.find(id);
             if (existing == _records.end())
             {
-                LOG_WARNING_D(std::format("id={}", id), "SetUnloaded skipped: missing id")
+                LOG_WARNING("Cannot set asset id={} state to Unloaded because related asset record is missing", id)
                 return;
             }
 
@@ -47,7 +50,7 @@ namespace rei::assets
             existing->second->LastError.clear();
         }
 
-        // Release owned payload outside registry lock to avoid re-entrant locking
+        // Release owned payload outside the registry lock to avoid re-entrant locking
         // if destructors trigger nested asset manager calls.
         ownedValueToRelease.reset();
     }
@@ -65,8 +68,8 @@ namespace rei::assets
                     std::format(
                         "id={}, existingType={}, requestedType={}",
                         id,
-                        rei::common::logging::internal::SimplifyTypeName(existing->second->Type.name()),
-                        rei::common::logging::internal::SimplifyTypeName(type.name())),
+                        rei::common::logging::utility::SimplifyTypeName(existing->second->Type.name()),
+                        rei::common::logging::utility::SimplifyTypeName(type.name())),
                     "Asset type mismatch")
                 return nullptr;
             }
@@ -206,6 +209,32 @@ namespace rei::assets
         return false;
     }
 
+    AssetReleaseResult AssetRegistry::ReleaseAssetWithId(const std::string& id)
+    {
+        AssetReleaseResult result{};
+        result.RefCountReachedZero = DecrementRefCount(id);
+        if (!result.RefCountReachedZero) return result;
+
+        const auto record = FindRecord(id);
+        if (record == nullptr || record->State == AssetState::Unloaded)
+        {
+            result.MissingLoadedRecord = true;
+            return result;
+        }
+
+        result.ReleasedSize = record->AssetSize;
+        SubtractLoadedAssetsSize(record->AssetSize);
+        MarkForDestruction(id);
+        CollectGarbage();
+        PumpDestroyQueue();
+        if (FindRecord(id) != nullptr)
+        {
+            SetUnloaded(id);
+        }
+
+        return result;
+    }
+
     void AssetRegistry::AddLoadedAssetsSize(const i32 size)
     {
         std::scoped_lock lock(_recordsMutex);
@@ -216,10 +245,7 @@ namespace rei::assets
     {
         std::scoped_lock lock(_recordsMutex);
         _loadedAssetsSize -= size;
-        if (_loadedAssetsSize < 0)
-        {
-            _loadedAssetsSize = 0;
-        }
+        _loadedAssetsSize = std::max<i64>(_loadedAssetsSize, 0);
     }
 
     i64 AssetRegistry::GetLoadedAssetsSize() const

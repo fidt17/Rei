@@ -53,11 +53,6 @@ namespace rei::render
     {
     }
 
-    Material::~Material()
-    {
-        GetAssetManager().Release(_shader);
-    }
-
     void Material::Use() const
     {
         if (!_shader.IsLoaded())

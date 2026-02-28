@@ -8,19 +8,27 @@
 
 #include "Common/Primitives.h"
 #include "AssetDestroyQueue.h"
+#include "Modules/Assets/Core/AssetRef.h"
 
 namespace rei::assets
 {
+    struct AssetReleaseResult
+    {
+        bool RefCountReachedZero = false;
+        bool MissingLoadedRecord = false;
+        i32 ReleasedSize = 0;
+    };
+
     class AssetRegistry
     {
     public:
         template <typename T>
-        void BindOwned(const std::string& id, T* value, i32 assetSize, AssetState state);
+        void CreateAssetRecord(AssetRef<T> assetRef, T* value, i32 assetSize, AssetState state);
 
         template <typename T>
         std::shared_ptr<AssetRecord> GetRecord(const std::string& id);
 
-        REI_API void BindExternal(const std::string& id, const std::type_index& type, void* value, AssetState state);
+        REI_API void CreateRecordFor(const std::string& id, const std::type_index& type, void* value, AssetState state);
         REI_API void SetUnloaded(const std::string& id);
         REI_API void MarkForDestruction(const std::string& id);
         REI_API void CollectGarbage();
@@ -31,6 +39,7 @@ namespace rei::assets
         REI_API void SetRefCount(const std::string& id, i32 count);
         REI_API void IncrementRefCount(const std::string& id);
         REI_API bool DecrementRefCount(const std::string& id);
+        REI_API AssetReleaseResult ReleaseAssetWithId(const std::string& id);
         REI_API void AddLoadedAssetsSize(i32 size);
         REI_API void SubtractLoadedAssetsSize(i32 size);
         REI_API i64 GetLoadedAssetsSize() const;

@@ -113,7 +113,7 @@ namespace rei::scenes
         bool PreloadById(const std::string& id) const
         {
             auto ref = assets::AssetRef<T>(id);
-            return _assetManager->EnsureAssetDataLoaded(ref, false);
+            return _assetManager->LoadInternal(ref, false);
         }
 
         template <typename T>

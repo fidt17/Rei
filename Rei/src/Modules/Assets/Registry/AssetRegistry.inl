@@ -3,12 +3,12 @@
 namespace rei::assets
 {
     template <typename T>
-    void AssetRegistry::BindOwned(const std::string& id, T* value, const i32 assetSize, const AssetState state)
+    void AssetRegistry::CreateAssetRecord(AssetRef<T> assetRef, T* value, const i32 assetSize, const AssetState state)
     {
-        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
-        if (id.empty())
+        const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
+        if (assetRef.Id.empty())
         {
-            LOG_WARNING_D(std::format("type={}", typeName), "BindOwned skipped: empty id")
+            LOG_ERROR("Failed to create asset record for asset with empty id, type={}", typeName)
             if (value != nullptr)
             {
                 delete value;
@@ -16,10 +16,10 @@ namespace rei::assets
             return;
         }
 
-        const auto record = GetOrCreateRecord(id, typeid(T));
+        const auto record = GetOrCreateRecord(assetRef.Id, typeid(T));
         if (record == nullptr)
         {
-            LOG_ERROR_D(std::format("id={}, type={}", id, typeName), "BindOwned failed: record creation failed")
+            LOG_ERROR("Failed to create asset record, id={}, type={}", assetRef.Id, typeName)
             if (value != nullptr)
             {
                 delete value;
