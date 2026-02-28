@@ -2,7 +2,6 @@
 #include "AssetManager.h"
 
 #include "AssetLoadUtils.h"
-#include "Engine/Services.h"
 #include <cstdlib>
 
 namespace rei::assets
@@ -118,12 +117,12 @@ namespace rei::assets
         {
             if (_registry.FindRecord(asset.Id) == nullptr)
             {
-                LOG_DEBUG("asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, formatSize(asset.Size))
+                LOG_DEBUG("Asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, formatSize(asset.Size))
             }
             else
             {
                 _registry.SetUnloaded(asset.Id);
-                LOG_DEBUG("asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, formatSize(asset.Size))
+                LOG_DEBUG("Asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, formatSize(asset.Size))
             }
         }
     }
@@ -131,5 +130,24 @@ namespace rei::assets
     void AssetManager::DeleteTmpFiles()
     {
         _tmpStorage.DeleteAll();
+    }
+
+    i64 AssetManager::GetLoadedAssetsSize() const
+    {
+        return _registry.GetLoadedAssetsSize();
+    }
+
+    i32 AssetManager::GetLoadedAssetCount() const
+    {
+        const auto records = _registry.GetAllRecords();
+        i32 loadedCount = 0;
+        for (const auto& record : records)
+        {
+            if (record == nullptr || record->State != AssetState::Loaded) continue;
+
+            loadedCount++;
+        }
+
+        return loadedCount;
     }
 }

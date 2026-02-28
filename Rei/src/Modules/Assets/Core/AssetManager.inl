@@ -113,7 +113,7 @@ namespace rei::assets
             const auto finishedAt = std::chrono::high_resolution_clock::now();
             const auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(finishedAt - startedAt).count();
             const i32 size = ref.Record != nullptr ? ref.Record->AssetSize : 0;
-            LOG_DEBUG("asset loaded id={} type={} size={} duration={}", ref.Id, typeName, internal::FormatSize(size), internal::FormatDurationMs(durationMs))
+            LOG_DEBUG("Asset loaded id={} type={} size={} duration={}", ref.Id, typeName, internal::FormatSize(size), internal::FormatDurationMs(durationMs))
         }
 
         return true;
@@ -151,12 +151,12 @@ namespace rei::assets
         _registry.PumpDestroyQueue();
         if (_registry.FindRecord(id) == nullptr)
         {
-            LOG_DEBUG("asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
+            LOG_DEBUG("Asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
         }
         else
         {
             _registry.SetUnloaded(id);
-            LOG_DEBUG("asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
+            LOG_DEBUG("Asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
         }
     }
 

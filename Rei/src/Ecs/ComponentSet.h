@@ -28,6 +28,7 @@ namespace rei::ecs
             Resize(e);
             _indexes.at(e.Id) = static_cast<EntityId>(_values.size());
             _values.emplace_back(T());
+            _entities.emplace_back(e.Id);
             didCreate = true;
 
             return _values.back();
@@ -42,18 +43,19 @@ namespace rei::ecs
         {
             if (!Has(e)) return false;
 
-            const auto backIdx = _indexes.back();
-            if (backIdx <= -1)
+            const EntityId deleteIndex = _indexes[e.Id];
+            const EntityId lastIndex = static_cast<EntityId>(_values.size() - 1);
+            if (deleteIndex != lastIndex)
             {
-                _indexes[e.Id] = MISSING;
-            }
-            else
-            {
-                _values[_indexes[e.Id]] = _values[backIdx];
-                _indexes.back() = _indexes[e.Id];
-                _indexes[e.Id] = MISSING;
+                _values[deleteIndex] = std::move(_values[lastIndex]);
+                const EntityId movedEntityId = _entities[lastIndex];
+                _entities[deleteIndex] = movedEntityId;
+                _indexes[movedEntityId] = deleteIndex;
             }
 
+            _values.pop_back();
+            _entities.pop_back();
+            _indexes[e.Id] = MISSING;
             return true;
         }
 
@@ -61,6 +63,7 @@ namespace rei::ecs
         const size_t _id;
         std::vector<EntityId> _indexes{};
         std::vector<T> _values{};
+        std::vector<EntityId> _entities{};
         const EntityId MISSING = -1;
 
         void Resize(const Entity e)

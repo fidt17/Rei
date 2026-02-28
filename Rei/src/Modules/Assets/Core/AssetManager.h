@@ -50,6 +50,9 @@ namespace rei::assets
         template <typename T>
         REI_API void Release(const AssetRef<T>& ref);
 
+        REI_API i64 GetLoadedAssetsSize() const;
+        REI_API i32 GetLoadedAssetCount() const;
+
         REI_API void DeleteTmpFiles();
 
     private:
