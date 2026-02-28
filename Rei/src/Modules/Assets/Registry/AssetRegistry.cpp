@@ -25,7 +25,6 @@ namespace rei::assets
         record->AssetSize = 0;
         record->State = value != nullptr ? state : AssetState::Unloaded;
         record->LastError.clear();
-        LOG_DEBUG_D(std::format("id={}, type={}, state={}", id, typeName, static_cast<int>(record->State)), "BindExternal completed")
     }
 
     void AssetRegistry::SetUnloaded(const std::string& id)
@@ -43,7 +42,6 @@ namespace rei::assets
         existing->second->ExternalValue = nullptr;
         existing->second->AssetSize = 0;
         existing->second->State = AssetState::Unloaded;
-        LOG_DEBUG_D(std::format("id={}", id), "SetUnloaded completed")
     }
 
     std::shared_ptr<AssetRecord> AssetRegistry::GetOrCreateRecord(const std::string& id, const std::type_index& type)
@@ -73,7 +71,6 @@ namespace rei::assets
         record->Type = type;
         record->State = AssetState::Unloaded;
         _records.insert({id, record});
-        LOG_DEBUG_D(std::format("id={}, type={}", id, rei::common::logging::internal::SimplifyTypeName(type.name())), "Created asset record")
 
         return record;
     }
@@ -90,7 +87,6 @@ namespace rei::assets
         }
 
         existing->second->State = AssetState::PendingDestroy;
-        LOG_DEBUG_D(std::format("id={}", id), "MarkForDestruction")
     }
 
     void AssetRegistry::CollectGarbage()
@@ -115,19 +111,15 @@ namespace rei::assets
             }
         }
 
-        LOG_DEBUG_D(std::format("count={}", recordsToDestroy.size()), "CollectGarbage ready records")
         for (const auto& record : recordsToDestroy)
         {
-            LOG_DEBUG_D(std::format("id={}", record->Id), "CollectGarbage enqueue destroy")
             _destroyQueue.Enqueue(record);
         }
     }
 
     void AssetRegistry::PumpDestroyQueue()
     {
-        LOG_DEBUG_D(std::format("size={}", _destroyQueue.Size()), "PumpDestroyQueue start")
         _destroyQueue.Flush();
-        LOG_DEBUG_D(std::format("size={}", _destroyQueue.Size()), "PumpDestroyQueue complete")
     }
 
     i32 AssetRegistry::GetRecordCount() const

@@ -41,8 +41,31 @@ namespace rei::assets
 
     void AssetManager::UnloadAllAssets()
     {
-        LOG_DEBUG("UnloadAllAssets requested")
-        std::vector<std::string> assetsToDestroy = {};
+        struct AssetUnloadInfo
+        {
+            std::string Id;
+            std::string TypeName;
+            i32 Size = 0;
+        };
+
+        auto formatSize = [](const i64 bytes)
+        {
+            if (bytes < 1024)
+            {
+                return std::format("{} B", bytes);
+            }
+
+            const double kb = static_cast<double>(bytes) / 1024.0;
+            if (kb < 1024.0)
+            {
+                return std::format("{:.2f} KB", kb);
+            }
+
+            const double mb = kb / 1024.0;
+            return std::format("{:.2f} MB", mb);
+        };
+
+        std::vector<AssetUnloadInfo> assetsToDestroy = {};
         {
             const auto records = _registry.GetAllRecords();
             assetsToDestroy.reserve(records.size());
@@ -53,7 +76,11 @@ namespace rei::assets
                     continue;
                 }
 
-                assetsToDestroy.push_back(record->Id);
+                assetsToDestroy.push_back({
+                    .Id = record->Id,
+                    .TypeName = rei::common::logging::internal::SimplifyTypeName(record->Type.name()),
+                    .Size = record->AssetSize,
+                });
             }
         }
 
@@ -61,16 +88,27 @@ namespace rei::assets
             _registry.ResetRuntimeTracking();
         }
 
-        LOG_DEBUG("UnloadAllAssets prepared {} assets for destruction", assetsToDestroy.size())
-        for (const auto& id : assetsToDestroy)
+        for (const auto& asset : assetsToDestroy)
         {
-            LOG_DEBUG("Delete asset id={}", id)
-            _registry.MarkForDestruction(id);
+            _registry.MarkForDestruction(asset.Id);
         }
 
         _registry.CollectGarbage();
         _registry.PumpDestroyQueue();
-        LOG_DEBUG("UnloadAllAssets completed")
+
+        for (const auto& asset : assetsToDestroy)
+        {
+            if (_registry.FindRecord(asset.Id) == nullptr)
+            {
+                LOG_DEBUG("asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, formatSize(asset.Size))
+            }
+            else
+            {
+                LOG_WARNING_D(
+                    std::format("id={}, type={}", asset.Id, asset.TypeName),
+                    "Shutdown unload skipped (still referenced)")
+            }
+        }
     }
 
     void AssetManager::DeleteTmpFiles()

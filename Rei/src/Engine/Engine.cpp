@@ -116,9 +116,10 @@ namespace rei::internal::engine
         _runEngine = false;
 
         _app->OnShutdown();
+        _assetManager->UnloadAllAssets();
+        _assetManager->DeleteTmpFiles();
         _mainRenderer->Dispose();
         glfwTerminate();
-        Services::GetInstance()->GetAssetManager().DeleteTmpFiles();
 
         LOG("Shutdown complete")
         ShutdownEvent(_exitCode);

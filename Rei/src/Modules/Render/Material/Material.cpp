@@ -46,18 +46,15 @@ namespace rei::render
             assignFallbackShader();
         }
         
-        LOG_DEBUG("Created material: {}", _shader.Id);
     }
 
     Material::Material(const assets::AssetRef<Shader>& shader)
         : _shader(shader)
     {
-        LOG_DEBUG("Created material: {}", _shader.Id);
     }
 
     Material::~Material()
     {
-        LOG_DEBUG("Deleting material: {}", _shader.Id);
         GetAssetManager().Release(_shader);
     }
 
@@ -113,8 +110,6 @@ namespace rei::render
         material->_useDepth = source._useDepth;
         material->_sortingOrder = source._sortingOrder;
         material->_textures = source._textures;
-        
-        LOG_DEBUG("Created material instance id={}, shader={}", material.Id, material->_shader.Id)
 
         return material;
     }

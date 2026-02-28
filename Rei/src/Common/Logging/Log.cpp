@@ -36,9 +36,36 @@ namespace rei::common::logging
             return value.substr(begin, end - begin + 1);
         }
 
+        size_t FindArgsStart(const std::string_view signature)
+        {
+            int templateDepth = 0;
+            for (size_t i = 0; i < signature.size(); ++i)
+            {
+                const char ch = signature[i];
+                if (ch == '<')
+                {
+                    templateDepth++;
+                    continue;
+                }
+
+                if (ch == '>')
+                {
+                    templateDepth--;
+                    continue;
+                }
+
+                if (ch == '(' && templateDepth == 0)
+                {
+                    return i;
+                }
+            }
+
+            return std::string_view::npos;
+        }
+
         std::string BuildFunctionName(const std::string_view signature)
         {
-            const size_t argsIndex = signature.find('(');
+            const size_t argsIndex = FindArgsStart(signature);
             const auto beforeArgs = Trim(argsIndex == std::string_view::npos ? signature : signature.substr(0, argsIndex));
             if (beforeArgs.empty())
             {

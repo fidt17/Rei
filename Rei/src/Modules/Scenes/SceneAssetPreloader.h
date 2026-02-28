@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <future>
+#include <sstream>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -25,7 +26,7 @@ namespace rei::scenes
             const auto uniqueDependencies = GetUniqueDependencies(dependencies);
             if (uniqueDependencies.empty())
             {
-                LOG("Scene asset dependencies loaded: 0")
+                LOG_DEBUG("Scene asset dependencies loaded: 0 | ids=[]")
                 return;
             }
 
@@ -33,7 +34,6 @@ namespace rei::scenes
             const u32 hardwareConcurrency = std::thread::hardware_concurrency();
             const std::size_t suggestedWorkerCount = std::max(1u, hardwareConcurrency);
             const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
-            LOG_DEBUG("Scene preload hardware_concurrency: {}, worker_count: {}", hardwareConcurrency, workerCount)
             loadFutures.reserve(workerCount);
         
             std::atomic<std::size_t> nextDependencyIndex = 0;
@@ -64,10 +64,26 @@ namespace rei::scenes
                 dependency.PostLoad(*this);
             }
 
-            LOG_DEBUG("Scene asset dependencies loaded: {}, workers: {}", uniqueDependencies.size(), workerCount)
+            LOG_DEBUG("Scene asset dependencies loaded: {} | ids=[{}]", uniqueDependencies.size(), JoinDependencyIds(uniqueDependencies))
         }
 
     private:
+        static std::string JoinDependencyIds(const std::vector<assets::AssetDependency>& dependencies)
+        {
+            std::ostringstream stream;
+            for (std::size_t i = 0; i < dependencies.size(); ++i)
+            {
+                if (i > 0)
+                {
+                    stream << ", ";
+                }
+
+                stream << dependencies[i].Id;
+            }
+
+            return stream.str();
+        }
+
         static std::vector<assets::AssetDependency> GetUniqueDependencies(const std::vector<assets::AssetDependency>& dependencies)
         {
             std::unordered_map<std::string, std::size_t> seenIds;

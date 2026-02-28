@@ -3,7 +3,6 @@
 
 #include "BuildScenesConfig.h"
 #include "Scene.h"
-#include "Common/Time/ScopedTimer.h"
 #include "Modules/Assets/Core/AssetManager.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
@@ -21,9 +20,6 @@ namespace rei::scenes
 
     void SceneManager::LoadScene(const int id)
     {
-        time::ScopedTimer timer("Scene " + STRING(id) + " load duration");
-        LOG_DEBUG("Loading scene id={}", id)
-        
         REI_ASSERT(_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
         REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
 

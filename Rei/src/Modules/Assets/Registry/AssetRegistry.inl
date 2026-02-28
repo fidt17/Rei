@@ -38,7 +38,6 @@ namespace rei::assets
         record->AssetSize = assetSize;
         record->State = value != nullptr ? state : AssetState::Unloaded;
         record->LastError.clear();
-        LOG_DEBUG_D(std::format("id={}, type={}, state={}, size={} B", id, typeName, static_cast<int>(record->State), assetSize), "BindOwned completed")
     }
 
     template <typename T>

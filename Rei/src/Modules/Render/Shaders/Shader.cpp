@@ -14,7 +14,6 @@ namespace rei::render
         const auto content = reader.GetStr();
         _vertexSource = ShaderGenerator::GetInstance().ComposeVertexSource(content);
         _fragmentSource = ShaderGenerator::GetInstance().ComposeFragmentSource(content);
-        LOG_DEBUG("Shader deserialized vertexLen={}, fragmentLen={}", _vertexSource.size(), _fragmentSource.size())
     }
 
     Shader::Shader(Shader&& other) noexcept
@@ -58,7 +57,6 @@ namespace rei::render
             return;
         }
 
-        LOG_DEBUG("Deleting shader: {}", _id);
         glDeleteProgram(_id);
     }
 
@@ -107,26 +105,16 @@ namespace rei::render
 
     void Shader::PostLoad()
     {
-        LOG_DEBUG("Shader PostLoad start id={}", _id)
-
         if (_id == 0)
         {
             _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
-            LOG_DEBUG("Shader program created id={}", _id)
         }
-        else
-        {
-            LOG_DEBUG("Shader PostLoad skipped create, already has id={}", _id)
-        }
-        LOG_DEBUG("Shader PostLoad complete id={}", _id)
     }
 
     Shader Shader::CreateInstanceFrom(const Shader& source)
     {
-        LOG_DEBUG("Create shader instance from source id={}", source._id)
         Shader instance;
         instance._id = ShaderUtility().CreateShaderProgram(source._vertexSource.c_str(), source._fragmentSource.c_str());
-        LOG_DEBUG("Created shader: {}", instance._id);
         
         return instance;
     }

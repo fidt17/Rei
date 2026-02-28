@@ -14,7 +14,6 @@ namespace rei::assets
             return;
         }
 
-        LOG_DEBUG("SyncAfterExternalChange type={}, boundId={}, targetId={}", typeid(T).name(), boundId, ref.Id)
         auto& assetManager = GetAssetManager();
 
         if (!boundId.empty())
@@ -28,7 +27,6 @@ namespace rei::assets
         {
             assetManager.Load(ref);
         }
-        LOG_DEBUG("SyncAfterExternalChange complete type={}, id={}", typeid(T).name(), ref.Id)
     }
 
     template <typename T>
@@ -39,7 +37,6 @@ namespace rei::assets
             return;
         }
 
-        LOG_DEBUG("AssetRef Assign type={}, targetId={}, otherId={}", typeid(T).name(), target.Id, other.Id)
         auto& assetManager = GetAssetManager();
 
         const auto targetBoundId = target.GetBoundId();
@@ -55,7 +52,6 @@ namespace rei::assets
         {
             assetManager.Load(target);
         }
-        LOG_DEBUG("AssetRef Assign complete type={}, targetId={}", typeid(T).name(), target.Id)
     }
 
     template <typename T>
