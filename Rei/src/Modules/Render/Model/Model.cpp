@@ -5,7 +5,6 @@
 
 namespace rei::render
 {
-    SET_LOG_SCOPE("Model")
 
     Model::Model(resources::BinaryReader& reader)
     {
@@ -70,4 +69,3 @@ namespace rei::render
         return _meshes;
     }
 }
-

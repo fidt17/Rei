@@ -13,7 +13,6 @@
 
 namespace rei::internal::engine
 {
-    SET_LOG_SCOPE("ENGINE")
 
     Engine::Engine(std::shared_ptr<App> app, const EngineMode mode, const bool isEditor) :
         _mode(mode),
@@ -152,3 +151,6 @@ namespace rei::internal::engine
         return t;
     }
 }
+
+
+

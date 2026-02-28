@@ -5,7 +5,6 @@
 
 namespace rei::render
 {
-    SET_LOG_SCOPE("Material")
 
     Material::Material(resources::BinaryReader& reader)
     {
@@ -166,3 +165,6 @@ namespace rei::render
         }
     }
 }
+
+
+

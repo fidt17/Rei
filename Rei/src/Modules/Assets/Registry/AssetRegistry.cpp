@@ -5,16 +5,17 @@ namespace rei::assets
 {
     void AssetRegistry::BindExternal(const std::string& id, const std::type_index& type, void* value, const AssetState state)
     {
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(type.name());
         if (id.empty())
         {
-            LOG_WARNING("BindExternal skipped: empty id, type={}", type.name())
+            LOG_WARNING_D(std::format("type={}", typeName), "BindExternal skipped: empty id")
             return;
         }
 
         const auto record = GetOrCreateRecord(id, type);
         if (record == nullptr)
         {
-            LOG_ERROR("BindExternal failed: record creation failed id={}, type={}", id, type.name())
+            LOG_ERROR_D(std::format("id={}, type={}", id, typeName), "BindExternal failed: record creation failed")
             return;
         }
 
@@ -24,7 +25,7 @@ namespace rei::assets
         record->AssetSize = 0;
         record->State = value != nullptr ? state : AssetState::Unloaded;
         record->LastError.clear();
-        LOG_DEBUG("BindExternal id={}, type={}, state={}, ptr={}", id, type.name(), static_cast<int>(record->State), value)
+        LOG_DEBUG_D(std::format("id={}, type={}, state={}", id, typeName, static_cast<int>(record->State)), "BindExternal completed")
     }
 
     void AssetRegistry::SetUnloaded(const std::string& id)
@@ -34,7 +35,7 @@ namespace rei::assets
         const auto existing = _records.find(id);
         if (existing == _records.end())
         {
-            LOG_WARNING("SetUnloaded skipped: missing id={}", id)
+            LOG_WARNING_D(std::format("id={}", id), "SetUnloaded skipped: missing id")
             return;
         }
 
@@ -42,7 +43,7 @@ namespace rei::assets
         existing->second->ExternalValue = nullptr;
         existing->second->AssetSize = 0;
         existing->second->State = AssetState::Unloaded;
-        LOG_DEBUG("SetUnloaded id={}", id)
+        LOG_DEBUG_D(std::format("id={}", id), "SetUnloaded completed")
     }
 
     std::shared_ptr<AssetRecord> AssetRegistry::GetOrCreateRecord(const std::string& id, const std::type_index& type)
@@ -54,7 +55,13 @@ namespace rei::assets
         {
             if (existing->second->Type != type)
             {
-                LOG_ERROR("Asset type mismatch for id={}. Existing={}, Requested={}", id, existing->second->Type.name(), type.name())
+                LOG_ERROR_D(
+                    std::format(
+                        "id={}, existingType={}, requestedType={}",
+                        id,
+                        rei::common::logging::internal::SimplifyTypeName(existing->second->Type.name()),
+                        rei::common::logging::internal::SimplifyTypeName(type.name())),
+                    "Asset type mismatch")
                 return nullptr;
             }
 
@@ -66,7 +73,7 @@ namespace rei::assets
         record->Type = type;
         record->State = AssetState::Unloaded;
         _records.insert({id, record});
-        LOG_DEBUG("Created asset record id={}, type={}", id, type.name())
+        LOG_DEBUG_D(std::format("id={}, type={}", id, rei::common::logging::internal::SimplifyTypeName(type.name())), "Created asset record")
 
         return record;
     }
@@ -78,12 +85,12 @@ namespace rei::assets
         const auto existing = _records.find(id);
         if (existing == _records.end())
         {
-            LOG_WARNING("MarkForDestruction skipped: missing id={}", id)
+            LOG_WARNING_D(std::format("id={}", id), "MarkForDestruction skipped: missing id")
             return;
         }
 
         existing->second->State = AssetState::PendingDestroy;
-        LOG_DEBUG("MarkForDestruction id={}", id)
+        LOG_DEBUG_D(std::format("id={}", id), "MarkForDestruction")
     }
 
     void AssetRegistry::CollectGarbage()
@@ -108,19 +115,19 @@ namespace rei::assets
             }
         }
 
-        LOG_DEBUG("CollectGarbage records ready for destroy={}", recordsToDestroy.size())
+        LOG_DEBUG_D(std::format("count={}", recordsToDestroy.size()), "CollectGarbage ready records")
         for (const auto& record : recordsToDestroy)
         {
-            LOG_DEBUG("CollectGarbage enqueue destroy id={}", record->Id)
+            LOG_DEBUG_D(std::format("id={}", record->Id), "CollectGarbage enqueue destroy")
             _destroyQueue.Enqueue(record);
         }
     }
 
     void AssetRegistry::PumpDestroyQueue()
     {
-        LOG_DEBUG("PumpDestroyQueue start size={}", _destroyQueue.Size())
+        LOG_DEBUG_D(std::format("size={}", _destroyQueue.Size()), "PumpDestroyQueue start")
         _destroyQueue.Flush();
-        LOG_DEBUG("PumpDestroyQueue complete size={}", _destroyQueue.Size())
+        LOG_DEBUG_D(std::format("size={}", _destroyQueue.Size()), "PumpDestroyQueue complete")
     }
 
     i32 AssetRegistry::GetRecordCount() const
@@ -164,7 +171,6 @@ namespace rei::assets
     {
         std::scoped_lock lock(_recordsMutex);
         _assetRefCounts[id] = count;
-        LOG_DEBUG("Asset refcount set id={}, count={}", id, count)
     }
 
     void AssetRegistry::IncrementRefCount(const std::string& id)
@@ -174,12 +180,10 @@ namespace rei::assets
         if (it == _assetRefCounts.end())
         {
             _assetRefCounts[id] = 1;
-            LOG_DEBUG("Asset refcount created id={}, count=1", id)
             return;
         }
 
         it->second++;
-        LOG_DEBUG("Asset refcount increment id={}, count={}", id, it->second)
     }
 
     bool AssetRegistry::DecrementRefCount(const std::string& id)
@@ -188,16 +192,14 @@ namespace rei::assets
         auto it = _assetRefCounts.find(id);
         if (it == _assetRefCounts.end())
         {
-            LOG_WARNING("Asset refcount decrement requested for missing id={}", id)
+            LOG_WARNING_D(std::format("id={}", id), "Asset refcount decrement requested for missing id")
             return true;
         }
 
         it->second--;
-        LOG_DEBUG("Asset refcount decrement id={}, count={}", id, it->second)
         if (it->second <= 0)
         {
             _assetRefCounts.erase(it);
-            LOG_DEBUG("Asset refcount reached zero id={}", id)
             return true;
         }
 

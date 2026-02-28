@@ -9,12 +9,7 @@ namespace rei::common::logging
 
     void Logger::Log(const LogLevelEnum logLevel, const std::string& message) const
     {
-        Log("", logLevel, message, "");
-    }
-
-    void Logger::Log(const std::string& scope, const LogLevelEnum logLevel, const std::string& message) const
-    {
-        Log(scope, logLevel, message, "");
+        Log(logLevel, message, "");
     }
 
     void UpdateConsoleColor(const LogLevelEnum logLevel)
@@ -36,12 +31,12 @@ namespace rei::common::logging
         }
     }
 
-    void Logger::Log(const std::string& scope, const LogLevelEnum logLevel, const std::string& message, const std::string& details) const
+    void Logger::Log(const LogLevelEnum logLevel, const std::string& message, const std::string& details) const
     {
         if (!_enabled) return;
         if (logLevel < _minLogLevel) return;
 
-        const auto logMessage = LogMessage(scope.c_str(), logLevel, message.c_str(), details.c_str());
+        const auto logMessage = LogMessage("Engine", logLevel, message.c_str(), details.c_str());
         UpdateConsoleColor(logLevel);
 
         if (logLevel == Error)

@@ -1,11 +1,10 @@
-﻿#include "Renderer.h"
+#include "Renderer.h"
 
 #include "Material/Material.h"
 #include "RenderScenario/DefaultRenderScenario.h"
 
 namespace rei::render
 {
-    SET_LOG_SCOPE("RENDERER")
 
     void Renderer::SetCamera(const ecs::RefComponent<Camera>& camera)
     {

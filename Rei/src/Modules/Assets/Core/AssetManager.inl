@@ -3,10 +3,31 @@
 
 namespace rei::assets
 {
+    namespace internal
+    {
+        inline std::string FormatSize(const i64 bytes)
+        {
+            if (bytes < 1024)
+            {
+                return std::format("{} B", bytes);
+            }
+
+            const double kb = static_cast<double>(bytes) / 1024.0;
+            if (kb < 1024.0)
+            {
+                return std::format("{:.2f} KB", kb);
+            }
+
+            const double mb = kb / 1024.0;
+            return std::format("{:.2f} MB", mb);
+        }
+    }
+
     template <typename T>
     AssetRef<T> AssetManager::GetById(const std::string& id)
     {
-        LOG_DEBUG("GetById request id={}, type={}", id, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}", id, typeName), "GetById request")
         auto asset = AssetRef<T>(id);
         Load(asset);
         return asset;
@@ -15,13 +36,14 @@ namespace rei::assets
     template <typename T>
     AssetRef<T> AssetManager::GetByPath(const std::string& path)
     {
-        LOG_DEBUG("GetByPath request path={}, type={}", path, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("path={}, type={}", path, typeName), "GetByPath request")
         AssetRef<T> ref(path);
         ref.Record = _registry.GetRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
             _registry.IncrementRefCount(ref.Id);
-            LOG_DEBUG("GetByPath cache hit id={}", ref.Id)
+            LOG_DEBUG_D(std::format("id={}", ref.Id), "GetByPath cache hit")
             return ref;
         }
 
@@ -34,13 +56,13 @@ namespace rei::assets
         const auto dest = _tmpStorage.CreateTempPath(filePath);
 
         std::cout << "\n";
-        LOG_DEBUG("Created temp file at {}", dest)
+        LOG_DEBUG_D(std::format("path={}", dest), "Created temp file")
 
         i64 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
         LoadAndBindFromPath(ref, dest, 0, true);
         RunPostLoad(ref);
-        LOG_DEBUG("GetByPath loaded id={} from {}", ref.Id, dest)
+        LOG_DEBUG_D(std::format("id={}, path={}", ref.Id, dest), "GetByPath loaded")
 
         return ref;
     }
@@ -48,14 +70,15 @@ namespace rei::assets
     template <typename T, typename... Args>
     AssetRef<T> AssetManager::CreateAssetWithId(std::string id, Args&&... args)
     {
-        LOG_DEBUG("CreateAssetWithId request id={}, type={}", id, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}", id, typeName), "CreateAssetWithId request")
         AssetRef<T> asset(id);
         const auto loadedAsset = new T(std::forward<Args>(args)...);
         constexpr i32 runtimeAssetSize = 0;
         _registry.BindOwned<T>(asset.Id, loadedAsset, runtimeAssetSize, AssetState::Loaded);
         _registry.SetRefCount(asset.Id, 1);
         asset.Record = _registry.GetRecord<T>(asset.Id);
-        LOG_DEBUG("CreateAssetWithId created id={}, type={}", asset.Id, typeid(T).name())
+        LOG_DEBUG_D(std::format("id={}, type={}", asset.Id, typeName), "CreateAssetWithId created")
 
         return asset;
     }
@@ -64,22 +87,24 @@ namespace rei::assets
     AssetRef<T> AssetManager::CreateAsset(Args&&... args)
     {
         std::string id("runtime_asset_" + STRING(_runtimeAssetCounter++));
-        LOG_DEBUG("CreateAsset generated id={}, type={}", id, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}", id, typeName), "CreateAsset generated id")
         return CreateAssetWithId<T>(id, std::forward<Args>(args)...);
     }
 
     template <typename T>
     bool AssetManager::Load(AssetRef<T>& ref)
     {
-        LOG_DEBUG("Load request id={}, type={}", ref.Id, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}", ref.Id, typeName), "Load request")
         if (!EnsureAssetDataLoaded(ref, true))
         {
-            LOG_ERROR("EnsureAssetDataLoaded failed id={}, type={}", ref.Id, typeid(T).name())
+            LOG_ERROR_D(std::format("id={}, type={}", ref.Id, typeName), "EnsureAssetDataLoaded failed")
             return false;
         }
 
         const bool didPostLoad = RunPostLoad(ref);
-        LOG_DEBUG("Load result id={}, type={}, success={}", ref.Id, typeid(T).name(), didPostLoad)
+        LOG_DEBUG_D(std::format("id={}, type={}, success={}", ref.Id, typeName, didPostLoad), "Load result")
         return didPostLoad;
     }
 
@@ -91,27 +116,28 @@ namespace rei::assets
             return;
         }
 
-        LOG_DEBUG("ReleaseById request id={}, type={}", id, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}", id, typeName), "ReleaseById request")
         if (!_registry.DecrementRefCount(id))
         {
-            LOG_DEBUG("ReleaseById deferred id={} (still referenced)", id)
+            LOG_DEBUG_D(std::format("id={}", id), "ReleaseById deferred (still referenced)")
             return;
         }
 
         const auto record = _registry.FindRecord(id);
         if (record == nullptr || record->State == AssetState::Unloaded)
         {
-            LOG_WARNING("ReleaseById missing loaded asset id={}", id)
+            LOG_WARNING_D(std::format("id={}", id), "ReleaseById missing loaded asset")
             return;
         }
 
         _registry.SubtractLoadedAssetsSize(record->AssetSize);
 
-        LOG_DEBUG("ReleaseById destroying id={}", id)
+        LOG_DEBUG_D(std::format("id={}", id), "ReleaseById destroying")
         _registry.MarkForDestruction(id);
         _registry.CollectGarbage();
         _registry.PumpDestroyQueue();
-        LOG_DEBUG("ReleaseById complete id={}", id)
+        LOG_DEBUG_D(std::format("id={}", id), "ReleaseById complete")
     }
 
     template <typename T>
@@ -125,7 +151,8 @@ namespace rei::assets
     {
         if (ref.Id == "")
         {
-            LOG_WARNING("EnsureAssetDataLoaded skipped empty id, type={}", typeid(T).name())
+            const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+            LOG_WARNING_D(std::format("type={}", typeName), "EnsureAssetDataLoaded skipped empty id")
             return false;
         }
 
@@ -135,7 +162,6 @@ namespace rei::assets
             {
                 _registry.IncrementRefCount(ref.Id);
             }
-            LOG_DEBUG("EnsureAssetDataLoaded already loaded id={}, type={}", ref.Id, typeid(T).name())
             return true;
         }
 
@@ -146,29 +172,29 @@ namespace rei::assets
             {
                 _registry.IncrementRefCount(ref.Id);
             }
-            LOG_DEBUG("EnsureAssetDataLoaded cache hit via record id={}, type={}", ref.Id, typeid(T).name())
             return true;
         }
 
         try
         {
-            // if an absolute path to the asset is used instead
             if (ref.Id.rfind("@", 0) == 0)
             {
                 ref = GetByPath<T>(ref.Id);
-                LOG_DEBUG("EnsureAssetDataLoaded loaded from direct path id={}, type={}", ref.Id, typeid(T).name())
+                const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+                LOG_DEBUG_D(std::format("id={}, type={}", ref.Id, typeName), "EnsureAssetDataLoaded loaded from direct path")
                 return true;
             }
 
             const auto assetInfo = _map->GetAssetInfo(ref.Id);
 
             LoadAndBindFromPath(ref, assetInfo.Path, assetInfo.Offset, incrementRefCount);
-            LOG_DEBUG("EnsureAssetDataLoaded loaded from map id={}, type={}, path={}, offset={}", ref.Id, typeid(T).name(), assetInfo.Path, assetInfo.Offset)
+            const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+            LOG_DEBUG_D(std::format("id={}, type={}, path={}, offset={}", ref.Id, typeName, assetInfo.Path, assetInfo.Offset), "EnsureAssetDataLoaded loaded from map")
             return true;
         }
         catch (std::exception e)
         {
-            LOG_ERROR("Caught exception while trying to load asset id={}\n Exception: {}", ref.Id, e.what())
+            LOG_ERROR_D(std::format("id={}", ref.Id), "EnsureAssetDataLoaded exception: {}", e.what())
         }
 
         return false;
@@ -177,7 +203,8 @@ namespace rei::assets
     template <typename T>
     void AssetManager::LoadAndBindFromPath(AssetRef<T>& ref, const std::string& path, const i64 offset, const bool incrementRefCount)
     {
-        LOG_DEBUG("LoadAndBindFromPath request id={}, type={}, path={}, offset={}, incrementRefCount={}", ref.Id, typeid(T).name(), path, offset, incrementRefCount)
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}, path={}, offset={}, incrementRefCount={}", ref.Id, typeName, path, offset, incrementRefCount), "LoadAndBindFromPath request")
         ref.Record = _registry.GetRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
@@ -185,7 +212,7 @@ namespace rei::assets
             {
                 _registry.IncrementRefCount(ref.Id);
             }
-            LOG_DEBUG("LoadAndBindFromPath early cache hit id={}", ref.Id)
+            LOG_DEBUG_D(std::format("id={}", ref.Id), "LoadAndBindFromPath cache hit")
             return;
         }
 
@@ -205,7 +232,7 @@ namespace rei::assets
                 {
                     _registry.IncrementRefCount(ref.Id);
                 }
-                LOG_DEBUG("LoadAndBindFromPath race cache hit id={} (discarded duplicate load)", ref.Id)
+                LOG_DEBUG_D(std::format("id={}", ref.Id), "LoadAndBindFromPath race cache hit (discarded duplicate load)")
                 return;
             }
         }
@@ -215,7 +242,10 @@ namespace rei::assets
         _registry.SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
         ref.Record = _registry.GetRecord<T>(ref.Id);
 
-        LOG_DEBUG("Loaded asset id={}, size={} b, total={} Mb", ref.Id, assetSize, _registry.GetLoadedAssetsSize() / 1024 / 1024.0)
+        const auto loadedTotal = _registry.GetLoadedAssetsSize();
+        LOG_DEBUG_D(
+            std::format("id={}, size={}, total={}", ref.Id, internal::FormatSize(assetSize), internal::FormatSize(loadedTotal)),
+            "Loaded asset")
     }
 
     template <typename T>
@@ -228,12 +258,14 @@ namespace rei::assets
 
         if (!ref.IsLoaded())
         {
-            LOG_WARNING("RunPostLoad skipped for unloaded ref id={}, type={}", ref.Id, typeid(T).name())
+            const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+            LOG_WARNING_D(std::format("id={}, type={}", ref.Id, typeName), "RunPostLoad skipped for unloaded ref")
             return false;
         }
 
         InvokePostLoadIfSupported(*ref.Get());
-        LOG_DEBUG("RunPostLoad completed id={}, type={}", ref.Id, typeid(T).name())
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
+        LOG_DEBUG_D(std::format("id={}, type={}", ref.Id, typeName), "RunPostLoad completed")
         return true;
     }
 
@@ -246,3 +278,6 @@ namespace rei::assets
         }
     }
 }
+
+
+

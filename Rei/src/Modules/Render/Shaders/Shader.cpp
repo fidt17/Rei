@@ -8,7 +8,6 @@
 
 namespace rei::render
 {
-    SET_LOG_SCOPE("Shader")
 
     Shader::Shader(resources::BinaryReader& reader)
     {

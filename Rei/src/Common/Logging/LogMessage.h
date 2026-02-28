@@ -1,4 +1,7 @@
 ﻿#pragma once
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 
 #include "LogLevelEnum.h"
@@ -23,12 +26,31 @@ namespace rei::common::logging
 
     inline std::ostream& operator <<(std::ostream& stream, LogMessage const& message)
     {
-        if (message.Scope[0])
+        const auto now = std::chrono::system_clock::now();
+        const auto nowTime = std::chrono::system_clock::to_time_t(now);
+        std::tm localTime{};
+        localtime_s(&localTime, &nowTime);
+
+        const char* level = "INFO";
+        switch (message.Level)
         {
-            stream << "[" << message.Scope << "] ";
+        case Debug:
+            level = "DEBUG";
+            break;
+        case Info:
+            level = "INFO";
+            break;
+        case Warning:
+            level = "WARN";
+            break;
+        case Error:
+            level = "ERROR";
+            break;
         }
 
-        stream << message.Message;
+        stream << "[" << std::put_time(&localTime, "%H:%M:%S") << "]"
+               << "[" << level << "] "
+               << message.Message;
 
         if (message.Details[0])
         {

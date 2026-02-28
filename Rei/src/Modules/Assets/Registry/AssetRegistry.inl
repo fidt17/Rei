@@ -5,9 +5,10 @@ namespace rei::assets
     template <typename T>
     void AssetRegistry::BindOwned(const std::string& id, T* value, const i32 assetSize, const AssetState state)
     {
+        const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
         if (id.empty())
         {
-            LOG_WARNING("BindOwned skipped: empty id, type={}", typeid(T).name())
+            LOG_WARNING_D(std::format("type={}", typeName), "BindOwned skipped: empty id")
             if (value != nullptr)
             {
                 delete value;
@@ -18,7 +19,7 @@ namespace rei::assets
         const auto record = GetOrCreateRecord(id, typeid(T));
         if (record == nullptr)
         {
-            LOG_ERROR("BindOwned failed: record creation failed id={}, type={}", id, typeid(T).name())
+            LOG_ERROR_D(std::format("id={}, type={}", id, typeName), "BindOwned failed: record creation failed")
             if (value != nullptr)
             {
                 delete value;
@@ -37,7 +38,7 @@ namespace rei::assets
         record->AssetSize = assetSize;
         record->State = value != nullptr ? state : AssetState::Unloaded;
         record->LastError.clear();
-        LOG_DEBUG("BindOwned id={}, type={}, state={}, size={} b", id, typeid(T).name(), static_cast<int>(record->State), assetSize)
+        LOG_DEBUG_D(std::format("id={}, type={}, state={}, size={} B", id, typeName, static_cast<int>(record->State), assetSize), "BindOwned completed")
     }
 
     template <typename T>

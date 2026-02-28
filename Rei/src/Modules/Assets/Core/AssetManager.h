@@ -19,11 +19,11 @@ namespace rei::scenes
 
 namespace rei::assets
 {
-    SET_LOG_SCOPE("Asset Manager")
 
     class AssetManager
     {
     public:
+
         explicit AssetManager();
 
         template <typename T>
@@ -76,3 +76,5 @@ namespace rei::assets
 }
 
 #include "AssetManager.inl"
+
+

@@ -36,7 +36,10 @@ public class EngineLogger : IEngineLogger
     private void HandleClientLogEvent(IntPtr messagePtr)
     {
         var messageStruct = Marshal.PtrToStructure<EngineLogMessage>(messagePtr);
-        var logMessage = new LogMessage(LogScopeEnum.Engine, messageStruct.Level, DateTime.Now, messageStruct.Message, $"{messageStruct.Scope}\n{messageStruct.Details}");
+        var details = string.IsNullOrWhiteSpace(messageStruct.Scope)
+            ? messageStruct.Details
+            : $"{messageStruct.Scope}\n{messageStruct.Details}";
+        var logMessage = new LogMessage(LogScopeEnum.Engine, messageStruct.Level, DateTime.Now, messageStruct.Message, details);
 
         _messagesToLog.Enqueue(logMessage);
     }

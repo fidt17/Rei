@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include <regex>
 #include "AssetBuilder.h"
 
@@ -12,7 +12,6 @@
 
 namespace rei::resources
 {
-    SET_LOG_SCOPE("Asset Builder")
     
     i64 AssetBuilder::BuildAsset(const std::string& file, const std::string& dest, const i64 offset) const
     {
@@ -98,3 +97,6 @@ namespace rei::resources
         writer.WriteStr(str);
     }
 }
+
+
+
