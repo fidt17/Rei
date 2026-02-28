@@ -19,7 +19,6 @@ namespace rei::assets
     public:
         virtual ~IAssetRef() = default;
 
-        virtual void UnloadAsset() = 0;
         virtual i32 GetAssetSize() = 0;
     };
 
@@ -36,11 +35,11 @@ namespace rei::assets
 
         REI_API AssetRef(std::string id) : Id(std::move(id)) { }
 
-        AssetRef(const AssetRef& other)
+        REI_API AssetRef(const AssetRef& other)
             : Id(other.Id),
               Record(other.Record) { }
 
-        AssetRef& operator=(const AssetRef& other)
+        REI_API AssetRef& operator=(const AssetRef& other)
         {
             if (this == &other) return *this;
 
@@ -55,7 +54,7 @@ namespace rei::assets
             return *this;
         }
 
-        T* operator->()
+        REI_API T* operator->()
         {
             REI_ASSERT(Id != "", "Missing asset Id")
             REI_ASSERT(IsLoaded(), "Asset id=" + Id + " is not loaded")
@@ -63,7 +62,7 @@ namespace rei::assets
             return Get();
         }
 
-        const T* operator->() const
+        REI_API const T* operator->() const
         {
             REI_ASSERT(Id != "", "Missing asset Id")
             REI_ASSERT(IsLoaded(), "Asset id=" + Id + " is not loaded")
@@ -71,40 +70,28 @@ namespace rei::assets
             return Get();
         }
 
-        bool IsLoaded() const
+        REI_API bool IsLoaded() const
         {
             if (Record == nullptr) return false;
 
-            const bool hasValue = Record->OwnedValue != nullptr || Record->ExternalValue != nullptr;
+            const bool hasValue = Record->Value != nullptr;
             return Record->Id == Id && Record->State == AssetState::Loaded && hasValue;
         }
 
-        std::string GetBoundId() const
+        REI_API std::string GetBoundId() const
         {
             if (Record == nullptr || Record->State != AssetState::Loaded) return "";
 
             return Record->Id;
         }
 
-        T* Get() const
+        REI_API T* Get() const
         {
             if (!IsLoaded()) return nullptr;
-            if (Record->OwnedValue != nullptr) return static_cast<T*>(Record->OwnedValue.get());
-
-            return static_cast<T*>(Record->ExternalValue);
+            return static_cast<T*>(Record->Value.get());
         }
 
-        void UnloadAsset() override
-        {
-            if (Record == nullptr) return;
-            
-            Record->OwnedValue.reset();
-            Record->ExternalValue = nullptr;
-            Record->AssetSize = 0;
-            Record->State = AssetState::Unloaded;
-        }
-
-        i32 GetAssetSize() override
+        REI_API i32 GetAssetSize() override
         {
             if (Record == nullptr) return 0;
 
@@ -116,4 +103,3 @@ namespace rei::assets
     #pragma pop_macro("SERIALIZABLE_BODY")
 #endif
 }
-

@@ -5,34 +5,9 @@
 
 namespace rei::assets
 {
-    void AssetRegistry::CreateRecordFor(const std::string& id, const std::type_index& type, void* value, const AssetState state)
-    {
-        const auto typeName = common::logging::utility::SimplifyTypeName(type.name());
-        
-        if (id.empty())
-        {
-            LOG_WARNING("Cannot create record for asset with empty id, type={}", typeName)
-            return;
-        }
-
-        const auto record = GetOrCreateRecord(id, type);
-        if (record == nullptr)
-        {
-            LOG_ERROR("Failed to create asset record. Id={}, type={}", id, typeName)
-            return;
-        }
-
-        std::scoped_lock lock(_recordsMutex);
-        record->OwnedValue.reset();
-        record->ExternalValue = value;
-        record->AssetSize = 0;
-        record->State = value != nullptr ? state : AssetState::Unloaded;
-        record->LastError.clear();
-    }
-
     void AssetRegistry::SetUnloaded(const std::string& id)
     {
-        std::shared_ptr<void> ownedValueToRelease = nullptr;
+        std::shared_ptr<void> valueToRelease = nullptr;
         {
             std::scoped_lock lock(_recordsMutex);
 
@@ -43,16 +18,14 @@ namespace rei::assets
                 return;
             }
 
-            ownedValueToRelease = std::move(existing->second->OwnedValue);
-            existing->second->ExternalValue = nullptr;
+            valueToRelease = std::move(existing->second->Value);
             existing->second->AssetSize = 0;
             existing->second->State = AssetState::Unloaded;
-            existing->second->LastError.clear();
         }
 
         // Release owned payload outside the registry lock to avoid re-entrant locking
         // if destructors trigger nested asset manager calls.
-        ownedValueToRelease.reset();
+        valueToRelease.reset();
     }
 
     std::shared_ptr<AssetRecord> AssetRegistry::GetOrCreateRecord(const std::string& id, const std::type_index& type)
@@ -261,4 +234,3 @@ namespace rei::assets
         _loadedAssetsSize = 0;
     }
 }
-

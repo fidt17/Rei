@@ -9,10 +9,7 @@ namespace rei::assets
     void SyncAfterExternalChange(AssetRef<T>& ref)
     {
         const auto boundId = ref.GetBoundId();
-        if (boundId == ref.Id)
-        {
-            return;
-        }
+        if (boundId == ref.Id) return;
 
         auto& assetManager = GetAssetManager();
 
@@ -32,10 +29,7 @@ namespace rei::assets
     template <typename T>
     void Assign(AssetRef<T>& target, const AssetRef<T>& other)
     {
-        if (&target == &other)
-        {
-            return;
-        }
+        if (&target == &other) return;
 
         auto& assetManager = GetAssetManager();
 

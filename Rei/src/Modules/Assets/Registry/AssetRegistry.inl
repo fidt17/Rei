@@ -28,16 +28,14 @@ namespace rei::assets
         }
 
         std::scoped_lock lock(_recordsMutex);
-        record->OwnedValue = std::shared_ptr<void>(
+        record->Value = std::shared_ptr<void>(
             value,
             [](void* ptr)
             {
                 delete static_cast<T*>(ptr);
             });
-        record->ExternalValue = nullptr;
         record->AssetSize = assetSize;
         record->State = value != nullptr ? state : AssetState::Unloaded;
-        record->LastError.clear();
     }
 
     template <typename T>
@@ -48,4 +46,3 @@ namespace rei::assets
         return GetOrCreateRecord(id, typeid(T));
     }
 }
-

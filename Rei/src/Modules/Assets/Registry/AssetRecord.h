@@ -14,8 +14,6 @@ namespace rei::assets
         std::type_index Type = typeid(void);
         AssetState State = AssetState::Unloaded;
         i32 AssetSize = 0;
-        std::shared_ptr<void> OwnedValue = nullptr;
-        void* ExternalValue = nullptr;
-        std::string LastError;
+        std::shared_ptr<void> Value = nullptr;
     };
 }

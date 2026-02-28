@@ -28,7 +28,6 @@ namespace rei::assets
         template <typename T>
         std::shared_ptr<AssetRecord> GetRecord(const std::string& id);
 
-        REI_API void CreateRecordFor(const std::string& id, const std::type_index& type, void* value, AssetState state);
         REI_API void SetUnloaded(const std::string& id);
         REI_API void MarkForDestruction(const std::string& id);
         REI_API void CollectGarbage();
