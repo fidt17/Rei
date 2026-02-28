@@ -28,53 +28,11 @@ namespace rei::assets
 
         UnloadGuard unloadGuard(_isUnloadingAllAssets);
 
-        struct AssetUnloadInfo
+        const auto assetsToUnload = _registry.ReleaseAllLoadedAssets();
+        for (const auto& asset : assetsToUnload)
         {
-            std::string Id;
-            std::string TypeName;
-            i32 Size = 0;
-        };
-
-        std::vector<AssetUnloadInfo> assetsToDestroy = {};
-        {
-            const auto records = _registry.GetAllRecords();
-            assetsToDestroy.reserve(records.size());
-            for (const auto& record : records)
-            {
-                if (record == nullptr || record->State == AssetState::Unloaded)
-                {
-                    continue;
-                }
-
-                assetsToDestroy.push_back({
-                    .Id = record->Id,
-                    .TypeName = common::logging::utility::SimplifyTypeName(record->Type.name()),
-                    .Size = record->AssetSize,
-                });
-            }
-        }
-
-        _registry.ResetRuntimeTracking();
-
-        for (const auto& asset : assetsToDestroy)
-        {
-            _registry.MarkForDestruction(asset.Id);
-        }
-
-        _registry.CollectGarbage();
-        _registry.PumpDestroyQueue();
-
-        for (const auto& asset : assetsToDestroy)
-        {
-            if (_registry.FindRecord(asset.Id) == nullptr)
-            {
-                LOG_DEBUG("Asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, common::logging::utility::FormatSize(asset.Size))
-            }
-            else
-            {
-                _registry.SetUnloaded(asset.Id);
-                LOG_DEBUG("Asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, common::logging::utility::FormatSize(asset.Size))
-            }
+            const auto typeName = common::logging::utility::SimplifyTypeName(asset.Type.name());
+            LOG_DEBUG("Asset unloaded id={} type={} size={}", asset.Id, typeName, common::logging::utility::FormatSize(asset.Size))
         }
     }
 

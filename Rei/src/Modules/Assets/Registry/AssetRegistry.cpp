@@ -5,7 +5,7 @@
 
 namespace rei::assets
 {
-    void AssetRegistry::SetUnloaded(const std::string& id)
+    void AssetRegistry::TransitionToUnloadedAndReleasePayload(const std::string& id)
     {
         std::shared_ptr<void> valueToRelease = nullptr;
         {
@@ -59,51 +59,38 @@ namespace rei::assets
         return record;
     }
 
-    void AssetRegistry::MarkForDestruction(const std::string& id)
+    void AssetRegistry::MarkPendingDestroy(const std::string& id)
     {
         std::scoped_lock lock(_recordsMutex);
 
         const auto existing = _records.find(id);
         if (existing == _records.end())
         {
-            LOG_WARNING_D(std::format("id={}", id), "MarkForDestruction skipped: missing id")
+            LOG_WARNING_D(std::format("id={}", id), "MarkPendingDestroy skipped: missing id")
             return;
         }
 
         existing->second->State = AssetState::PendingDestroy;
     }
 
-    void AssetRegistry::CollectGarbage()
+    void AssetRegistry::CollectPendingDestroyRecords(std::vector<std::shared_ptr<AssetRecord>>& recordsToDestroy)
     {
-        std::vector<std::shared_ptr<AssetRecord>> recordsToDestroy;
-        {
-            std::scoped_lock lock(_recordsMutex);
+        std::scoped_lock lock(_recordsMutex);
 
-            auto it = _records.begin();
-            while (it != _records.end())
+        auto it = _records.begin();
+        while (it != _records.end())
+        {
+            const auto& record = it->second;
+            const bool readyForDestroy = record->State == AssetState::PendingDestroy && record.use_count() == 1;
+            if (!readyForDestroy)
             {
-                const auto& record = it->second;
-                const bool readyForDestroy = record->State == AssetState::PendingDestroy && record.use_count() == 1;
-                if (!readyForDestroy)
-                {
-                    ++it;
-                    continue;
-                }
-
-                recordsToDestroy.push_back(record);
-                it = _records.erase(it);
+                ++it;
+                continue;
             }
-        }
 
-        for (const auto& record : recordsToDestroy)
-        {
-            _destroyQueue.Enqueue(record);
+            recordsToDestroy.push_back(record);
+            it = _records.erase(it);
         }
-    }
-
-    void AssetRegistry::PumpDestroyQueue()
-    {
-        _destroyQueue.Flush();
     }
 
     i32 AssetRegistry::GetRecordCount() const
@@ -190,17 +177,79 @@ namespace rei::assets
         }
 
         result.ReleasedSize = record->AssetSize;
-        SubtractLoadedAssetsSize(record->AssetSize);
-        
-        MarkForDestruction(id);
-        CollectGarbage();
-        PumpDestroyQueue();
-        if (FindRecord(id) != nullptr)
+        if (ReleaseRecordOrUnloadInPlace(id))
         {
-            SetUnloaded(id);
+            SubtractLoadedAssetsSize(result.ReleasedSize);
         }
 
         return result;
+    }
+
+    std::vector<AssetUnloadRecord> AssetRegistry::ReleaseAllLoadedAssets()
+    {
+        std::vector<AssetUnloadRecord> assetsToUnload = {};
+        {
+            const auto records = GetAllRecords();
+            assetsToUnload.reserve(records.size());
+            for (const auto& record : records)
+            {
+                if (record == nullptr || record->State == AssetState::Unloaded) continue;
+
+                assetsToUnload.push_back({
+                    .Id = record->Id,
+                    .Type = record->Type,
+                    .Size = record->AssetSize,
+                });
+            }
+        }
+
+        ResetRuntimeTracking();
+
+        for (const auto& asset : assetsToUnload)
+        {
+            MarkPendingDestroy(asset.Id);
+        }
+
+        FlushPendingDestroy();
+
+        for (const auto& asset : assetsToUnload)
+        {
+            if (FindRecord(asset.Id) == nullptr) continue;
+
+            TransitionToUnloadedAndReleasePayload(asset.Id);
+        }
+
+        return assetsToUnload;
+    }
+
+    void AssetRegistry::FlushPendingDestroy()
+    {
+        std::vector<std::shared_ptr<AssetRecord>> recordsToDestroy = {};
+        CollectPendingDestroyRecords(recordsToDestroy);
+
+        for (const auto& record : recordsToDestroy)
+        {
+            _destroyQueue.Enqueue(record);
+        }
+
+        _destroyQueue.Flush();
+    }
+
+    bool AssetRegistry::ReleaseRecordOrUnloadInPlace(const std::string& id)
+    {
+        MarkPendingDestroy(id);
+        FlushPendingDestroy();
+
+        const auto recordAfterDestroyAttempt = FindRecord(id);
+        if (recordAfterDestroyAttempt == nullptr) return true;
+        if (recordAfterDestroyAttempt->State == AssetState::Unloaded) return true;
+
+        TransitionToUnloadedAndReleasePayload(id);
+
+        const auto recordAfterUnloadAttempt = FindRecord(id);
+        if (recordAfterUnloadAttempt == nullptr) return true;
+
+        return recordAfterUnloadAttempt->State == AssetState::Unloaded;
     }
 
     void AssetRegistry::AddLoadedAssetsSize(const i32 size)

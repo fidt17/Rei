@@ -19,6 +19,13 @@ namespace rei::assets
         i32 ReleasedSize = 0;
     };
 
+    struct AssetUnloadRecord
+    {
+        std::string Id;
+        std::type_index Type = typeid(void);
+        i32 Size = 0;
+    };
+
     class AssetRegistry
     {
     public:
@@ -31,11 +38,8 @@ namespace rei::assets
         REI_API std::vector<std::shared_ptr<AssetRecord>> GetAllRecords() const;
         REI_API i32 GetRecordCount() const;
 
-        REI_API void SetUnloaded(const std::string& id);
-        REI_API void MarkForDestruction(const std::string& id);
         REI_API AssetReleaseResult ReleaseAssetWithId(const std::string& id);
-        REI_API void CollectGarbage();
-        REI_API void PumpDestroyQueue();
+        REI_API std::vector<AssetUnloadRecord> ReleaseAllLoadedAssets();
         
         REI_API void SetRefCount(const std::string& id, i32 count);
         REI_API void IncrementRefCount(const std::string& id);
@@ -46,6 +50,12 @@ namespace rei::assets
         REI_API void ResetRuntimeTracking();
 
     private:
+        REI_API void MarkPendingDestroy(const std::string& id);
+        REI_API void TransitionToUnloadedAndReleasePayload(const std::string& id);
+        REI_API bool ReleaseRecordOrUnloadInPlace(const std::string& id);
+        REI_API void FlushPendingDestroy();
+        REI_API void CollectPendingDestroyRecords(std::vector<std::shared_ptr<AssetRecord>>& recordsToDestroy);
+
         REI_API void AddLoadedAssetsSize(i32 size);
         REI_API void SubtractLoadedAssetsSize(i32 size);
         REI_API std::shared_ptr<AssetRecord> GetOrCreateRecord(const std::string& id, const std::type_index& type);
