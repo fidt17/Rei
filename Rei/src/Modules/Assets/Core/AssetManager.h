@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -57,6 +58,7 @@ namespace rei::assets
         std::unique_ptr<AssetsMap> _map;
         AssetRegistry _registry = {};
         AssetTmpStorage _tmpStorage = {};
+        std::atomic<bool> _isUnloadingAllAssets = false;
 
         u32 _runtimeAssetCounter = 0;
         mutable std::mutex _assetsMutex;

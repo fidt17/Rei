@@ -14,6 +14,8 @@ namespace rei::scenes
         explicit SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager);
     
         void LoadScene(int id);
+        void UnloadCurrentScene();
+        void Shutdown();
         
     private:
         std::vector<assets::AssetDependency> CollectSceneAssetDependencies();

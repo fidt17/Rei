@@ -116,9 +116,10 @@ namespace rei::internal::engine
         _runEngine = false;
 
         _app->OnShutdown();
+        _sceneManager->Shutdown();
+        _mainRenderer->Dispose();
         _assetManager->UnloadAllAssets();
         _assetManager->DeleteTmpFiles();
-        _mainRenderer->Dispose();
         glfwTerminate();
 
         LOG("Shutdown complete")

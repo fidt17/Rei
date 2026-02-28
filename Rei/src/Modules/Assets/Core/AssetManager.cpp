@@ -41,6 +41,24 @@ namespace rei::assets
 
     void AssetManager::UnloadAllAssets()
     {
+        struct UnloadGuard
+        {
+            explicit UnloadGuard(std::atomic<bool>& flagRef)
+                : flag(flagRef)
+            {
+                flag.store(true);
+            }
+
+            ~UnloadGuard()
+            {
+                flag.store(false);
+            }
+
+            std::atomic<bool>& flag;
+        };
+
+        UnloadGuard unloadGuard(_isUnloadingAllAssets);
+
         struct AssetUnloadInfo
         {
             std::string Id;
@@ -104,9 +122,8 @@ namespace rei::assets
             }
             else
             {
-                LOG_WARNING_D(
-                    std::format("id={}, type={}", asset.Id, asset.TypeName),
-                    "Shutdown unload skipped (still referenced)")
+                _registry.SetUnloaded(asset.Id);
+                LOG_DEBUG("asset unloaded id={} type={} size={}", asset.Id, asset.TypeName, formatSize(asset.Size))
             }
         }
     }

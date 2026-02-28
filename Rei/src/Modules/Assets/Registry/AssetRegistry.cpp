@@ -29,19 +29,27 @@ namespace rei::assets
 
     void AssetRegistry::SetUnloaded(const std::string& id)
     {
-        std::scoped_lock lock(_recordsMutex);
-
-        const auto existing = _records.find(id);
-        if (existing == _records.end())
+        std::shared_ptr<void> ownedValueToRelease = nullptr;
         {
-            LOG_WARNING_D(std::format("id={}", id), "SetUnloaded skipped: missing id")
-            return;
+            std::scoped_lock lock(_recordsMutex);
+
+            const auto existing = _records.find(id);
+            if (existing == _records.end())
+            {
+                LOG_WARNING_D(std::format("id={}", id), "SetUnloaded skipped: missing id")
+                return;
+            }
+
+            ownedValueToRelease = std::move(existing->second->OwnedValue);
+            existing->second->ExternalValue = nullptr;
+            existing->second->AssetSize = 0;
+            existing->second->State = AssetState::Unloaded;
+            existing->second->LastError.clear();
         }
 
-        existing->second->OwnedValue.reset();
-        existing->second->ExternalValue = nullptr;
-        existing->second->AssetSize = 0;
-        existing->second->State = AssetState::Unloaded;
+        // Release owned payload outside registry lock to avoid re-entrant locking
+        // if destructors trigger nested asset manager calls.
+        ownedValueToRelease.reset();
     }
 
     std::shared_ptr<AssetRecord> AssetRegistry::GetOrCreateRecord(const std::string& id, const std::type_index& type)

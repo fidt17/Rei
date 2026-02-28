@@ -40,6 +40,24 @@ namespace rei::scenes
         LOG("Loaded scene {}", _activeScene->GetName())
     }
 
+    void SceneManager::UnloadCurrentScene()
+    {
+        const auto roots = _entityManager->GetRootEntities();
+        for (const auto root : roots)
+        {
+            _entityManager->Destroy(root);
+        }
+        GetInternalWorld()->Refresh();
+
+        _assetManager->Release(_activeScene);
+    }
+
+    void SceneManager::Shutdown()
+    {
+        UnloadCurrentScene();
+        _assetManager->Release(_buildScenesConfig);
+    }
+
     std::vector<assets::AssetDependency> SceneManager::CollectSceneAssetDependencies()
     {
         std::vector<assets::AssetDependency> dependencies{};

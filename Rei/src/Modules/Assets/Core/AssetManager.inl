@@ -126,6 +126,10 @@ namespace rei::assets
         {
             return;
         }
+        if (_isUnloadingAllAssets.load())
+        {
+            return;
+        }
 
         const auto typeName = rei::common::logging::internal::SimplifyTypeName(typeid(T).name());
         if (!_registry.DecrementRefCount(id))
@@ -145,7 +149,15 @@ namespace rei::assets
         _registry.MarkForDestruction(id);
         _registry.CollectGarbage();
         _registry.PumpDestroyQueue();
-        LOG_DEBUG("asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
+        if (_registry.FindRecord(id) == nullptr)
+        {
+            LOG_DEBUG("asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
+        }
+        else
+        {
+            _registry.SetUnloaded(id);
+            LOG_DEBUG("asset unloaded id={} type={} size={}", id, typeName, internal::FormatSize(size))
+        }
     }
 
     template <typename T>

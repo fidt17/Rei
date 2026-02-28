@@ -9,7 +9,6 @@ namespace rei::assets
 
         std::scoped_lock lock(_queueMutex);
         _queue.push_back(record);
-        LOG_DEBUG("AssetDestroyQueue enqueue id={}, size={}", record->Id, _queue.size())
     }
 
     void AssetDestroyQueue::Flush()
@@ -22,9 +21,7 @@ namespace rei::assets
             recordsToDestroy.swap(_queue);
         }
 
-        LOG_DEBUG("AssetDestroyQueue flush records={}", recordsToDestroy.size())
         recordsToDestroy.clear();
-        LOG_DEBUG("AssetDestroyQueue flush complete")
     }
 
     i32 AssetDestroyQueue::Size() const
