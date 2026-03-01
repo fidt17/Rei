@@ -30,7 +30,7 @@ namespace rei::assets
     {
     public:
         template <typename T>
-        void CreateAssetRecord(AssetRef<T>& assetRef, T* value, i32 assetSize, AssetState state);
+        void CreateAssetRecord(AssetRef<T>& assetRef, const std::string& name, T* value, i32 assetSize, AssetState state);
 
         template <typename T>
         std::shared_ptr<AssetRecord> FindRecord(const std::string& id) const;
@@ -58,7 +58,7 @@ namespace rei::assets
 
         REI_API void AddLoadedAssetsSize(i32 size);
         REI_API void SubtractLoadedAssetsSize(i32 size);
-        REI_API std::shared_ptr<AssetRecord> GetOrCreateRecord(const std::string& id, const std::type_index& type);
+        REI_API std::shared_ptr<AssetRecord> GetOrCreateRecord(const std::string& id, const std::string& name, const std::type_index& type);
 
         mutable std::mutex _recordsMutex;
         std::unordered_map<std::string, std::shared_ptr<AssetRecord>> _records = {};

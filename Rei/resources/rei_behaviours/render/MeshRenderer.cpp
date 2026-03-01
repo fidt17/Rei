@@ -84,7 +84,7 @@ namespace rei::render
     {
         if (_material.IsLoaded()) return *_material.Get();
 
-        static assets::AssetRef<Material> fallbackMaterial = GetAssetManager().GetById<Material>(REI_FALLBACK_MATERIAL_ID);
+        static assets::AssetRef<Material> fallbackMaterial = GetAssetManager().GetById<Material>(REI_ERROR_MATERIAL_ID);
         return *fallbackMaterial.Get();
     }
 }

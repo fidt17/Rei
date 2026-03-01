@@ -11,10 +11,12 @@ namespace rei::assets
     {
         const std::string Path;
         const i64 Offset;
+        const std::string AssetName;
 
-        BuildAssetInfo(std::string path, const i64 offset)
+        BuildAssetInfo(std::string path, const i64 offset, std::string assetName)
             : Path(std::move(path)),
-              Offset(offset)
+              Offset(offset),
+              AssetName(std::move(assetName))
         {
         }
     };

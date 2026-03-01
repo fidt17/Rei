@@ -73,10 +73,8 @@ namespace rei::render
 
     void Renderer::PrepareMaterials() const
     {
-        const auto fallbackShader = GetAssetManager().GetById<Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
-        auto fallbackMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_FALLBACK_MATERIAL_ID,fallbackShader);
-        fallbackMaterial->GetShader().SetFloat("_Shininess", 0.5);
-        fallbackMaterial->GetShader().SetColor("_Color", Color(1,1,1,1));
+        const auto errorShader = GetAssetManager().GetById<Shader>(REI_SHADER_ERROR_ASSET_ID);
+        auto errorMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_ERROR_MATERIAL_ID,errorShader);
 
         const auto lightSourceShader = GetAssetManager().GetById<Shader>(REI_SHADER_LIGHT_SOURCE_ASSET_ID);
         GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);

@@ -3,7 +3,7 @@
 namespace rei::assets
 {
     template <typename T>
-    void AssetRegistry::CreateAssetRecord(AssetRef<T>& assetRef, T* value, const i32 assetSize, const AssetState state)
+    void AssetRegistry::CreateAssetRecord(AssetRef<T>& assetRef, const std::string& name, T* value, const i32 assetSize, const AssetState state)
     {
         const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
         if (assetRef.Id.empty())
@@ -16,7 +16,7 @@ namespace rei::assets
             return;
         }
 
-        const auto record = GetOrCreateRecord(assetRef.Id, typeid(T));
+        const auto record = GetOrCreateRecord(assetRef.Id, name, typeid(T));
         if (record == nullptr)
         {
             LOG_ERROR("Failed to create asset record, id={}, type={}", assetRef.Id, typeName)

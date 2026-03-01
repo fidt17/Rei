@@ -49,10 +49,11 @@ namespace rei::assets
         for (auto i = 0; i < count; i++)
         {
             const auto id = reader.GetStr();
+            const auto assetName = reader.GetStr();
             const auto path = reader.GetStr();
             const i64 offset = reader.GetI64();
 
-            _assets.insert({id, BuildAssetInfo(path, offset)});
+            _assets.insert({id, BuildAssetInfo(path, offset, assetName)});
         }
         reader.Close();
         

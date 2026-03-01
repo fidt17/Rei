@@ -5,9 +5,9 @@
 namespace rei::assets
 {
 #ifdef SERIALIZABLE_BODY
-    #pragma push_macro("SERIALIZABLE_BODY")
-    #undef SERIALIZABLE_BODY
-    #define SERIALIZABLE_BODY(CLASS_NAME)\
+#pragma push_macro("SERIALIZABLE_BODY")
+#undef SERIALIZABLE_BODY
+#define SERIALIZABLE_BODY(CLASS_NAME)\
         public:\
         CLASS_NAME() = default;\
         nlohmann::json REI_GET() const;\
@@ -33,11 +33,17 @@ namespace rei::assets
         using AssignHandler = void (*)(AssetRef<T>&, const AssetRef<T>&);
         inline static AssignHandler AssignHandlerFunc = nullptr;
 
-        REI_API AssetRef(std::string id) : Id(std::move(id)) { }
+        REI_API AssetRef(std::string id)
+            :
+            Id(std::move(id))
+        {
+        }
 
         REI_API AssetRef(const AssetRef& other)
             : Id(other.Id),
-              Record(other.Record) { }
+              Record(other.Record)
+        {
+        }
 
         REI_API AssetRef& operator=(const AssetRef& other)
         {
@@ -57,7 +63,7 @@ namespace rei::assets
         REI_API T* operator->()
         {
             REI_ASSERT(Id != "", "Missing asset Id")
-            REI_ASSERT(IsLoaded(), "Asset id=" + Id + " is not loaded")
+            REI_ASSERT(IsLoaded(), "Asset id=" + Id + ", name=" + GetName() + " is not loaded")
 
             return Get();
         }
@@ -65,7 +71,7 @@ namespace rei::assets
         REI_API const T* operator->() const
         {
             REI_ASSERT(Id != "", "Missing asset Id")
-            REI_ASSERT(IsLoaded(), "Asset id=" + Id + " is not loaded")
+            REI_ASSERT(IsLoaded(), "Asset id=" + Id + ", name=" + GetName() + " is not loaded")
 
             return Get();
         }
@@ -84,6 +90,13 @@ namespace rei::assets
 
             return Record->Id;
         }
+        
+        REI_API std::string GetName() const
+        {
+            if (Record == nullptr) return "";
+
+            return Record->Name;
+        }
 
         REI_API T* Get() const
         {
@@ -100,6 +113,6 @@ namespace rei::assets
     };
 
 #ifdef SERIALIZABLE_BODY
-    #pragma pop_macro("SERIALIZABLE_BODY")
+#pragma pop_macro("SERIALIZABLE_BODY")
 #endif
 }

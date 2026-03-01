@@ -16,6 +16,7 @@ public class BuildAssetMapSerializer : IBinarySerializer<BuildAssetMap>
 		foreach (var assetBuildInfo in assets)
 		{
 			writer.WriteString(assetBuildInfo.Id);
+			writer.WriteString(assetBuildInfo.Name);
 			writer.WriteString(assetBuildInfo.Path);
 			writer.Write(assetBuildInfo.Offset);
 		}

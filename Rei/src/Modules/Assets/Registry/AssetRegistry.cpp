@@ -28,7 +28,7 @@ namespace rei::assets
         valueToRelease.reset();
     }
 
-    std::shared_ptr<AssetRecord> AssetRegistry::GetOrCreateRecord(const std::string& id, const std::type_index& type)
+    std::shared_ptr<AssetRecord> AssetRegistry::GetOrCreateRecord(const std::string& id, const std::string& name, const std::type_index& type)
     {
         std::scoped_lock lock(_recordsMutex);
 
@@ -52,6 +52,7 @@ namespace rei::assets
 
         auto record = std::make_shared<AssetRecord>();
         record->Id = id;
+        record->Name = name;
         record->Type = type;
         record->State = AssetState::Unloaded;
         _records.insert({id, record});

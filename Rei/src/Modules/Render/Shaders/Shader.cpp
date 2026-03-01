@@ -45,6 +45,15 @@ namespace rei::render
         Delete();
     }
 
+    void Shader::PostLoad()
+    {
+        if (_id == 0)
+        {
+            _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
+            if (_id == 0) throw std::runtime_error("Failed to create shader program");
+        }
+    }
+
     void Shader::Use() const
     {
         glUseProgram(_id);
@@ -101,14 +110,6 @@ namespace rei::render
         glUniformMatrix4fv(GetLocation("_Projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
         glUniformMatrix4fv(GetLocation("_View"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
         glUniformMatrix4fv(GetLocation("_Model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
-    }
-
-    void Shader::PostLoad()
-    {
-        if (_id == 0)
-        {
-            _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
-        }
     }
 
     Shader Shader::CreateInstanceFrom(const Shader& source)

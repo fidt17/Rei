@@ -10,7 +10,7 @@ namespace rei::render
     {
         auto assignFallbackShader = [this]()
         {
-            _shader = GetAssetManager().GetById<Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+            _shader = GetAssetManager().GetById<Shader>(REI_SHADER_ERROR_ASSET_ID);
         };
 
         try
@@ -20,7 +20,7 @@ namespace rei::render
 
             if (!data.contains("ShaderAssetId") || !data.at("ShaderAssetId").is_string())
             {
-                LOG_ERROR("Material asset is missing valid 'ShaderAssetId'. Falling back to {}", REI_SHADER_SIMPLE_LIT_ASSET_ID)
+                LOG_ERROR("Material asset is missing valid 'ShaderAssetId'. Falling back to {}", REI_SHADER_ERROR_ASSET_ID)
                 assignFallbackShader();
                 return;
             }
@@ -28,7 +28,7 @@ namespace rei::render
             const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
             if (shaderAssetId.empty())
             {
-                LOG_ERROR("Material asset has empty 'ShaderAssetId'. Falling back to {}", REI_SHADER_SIMPLE_LIT_ASSET_ID)
+                LOG_ERROR("Material asset has empty 'ShaderAssetId'. Falling back to {}", REI_SHADER_ERROR_ASSET_ID)
                 assignFallbackShader();
                 return;
             }
@@ -36,13 +36,13 @@ namespace rei::render
             _shader = GetAssetManager().GetById<Shader>(shaderAssetId);
             if (!_shader.IsLoaded())
             {
-                LOG_ERROR("Failed to load shader '{}' for material. Falling back to {}", shaderAssetId, REI_SHADER_SIMPLE_LIT_ASSET_ID)
+                LOG_ERROR("Failed to load shader '{}' for material. Falling back to {}", shaderAssetId, REI_SHADER_ERROR_ASSET_ID)
                 assignFallbackShader();
             }
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR("Failed to parse material asset. Falling back to {}. Error: {}", REI_SHADER_SIMPLE_LIT_ASSET_ID, e.what())
+            LOG_ERROR("Failed to parse material asset. Falling back to {}. Error: {}", REI_SHADER_ERROR_ASSET_ID, e.what())
             assignFallbackShader();
         }
         

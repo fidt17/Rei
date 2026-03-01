@@ -70,7 +70,7 @@ namespace rei::assets
         REI_API bool LoadInternal(AssetRef<T>& ref, bool incrementRefCount);
 
         template <typename T>
-        REI_API void LoadAndCreateRecord(AssetRef<T>& ref, const std::string& path, i64 offset, bool incrementRefCount);
+        REI_API void LoadAndCreateRecord(AssetRef<T>& ref, const std::string& name, const std::string& path, i64 offset, bool incrementRefCount);
 
         template <typename T>
         REI_API bool RunPostLoad(AssetRef<T>& ref);

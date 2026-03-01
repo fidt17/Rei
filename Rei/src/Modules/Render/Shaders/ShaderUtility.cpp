@@ -32,17 +32,21 @@ namespace rei::render
         }
     }
 
-    void VerifyShaderProgramLinking(const unsigned shaderProgram)
+    bool VerifyShaderProgramLinking(const unsigned shaderProgram)
     {
         int success;
         glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-        if (!success)
+        if (success <= 0)
         {
             constexpr int LOG_BUFFER_SIZE = 512;
             char infoLog[LOG_BUFFER_SIZE];
             glGetProgramInfoLog(shaderProgram, LOG_BUFFER_SIZE, nullptr, infoLog);
             LOG_ERROR("Shader linking failed\n{}", std::string(infoLog))
+            
+            return false;
         }
+        
+        return true;
     }
 
     unsigned ShaderUtility::CreateShaderProgram(const char* vertexShaderSrc, const char* fragmentShaderSrc) const
@@ -59,9 +63,7 @@ namespace rei::render
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
 
-        VerifyShaderProgramLinking(shaderProgram);
-
-        return shaderProgram;
+        return VerifyShaderProgramLinking(shaderProgram) ? shaderProgram : 0;
     }
 
     unsigned ShaderUtility::CompileVertexShader(const char* src) const
