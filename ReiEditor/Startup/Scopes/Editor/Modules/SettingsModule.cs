@@ -16,6 +16,7 @@ public class SettingsModule : Module
         builder.RegisterSingleton<SettingsWindowService>().As<ISettingsWindowService>();
         builder.RegisterType<OpenSettingsWindowCommand>();
         builder.RegisterType<SetMsBuildLocationCommand>();
+        builder.RegisterType<SetTextEditorLocationCommand>();
 
         builder.RegisterType<EditorSettingsWindowViewModel>();
     }

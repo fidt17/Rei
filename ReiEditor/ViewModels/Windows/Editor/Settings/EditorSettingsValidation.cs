@@ -5,36 +5,49 @@ namespace ReiEditor.ViewModels.Windows.Editor.Settings;
 
 public class EditorSettingsValidation : BaseViewModel
 {
-    	#region IsMsBuildPathValid
+    #region IsMsBuildPathValid
     
-    	private bool _isMsBuildPathValid;
-    	public bool IsMsBuildPathValid
-    	{
-    		get => _isMsBuildPathValid;
-    		private set => SetField(ref _isMsBuildPathValid, value);
-    	}
+    private bool _isMsBuildPathValid;
+    public bool IsMsBuildPathValid
+    {
+        get => _isMsBuildPathValid;
+        private set => SetField(ref _isMsBuildPathValid, value);
+    }
     
-    	#endregion
+    #endregion
+
+    #region IsTextEditorPathValid
+
+    private bool _isTextEditorPathValid;
+    public bool IsTextEditorPathValid
+    {
+        get => _isTextEditorPathValid;
+        private set => SetField(ref _isTextEditorPathValid, value);
+    }
+
+    #endregion
     
-    	private readonly IEditorSettingsService _editorSettingsService;
+    private readonly IEditorSettingsService _editorSettingsService;
     
-    	public EditorSettingsValidation(IEditorSettingsService editorSettingsService)
-    	{
-    		_editorSettingsService = editorSettingsService;
+    public EditorSettingsValidation(IEditorSettingsService editorSettingsService)
+    {
+        _editorSettingsService = editorSettingsService;
     
-    		IsMsBuildPathValid = _editorSettingsService.IsMsBuildLocationValid();
+        IsMsBuildPathValid = _editorSettingsService.IsMsBuildLocationValid();
+        IsTextEditorPathValid = _editorSettingsService.IsTextEditorLocationValid();
     		
-    		_editorSettingsService.EditorConfigurationChangedEvent += HandleEditorSettingsChangedEvent;
-    	}
+        _editorSettingsService.EditorConfigurationChangedEvent += HandleEditorSettingsChangedEvent;
+    }
     
-    	public override void Dispose()
-    	{
-    		base.Dispose();
-    		_editorSettingsService.EditorConfigurationChangedEvent -= HandleEditorSettingsChangedEvent;
-    	}
+    public override void Dispose()
+    {
+        base.Dispose();
+        _editorSettingsService.EditorConfigurationChangedEvent -= HandleEditorSettingsChangedEvent;
+    }
     
-    	private void HandleEditorSettingsChangedEvent(bool isValid)
-    	{
-    		IsMsBuildPathValid = _editorSettingsService.IsMsBuildLocationValid();
-    	}
+    private void HandleEditorSettingsChangedEvent(bool isValid)
+    {
+        IsMsBuildPathValid = _editorSettingsService.IsMsBuildLocationValid();
+        IsTextEditorPathValid = _editorSettingsService.IsTextEditorLocationValid();
+    }
 }

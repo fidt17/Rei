@@ -7,6 +7,7 @@ public class EditorPreferences
 {
 	public string EnginePath { get; set; } = "";
 	public string MsBuildPath { get; set; } = "";
+	public string TextEditorPath { get; set; } = "";
 	public List<string> BookmarkedProjectsPaths { get; set; } = new();
 
 	public ConsolePreferences ConsolePreferences { get; set; } = new();

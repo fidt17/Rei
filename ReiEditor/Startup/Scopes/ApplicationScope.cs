@@ -54,6 +54,7 @@ public class ApplicationScope : BaseLifetimeScope
         });
 		
         b.RegisterSingleton<WindowsFileExplorerProvider>().As<IFileExplorerProvider>();
+        b.RegisterSingleton<WindowsTextEditorFileOpener>().As<ITextEditorFileOpener>();
 		
         b.RegisterSingleton<ProjectTemplateProvider>().As<IProjectTemplateProvider>();
         b.RegisterSingleton<SolutionGenerator>().As<ISolutionGenerator>();

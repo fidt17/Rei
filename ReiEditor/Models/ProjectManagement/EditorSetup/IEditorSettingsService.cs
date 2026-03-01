@@ -5,17 +5,22 @@ namespace ReiEditor.Models.ProjectManagement.EditorSetup;
 
 public interface IEditorSettingsService : IAsyncInitializable
 {
-	event Action<bool> EditorConfigurationChangedEvent;
-	event Action ConfigurationSetEvent;
+    event Action<bool> EditorConfigurationChangedEvent;
+    event Action ConfigurationSetEvent;
 	
-	bool IsEditorConfigurationValid();
-	void SaveConfiguration();
+    bool IsEditorConfigurationValid();
+    void SaveConfiguration();
 
-	bool IsEngineLocationValid();
-	bool SetEngineLocation(string path);
-	string GetEngineLocation();
+    bool IsEngineLocationValid();
+    bool SetEngineLocation(string path);
+    string GetEngineLocation();
 
-	bool IsMsBuildLocationValid();
-	bool SetMsBuildLocation(string path);
-	string GetMsBuildLocation();
+    bool IsMsBuildLocationValid();
+    bool SetMsBuildLocation(string path);
+    string GetMsBuildLocation();
+
+    bool IsTextEditorLocationValid();
+    bool SetTextEditorLocation(string path);
+    void ClearTextEditorLocation();
+    string GetTextEditorLocation();
 }

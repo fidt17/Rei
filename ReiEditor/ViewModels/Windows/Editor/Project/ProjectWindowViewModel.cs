@@ -7,6 +7,9 @@ using IOPath = System.IO.Path;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.EditorApp.AssetCreation.Shader;
@@ -45,6 +48,8 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IFileExplorerProvider? _fileExplorerProvider;
     private readonly IAssetSearchService? _assetSearchService;
     private readonly IEditorRefreshService? _editorRefreshService;
+    private readonly ITextEditorFileOpener? _textEditorFileOpener;
+    private readonly ISettingsWindowService? _settingsWindowService;
     private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
     private readonly IMaterialCreationWindowService? _materialCreationWindowService;
     private readonly IShaderCreationWindowService? _shaderCreationWindowService;
@@ -65,6 +70,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IFileExplorerProvider fileExplorerProvider,
         IAssetSearchService assetSearchService,
         IEditorRefreshService editorRefreshService,
+        ITextEditorFileOpener textEditorFileOpener,
+        ISettingsWindowService settingsWindowService,
         IBehaviourCreationWindowService behaviourCreationWindowService,
         IMaterialCreationWindowService materialCreationWindowService,
         IShaderCreationWindowService shaderCreationWindowService)
@@ -75,6 +82,8 @@ public class ProjectWindowViewModel : BaseViewModel
         _fileExplorerProvider = fileExplorerProvider;
         _assetSearchService = assetSearchService;
         _editorRefreshService = editorRefreshService;
+        _textEditorFileOpener = textEditorFileOpener;
+        _settingsWindowService = settingsWindowService;
         _behaviourCreationWindowService = behaviourCreationWindowService;
         _materialCreationWindowService = materialCreationWindowService;
         _shaderCreationWindowService = shaderCreationWindowService;
@@ -319,8 +328,31 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void OpenAsset(ProjectAssetItemViewModel item)
     {
-        if (!item.IsDirectory) return;
-        OpenDirectory(item.FullPath);
+        if (item.IsDirectory)
+        {
+            OpenDirectory(item.FullPath);
+            return;
+        }
+
+        if (_textEditorFileOpener == null) return;
+
+        var result = _textEditorFileOpener.Open(item.FullPath);
+        if (result != TextEditorOpenResult.InvalidCustomEditorPath) return;
+        if (_settingsWindowService == null) return;
+
+        Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var prompt = MessageBoxManager.GetMessageBoxStandard(
+                "Text Editor",
+                "Configured text editor path is invalid. Open Editor Settings?",
+                ButtonEnum.YesNo);
+            var dialogResult = await prompt.ShowAsync();
+
+            if (dialogResult == ButtonResult.Yes)
+            {
+                _settingsWindowService.OpenSettingsWindow();
+            }
+        });
     }
 
     private void RenameAsset(ProjectAssetItemViewModel item, string newName)

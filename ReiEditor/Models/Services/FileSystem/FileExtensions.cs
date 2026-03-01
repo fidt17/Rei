@@ -27,6 +27,12 @@ public static class FileExtensions
 
     public static readonly IReadOnlyList<string> ModelAssetExtensions = new[] { OBJ, FBX };
     public static readonly IReadOnlyList<string> MaterialAssetExtensions = new[] { MATERIAL };
+    public static readonly HashSet<string> TextEditorOpenExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        H,
+        CPP,
+        RSHADER
+    };
 
     public static FilePickerFileType GetFilePicker(string fileExtension)
     {
@@ -59,5 +65,13 @@ public static class FileExtensions
         }
 
         return targets;
+    }
+
+    public static bool IsTextEditorOpenSupported(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return false;
+
+        var extension = Path.GetExtension(filePath);
+        return TextEditorOpenExtensions.Contains(extension);
     }
 }

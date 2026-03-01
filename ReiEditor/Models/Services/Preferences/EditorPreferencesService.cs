@@ -56,6 +56,18 @@ public class EditorPreferencesService : IEditorPreferencesService
         SavePreferences(_preferences);
     }
 
+    public string? GetTextEditorPath()
+    {
+        if (string.IsNullOrEmpty(_preferences.TextEditorPath)) return null;
+        return _preferences.TextEditorPath;
+    }
+
+    public void SetTextEditorPath(string path)
+    {
+        _preferences.TextEditorPath = path;
+        SavePreferences(_preferences);
+    }
+
     public IEnumerable<Project> GetBookmarkedProjects()
     {
         var validProjects = new List<Project>();

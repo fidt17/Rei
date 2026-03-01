@@ -10,7 +10,9 @@ namespace ReiEditor.ViewModels.Windows.Editor.Settings;
 public class EditorSettingsWindowViewModel : BaseViewModel
 {
 	public RelayCommand ConfirmCommand { get; }
+    public RelayCommand UseSystemDefaultTextEditorCommand { get; }
 	public SetMsBuildLocationCommand SetMsBuildLocationCommand { get; }
+    public SetTextEditorLocationCommand SetTextEditorLocationCommand { get; }
 	
 	#region MsBuildPath
 
@@ -22,8 +24,21 @@ public class EditorSettingsWindowViewModel : BaseViewModel
 	}
 
 	#endregion
+
+    #region TextEditorPath
+
+    private string _textEditorPath = "";
+    public string TextEditorPath
+    {
+        get => _textEditorPath;
+        private set => SetField(ref _textEditorPath, value);
+    }
+
+    #endregion
 	
 	public EditorSettingsValidation Validation { get; }
+
+    private readonly IEditorSettingsService _editorSettingsService;
 
 #pragma warning disable CS8618
 	public EditorSettingsWindowViewModel() { }
@@ -31,12 +46,19 @@ public class EditorSettingsWindowViewModel : BaseViewModel
 
 	public EditorSettingsWindowViewModel(IEditorSettingsService editorSettingsService, 
 		ISettingsWindowService settingsWindowService,
-		IFactory<SetMsBuildLocationCommand> setMsBuildLocationCommandFactory)
+		IFactory<SetMsBuildLocationCommand> setMsBuildLocationCommandFactory,
+        IFactory<SetTextEditorLocationCommand> setTextEditorLocationCommandFactory)
 	{
+        _editorSettingsService = editorSettingsService;
 		Validation = new EditorSettingsValidation(editorSettingsService);
 		
 		SetMsBuildLocationCommand = setMsBuildLocationCommandFactory.CreateInstance();
 		SetMsBuildLocationCommand.MsBuildPathSetEvent += HandleMsBuildPathSetEvent;
+
+        SetTextEditorLocationCommand = setTextEditorLocationCommandFactory.CreateInstance();
+        SetTextEditorLocationCommand.TextEditorPathSetEvent += HandleTextEditorPathSetEvent;
+
+        UseSystemDefaultTextEditorCommand = new RelayCommand(ClearTextEditorPath);
 
 		ConfirmCommand = new RelayCommand(() =>
 		{
@@ -45,12 +67,22 @@ public class EditorSettingsWindowViewModel : BaseViewModel
 		});
 
 		MsBuildPath = editorSettingsService.GetMsBuildLocation();
+        TextEditorPath = editorSettingsService.GetTextEditorLocation();
 	}
 
 	public override void Dispose()
 	{
+        SetMsBuildLocationCommand.MsBuildPathSetEvent -= HandleMsBuildPathSetEvent;
+        SetTextEditorLocationCommand.TextEditorPathSetEvent -= HandleTextEditorPathSetEvent;
 		Validation.Dispose();
 	}
 
 	private void HandleMsBuildPathSetEvent(string path) => MsBuildPath = path;
+    private void HandleTextEditorPathSetEvent(string path) => TextEditorPath = path;
+
+    private void ClearTextEditorPath()
+    {
+        _editorSettingsService.ClearTextEditorLocation();
+        TextEditorPath = _editorSettingsService.GetTextEditorLocation();
+    }
 }

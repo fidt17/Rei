@@ -12,6 +12,9 @@ public interface IEditorPreferencesService : IAsyncInitializable
 
     string? GetMsBuildPath();
     void SetMsBuildPath(string path);
+
+    string? GetTextEditorPath();
+    void SetTextEditorPath(string path);
 	
     IEnumerable<Project> GetBookmarkedProjects();
     void SetBookmarkedProjects(IEnumerable<Project> paths);

@@ -100,7 +100,6 @@ public partial class ProjectAssetItemView : UserControl
     private void RootBorder_OnDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (_vm == null) return;
-        if (!_vm.IsDirectory) return;
 
         _vm.OpenCommand.Execute(null);
         e.Handled = true;
