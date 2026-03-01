@@ -2,8 +2,7 @@
 
 namespace ReiEditor.Models.Services.Logging.Loggers;
 
-// ReSharper disable once UnusedTypeParameter
-public interface ILogger<T>
+public interface ILogger
 {
 	void AddEmptyLine();
 	void Log(string message);
@@ -11,3 +10,6 @@ public interface ILogger<T>
 	void LogError(string message);
 	void LogException(Exception exception);
 }
+
+// ReSharper disable once UnusedTypeParameter
+public interface ILogger<T> : ILogger { }

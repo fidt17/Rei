@@ -1,18 +1,37 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "SceneAssetPreloader.h"
 
 namespace rei::scenes
 {
+    namespace
+    {
+        std::string JoinFailedDependencyIds(const std::vector<std::string>& dependencyIds)
+        {
+            std::ostringstream stream;
+            for (std::size_t i = 0; i < dependencyIds.size(); ++i)
+            {
+                if (i > 0)
+                {
+                    stream << ", ";
+                }
+
+                stream << dependencyIds[i];
+            }
+
+            return stream.str();
+        }
+    }
+
     SceneAssetPreloader::SceneAssetPreloader(const std::shared_ptr<assets::AssetManager>& assetManager)
         : _assetManager(assetManager) { }
 
-    void SceneAssetPreloader::Preload(const std::vector<assets::AssetDependency>& dependencies) const
+    bool SceneAssetPreloader::Preload(const std::vector<assets::AssetDependency>& dependencies) const
     {
         const auto uniqueDependencies = GetUniqueDependencies(dependencies);
         if (uniqueDependencies.empty())
         {
             LOG_DEBUG("Scene asset dependencies loaded: 0 | ids=[]")
-            return;
+            return true;
         }
 
         std::vector<std::future<void>> loadFutures;
@@ -22,11 +41,16 @@ namespace rei::scenes
         loadFutures.reserve(workerCount);
 
         LOG_DEBUG("Loading scene dependencies using {} workers", workerCount)
-        
+
         std::atomic<std::size_t> nextDependencyIndex = 0;
+        std::atomic<bool> hasDependencyLoadFailure = false;
+        std::mutex failedDependencyIdsMutex;
+        std::vector<std::string> failedDependencyIds;
+        failedDependencyIds.reserve(uniqueDependencies.size());
+
         for (std::size_t i = 0; i < workerCount; ++i)
         {
-            loadFutures.push_back(std::async(std::launch::async, [this, &uniqueDependencies, &nextDependencyIndex]
+            loadFutures.push_back(std::async(std::launch::async, [this, &uniqueDependencies, &nextDependencyIndex, &hasDependencyLoadFailure, &failedDependencyIdsMutex, &failedDependencyIds]
             {
                 const assets::AssetPostLoadHandler::ScopedPostLoadSuppression postLoadSuppression(true);
 
@@ -35,7 +59,12 @@ namespace rei::scenes
                     const std::size_t index = nextDependencyIndex.fetch_add(1);
                     if (index >= uniqueDependencies.size()) break;
 
-                    uniqueDependencies[index].LoadData(*this);
+                    const auto& dependency = uniqueDependencies[index];
+                    if (dependency.LoadData(*this)) continue;
+
+                    hasDependencyLoadFailure.store(true);
+                    std::scoped_lock lock(failedDependencyIdsMutex);
+                    failedDependencyIds.push_back(dependency.Id);
                 }
             }));
         }
@@ -45,12 +74,21 @@ namespace rei::scenes
             loadFuture.get();
         }
 
-        if (!_assetManager->FlushDeferredPostLoads())
+        const bool didFlushDeferredPostLoads = _assetManager->FlushDeferredPostLoads();
+        if (!didFlushDeferredPostLoads)
         {
             LOG_ERROR("Failed to run one or more deferred post-load actions while preloading scene dependencies")
         }
 
+        if (hasDependencyLoadFailure.load())
+        {
+            std::sort(failedDependencyIds.begin(), failedDependencyIds.end());
+            failedDependencyIds.erase(std::unique(failedDependencyIds.begin(), failedDependencyIds.end()), failedDependencyIds.end());
+            LOG_ERROR("Failed to preload scene asset dependencies count={} | ids=[{}]", failedDependencyIds.size(), JoinFailedDependencyIds(failedDependencyIds))
+        }
+
         LOG_DEBUG("Scene asset dependencies loaded: {} | ids=[{}]", uniqueDependencies.size(), JoinDependencyIds(uniqueDependencies))
+        return didFlushDeferredPostLoads && !hasDependencyLoadFailure.load();
     }
 
     std::string SceneAssetPreloader::JoinDependencyIds(const std::vector<assets::AssetDependency>& dependencies)

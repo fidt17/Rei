@@ -1,4 +1,5 @@
 using System;
+using ReiEditor.Models.EditorApp.AssetCreation.Common;
 using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Factory;
@@ -9,10 +10,8 @@ namespace ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 
 public class BehaviourCreationWindowService : IBehaviourCreationWindowService
 {
-    private CreateBehaviourAssetWindowView? _window;
-
     private readonly IFactory<CreateBehaviourAssetWindowViewModel> _viewModelFactory;
-    private readonly IMainWindowService _mainWindowService;
+    private readonly SingleDialogWindowCoordinator _windowCoordinator;
     private readonly ILogger<BehaviourCreationWindowService> _logger;
 
     public BehaviourCreationWindowService(
@@ -21,40 +20,19 @@ public class BehaviourCreationWindowService : IBehaviourCreationWindowService
         ILogger<BehaviourCreationWindowService> logger)
     {
         _viewModelFactory = viewModelFactory;
-        _mainWindowService = mainWindowService;
         _logger = logger;
+        _windowCoordinator = new SingleDialogWindowCoordinator(mainWindowService, _logger);
     }
 
     public void OpenBehaviourCreationWindow(string targetDirectory, Action onCreated)
     {
-        if (_window != null)
-        {
-            _logger.LogWarning("Behaviour creation window is already opened.");
-            return;
-        }
-
-        var vm = _viewModelFactory.CreateInstance(targetDirectory, onCreated);
-        _window = new CreateBehaviourAssetWindowView
-        {
-            DataContext = vm
-        };
-        _mainWindowService.ShowDialog(_window);
-
-        _window.Closed += (_, _) =>
-        {
-            vm.Dispose();
-            _window = null;
-        };
+        _windowCoordinator.Open(
+            () => _viewModelFactory.CreateInstance(targetDirectory, onCreated),
+            vm => new CreateBehaviourAssetWindowView { DataContext = vm });
     }
 
     public void CloseBehaviourCreationWindow()
     {
-        if (_window == null)
-        {
-            _logger.LogWarning("Cannot close behaviour creation window because it is not opened.");
-            return;
-        }
-
-        _window.Close();
+        _windowCoordinator.Close();
     }
 }

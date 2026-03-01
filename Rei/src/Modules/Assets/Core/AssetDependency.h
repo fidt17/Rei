@@ -16,7 +16,7 @@ namespace rei::assets
     struct AssetDependency
     {
         std::string Id;
-        std::function<void(const scenes::SceneAssetPreloader&)> LoadData;
+        std::function<bool(const scenes::SceneAssetPreloader&)> LoadData;
     };
 
     template <typename T>
@@ -26,7 +26,7 @@ namespace rei::assets
             .Id = id,
             .LoadData = [id](const scenes::SceneAssetPreloader& preloader)
             {
-                PreloadSceneDependency<T>(preloader, id);
+                return PreloadSceneDependency<T>(preloader, id);
             },
         };
     }
