@@ -175,6 +175,9 @@
     <AdditionalFiles Include="Resources\ProjectTemplates\SolutionTemplate\main_cpp_template.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AdditionalFiles>
+    <AdditionalFiles Include="Resources\ProjectTemplates\new_shader_template.rshader">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AdditionalFiles>
   </ItemGroup>
 
 

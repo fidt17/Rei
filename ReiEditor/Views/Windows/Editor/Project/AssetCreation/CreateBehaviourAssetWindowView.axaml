@@ -13,6 +13,7 @@
         Title="Create Behaviour"
         Icon="/Assets/Images/Rei Icon.png"
         Background="{StaticResource Dark_0}"
+        CanResize="False"
         WindowStartupLocation="CenterOwner">
 
     <Design.DataContext>
@@ -45,7 +46,7 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Spacing="8">
-            <Button Command="{Binding CreateCommand}" Content="Create" />
+            <Button Command="{Binding CreateCommand}" Content="Create" IsDefault="True" />
         </StackPanel>
     </Grid>
 </Window>

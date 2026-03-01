@@ -33,4 +33,11 @@ public class ProjectTemplateProvider : IProjectTemplateProvider
 		if (string.IsNullOrWhiteSpace(result)) throw new Exception("Could not load main file template");
 		return result;
 	}
+
+	public async Task<string> GetNewShaderTemplate()
+	{
+		var result = await _editorResourceService.Load("ProjectTemplates", "new_shader_template.rshader");
+		if (string.IsNullOrWhiteSpace(result)) throw new Exception("Could not load new shader template");
+		return result;
+	}
 }

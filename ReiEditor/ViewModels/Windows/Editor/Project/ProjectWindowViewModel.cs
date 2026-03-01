@@ -9,6 +9,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
+using ReiEditor.Models.EditorApp.AssetCreation.Shader;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Services.Assets;
@@ -46,6 +47,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IEditorRefreshService? _editorRefreshService;
     private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
     private readonly IMaterialCreationWindowService? _materialCreationWindowService;
+    private readonly IShaderCreationWindowService? _shaderCreationWindowService;
     private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
@@ -64,7 +66,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IAssetSearchService assetSearchService,
         IEditorRefreshService editorRefreshService,
         IBehaviourCreationWindowService behaviourCreationWindowService,
-        IMaterialCreationWindowService materialCreationWindowService)
+        IMaterialCreationWindowService materialCreationWindowService,
+        IShaderCreationWindowService shaderCreationWindowService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
@@ -74,6 +77,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _editorRefreshService = editorRefreshService;
         _behaviourCreationWindowService = behaviourCreationWindowService;
         _materialCreationWindowService = materialCreationWindowService;
+        _shaderCreationWindowService = shaderCreationWindowService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
@@ -530,7 +534,15 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void OpenCreateShaderOverlay()
     {
-        // todo
+        if (_shaderCreationWindowService == null) return;
+
+        var targetDirectory = ActiveDirectoryPath.Value;
+        if (string.IsNullOrWhiteSpace(targetDirectory) || !Directory.Exists(targetDirectory)) return;
+
+        _shaderCreationWindowService.OpenShaderCreationWindow(targetDirectory, () =>
+        {
+            Dispatcher.UIThread.InvokeAsync(() => RefreshView(affectsTree: false));
+        });
     }
 
     private void OpenCreateMaterialOverlay()

@@ -5,6 +5,7 @@ using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
+using ReiEditor.Models.EditorApp.AssetCreation.Shader;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
@@ -13,6 +14,7 @@ using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Creation;
 using ReiEditor.Models.Services.Assets.Creation.Behaviour;
 using ReiEditor.Models.Services.Assets.Creation.Material;
+using ReiEditor.Models.Services.Assets.Creation.Shader;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Search;
@@ -60,8 +62,10 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<AssetCreator>().As<IAssetCreator>();
         b.RegisterSingleton<BehaviourCreationUtility>().As<IBehaviourCreationUtility>();
         b.RegisterSingleton<MaterialCreationUtility>().As<IMaterialCreationUtility>();
+        b.RegisterSingleton<ShaderCreationUtility>().As<IShaderCreationUtility>();
         b.RegisterSingleton<BehaviourCreationWindowService>().As<IBehaviourCreationWindowService>();
         b.RegisterSingleton<MaterialCreationWindowService>().As<IMaterialCreationWindowService>();
+        b.RegisterSingleton<ShaderCreationWindowService>().As<IShaderCreationWindowService>();
         
         b.RegisterSingleton<EngineResourcesImporter>().As<IEngineResourcesImporter>();
         b.RegisterSingleton<SerializableObjectsRegistry>().As<ISerializableObjectsRegistry>();
@@ -91,5 +95,6 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterType<ProjectWindowViewModel>();
         b.RegisterType<CreateBehaviourAssetWindowViewModel>();
         b.RegisterType<CreateMaterialAssetWindowViewModel>();
+        b.RegisterType<CreateShaderAssetWindowViewModel>();
     }
 }

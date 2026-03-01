@@ -3,43 +3,31 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Project.AssetCreation"
-        xmlns:assets="clr-namespace:ReiEditor.Views.Controls.Assets"
         mc:Ignorable="d"
-        Width="520"
-        Height="500"
-        MinWidth="500"
-        MinHeight="420"
-        x:Class="ReiEditor.Views.Windows.Editor.Project.AssetCreation.CreateMaterialAssetWindowView"
-        x:DataType="vm:CreateMaterialAssetWindowViewModel"
-        Title="Create Material"
+        Width="460"
+        Height="280"
+        MinWidth="420"
+        MinHeight="240"
+        x:Class="ReiEditor.Views.Windows.Editor.Project.AssetCreation.CreateShaderAssetWindowView"
+        x:DataType="vm:CreateShaderAssetWindowViewModel"
+        Title="Create Shader"
         Icon="/Assets/Images/Rei Icon.png"
         Background="{StaticResource Dark_0}"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
 
     <Design.DataContext>
-        <vm:CreateMaterialAssetWindowViewModel />
+        <vm:CreateShaderAssetWindowViewModel />
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20">
-        <TextBlock Text="Create Material" Classes="h2" />
+        <TextBlock Text="Create Shader" Classes="h2" />
 
         <StackPanel Grid.Row="1" Margin="0,16,0,16" Spacing="12">
             <StackPanel Spacing="6">
                 <TextBlock Text="Name" />
-                <TextBox Text="{Binding MaterialName}" />
+                <TextBox Text="{Binding ShaderName}" />
             </StackPanel>
-
-            <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
-                <TextBlock Grid.Column="0"
-                           Width="120"
-                           VerticalAlignment="Center"
-                           FontSize="14"
-                           Foreground="{StaticResource Gray_4}"
-                           Text="Shader" />
-                <assets:AssetPickerView Grid.Column="1"
-                                        DataContext="{Binding ShaderPicker}" />
-            </Grid>
 
             <TextBlock Foreground="{StaticResource Error}"
                        TextWrapping="Wrap"
