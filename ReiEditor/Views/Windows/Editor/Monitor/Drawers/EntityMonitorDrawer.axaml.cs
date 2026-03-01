@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
@@ -7,54 +7,45 @@ namespace ReiEditor.Views.Windows.Editor.Monitor.Drawers;
 
 public partial class EntityMonitorDrawer : UserControl
 {
+    private EntityMonitorDrawerViewModel? _viewModel;
+
     public EntityMonitorDrawer()
     {
         InitializeComponent();
+        DataContextChanged += HandleDataContextChangedEvent;
     }
 
-    // ReSharper disable once UnusedParameter.Local
-    private void AddBehaviourButtonClicked(object? sender, RoutedEventArgs _)
+    protected override void OnUnloaded(RoutedEventArgs e)
     {
-        ShowBehaviourComboBox();
+        base.OnUnloaded(e);
+        UnsubscribeFromViewModel();
     }
 
-    private void ShowAddBehaviourButton()
+    private void HandleDataContextChangedEvent(object? sender, EventArgs e)
     {
-        AddBehaviourButton.IsVisible = true;
-        BehaviourSelectionComboBox.IsVisible = false;
-        BehaviourSelectionComboBox.IsDropDownOpen = false;
+        UnsubscribeFromViewModel();
+        _viewModel = DataContext as EntityMonitorDrawerViewModel;
+        if (_viewModel == null) return;
+
+        _viewModel.BehaviourSelectedEvent += HandleBehaviourSelectedEvent;
     }
 
-    private void ShowBehaviourComboBox()
+    private void UnsubscribeFromViewModel()
     {
-        AddBehaviourButton.IsVisible = false;
-        BehaviourSelectionComboBox.SelectedIndex = -1;
-        BehaviourSelectionComboBox.IsVisible = true;
-        BehaviourSelectionComboBox.IsDropDownOpen = true;
+        if (_viewModel == null) return;
+        _viewModel.BehaviourSelectedEvent -= HandleBehaviourSelectedEvent;
     }
 
-    // ReSharper disable once UnusedParameter.Local
-    private void BehaviourComboboxLostFocus(object? sender, RoutedEventArgs _)
+    private void HandleBehaviourSelectedEvent()
     {
-        ShowAddBehaviourButton();
+        AddBehaviourButton.Flyout?.Hide();
     }
 
-    // ReSharper disable once UnusedParameter.Local
-    private void BehaviourComboboxClosed(object? sender, EventArgs _)
+    private void BehaviourSelectionFlyout_OnOpened(object? sender, EventArgs e)
     {
-        ShowAddBehaviourButton();
-    }
+        if (_viewModel == null) return;
 
-    private void BehaviourComboboxSelectionChanged(object? _, SelectionChangedEventArgs e)
-    {
-        if (!BehaviourSelectionComboBox.IsVisible) return;
-        if (e.AddedItems.Count != 1) return;
-
-        BehaviourSelectionData? item = (BehaviourSelectionData?) e.AddedItems[0];
-        if (item == null) return;
-        if (DataContext is EntityMonitorDrawerViewModel vm)
-        {
-            vm.AddBehaviour(item);
-        }
+        _viewModel.SearchField.ResetSearch();
+        SearchFieldControl.FocusInput();
     }
 }

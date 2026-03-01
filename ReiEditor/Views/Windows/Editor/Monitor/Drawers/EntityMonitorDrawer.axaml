@@ -5,6 +5,7 @@
              xmlns:drawers="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
              xmlns:components="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components"
              xmlns:component="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component"
+             xmlns:search="clr-namespace:ReiEditor.Views.Controls.SearchField"
              mc:Ignorable="d"
              d:DesignWidth="300" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.EntityMonitorDrawer"
@@ -36,27 +37,38 @@
                 <Button
                     x:Name="AddBehaviourButton"
                     Width="200"
-                    HorizontalAlignment="Stretch"
-                    Click="AddBehaviourButtonClicked">
+                    HorizontalAlignment="Stretch">
                     <TextBlock Text="Add Behaviour"
                                HorizontalAlignment="Center" />
+                    <Button.Flyout>
+                        <Flyout FlyoutPresenterClasses="Default"
+                                Opened="BehaviourSelectionFlyout_OnOpened">
+                            <StackPanel Spacing="6">
+                                <search:SearchFieldView
+                                    x:Name="SearchFieldControl"
+                                    DataContext="{Binding SearchField}" />
+                                <ScrollViewer MaxHeight="260">
+                                    <ItemsControl ItemsSource="{Binding BehaviourSelection}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="drawers:BehaviourSelectionData">
+                                                <Button
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Height="28"
+                                                    Margin="0,1"
+                                                    Command="{Binding SelectCommand}">
+                                                    <TextBlock
+                                                        VerticalAlignment="Center"
+                                                        Text="{Binding BehaviourName}" />
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
                 </Button>
-
-                <ComboBox
-                    x:Name="BehaviourSelectionComboBox"
-                    IsVisible="False"
-                    LostFocus="BehaviourComboboxLostFocus"
-                    DropDownClosed="BehaviourComboboxClosed"
-                    ItemsSource="{Binding BehaviourSelection}"
-                    SelectionChanged="BehaviourComboboxSelectionChanged"
-                    HorizontalAlignment="Stretch">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate DataType="drawers:BehaviourSelectionData">
-                            <TextBlock Text="{Binding BehaviourName}"
-                                       Cursor="Hand" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
             </StackPanel>
 
         </StackPanel>
