@@ -23,6 +23,11 @@ public class SelectionService : ISelectionService
     public void Select(ISelectable selectable)
     {
         if (_activeSelection.Value == selectable) return;
+
+        if (_activeSelection.Value is IEntitySelectable && selectable is not IEntitySelectable)
+        {
+            _entityApi.ResetEntitySelection();
+        }
         
         _activeSelection.Value = selectable;
         selectable.Select();

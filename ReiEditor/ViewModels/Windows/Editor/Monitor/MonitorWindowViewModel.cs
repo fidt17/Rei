@@ -74,6 +74,8 @@ public class MonitorWindowViewModel : BaseViewModel
 
     private void UpdateDrawer(ISelectable? obj)
     {
+        _entityUpdateStateCTS?.Cancel();
+
         if (Drawer != null)
         {
             Drawer.Dispose();
@@ -87,6 +89,12 @@ public class MonitorWindowViewModel : BaseViewModel
             
             var entityMonitor = _entityMonitorFactory.CreateInstance(e);
             Drawer = entityMonitor;
+            return;
+        }
+
+        if (obj is IAssetSelectable assetSelection)
+        {
+            Drawer = new AssetMonitorDrawerViewModel(assetSelection);
         }
     }
 

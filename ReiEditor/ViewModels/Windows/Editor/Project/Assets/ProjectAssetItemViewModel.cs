@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Windows.Input;
 using Avalonia.Media;
 using ReactiveUI;
+using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils;
 using ReiEditor.Utils.Common;
@@ -11,7 +13,7 @@ using ReiEditor.ViewModels.Controls;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
-public class ProjectAssetItemViewModel : BaseViewModel
+public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
 {
     public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; }
@@ -29,9 +31,15 @@ public class ProjectAssetItemViewModel : BaseViewModel
     public ProjectAssetType AssetType { get; }
     public bool IsDirectory { get; }
     public IImage Icon { get; }
+    public string AssetId { get; }
+    public string AssetName => Name.Value;
+    public string AssetPath => FullPath;
+    public bool IsAssetSupportedInMonitor { get; }
 
     public ContextMenuViewModel ContextMenu { get; } = new();
     public ContextMenuViewModel CombinedContextMenu { get; } = new();
+
+    private readonly ISelectionService? _selectionService;
 
 #pragma warning disable CS8618
     public ProjectAssetItemViewModel() { }
@@ -41,34 +49,68 @@ public class ProjectAssetItemViewModel : BaseViewModel
         string name,
         string fullPath,
         ProjectAssetType assetType,
-        Action<ProjectAssetItemViewModel> deleteAction,
-        Action<ProjectAssetItemViewModel> duplicateAction,
-        Action<ProjectAssetItemViewModel, string> renameAction,
-        Action<ProjectAssetItemViewModel> moveAction,
-        Action<ProjectAssetItemViewModel> openAction,
+        string assetId,
+        ProjectAssetItemActions actions,
         ContextMenuViewModel activeFolderContextMenu,
-        IFileExplorerProvider fileExplorerProvider)
+        IFileExplorerProvider fileExplorerProvider,
+        ISelectionService selectionService)
     {
         Name = new ObservableField<string>(name);
         FullPath = fullPath;
         AssetType = assetType;
+        AssetId = assetId;
         IsDirectory = assetType == ProjectAssetType.Directory;
+        IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsInteractiveAsset(fullPath, IsDirectory);
         Icon = ProjectAssetIconProvider.GetAssetIcon(assetType);
+        _selectionService = selectionService;
         
         SelectCommand = ReactiveCommand.Create(Select);
         StartRenameCommand = new RelayCommand(StartRename);
-        ConfirmRenameCommand = new RelayCommand(() => ConfirmRename(renameAction));
-        DeleteCommand = ReactiveCommand.Create(() => deleteAction(this));
-        DuplicateCommand = ReactiveCommand.Create(() => duplicateAction(this));
-        MoveCommand = ReactiveCommand.Create(() => moveAction(this));
-        OpenCommand = ReactiveCommand.Create(() => openAction(this));
+        ConfirmRenameCommand = new RelayCommand(() => ConfirmRename(actions.RenameAction));
+        DeleteCommand = ReactiveCommand.Create(() => actions.DeleteAction(this));
+        DuplicateCommand = ReactiveCommand.Create(() => actions.DuplicateAction(this));
+        MoveCommand = ReactiveCommand.Create(() => actions.MoveAction(this));
+        OpenCommand = ReactiveCommand.Create(() => actions.OpenAction(this));
 
         SetupContextMenu(fileExplorerProvider);
         SetupCombinedContextMenu(activeFolderContextMenu);
+        
+        _selectionService.RegisterSelectable(this);
+        _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
+        HandleActiveSelectionChangedEvent(_selectionService.ActiveSelection.Value);
     }
 
-    public void Select() => Selected.Value = true;
-    public void Deselect() => Selected.Value = false;
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        if (_selectionService == null) return;
+
+        _selectionService.UnregisterSelectable(this);
+        _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
+    }
+
+    public void Select()
+    {
+        if (IsDirectory)
+        {
+            Selected.Value = true;
+            return;
+        }
+
+        _selectionService?.Select(this);
+    }
+
+    public void Deselect()
+    {
+        if (IsDirectory)
+        {
+            Selected.Value = false;
+            return;
+        }
+
+        _selectionService?.Deselect(this, sendToEngine: false);
+    }
 
     private void StartRename() => RenameValue.Value = PathNamingUtils.GetRenameValue(Name.Value, IsDirectory);
 
@@ -106,4 +148,11 @@ public class ProjectAssetItemViewModel : BaseViewModel
             CombinedContextMenu.AddOption(option);
         }
     }
+
+    private void HandleActiveSelectionChangedEvent(ISelectable? selection)
+    {
+        Selected.Value = selection == this;
+    }
 }
+
+

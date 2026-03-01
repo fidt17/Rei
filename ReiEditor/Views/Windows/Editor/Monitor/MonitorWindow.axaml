@@ -27,13 +27,15 @@
 
                 <ScrollViewer>
                     <!-- Drawers -->
-                    <ContentControl
-                        Content="{Binding Drawer}">
-                        <ContentControl.ContentTemplate>
+                    <ContentControl Content="{Binding Drawer}">
+                        <ContentControl.DataTemplates>
                             <DataTemplate x:DataType="drawers1:EntityMonitorDrawerViewModel">
                                 <drawers:EntityMonitorDrawer />
                             </DataTemplate>
-                        </ContentControl.ContentTemplate>
+                            <DataTemplate x:DataType="drawers1:AssetMonitorDrawerViewModel">
+                                <drawers:AssetMonitorDrawer />
+                            </DataTemplate>
+                        </ContentControl.DataTemplates>
                     </ContentControl>
                 </ScrollViewer>
 

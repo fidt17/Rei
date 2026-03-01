@@ -9,6 +9,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
@@ -44,6 +45,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private ProjectDirectoryNodeViewModel? _selectedDirectory;
     private readonly IResourceService? _resourceService;
     private readonly IStorageProvider? _storageProvider;
+    private readonly IAssetRegistry? _assetRegistry;
     private readonly IAssetOperationsService? _assetOperationsService;
     private readonly IFileExplorerProvider? _fileExplorerProvider;
     private readonly IAssetSearchService? _assetSearchService;
@@ -53,6 +55,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
     private readonly IMaterialCreationWindowService? _materialCreationWindowService;
     private readonly IShaderCreationWindowService? _shaderCreationWindowService;
+    private readonly ISelectionService? _selectionService;
     private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
@@ -66,6 +69,7 @@ public class ProjectWindowViewModel : BaseViewModel
     public ProjectWindowViewModel(
         IResourceService resourceService,
         IStorageProvider storageProvider,
+        IAssetRegistry assetRegistry,
         IAssetOperationsService assetOperationsService,
         IFileExplorerProvider fileExplorerProvider,
         IAssetSearchService assetSearchService,
@@ -74,10 +78,12 @@ public class ProjectWindowViewModel : BaseViewModel
         ISettingsWindowService settingsWindowService,
         IBehaviourCreationWindowService behaviourCreationWindowService,
         IMaterialCreationWindowService materialCreationWindowService,
-        IShaderCreationWindowService shaderCreationWindowService)
+        IShaderCreationWindowService shaderCreationWindowService,
+        ISelectionService selectionService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
+        _assetRegistry = assetRegistry;
         _assetOperationsService = assetOperationsService;
         _fileExplorerProvider = fileExplorerProvider;
         _assetSearchService = assetSearchService;
@@ -87,6 +93,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _behaviourCreationWindowService = behaviourCreationWindowService;
         _materialCreationWindowService = materialCreationWindowService;
         _shaderCreationWindowService = shaderCreationWindowService;
+        _selectionService = selectionService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
@@ -277,7 +284,15 @@ public class ProjectWindowViewModel : BaseViewModel
         foreach (var directory in Directory.EnumerateDirectories(directoryPath).OrderBy(IOPath.GetFileName))
         {
             var name = IOPath.GetFileName(directory);
-            var item = new ProjectAssetItemViewModel(name, directory, ProjectAssetType.Directory, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, ActiveFolderContextMenu, _fileExplorerProvider!);
+            var item = new ProjectAssetItemViewModel(
+                name,
+                directory,
+                ProjectAssetType.Directory,
+                "",
+                new ProjectAssetItemActions(DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset),
+                ActiveFolderContextMenu,
+                _fileExplorerProvider!,
+                _selectionService!);
             RegisterAsset(item);
             ActiveItems.Add(item);
         }
@@ -288,7 +303,18 @@ public class ProjectWindowViewModel : BaseViewModel
 
             var name = IOPath.GetFileName(file);
             var assetType = GetAssetType(file);
-            var item = new ProjectAssetItemViewModel(name, file, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, ActiveFolderContextMenu, _fileExplorerProvider!);
+            var assetId = _assetRegistry != null && _assetRegistry.TryGetByPath(file, out var assetInfo) && assetInfo != null
+                ? assetInfo.Meta.AssetId
+                : "";
+            var item = new ProjectAssetItemViewModel(
+                name,
+                file,
+                assetType,
+                assetId,
+                new ProjectAssetItemActions(DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset),
+                ActiveFolderContextMenu,
+                _fileExplorerProvider!,
+                _selectionService!);
             RegisterAsset(item);
             ActiveItems.Add(item);
         }
@@ -441,10 +467,7 @@ public class ProjectWindowViewModel : BaseViewModel
 
     public void ClearAssetSelection()
     {
-        foreach (var asset in _allAssets)
-        {
-            asset.Deselect();
-        }
+        _selectionService?.ResetSelection();
     }
 
     private void RefreshView(bool affectsTree)
@@ -492,7 +515,18 @@ public class ProjectWindowViewModel : BaseViewModel
         foreach (var result in results)
         {
             var assetType = result.IsDirectory ? ProjectAssetType.Directory : GetAssetType(result.FullPath);
-            var item = new ProjectAssetItemViewModel(result.Name, result.FullPath, assetType, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset, ActiveFolderContextMenu, _fileExplorerProvider!);
+            var assetId = !result.IsDirectory && _assetRegistry != null && _assetRegistry.TryGetByPath(result.FullPath, out var assetInfo) && assetInfo != null
+                ? assetInfo.Meta.AssetId
+                : "";
+            var item = new ProjectAssetItemViewModel(
+                result.Name,
+                result.FullPath,
+                assetType,
+                assetId,
+                new ProjectAssetItemActions(DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset),
+                ActiveFolderContextMenu,
+                _fileExplorerProvider!,
+                _selectionService!);
             RegisterAsset(item);
             ActiveItems.Add(item);
         }
@@ -589,4 +623,5 @@ public class ProjectWindowViewModel : BaseViewModel
             Dispatcher.UIThread.InvokeAsync(() => RefreshView(affectsTree: false));
         });
     }
+
 }
