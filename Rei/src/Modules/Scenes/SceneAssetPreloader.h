@@ -27,13 +27,6 @@ namespace rei::scenes
             return _assetManager->LoadInternal(ref, false);
         }
 
-        template <typename T>
-        bool FinalizeById(const std::string& id) const
-        {
-            auto ref = assets::AssetRef<T>(id);
-            return _assetManager->RunPostLoad(ref);
-        }
-
     private:
         std::shared_ptr<assets::AssetManager> _assetManager;
         
@@ -49,11 +42,5 @@ namespace rei::assets
     bool PreloadSceneDependency(const scenes::SceneAssetPreloader& preloader, const std::string& id)
     {
         return preloader.PreloadById<T>(id);
-    }
-
-    template <typename T>
-    bool FinalizeSceneDependency(const scenes::SceneAssetPreloader& preloader, const std::string& id)
-    {
-        return preloader.FinalizeById<T>(id);
     }
 }

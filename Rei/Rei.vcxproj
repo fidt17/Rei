@@ -598,6 +598,7 @@
     <ClInclude Include="src\Engine\Services.h" />
     <ClInclude Include="src\Modules\Assets\Core\AssetDependency.h" />
     <ClInclude Include="src\Modules\Assets\Core\AssetIds.h" />
+    <ClInclude Include="src\Modules\Assets\Core\AssetPostLoadHandler.h" />
     <ClInclude Include="src\Modules\Assets\Core\AssetRefUtils.h" />
     <ClInclude Include="src\Modules\Assets\Core\AssetTmpStorage.h" />
     <ClInclude Include="src\Modules\Assets\Registry\AssetDestroyQueue.h" />
@@ -751,6 +752,7 @@
     <ClCompile Include="src\Engine\Services.cpp" />
     <ClCompile Include="src\Modules\Assets\Core\AssetTmpStorage.cpp" />
     <ClCompile Include="src\Modules\Assets\Registry\AssetDestroyQueue.cpp" />
+    <ClCompile Include="src\Modules\Assets\Core\AssetPostLoadHandler.cpp" />
     <ClCompile Include="src\Modules\Assets\Core\AssetManager.cpp" />
     <ClCompile Include="src\Modules\Assets\Registry\AssetRegistry.cpp" />
     <ClCompile Include="src\Modules\Assets\Storage\AssetsMap.cpp" />

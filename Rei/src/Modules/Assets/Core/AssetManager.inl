@@ -35,7 +35,14 @@ namespace rei::assets
         i64 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
         LoadAndCreateRecord(ref, path, dest, 0, true);
-        RunPostLoad(ref);
+        if (AssetPostLoadHandler::IsSuppressedForCurrentThread())
+        {
+            QueueDeferredPostLoad<T>(ref.Id);
+        }
+        else
+        {
+            RunPostLoad(ref);
+        }
 
         return ref;
     }
@@ -70,6 +77,12 @@ namespace rei::assets
         {
             LOG_ERROR("Failed to load asset name={}, id={}, type={}", ref.GetName(), ref.Id, typeName)
             return false;
+        }
+
+        if (AssetPostLoadHandler::IsSuppressedForCurrentThread())
+        {
+            QueueDeferredPostLoad<T>(ref.Id);
+            return true;
         }
 
         const bool loaded = RunPostLoad(ref);
@@ -221,11 +234,6 @@ namespace rei::assets
 
         try
         {
-            if (ref.Id == "rei_simple_lit.rshader" || ref.Id == "rei_depth.rshader")
-            {
-                LOG("Check {}", ref.Id)
-            }
-            
             InvokePostLoadIfSupported(*ref.Get());
             return true;
         }
@@ -245,5 +253,17 @@ namespace rei::assets
         {
             asset.PostLoad();
         }
+    }
+
+    template <typename T>
+    void AssetManager::QueueDeferredPostLoad(const std::string& id)
+    {
+        LOG_DEBUG("Deferring post-load for asset id={}", id)
+        
+        _postLoadHandler.Queue(id, [this, id]()
+        {
+            auto ref = AssetRef<T>(id);
+            return RunPostLoad(ref);
+        });
     }
 }

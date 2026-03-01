@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Modules/Assets/Registry/AssetRegistry.h"
+#include "AssetPostLoadHandler.h"
 #include "AssetRef.h"
 #include "AssetTmpStorage.h"
 #include "Modules/Assets/Storage/AssetsMap.h"
@@ -61,11 +62,17 @@ namespace rei::assets
         AssetsMap _map;
         AssetRegistry _registry = {};
         AssetTmpStorage _tmpStorage = {};
-        std::atomic<bool> _isUnloadingAllAssets = false;
+        AssetPostLoadHandler _postLoadHandler = {};
 
         u32 _runtimeAssetCounter = 0;
         mutable std::mutex _assetsMutex;
-        
+        std::atomic<bool> _isUnloadingAllAssets = false;
+
+        template <typename T>
+        REI_API void QueueDeferredPostLoad(const std::string& id);
+
+        REI_API bool FlushDeferredPostLoads();
+
         template <typename T>
         REI_API bool LoadInternal(AssetRef<T>& ref, bool incrementRefCount);
 

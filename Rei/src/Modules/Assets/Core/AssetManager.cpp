@@ -8,6 +8,12 @@ namespace rei::assets
         _map.Initialize();
     }
 
+    bool AssetManager::FlushDeferredPostLoads()
+    {
+        LOG_DEBUG("Flushing deferred post loads");
+        return _postLoadHandler.Flush();
+    }
+
     void AssetManager::UnloadAllAssets()
     {
         struct UnloadGuard

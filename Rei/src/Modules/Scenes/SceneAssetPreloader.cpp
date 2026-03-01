@@ -18,8 +18,7 @@ namespace rei::scenes
         std::vector<std::future<void>> loadFutures;
         const u32 hardwareConcurrency = std::thread::hardware_concurrency();
         const std::size_t suggestedWorkerCount = std::max(1u, hardwareConcurrency);
-        //const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
-        const std::size_t workerCount = 1;
+        const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
         loadFutures.reserve(workerCount);
 
         LOG_DEBUG("Loading scene dependencies using {} workers", workerCount)
@@ -29,13 +28,12 @@ namespace rei::scenes
         {
             loadFutures.push_back(std::async(std::launch::async, [this, &uniqueDependencies, &nextDependencyIndex]
             {
+                const assets::AssetPostLoadHandler::ScopedPostLoadSuppression postLoadSuppression(true);
+
                 while (true)
                 {
                     const std::size_t index = nextDependencyIndex.fetch_add(1);
-                    if (index >= uniqueDependencies.size())
-                    {
-                        break;
-                    }
+                    if (index >= uniqueDependencies.size()) break;
 
                     uniqueDependencies[index].LoadData(*this);
                 }
@@ -47,9 +45,9 @@ namespace rei::scenes
             loadFuture.get();
         }
 
-        for (const auto& dependency : uniqueDependencies)
+        if (!_assetManager->FlushDeferredPostLoads())
         {
-            dependency.PostLoad(*this);
+            LOG_ERROR("Failed to run one or more deferred post-load actions while preloading scene dependencies")
         }
 
         LOG_DEBUG("Scene asset dependencies loaded: {} | ids=[{}]", uniqueDependencies.size(), JoinDependencyIds(uniqueDependencies))
