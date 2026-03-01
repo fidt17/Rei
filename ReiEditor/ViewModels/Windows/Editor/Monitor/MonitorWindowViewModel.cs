@@ -3,11 +3,12 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Common;
-using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor;
@@ -28,6 +29,9 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly IEditorRefreshService _editorRefreshService;
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
+    private readonly IAssetsService _assetsService;
+    private readonly IAssetSearchService _assetSearchService;
+    private readonly IAssetRegistry _assetRegistry;
 
     private readonly IEntityStateSynchronizer _entityStateSynchronizer;
 
@@ -41,11 +45,17 @@ public class MonitorWindowViewModel : BaseViewModel
         ISelectionService selectionService,
         IEditorRefreshService editorRefreshService,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
+        IAssetsService assetsService,
+        IAssetSearchService assetSearchService,
+        IAssetRegistry assetRegistry,
         IEntityStateSynchronizer entityStateSynchronizer)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
+        _assetsService = assetsService;
+        _assetSearchService = assetSearchService;
+        _assetRegistry = assetRegistry;
         _entityStateSynchronizer = entityStateSynchronizer;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
@@ -81,20 +91,18 @@ public class MonitorWindowViewModel : BaseViewModel
             Drawer.Dispose();
             Drawer = null;
         }
-        
-        if (obj is HierarchyNodeViewModel hNode)
-        {
-            var e = hNode.Node.Content;
-            RunEntityUpdateStateTask(e);
-            
-            var entityMonitor = _entityMonitorFactory.CreateInstance(e);
-            Drawer = entityMonitor;
-            return;
-        }
 
-        if (obj is IAssetSelectable assetSelection)
+        Drawer = MonitorDrawerUtils.CreateDrawer(
+            obj,
+            _entityMonitorFactory,
+            _assetsService,
+            _assetSearchService,
+            _assetRegistry,
+            out var entityToSync);
+
+        if (entityToSync != null)
         {
-            Drawer = new AssetMonitorDrawerViewModel(assetSelection);
+            RunEntityUpdateStateTask(entityToSync);
         }
     }
 

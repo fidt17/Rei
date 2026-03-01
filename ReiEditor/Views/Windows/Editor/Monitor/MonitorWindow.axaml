@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:monitor="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor"
-             xmlns:drawers="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers"
-             xmlns:drawers1="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
+             xmlns:drawers="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
+             xmlns:drawerViews="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers"
              d:DesignWidth="300" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.MonitorWindow"
              x:DataType="monitor:MonitorWindowViewModel">
@@ -29,11 +29,14 @@
                     <!-- Drawers -->
                     <ContentControl Content="{Binding Drawer}">
                         <ContentControl.DataTemplates>
-                            <DataTemplate x:DataType="drawers1:EntityMonitorDrawerViewModel">
-                                <drawers:EntityMonitorDrawer />
+                            <DataTemplate x:DataType="drawers:EntityMonitorDrawerViewModel">
+                                <drawerViews:EntityMonitorDrawer />
                             </DataTemplate>
-                            <DataTemplate x:DataType="drawers1:AssetMonitorDrawerViewModel">
-                                <drawers:AssetMonitorDrawer />
+                            <DataTemplate x:DataType="drawers:MaterialMonitorDrawerViewModel">
+                                <drawerViews:MaterialMonitorDrawer />
+                            </DataTemplate>
+                            <DataTemplate x:DataType="drawers:AssetMonitorDrawerViewModel">
+                                <drawerViews:AssetMonitorDrawer />
                             </DataTemplate>
                         </ContentControl.DataTemplates>
                     </ContentControl>
