@@ -7,6 +7,7 @@ using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -32,6 +33,7 @@ public class AssetImporter : IAssetImporter
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetsService _assetsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
+    private readonly IShaderRegistry _shaderRegistry;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourFileUtility _behaviourFileUtility;
     private readonly ISerializer _serializer;
@@ -43,6 +45,7 @@ public class AssetImporter : IAssetImporter
         IAssetCreator assetCreator,
         IMetaFilesService metaFilesService,
         IBehaviourRegistry behaviourRegistry, 
+        IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry, 
         IBehaviourComponentsService behaviourComponentsService, 
         IBehaviourFileUtility behaviourFileUtility,
@@ -55,6 +58,7 @@ public class AssetImporter : IAssetImporter
         _assetCreator = assetCreator;
         _metaFilesService = metaFilesService;
         _behaviourRegistry = behaviourRegistry;
+        _shaderRegistry = shaderRegistry;
         _assetRegistry = assetRegistry;
         _behaviourComponentsService = behaviourComponentsService;
         _behaviourFileUtility = behaviourFileUtility;
@@ -78,6 +82,7 @@ public class AssetImporter : IAssetImporter
             _assetRegistry.UpdateRegistry(assets);
             
             await _behaviourRegistry.RefreshBehaviours();
+            await _shaderRegistry.RefreshShaders();
             await ImportScenes();
         }
         catch (Exception e)
@@ -158,6 +163,12 @@ public class AssetImporter : IAssetImporter
             if (isAnyBehaviour)
             {
                 await _behaviourRegistry.RefreshBehaviours();
+            }
+
+            var isAnyShader = targetFiles.Any(x => Path.GetExtension(x).Equals(FileExtensions.RSHADER, StringComparison.OrdinalIgnoreCase));
+            if (isAnyShader)
+            {
+                await _shaderRegistry.RefreshShaders();
             }
         }
         catch (Exception e)
