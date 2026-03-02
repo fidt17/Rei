@@ -2,8 +2,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Assets.Search;
-using ReiEditor.Models.Services.FileSystem;
+using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Render;
 using ReiEditor.ViewModels.Controls.Assets;
 
@@ -48,7 +47,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     public MaterialMonitorDrawerViewModel(
         IAssetSelectable assetSelection,
         IAssetsService assetsService,
-        IAssetSearchService assetSearchService,
+        IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry)
     {
         AssetName = assetSelection.AssetName;
@@ -57,9 +56,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         _assetsService = assetsService;
 
         ShaderPicker = new AssetPickerViewModel(
-            assetSearchService,
             assetRegistry,
-            new[] { FileExtensions.RSHADER },
+            shaderRegistry.BuildEntries(),
             HandleShaderChanged);
         ShaderPicker.RefreshSearchResultsForAll();
 

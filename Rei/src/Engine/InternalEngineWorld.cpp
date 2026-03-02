@@ -45,6 +45,8 @@ namespace rei::internal::engine
         _world->AddSystem([&] { renderer->Render(); });
 
         _world->AddSystem([&] { mainThread->CompleteTasks(); });
+        
+        LOG_DEBUG("Configured internal world")
     }
 
     void InternalEngineWorld::Run() const

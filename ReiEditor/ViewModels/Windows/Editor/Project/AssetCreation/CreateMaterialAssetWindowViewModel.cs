@@ -1,9 +1,8 @@
 using System;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Creation.Material;
-using ReiEditor.Models.Services.Assets.Search;
-using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls.Assets;
@@ -53,7 +52,7 @@ public class CreateMaterialAssetWindowViewModel : BaseViewModel
         IMaterialCreationWindowService windowService,
         IMaterialCreationUtility materialCreationUtility,
         IAssetRegistry assetRegistry,
-        IAssetSearchService assetSearchService)
+        IShaderRegistry shaderRegistry)
     {
         _targetDirectory = targetDirectory;
         _onCreated = onCreated;
@@ -64,9 +63,8 @@ public class CreateMaterialAssetWindowViewModel : BaseViewModel
         CancelCommand = new RelayCommand(() => _windowService.CloseMaterialCreationWindow());
 
         ShaderPicker = new AssetPickerViewModel(
-            assetSearchService,
             assetRegistry,
-            new[] { FileExtensions.RSHADER },
+            shaderRegistry.BuildEntries(),
             SelectShaderAsset);
         ShaderPicker.RefreshSearchResultsForAll();
     }

@@ -62,13 +62,21 @@ public partial class ProjectAssetItemView : UserControl
     private void RootBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_vm == null) return;
+        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
+        
         _vm.SelectCommand.Execute(null);
         RootBorder.Focus();
 
-        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
-
         FlyoutBase.ShowAttachedFlyout(RootBorder);
         e.Handled = true;
+    }
+
+    private void RootBorder_OnTapped(object? sender, TappedEventArgs e)
+    {
+        if (_vm == null) return;
+
+        _vm.SelectCommand.Execute(null);
+        RootBorder.Focus();
     }
 
     private void RootBorder_OnKeyDown(object? sender, KeyEventArgs e)
@@ -142,12 +150,6 @@ public partial class ProjectAssetItemView : UserControl
                 if (_vm == null) return;
                 if (_vm.IsDirectory) return;
                 if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
-
-                if (!_vm.Selected.Value)
-                {
-                    await Task.Delay(100);
-                    _vm.SelectCommand.Execute(null);
-                }
 
                 await Task.Delay(100);
                 if (!pointerDown) return;

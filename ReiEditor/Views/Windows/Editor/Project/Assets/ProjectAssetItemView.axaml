@@ -17,6 +17,7 @@
             Cursor="Hand"
             Focusable="True"
             PointerPressed="RootBorder_OnPointerPressed"
+            Tapped="RootBorder_OnTapped"
             DoubleTapped="RootBorder_OnDoubleTapped"
             KeyDown="RootBorder_OnKeyDown">
         <FlyoutBase.AttachedFlyout>

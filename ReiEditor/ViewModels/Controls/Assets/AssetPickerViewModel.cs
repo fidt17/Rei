@@ -12,6 +12,20 @@ namespace ReiEditor.ViewModels.Controls.Assets;
 
 public sealed class AssetPickerViewModel : BaseViewModel
 {
+    public sealed class Entry
+    {
+        public string Name { get; }
+        public string FullPath { get; }
+        public string AssetId { get; }
+
+        public Entry(string name, string fullPath, string assetId)
+        {
+            Name = name;
+            FullPath = fullPath;
+            AssetId = assetId;
+        }
+    }
+
     public const string EmptyAssetName = "empty";
     public const string MissingAssetName = "missing asset";
     public event Action? AssetSelectedEvent;
@@ -19,7 +33,7 @@ public sealed class AssetPickerViewModel : BaseViewModel
     public SearchFieldViewModel SearchField { get; } = new();
     public ObservableCollection<AssetSearchItemViewModel> SearchResults { get; } = new();
 
-    public bool IsSelectionSupported => _allowedExtensions.Count > 0;
+    public bool IsSelectionSupported => _useEntriesMode ? _entries.Count > 0 : _allowedExtensions.Count > 0;
 
     #region AssetName
 
@@ -54,9 +68,13 @@ public sealed class AssetPickerViewModel : BaseViewModel
 
     #endregion
 
-    private readonly IAssetSearchService _assetSearchService;
+    private readonly IAssetSearchService? _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IReadOnlyList<string> _allowedExtensions;
+    private readonly bool _useEntriesMode;
+    private readonly List<Entry> _entries = new();
+    private readonly Dictionary<string, Entry> _entryById = new();
+    private readonly Dictionary<string, Entry> _entryByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly Action<string?, string?>? _onSelectedAssetChanged;
 
     public AssetPickerViewModel(
@@ -69,6 +87,26 @@ public sealed class AssetPickerViewModel : BaseViewModel
         _assetRegistry = assetRegistry;
         _allowedExtensions = allowedExtensions;
         _onSelectedAssetChanged = onSelectedAssetChanged;
+
+        SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
+    }
+
+    public AssetPickerViewModel(
+        IAssetRegistry assetRegistry,
+        IEnumerable<Entry> entries,
+        Action<string?, string?>? onSelectedAssetChanged)
+    {
+        _assetRegistry = assetRegistry;
+        _allowedExtensions = Array.Empty<string>();
+        _onSelectedAssetChanged = onSelectedAssetChanged;
+        _useEntriesMode = true;
+
+        foreach (var entry in entries)
+        {
+            _entries.Add(entry);
+            _entryById[entry.AssetId] = entry;
+            _entryByPath[entry.FullPath] = entry;
+        }
 
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
     }
@@ -89,6 +127,8 @@ public sealed class AssetPickerViewModel : BaseViewModel
         if (string.IsNullOrWhiteSpace(path)) return false;
         if (!IsSelectionSupported) return false;
 
+        if (_useEntriesMode) return _entryByPath.ContainsKey(path);
+
         var extension = Path.GetExtension(path);
         if (!_allowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) return false;
 
@@ -97,6 +137,13 @@ public sealed class AssetPickerViewModel : BaseViewModel
 
     public bool TryAssignAssetFromPath(string path)
     {
+        if (_useEntriesMode)
+        {
+            if (!_entryByPath.TryGetValue(path, out var entry)) return false;
+            CommitSelection(entry.AssetId, entry.FullPath);
+            return true;
+        }
+
         if (!CanAcceptAssetPath(path)) return false;
         if (!_assetRegistry.TryGetByPath(path, out var assetInfo) || assetInfo == null) return false;
 
@@ -108,6 +155,20 @@ public sealed class AssetPickerViewModel : BaseViewModel
     {
         SearchResults.Clear();
         if (!IsSelectionSupported) return;
+
+        if (_useEntriesMode)
+        {
+            foreach (var entry in _entries.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                SearchResults.Add(new AssetSearchItemViewModel(
+                    entry.Name,
+                    entry.FullPath,
+                    entry.AssetId,
+                    () => CommitSelection(entry.AssetId, entry.FullPath)));
+            }
+
+            return;
+        }
 
         foreach (var asset in _assetRegistry.GetAllAssetsByExtensions(_allowedExtensions))
         {
@@ -143,6 +204,22 @@ public sealed class AssetPickerViewModel : BaseViewModel
         SearchResults.Clear();
         if (!IsSelectionSupported) return;
 
+        if (_useEntriesMode)
+        {
+            foreach (var entry in _entries.Where(x => x.Name.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            {
+                SearchResults.Add(new AssetSearchItemViewModel(
+                    entry.Name,
+                    entry.FullPath,
+                    entry.AssetId,
+                    () => CommitSelection(entry.AssetId, entry.FullPath)));
+            }
+
+            return;
+        }
+
+        if (_assetSearchService == null) return;
+
         var results = _assetSearchService.SearchByExtensions(query, _allowedExtensions);
         foreach (var result in results)
         {
@@ -170,6 +247,20 @@ public sealed class AssetPickerViewModel : BaseViewModel
         if (string.IsNullOrWhiteSpace(assetId))
         {
             AssetName = EmptyAssetName;
+            IsMissingAsset = false;
+            return;
+        }
+
+        if (_useEntriesMode)
+        {
+            if (!_entryById.TryGetValue(assetId, out var entry))
+            {
+                AssetName = MissingAssetName;
+                IsMissingAsset = true;
+                return;
+            }
+
+            AssetName = entry.Name;
             IsMissingAsset = false;
             return;
         }

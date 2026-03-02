@@ -1,6 +1,6 @@
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
@@ -13,7 +13,7 @@ public static class MonitorDrawerUtils
         ISelectable? selection,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
         IAssetsService assetsService,
-        IAssetSearchService assetSearchService,
+        IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry,
         out GameEntity? entityToSync)
     {
@@ -35,6 +35,6 @@ public static class MonitorDrawerUtils
             return new AssetMonitorDrawerViewModel(assetSelection);
         }
 
-        return new MaterialMonitorDrawerViewModel(assetSelection, assetsService, assetSearchService, assetRegistry);
+        return new MaterialMonitorDrawerViewModel(assetSelection, assetsService, shaderRegistry, assetRegistry);
     }
 }

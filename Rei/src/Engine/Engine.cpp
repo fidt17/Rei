@@ -79,6 +79,7 @@ namespace rei::internal::engine
             _sceneManager->LoadScene(0);
             _app->OnStart();
 
+            LOG_DEBUG("Invoking start event")
             StartEvent();
         }
         catch (const std::exception& exc)
@@ -92,6 +93,8 @@ namespace rei::internal::engine
 
     void Engine::RunUpdateLoop()
     {
+        LOG_DEBUG("Engine update loop started")
+        
         try
         {
             while (_runEngine)
