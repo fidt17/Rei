@@ -73,6 +73,8 @@ namespace rei::render
 
     void Renderer::PrepareMaterials() const
     {
+        LOG_DEBUG("Preparing engine materials")
+        
         const auto errorShader = GetAssetManager().GetById<Shader>(REI_SHADER_ERROR_ASSET_ID);
         auto errorMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_ERROR_MATERIAL_ID,errorShader);
 

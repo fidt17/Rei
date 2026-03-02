@@ -10,6 +10,7 @@ namespace ReiEditor.Models.EditorApp.MainWindow;
 public class MainWindowService : IMainWindowService
 {
     public event Action? ActivatedEvent;
+    public event Action? DeactivatedEvent;
 	
     private Window? _mainWindow;
 	
@@ -30,6 +31,7 @@ public class MainWindowService : IMainWindowService
         {
             _mainWindow.Closed -= HandleWindowClosedEvent;
             _mainWindow.Activated -= HandleWindowActivatedEvent;
+            _mainWindow.Deactivated -= HandleWindowDeactivatedEvent;
             _mainWindow.Close();
         }
 		
@@ -43,6 +45,7 @@ public class MainWindowService : IMainWindowService
         _mainWindow.Show();
         _mainWindow.Closed += HandleWindowClosedEvent;
         _mainWindow.Activated += HandleWindowActivatedEvent;
+        _mainWindow.Deactivated += HandleWindowDeactivatedEvent;
     }
 
     public void ShowDialog(Window window)
@@ -58,4 +61,5 @@ public class MainWindowService : IMainWindowService
 
     private void HandleWindowClosedEvent(object? sender, EventArgs e) => _shutdownService.Shutdown(1);
     private void HandleWindowActivatedEvent(object? sender, EventArgs args) => ActivatedEvent?.Invoke();
+    private void HandleWindowDeactivatedEvent(object? sender, EventArgs args) => DeactivatedEvent?.Invoke();
 }

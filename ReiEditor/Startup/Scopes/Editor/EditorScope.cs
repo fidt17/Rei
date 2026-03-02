@@ -50,6 +50,8 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterNonLazy<ProjectFilesWatcherService>();
         b.RegisterSingleton<AssetImportEditorRefreshService>();
         b.RegisterNonLazy<AssetImportEditorRefreshService>();
+        b.RegisterSingleton<WindowActivatedAssetRefreshService>();
+        b.RegisterBuildCallback(scope => scope.Resolve<WindowActivatedAssetRefreshService>());
 		
         b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<AssetRegistry>().As<IAssetRegistry>();

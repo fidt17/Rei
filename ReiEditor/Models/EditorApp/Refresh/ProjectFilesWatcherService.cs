@@ -1,33 +1,28 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using ReiEditor.Models.EditorApp.MainWindow;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Resources.Client;
-using ReiEditor.Models.Services.Assets.Import;
 
 namespace ReiEditor.Models.EditorApp.Refresh;
 
 public sealed class ProjectFilesWatcherService : IDisposable
 {
-    private readonly IResourceService _resourceService;
-    private readonly IAssetImporter _assetImporter;
-    private readonly IEditorRefreshService _editorRefreshService;
-
     private FileSystemWatcher? _watcher;
-    private Timer? _refreshTimer;
     private readonly object _watcherLock = new();
-    private readonly HashSet<string> _pendingImportPaths = new(StringComparer.OrdinalIgnoreCase);
+    private bool _isMainWindowActive = true;
+    private bool _hasPendingChangesWhileInactive;
+    
+    private readonly IResourceService _resourceService;
+    private readonly IMainWindowService _mainWindowService;
 
-    public ProjectFilesWatcherService(
-        IResourceService resourceService,
-        IAssetImporter assetImporter,
-        IEditorRefreshService editorRefreshService)
+    public ProjectFilesWatcherService(IResourceService resourceService, IMainWindowService mainWindowService)
     {
         _resourceService = resourceService;
-        _assetImporter = assetImporter;
-        _editorRefreshService = editorRefreshService;
+        _mainWindowService = mainWindowService;
+        
+        _mainWindowService.ActivatedEvent += HandleMainWindowActivated;
+        _mainWindowService.DeactivatedEvent += HandleMainWindowDeactivated;
 
         StartWatcher();
     }
@@ -35,6 +30,36 @@ public sealed class ProjectFilesWatcherService : IDisposable
     public void Dispose()
     {
         StopWatcher();
+        
+        _mainWindowService.ActivatedEvent -= HandleMainWindowActivated;
+        _mainWindowService.DeactivatedEvent -= HandleMainWindowDeactivated;
+    }
+
+    private void HandleMainWindowActivated()
+    {
+        lock (_watcherLock)
+        {
+            _isMainWindowActive = true;
+        }
+    }
+
+    private void HandleMainWindowDeactivated()
+    {
+        lock (_watcherLock)
+        {
+            _isMainWindowActive = false;
+        }
+    }
+
+    public bool ConsumePendingChangesWhileInactive()
+    {
+        lock (_watcherLock)
+        {
+            if (!_hasPendingChangesWhileInactive) return false;
+
+            _hasPendingChangesWhileInactive = false;
+            return true;
+        }
     }
 
     private void StartWatcher()
@@ -44,18 +69,17 @@ public sealed class ProjectFilesWatcherService : IDisposable
         if (!Directory.Exists(rootPath)) return;
         if (_watcher != null) return;
 
-        _refreshTimer = new Timer(_ => ProcessWatcherRefresh(), null, Timeout.Infinite, Timeout.Infinite);
-
         _watcher = new FileSystemWatcher(rootPath)
         {
             IncludeSubdirectories = true,
             EnableRaisingEvents = true,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite
         };
 
         _watcher.Created += HandleWatcherEvent;
         _watcher.Deleted += HandleWatcherEvent;
         _watcher.Renamed += HandleWatcherEvent;
+        _watcher.Changed += HandleWatcherEvent;
     }
 
     private void StopWatcher()
@@ -65,44 +89,21 @@ public sealed class ProjectFilesWatcherService : IDisposable
             _watcher.Created -= HandleWatcherEvent;
             _watcher.Deleted -= HandleWatcherEvent;
             _watcher.Renamed -= HandleWatcherEvent;
+            _watcher.Changed -= HandleWatcherEvent;
             _watcher.Dispose();
             _watcher = null;
         }
-
-        _refreshTimer?.Dispose();
-        _refreshTimer = null;
     }
 
     private void HandleWatcherEvent(object? sender, FileSystemEventArgs e)
     {
-        QueueImportPath(e.FullPath);
-        _refreshTimer?.Change(200, Timeout.Infinite);
-    }
-
-    private void QueueImportPath(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return;
+        if (string.IsNullOrWhiteSpace(e.FullPath)) return;
+        if (Path.GetExtension(e.FullPath).Equals(FileExtensions.SCENE, StringComparison.OrdinalIgnoreCase)) return;
 
         lock (_watcherLock)
         {
-            _pendingImportPaths.Add(path);
+            if (_isMainWindowActive) return;
+            _hasPendingChangesWhileInactive = true;
         }
-    }
-
-    private void ProcessWatcherRefresh()
-    {
-        List<string> paths;
-        lock (_watcherLock)
-        {
-            if (_pendingImportPaths.Count == 0) return;
-            paths = _pendingImportPaths.ToList();
-            _pendingImportPaths.Clear();
-        }
-
-        _ = Task.Run(async () =>
-        {
-            await _assetImporter.ReimportPaths(paths);
-            _editorRefreshService.NotifyRefreshed();
-        });
     }
 }

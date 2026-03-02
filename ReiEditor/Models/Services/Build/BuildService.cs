@@ -133,6 +133,6 @@ public class BuildService : IBuildService, IAsyncDisposable
         
         buildProcedure.Complete();
         
-        return false;
+        return true;
     }
 }

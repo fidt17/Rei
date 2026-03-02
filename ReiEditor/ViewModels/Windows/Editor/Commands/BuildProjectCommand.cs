@@ -11,15 +11,13 @@ public class BuildProjectCommand : ICommand, IDisposable
 {
     private readonly IBuildStarter _buildStarter;
     private readonly IEditorModeStarter _editorModeStarter;
-    private readonly SaveProjectCommand _saveProjectCommand;
     
     public event EventHandler? CanExecuteChanged;
 
-    public BuildProjectCommand(IBuildStarter buildStarter, IEditorModeStarter editorModeStarter, SaveProjectCommand saveProjectCommand)
+    public BuildProjectCommand(IBuildStarter buildStarter, IEditorModeStarter editorModeStarter)
     {
         _buildStarter = buildStarter;
         _editorModeStarter = editorModeStarter;
-        _saveProjectCommand = saveProjectCommand;
         _buildStarter.CanStartBuild.IsTrue.Subscribe(HandleCanStartBuildChangedEvent);
     }
 
@@ -34,9 +32,10 @@ public class BuildProjectCommand : ICommand, IDisposable
     {
         Task.Run(async () =>
         {
-            await _saveProjectCommand.SaveProject();
-            await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
-            _editorModeStarter.Start();
+            if (await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug))
+            {
+                _editorModeStarter.Start();
+            }
         });
     }
 	

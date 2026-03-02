@@ -22,6 +22,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
     public Utils.Common.IObservable<bool> IsActive => _isActive;
     public Utils.Common.IObservable<bool> IsPlaymodeActive => _isPlaymodeActive;
     public Utils.Common.IObservable<bool> IsEditorActive => _isEditormodeActive;
+    public Utils.Common.IObservable<bool> IsEngineStarting => _isEngineStarting;
 
     public EngineRunMode ActiveMode { get; private set; }
 
@@ -31,6 +32,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
     private readonly Observable<bool> _isActive = new(false);
     private readonly Observable<bool> _isPlaymodeActive = new(false);
     private readonly Observable<bool> _isEditormodeActive = new(false);
+    private readonly Observable<bool> _isEngineStarting = new(false);
     
     private readonly IEngineApi _engineApi;
     private readonly ILogger<EngineRunner> _logger;
@@ -82,10 +84,16 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         }
 
         BeginStartProcedure();
+        _isEngineStarting.Value = true;
         
         Task.Run(() =>
         {
-            if (!LoadClientDll()) return;
+            if (!LoadClientDll())
+            {
+                _isEngineStarting.Value = false;
+                EndStartProcedure();
+                return;
+            }
             
             try
             {
@@ -104,6 +112,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 _logger.LogError("Engine failure...");
                 _logger.LogException(e);
+                _isEngineStarting.Value = false;
                 EndStartProcedure();
                 _ = StopEngine();
             }
@@ -143,6 +152,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _isActive.Value = false;
         _isPlaymodeActive.Value = false;
         _isEditormodeActive.Value = false;
+        _isEngineStarting.Value = false;
     }
 
     private bool LoadClientDll()
@@ -175,6 +185,8 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
                 _isActive.Value = true;
                 _isPlaymodeActive.Value = ActiveMode == EngineRunMode.PlayMode;
                 _isEditormodeActive.Value = ActiveMode == EngineRunMode.EditorMode;
+                _isEngineStarting.Value = false;
+                
                 EngineStartedEvent?.Invoke();
             }
             catch (Exception e)

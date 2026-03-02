@@ -8,6 +8,8 @@ namespace rei::assets
     AssetRef<T> AssetManager::GetById(const std::string& id)
     {
         auto asset = AssetRef<T>(id);
+        asset.Record = _registry.FindRecord<T>(id);
+        
         Load(asset);
 
         return asset;
@@ -50,11 +52,22 @@ namespace rei::assets
     template <typename T, typename... Args>
     AssetRef<T> AssetManager::CreateAssetWithId(std::string id, Args&&... args)
     {
+        LOG_DEBUG("Creating asset id={}", id)
+        
         AssetRef<T> asset(id);
         const auto loadedAsset = new T(std::forward<Args>(args)...);
         constexpr i32 runtimeAssetSize = 0;
         _registry.CreateAssetRecord<T>(asset, id, loadedAsset, runtimeAssetSize, AssetState::Loaded);
         _registry.SetRefCount(asset.Id, 1);
+        
+        if (AssetPostLoadHandler::IsSuppressedForCurrentThread())
+        {
+            QueueDeferredPostLoad<T>(asset.Id);
+        }
+        else
+        {
+            RunPostLoad(asset);
+        }
 
         return asset;
     }
