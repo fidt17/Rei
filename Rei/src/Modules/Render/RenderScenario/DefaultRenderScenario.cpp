@@ -4,6 +4,7 @@
 #include "FrameBuffer.h"
 #include "Engine/Engine.h"
 #include "glad/glad.h"
+#include <limits>
 #include "Modules/Components/ActiveTag.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Input/Input.h"
@@ -93,7 +94,7 @@ void rei::render::DefaultRenderScenario::RenderInWireframeMode() const
     SetBackgroundColor(_camera.Get().GetBackgroundColor());
     ClearBuffer();
 
-    RenderMeshRenderers(SORTING_ORDER_DEFAULT, SORTING_ORDER_POST_PROCESSING - 1);
+    RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
     RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
 }
 
@@ -113,7 +114,7 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
         _gridRenderModule->DrawGrids();
     }
 
-    RenderMeshRenderers(SORTING_ORDER_DEFAULT, SORTING_ORDER_POST_PROCESSING - 1);
+    RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
     _lighting->Render();
 
     _gizmos->Render();

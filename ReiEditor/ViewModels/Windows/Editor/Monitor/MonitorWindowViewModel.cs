@@ -6,6 +6,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Shaders;
+using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Utils.Factory;
@@ -35,6 +36,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IShaderRegistry _shaderRegistry;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
+    private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
 
     private readonly IEntityStateSynchronizer _entityStateSynchronizer;
 
@@ -53,6 +55,7 @@ public class MonitorWindowViewModel : BaseViewModel
         IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
+        IAssetRuntimeSyncService assetRuntimeSyncService,
         IEntityStateSynchronizer entityStateSynchronizer)
     {
         _selectionService = selectionService;
@@ -63,6 +66,7 @@ public class MonitorWindowViewModel : BaseViewModel
         _shaderRegistry = shaderRegistry;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
+        _assetRuntimeSyncService = assetRuntimeSyncService;
         _entityStateSynchronizer = entityStateSynchronizer;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
@@ -107,6 +111,7 @@ public class MonitorWindowViewModel : BaseViewModel
             _shaderRegistry,
             _assetRegistry,
             _assetTypeMapper,
+            _assetRuntimeSyncService,
             out var entityToSync);
 
         if (entityToSync != null)

@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Newtonsoft.Json;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Shaders;
+using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Render;
 using ReiEditor.ViewModels.Common;
@@ -80,6 +83,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         {
             if (!SetField(ref _useDepth, value)) return;
             _material?.SetUseDepth(value);
+            SyncRuntimeMaterial();
         }
     }
 
@@ -95,6 +99,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         {
             if (!SetField(ref _sortingOrder, value)) return;
             _material?.SetSortingOrder(value);
+            SyncRuntimeMaterial();
         }
     }
 
@@ -106,8 +111,12 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
+    private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
     private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
+    private CancellationTokenSource? _runtimeSyncDebounceCTS;
+    private bool _suppressRuntimeSync;
+    private const int RuntimeSyncDebounceDelayMs = 40;
 
 #pragma warning disable CS8618
     public MaterialMonitorDrawerViewModel() { }
@@ -119,7 +128,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         IAssetSearchService assetSearchService,
         IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper)
+        IAssetTypeMapper assetTypeMapper,
+        IAssetRuntimeSyncService assetRuntimeSyncService)
     {
         AssetName = assetSelection.AssetName;
         AssetId = assetSelection.AssetId;
@@ -129,6 +139,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         _shaderRegistry = shaderRegistry;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
+        _assetRuntimeSyncService = assetRuntimeSyncService;
 
         ShaderPicker = new AssetPickerViewModel(
             assetRegistry,
@@ -143,6 +154,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     {
         base.Dispose();
         PersistUniformValuesFromEditors();
+        CancelRuntimeSyncDebounce();
+        SyncRuntimeMaterialImmediate();
         UnsubscribeFromUniformPropertyChanges();
         ShaderProperties.ClearAndDispose();
         ShaderPicker.Dispose();
@@ -175,12 +188,14 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                _suppressRuntimeSync = true;
                 ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
                 UseDepth = _material.UseDepth;
                 SortingOrder = _material.SortingOrder;
                 RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
                 StatusText = "";
                 IsMaterialLoaded = true;
+                _suppressRuntimeSync = false;
             });
         }
         catch (Exception e)
@@ -204,6 +219,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         var existingValues = new Dictionary<string, object?>(_material.Properties);
         _material.SetShaderAssetId(targetShaderAssetId);
         RebuildShaderProperties(targetShaderAssetId, existingValues);
+        SyncRuntimeMaterial();
     }
 
     private void RebuildShaderProperties(string shaderAssetId, IReadOnlyDictionary<string, object?> existingValues)
@@ -310,6 +326,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     {
         if (_material == null) return;
         _material.Properties[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
+        SyncRuntimeMaterial();
     }
 
     private void PersistUniformValuesFromEditors()
@@ -320,5 +337,51 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         {
             ApplyUniformPropertyValue(uniform, rootProperty);
         }
+    }
+
+    private void SyncRuntimeMaterial()
+    {
+        if (_suppressRuntimeSync) return;
+        if (_material == null) return;
+        if (string.IsNullOrWhiteSpace(AssetId)) return;
+
+        CancelRuntimeSyncDebounce();
+        _runtimeSyncDebounceCTS = new CancellationTokenSource();
+        var token = _runtimeSyncDebounceCTS.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(RuntimeSyncDebounceDelayMs, token);
+                if (token.IsCancellationRequested) return;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (token.IsCancellationRequested) return;
+                    SyncRuntimeMaterialImmediate();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }, token);
+    }
+
+    private void SyncRuntimeMaterialImmediate()
+    {
+        if (_suppressRuntimeSync) return;
+        if (_material == null) return;
+        if (string.IsNullOrWhiteSpace(AssetId)) return;
+
+        var jsonData = JsonConvert.SerializeObject(_material);
+        _assetRuntimeSyncService.TrySetAssetData(AssetId, jsonData);
+    }
+
+    private void CancelRuntimeSyncDebounce()
+    {
+        _runtimeSyncDebounceCTS?.Cancel();
+        _runtimeSyncDebounceCTS?.Dispose();
+        _runtimeSyncDebounceCTS = null;
     }
 }

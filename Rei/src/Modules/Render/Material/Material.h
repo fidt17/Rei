@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+#include <unordered_map>
+
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
 
@@ -29,10 +31,17 @@ namespace rei::render
 
     private:
         void BindTextures() const;
+        void ApplyShaderProperties() const;
+        void LoadSerializableFields(const nlohmann::json& data);
+
+        static bool TryReadNumber(const nlohmann::json& value, float& outFloatValue, i32& outIntValue, bool& isInteger);
+        static bool TryReadColor(const nlohmann::json& value, Color& outColor);
+        static bool TryReadTextureAssetId(const nlohmann::json& value, std::string& outTextureAssetId);
 
     private:
         assets::AssetRef<Shader> _shader;
         std::vector<assets::AssetRef<Texture>> _textures = {};
+        std::unordered_map<std::string, nlohmann::json> _properties = {};
 
         bool _useDepth = true;
         i32 _sortingOrder = SORTING_ORDER_DEFAULT;

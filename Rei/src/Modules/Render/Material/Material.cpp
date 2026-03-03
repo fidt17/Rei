@@ -39,13 +39,14 @@ namespace rei::render
                 LOG_ERROR("Failed to load shader '{}' for material. Falling back to {}", shaderAssetId, REI_SHADER_ERROR_ASSET_ID)
                 assignFallbackShader();
             }
+
+            LoadSerializableFields(data);
         }
         catch (const std::exception& e)
         {
             LOG_ERROR("Failed to parse material asset. Falling back to {}. Error: {}", REI_SHADER_ERROR_ASSET_ID, e.what())
             assignFallbackShader();
         }
-        
     }
 
     Material::Material(const assets::AssetRef<Shader>& shader)
@@ -55,38 +56,23 @@ namespace rei::render
 
     nlohmann::json Material::REI_GET() const
     {
+        auto properties = nlohmann::json::object();
+        for (const auto& [key, value] : _properties)
+        {
+            properties[key] = value;
+        }
+
         nlohmann::json data;
         data["ShaderAssetId"] = _shader.Id;
         data["UseDepth"] = _useDepth;
         data["SortingOrder"] = _sortingOrder;
-        data["Properties"] = nlohmann::json::object();
+        data["Properties"] = properties;
         return data;
     }
 
     void Material::REI_SET(const nlohmann::json& data)
     {
-        if (data.contains("ShaderAssetId") && data.at("ShaderAssetId").is_string())
-        {
-            const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
-            if (!shaderAssetId.empty())
-            {
-                const auto shader = GetAssetManager().GetById<Shader>(shaderAssetId);
-                if (shader.IsLoaded())
-                {
-                    _shader = shader;
-                }
-            }
-        }
-
-        if (data.contains("UseDepth") && data.at("UseDepth").is_boolean())
-        {
-            _useDepth = data.at("UseDepth").get<bool>();
-        }
-
-        if (data.contains("SortingOrder") && data.at("SortingOrder").is_number_integer())
-        {
-            _sortingOrder = data.at("SortingOrder").get<i32>();
-        }
+        LoadSerializableFields(data);
     }
 
     void Material::Use() const
@@ -99,6 +85,7 @@ namespace rei::render
 
         _shader->Use();
         BindTextures();
+        ApplyShaderProperties();
 
         if (UseDepth())
         {
@@ -141,6 +128,7 @@ namespace rei::render
         material->_useDepth = source._useDepth;
         material->_sortingOrder = source._sortingOrder;
         material->_textures = source._textures;
+        material->_properties = source._properties;
 
         return material;
     }
@@ -190,7 +178,149 @@ namespace rei::render
             texturePtr->Use(i);
         }
     }
+
+    void Material::ApplyShaderProperties() const
+    {
+        if (!_shader.IsLoaded()) return;
+
+        std::vector<std::pair<std::string, nlohmann::json>> orderedProperties;
+        orderedProperties.reserve(_properties.size());
+        for (const auto& [uniformName, rawValue] : _properties)
+        {
+            orderedProperties.emplace_back(uniformName, rawValue);
+        }
+
+        std::sort(orderedProperties.begin(), orderedProperties.end(), [](const auto& lhs, const auto& rhs)
+        {
+            return lhs.first < rhs.first;
+        });
+
+        auto textureSlot = static_cast<i32>(_textures.size());
+        for (const auto& [uniformName, rawValue] : orderedProperties)
+        {
+            if (uniformName.empty()) continue;
+
+            float floatValue = 0.0f;
+            i32 intValue = 0;
+            bool isInteger = false;
+            if (TryReadNumber(rawValue, floatValue, intValue, isInteger))
+            {
+                if (isInteger)
+                {
+                    _shader->SetInt(uniformName, intValue);
+                }
+                else
+                {
+                    _shader->SetFloat(uniformName, floatValue);
+                }
+                continue;
+            }
+
+            Color colorValue = Color::White();
+            if (TryReadColor(rawValue, colorValue))
+            {
+                _shader->SetColor(uniformName, colorValue);
+                continue;
+            }
+
+            std::string textureAssetId;
+            if (TryReadTextureAssetId(rawValue, textureAssetId))
+            {
+                const auto texture = GetAssetManager().GetById<Texture>(textureAssetId);
+                if (!texture.IsLoaded())
+                {
+                    LOG_ERROR("Texture {} is not loaded", textureAssetId)
+                    continue;
+                }
+
+                _shader->SetInt(uniformName, textureSlot);
+                texture->Use(textureSlot);
+                textureSlot++;
+            }
+        }
+    }
+
+    void Material::LoadSerializableFields(const nlohmann::json& data)
+    {
+        if (data.contains("ShaderAssetId") && data.at("ShaderAssetId").is_string())
+        {
+            const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
+            if (!shaderAssetId.empty())
+            {
+                const auto shader = GetAssetManager().GetById<Shader>(shaderAssetId);
+                if (shader.IsLoaded())
+                {
+                    _shader = shader;
+                }
+            }
+        }
+
+        if (data.contains("UseDepth") && data.at("UseDepth").is_boolean())
+        {
+            _useDepth = data.at("UseDepth").get<bool>();
+        }
+
+        if (data.contains("SortingOrder") && data.at("SortingOrder").is_number_integer())
+        {
+            _sortingOrder = data.at("SortingOrder").get<i32>();
+        }
+
+        if (!data.contains("Properties") || !data.at("Properties").is_object()) return;
+
+        _properties.clear();
+        for (const auto& [uniformName, value] : data.at("Properties").items())
+        {
+            if (uniformName.empty()) continue;
+            _properties[uniformName] = value;
+        }
+    }
+
+    bool Material::TryReadNumber(const nlohmann::json& value, float& outFloatValue, i32& outIntValue, bool& isInteger)
+    {
+        isInteger = false;
+
+        if (value.is_number_integer())
+        {
+            outIntValue = value.get<i32>();
+            isInteger = true;
+            return true;
+        }
+
+        if (value.is_number_unsigned())
+        {
+            outIntValue = static_cast<i32>(value.get<u32>());
+            isInteger = true;
+            return true;
+        }
+
+        if (!value.is_number_float()) return false;
+
+        outFloatValue = value.get<float>();
+        return true;
+    }
+
+    bool Material::TryReadColor(const nlohmann::json& value, Color& outColor)
+    {
+        if (!value.is_object()) return false;
+        if (!value.contains("r") || !value.contains("g") || !value.contains("b")) return false;
+
+        if (!value.at("r").is_number() || !value.at("g").is_number() || !value.at("b").is_number()) return false;
+        if (value.contains("a") && !value.at("a").is_number()) return false;
+
+        outColor.r = value.at("r").get<float>();
+        outColor.g = value.at("g").get<float>();
+        outColor.b = value.at("b").get<float>();
+        outColor.a = value.contains("a") ? value.at("a").get<float>() : 1.0f;
+
+        return true;
+    }
+
+    bool Material::TryReadTextureAssetId(const nlohmann::json& value, std::string& outTextureAssetId)
+    {
+        if (!value.is_object()) return false;
+        if (!value.contains("Id") || !value.at("Id").is_string()) return false;
+
+        outTextureAssetId = value.at("Id").get<std::string>();
+        return !outTextureAssetId.empty();
+    }
 }
-
-
-
