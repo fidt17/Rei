@@ -830,6 +830,7 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\materials\simple_lit.mat" />
     <Content Include="resources\meshes\cube.obj" />
     <Content Include="resources\shaders\editor\editor_grid.rshader" />
     <Content Include="resources\shaders\includes\include_ambient_light.rshader_include" />

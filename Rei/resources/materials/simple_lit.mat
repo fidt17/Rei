@@ -1,0 +1,14 @@
+{
+  "ShaderAssetId": "rei_simple_lit.rshader",
+  "UseDepth": true,
+  "SortingOrder": 1000,
+  "Properties": {
+    "_Shininess": 1.0,
+    "_Color": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    }
+  }
+}

@@ -9,7 +9,7 @@ namespace rei::render
         BEHAVIOUR_BODY(MeshRenderer)
     private:
         SERIALIZE assets::AssetRef<Model> _model;
-        SERIALIZE assets::AssetRef<Material> _material;
+        SERIALIZE assets::AssetRef<Material> _material = assets::AssetRef<Material>("rei_simple_lit.mat");
 
     public:
         REI_API void AfterREI_SET() override;

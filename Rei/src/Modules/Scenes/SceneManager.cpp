@@ -27,7 +27,6 @@ namespace rei::scenes
         _assetManager->Load(_activeScene);
 
         const auto sceneAssetDependencies = CollectSceneAssetDependencies();
-        REI_THROW_IF(!_sceneAssetPreloader.Preload(sceneAssetDependencies), "Failed to preload one or more scene asset dependencies")
 
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {

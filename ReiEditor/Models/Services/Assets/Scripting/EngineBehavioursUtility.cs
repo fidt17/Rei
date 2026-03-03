@@ -14,4 +14,11 @@ public static class EngineBehavioursUtility
     
     public const string AMBIENT_LIGHT = "AmbientLight";
     public const string POINT_LIGHT = "PointLight";
+
+    public const string MESH_RENDERER = "MeshRenderer";
+    public const string MESH_RENDERER_MATERIAL = "_material";
+    
+    public const string ASSET_REF_ID = "Id";
+
+    public const string DEFAULT_ENGINE_SIMPLE_LIT_MATERIAL_ASSET_ID = "rei_simple_lit.mat";
 }

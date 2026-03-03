@@ -263,6 +263,25 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             scaleValue["x"].Value = 1;
             scaleValue["y"].Value = 1;
             scaleValue["z"].Value = 1;
+            return;
         }
+
+        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursUtility.MESH_RENDERER))
+        {
+            TrySetAssetRefId(
+                component,
+                EngineBehavioursUtility.MESH_RENDERER_MATERIAL,
+                EngineBehavioursUtility.DEFAULT_ENGINE_SIMPLE_LIT_MATERIAL_ASSET_ID);
+        }
+    }
+
+    private static void TrySetAssetRefId(BehaviourComponent component, string propertyName, string assetId)
+    {
+        if (!component.HasProperty(propertyName)) return;
+        var property = component.GetProperty(propertyName);
+        if (property.Value is not Dictionary<string, SerializedProperty> nestedProperties) return;
+        if (!nestedProperties.TryGetValue(EngineBehavioursUtility.ASSET_REF_ID, out var idProperty)) return;
+
+        idProperty.Value = assetId;
     }
 }

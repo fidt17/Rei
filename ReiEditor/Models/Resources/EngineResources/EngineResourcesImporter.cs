@@ -43,6 +43,7 @@ public class EngineResourcesImporter : IEngineResourcesImporter
         var fromPaths = new List<string>
         {
             "/shaders",
+            "/materials",
             "/textures",
             "/meshes"
         };
