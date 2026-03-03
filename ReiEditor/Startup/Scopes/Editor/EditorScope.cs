@@ -19,6 +19,7 @@ using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Startup.Common;
@@ -61,6 +62,7 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
         b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();
         b.RegisterSingleton<AssetSearchService>().As<IAssetSearchService>();
+        b.RegisterSingleton<AssetRuntimeSyncService>().As<IAssetRuntimeSyncService>();
         b.RegisterSingleton<ShaderUniformParser>().As<IShaderUniformParser>();
         b.RegisterSingleton<ShaderRegistry>().As<IShaderRegistry>();
         

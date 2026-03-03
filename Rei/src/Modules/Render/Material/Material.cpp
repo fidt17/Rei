@@ -53,6 +53,42 @@ namespace rei::render
     {
     }
 
+    nlohmann::json Material::REI_GET() const
+    {
+        nlohmann::json data;
+        data["ShaderAssetId"] = _shader.Id;
+        data["UseDepth"] = _useDepth;
+        data["SortingOrder"] = _sortingOrder;
+        data["Properties"] = nlohmann::json::object();
+        return data;
+    }
+
+    void Material::REI_SET(const nlohmann::json& data)
+    {
+        if (data.contains("ShaderAssetId") && data.at("ShaderAssetId").is_string())
+        {
+            const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
+            if (!shaderAssetId.empty())
+            {
+                const auto shader = GetAssetManager().GetById<Shader>(shaderAssetId);
+                if (shader.IsLoaded())
+                {
+                    _shader = shader;
+                }
+            }
+        }
+
+        if (data.contains("UseDepth") && data.at("UseDepth").is_boolean())
+        {
+            _useDepth = data.at("UseDepth").get<bool>();
+        }
+
+        if (data.contains("SortingOrder") && data.at("SortingOrder").is_number_integer())
+        {
+            _sortingOrder = data.at("SortingOrder").get<i32>();
+        }
+    }
+
     void Material::Use() const
     {
         if (!_shader.IsLoaded())

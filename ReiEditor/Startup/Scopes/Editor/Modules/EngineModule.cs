@@ -14,6 +14,7 @@ public class EngineModule : Module
         builder.RegisterSingleton<ClientDllManager>().As<IClientDllManager>();
         builder.RegisterSingleton<EngineApi>().As<IEngineApi>();
         builder.RegisterSingleton<EntityApi>().As<IEntityApi>();
+        builder.RegisterSingleton<AssetApi>().As<IAssetApi>();
 		
         builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
         builder.RegisterSingleton<EngineShutdownListener>().As<IEngineShutdownListener>();

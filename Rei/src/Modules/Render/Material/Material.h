@@ -10,6 +10,8 @@ namespace rei::render
         REI_API Material() = default;
         REI_API Material(resources::BinaryReader& reader);
         REI_API Material(const assets::AssetRef<Shader>& shader);
+        REI_API nlohmann::json REI_GET() const;
+        REI_API void REI_SET(const nlohmann::json& data);
 
         REI_API void Use() const;
 

@@ -70,6 +70,36 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     #endregion
 
+    #region UseDepth
+
+    private bool _useDepth = true;
+    public bool UseDepth
+    {
+        get => _useDepth;
+        set
+        {
+            if (!SetField(ref _useDepth, value)) return;
+            _material?.SetUseDepth(value);
+        }
+    }
+
+    #endregion
+
+    #region SortingOrder
+
+    private int _sortingOrder = 1000;
+    public int SortingOrder
+    {
+        get => _sortingOrder;
+        set
+        {
+            if (!SetField(ref _sortingOrder, value)) return;
+            _material?.SetSortingOrder(value);
+        }
+    }
+
+    #endregion
+
     private Material? _material;
     private readonly IAssetsService _assetsService;
     private readonly IShaderRegistry _shaderRegistry;
@@ -146,6 +176,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
+                UseDepth = _material.UseDepth;
+                SortingOrder = _material.SortingOrder;
                 RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
                 StatusText = "";
                 IsMaterialLoaded = true;

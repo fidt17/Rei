@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:drawers="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
              xmlns:assets="clr-namespace:ReiEditor.Views.Controls.Assets"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
              xmlns:property="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.MaterialMonitorDrawer"
@@ -22,6 +23,31 @@
                        Foreground="{StaticResource Gray_2}" />
 
             <StackPanel IsVisible="{Binding IsMaterialLoaded}" Spacing="8">
+                <Grid ColumnDefinitions="Auto,*" Margin="0,2,0,0">
+                    <TextBlock Grid.Column="0"
+                               Width="120"
+                               VerticalAlignment="Center"
+                               FontSize="14"
+                               Foreground="{StaticResource Gray_4}"
+                               Text="Use Depth" />
+                    <CheckBox Grid.Column="1"
+                              HorizontalAlignment="Left"
+                              Cursor="Hand"
+                              IsChecked="{Binding UseDepth, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto,*" Margin="0,2,0,0">
+                    <TextBlock Grid.Column="0"
+                               Width="120"
+                               VerticalAlignment="Center"
+                               FontSize="14"
+                               Foreground="{StaticResource Gray_4}"
+                               Text="Sorting Order" />
+                    <textBoxes:ReiTextBox Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          Text="{Binding SortingOrder, Mode=TwoWay}" />
+                </Grid>
+
                 <Grid ColumnDefinitions="Auto,*" Margin="0,2,0,0">
                     <TextBlock Grid.Column="0"
                                Width="120"
