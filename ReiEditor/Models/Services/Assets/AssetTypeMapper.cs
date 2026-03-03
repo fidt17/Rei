@@ -20,6 +20,11 @@ public sealed class AssetTypeMapper : IAssetTypeMapper
             return AssetType.Material;
         }
 
+        if (string.Equals(templateTypeName, "Texture", StringComparison.OrdinalIgnoreCase))
+        {
+            return AssetType.Texture;
+        }
+
         return AssetType.Unknown;
     }
 
@@ -29,6 +34,7 @@ public sealed class AssetTypeMapper : IAssetTypeMapper
         {
             AssetType.Model => FileExtensions.ModelAssetExtensions,
             AssetType.Material => FileExtensions.MaterialAssetExtensions,
+            AssetType.Texture => FileExtensions.TextureAssetExtensions,
             _ => Array.Empty<string>()
         };
     }

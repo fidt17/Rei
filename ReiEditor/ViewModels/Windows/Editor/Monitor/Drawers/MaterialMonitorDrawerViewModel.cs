@@ -1,10 +1,20 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Shaders;
+using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Render;
+using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls.Assets;
+using ReiEditor.ViewModels.Utils;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
 
@@ -14,6 +24,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     public string AssetId { get; }
     public string AssetIdLabel { get; }
     public AssetPickerViewModel ShaderPicker { get; }
+    public ObservableCollection<BaseViewModel> ShaderProperties { get; } = new();
 
     #region StatusText
 
@@ -37,8 +48,35 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     #endregion
 
+    #region HasShaderProperties
+
+    private bool _hasShaderProperties;
+    public bool HasShaderProperties
+    {
+        get => _hasShaderProperties;
+        private set => SetField(ref _hasShaderProperties, value);
+    }
+
+    #endregion
+
+    #region ShaderPropertiesStatusText
+
+    private string _shaderPropertiesStatusText = "";
+    public string ShaderPropertiesStatusText
+    {
+        get => _shaderPropertiesStatusText;
+        private set => SetField(ref _shaderPropertiesStatusText, value);
+    }
+
+    #endregion
+
     private Material? _material;
     private readonly IAssetsService _assetsService;
+    private readonly IShaderRegistry _shaderRegistry;
+    private readonly IAssetSearchService _assetSearchService;
+    private readonly IAssetRegistry _assetRegistry;
+    private readonly IAssetTypeMapper _assetTypeMapper;
+    private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
 
 #pragma warning disable CS8618
     public MaterialMonitorDrawerViewModel() { }
@@ -47,13 +85,19 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     public MaterialMonitorDrawerViewModel(
         IAssetSelectable assetSelection,
         IAssetsService assetsService,
+        IAssetSearchService assetSearchService,
         IShaderRegistry shaderRegistry,
-        IAssetRegistry assetRegistry)
+        IAssetRegistry assetRegistry,
+        IAssetTypeMapper assetTypeMapper)
     {
         AssetName = assetSelection.AssetName;
         AssetId = assetSelection.AssetId;
         AssetIdLabel = string.IsNullOrWhiteSpace(AssetId) ? "ID: <missing>" : $"ID: {AssetId}";
         _assetsService = assetsService;
+        _assetSearchService = assetSearchService;
+        _shaderRegistry = shaderRegistry;
+        _assetRegistry = assetRegistry;
+        _assetTypeMapper = assetTypeMapper;
 
         ShaderPicker = new AssetPickerViewModel(
             assetRegistry,
@@ -67,6 +111,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     public override void Dispose()
     {
         base.Dispose();
+        UnsubscribeFromUniformPropertyChanges();
+        ShaderProperties.ClearAndDispose();
         ShaderPicker.Dispose();
     }
 
@@ -88,14 +134,105 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
+            RebuildShaderProperties(_material.ShaderAssetId, _material.Properties);
             StatusText = "";
             IsMaterialLoaded = true;
         });
     }
 
-    private void HandleShaderChanged(string? shaderAssetId, string? _)
+    private void HandleShaderChanged(string? shaderAssetId, string? _fullPath)
     {
         if (_material == null) return;
-        _material.SetShaderAssetId(shaderAssetId ?? "");
+
+        var targetShaderAssetId = shaderAssetId ?? "";
+        if (string.Equals(_material.ShaderAssetId, targetShaderAssetId, StringComparison.Ordinal)) return;
+
+        var existingValues = new Dictionary<string, object?>(_material.Properties);
+        _material.SetShaderAssetId(targetShaderAssetId);
+        RebuildShaderProperties(targetShaderAssetId, existingValues);
+    }
+
+    private void RebuildShaderProperties(string shaderAssetId, IReadOnlyDictionary<string, object?> existingValues)
+    {
+        UnsubscribeFromUniformPropertyChanges();
+        ShaderProperties.ClearAndDispose();
+
+        if (_material == null)
+        {
+            HasShaderProperties = false;
+            ShaderPropertiesStatusText = "";
+            return;
+        }
+
+        _material.Properties.Clear();
+
+        if (string.IsNullOrWhiteSpace(shaderAssetId))
+        {
+            HasShaderProperties = false;
+            ShaderPropertiesStatusText = "Material shader is not set.";
+            return;
+        }
+
+        if (!_shaderRegistry.TryGetById(shaderAssetId, out var shader))
+        {
+            HasShaderProperties = false;
+            ShaderPropertiesStatusText = "Selected shader asset was not found.";
+            return;
+        }
+
+        foreach (var uniform in shader.Uniforms.Where(x => x.IsSupported))
+        {
+            existingValues.TryGetValue(uniform.Name, out var rawValue);
+
+            var rootProperty = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, rawValue);
+            var viewModel = CreatePropertyViewModel(uniform, rootProperty);
+            if (viewModel == null) continue;
+
+            ShaderProperties.Add(viewModel);
+            SubscribeToUniformPropertyChanges(uniform, rootProperty);
+            ApplyUniformPropertyValue(uniform, rootProperty);
+        }
+
+        HasShaderProperties = ShaderProperties.Count > 0;
+        ShaderPropertiesStatusText = HasShaderProperties
+            ? ""
+            : "Selected shader has no supported editable uniforms.";
+    }
+
+    private BaseViewModel? CreatePropertyViewModel(ShaderUniformInfo uniform, SerializedProperty property)
+    {
+        return uniform.Type switch
+        {
+            ShaderUniformType.Float => new FloatPropertyViewModel(property),
+            ShaderUniformType.Integer => new IntegerPropertyViewModel(property),
+            ShaderUniformType.Color => new ColorPropertyViewModel(property),
+            ShaderUniformType.Texture => new AssetPropertyViewModel(property, _assetSearchService, _assetRegistry, _assetTypeMapper),
+            _ => null
+        };
+    }
+
+    private void SubscribeToUniformPropertyChanges(ShaderUniformInfo uniform, SerializedProperty rootProperty)
+    {
+        foreach (var observedProperty in MaterialShaderPropertyUtils.GetObservedProperties(uniform.Type, rootProperty))
+        {
+            Action<object?> handler = _ => ApplyUniformPropertyValue(uniform, rootProperty);
+            observedProperty.ValueChangedEvent += handler;
+            _propertySubscriptions.Add((observedProperty, handler));
+        }
+    }
+
+    private void UnsubscribeFromUniformPropertyChanges()
+    {
+        foreach (var (property, handler) in _propertySubscriptions)
+        {
+            property.ValueChangedEvent -= handler;
+        }
+        _propertySubscriptions.Clear();
+    }
+
+    private void ApplyUniformPropertyValue(ShaderUniformInfo uniform, SerializedProperty property)
+    {
+        if (_material == null) return;
+        _material.Properties[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
     }
 }

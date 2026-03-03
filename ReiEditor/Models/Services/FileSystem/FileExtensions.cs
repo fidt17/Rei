@@ -22,11 +22,14 @@ public static class FileExtensions
     public const string H = ".h";
     public const string OBJ = ".obj";
     public const string FBX = ".fbx";
+    public const string PNG = ".png";
+    public const string JPG = ".jpg";
     public const string RSHADER = ".rshader";
     public const string MATERIAL = ".mat";
 
     public static readonly IReadOnlyList<string> ModelAssetExtensions = new[] { OBJ, FBX };
     public static readonly IReadOnlyList<string> MaterialAssetExtensions = new[] { MATERIAL };
+    public static readonly IReadOnlyList<string> TextureAssetExtensions = new[] { PNG, JPG };
     public static readonly HashSet<string> TextEditorOpenExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         H,

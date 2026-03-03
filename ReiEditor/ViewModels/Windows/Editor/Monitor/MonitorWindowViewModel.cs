@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
@@ -30,8 +31,10 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IEditorRefreshService _editorRefreshService;
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
     private readonly IAssetsService _assetsService;
+    private readonly IAssetSearchService _assetSearchService;
     private readonly IShaderRegistry _shaderRegistry;
     private readonly IAssetRegistry _assetRegistry;
+    private readonly IAssetTypeMapper _assetTypeMapper;
 
     private readonly IEntityStateSynchronizer _entityStateSynchronizer;
 
@@ -46,16 +49,20 @@ public class MonitorWindowViewModel : BaseViewModel
         IEditorRefreshService editorRefreshService,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
         IAssetsService assetsService,
+        IAssetSearchService assetSearchService,
         IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry,
+        IAssetTypeMapper assetTypeMapper,
         IEntityStateSynchronizer entityStateSynchronizer)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
         _assetsService = assetsService;
+        _assetSearchService = assetSearchService;
         _shaderRegistry = shaderRegistry;
         _assetRegistry = assetRegistry;
+        _assetTypeMapper = assetTypeMapper;
         _entityStateSynchronizer = entityStateSynchronizer;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
@@ -96,8 +103,10 @@ public class MonitorWindowViewModel : BaseViewModel
             obj,
             _entityMonitorFactory,
             _assetsService,
+            _assetSearchService,
             _shaderRegistry,
             _assetRegistry,
+            _assetTypeMapper,
             out var entityToSync);
 
         if (entityToSync != null)

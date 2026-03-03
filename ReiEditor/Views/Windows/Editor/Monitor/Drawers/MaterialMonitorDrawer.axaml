@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:drawers="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
              xmlns:assets="clr-namespace:ReiEditor.Views.Controls.Assets"
+             xmlns:property="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.MaterialMonitorDrawer"
              x:DataType="drawers:MaterialMonitorDrawerViewModel">
@@ -32,11 +33,14 @@
                                             DataContext="{Binding ShaderPicker}" />
                 </Grid>
 
-                <Border Padding="8" Background="{StaticResource Dark_3}">
-                    <TextBlock Text="Shader property editors will be added in the next step."
-                               Foreground="{StaticResource Gray_2}"
-                               TextWrapping="Wrap" />
-                </Border>
+                <TextBlock IsVisible="{Binding !HasShaderProperties}"
+                           Text="{Binding ShaderPropertiesStatusText}"
+                           Foreground="{StaticResource Gray_2}"
+                           Margin="0,2,0,0"
+                           TextWrapping="Wrap" />
+
+                <property:PropertiesDisplayControl IsVisible="{Binding HasShaderProperties}"
+                                                   Value="{Binding ShaderProperties}" />
             </StackPanel>
         </StackPanel>
     </Border>
