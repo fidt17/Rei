@@ -16,6 +16,7 @@ public class WindowEngineControl : NativeControlHost
 
         if (DataContext is EngineWindowProviderViewModel vm)
         {
+            if (e.NewSize.Width <= 0 || e.NewSize.Height <= 0) return;
             vm.ResizeWindow(e.NewSize.Width, e.NewSize.Height);
         }
     }

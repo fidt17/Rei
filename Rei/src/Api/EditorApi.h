@@ -92,10 +92,14 @@ REI_EXTERN_API inline void ChangeTransformationMode(const bool worldSpace)
 
 REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const int width, const int height)
 {
-    rei::GetEngine().ExecuteOnMainThread([&]
+    if (window == nullptr) return;
+    if (!rei::GetEngine().IsRunning()) return;
+
+    rei::GetEngine().ExecuteOnMainThread([window, width, height]
     {
+        if (!rei::GetEngine().IsRunning()) return;
         window->Resize(width, height);
-    })->WaitForCompletion();
+    });
 }
 
 REI_EXTERN_API inline void SetEditorGridSettings(const rei::render::GridRenderSettings* settings)

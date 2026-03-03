@@ -11,14 +11,30 @@ namespace rei
 
     void Task::Invoke()
     {
-        _action();
-        _isComplete = true;
+        try
+        {
+            _action();
+        }
+        catch (...)
+        {
+            {
+                std::scoped_lock lock(_completionMutex);
+                _isComplete = true;
+            }
+            _completionCondition.notify_all();
+            throw;
+        }
+
+        {
+            std::scoped_lock lock(_completionMutex);
+            _isComplete = true;
+        }
+        _completionCondition.notify_all();
     }
 
     void Task::WaitForCompletion() const
     {
-        while (!_isComplete)
-        {
-        }
+        std::unique_lock lock(_completionMutex);
+        _completionCondition.wait(lock, [&] { return _isComplete; });
     }
 }

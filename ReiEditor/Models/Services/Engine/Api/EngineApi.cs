@@ -44,15 +44,18 @@ public class EngineApi : IEngineApi
     private delegate void StartEngineDelegate(IntPtr enginePtr);
     public void Start(IntPtr enginePtr)
     {
+        IsEngineRunning = true;
         try
         {
-            IsEngineRunning = true;
             Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
         }
         catch (Exception)
         {
-            IsEngineRunning = false;
             throw;
+        }
+        finally
+        {
+            IsEngineRunning = false;
         }
     }
 
@@ -63,11 +66,18 @@ public class EngineApi : IEngineApi
         Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
     }
 
-    public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.IntPtrCallbackDelegate), "AddLogCallback", callback);
-    
-    public void AddEngineStartCallback(IntPtr callback) => Invoke(typeof(IEngineApi.IntPtrCallbackDelegate), "AddEngineStartCallback", callback);
+    private delegate void DestroyEngineDelegate(IntPtr enginePtr);
+    public void DestroyEngine(IntPtr enginePtr)
+    {
+        IsEngineRunning = false;
+        Invoke(typeof(DestroyEngineDelegate), "DestroyEngine", enginePtr);
+    }
 
-    public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.IntPtrCallbackDelegate), "AddShutdownCallback", callback);
+    public void AddLogCallback(IntPtr callback) => Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddLogCallback", callback);
+    
+    public void AddEngineStartCallback(IntPtr callback) => Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddEngineStartCallback", callback);
+
+    public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddShutdownCallback", callback);
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
@@ -114,11 +124,20 @@ public class EngineApi : IEngineApi
         Invoke(typeof(SetTransformationSpaceDelegate), "ChangeTransformationMode", worldSpace);
     }
 
+    public void MarkEngineStopped()
+    {
+        IsEngineRunning = false;
+    }
+
     private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);
     public IntPtr GetWindowHandle(IntPtr windowPtr) => Invoke<IntPtr>(typeof(GetWindowHandleDelegate), "GetWindowHandle", windowPtr);
 
     private delegate IntPtr ResizeWindowDelegate(IntPtr windowPtr, int width, int height);
-    public void ResizeWindow(IntPtr windowPtr, int width, int height) => Invoke(typeof(ResizeWindowDelegate), "ResizeWindow", windowPtr, width, height);
+    public void ResizeWindow(IntPtr windowPtr, int width, int height)
+    {
+        if (!IsEngineRunning) return;
+        Invoke(typeof(ResizeWindowDelegate), "ResizeWindow", windowPtr, width, height);
+    }
 
     #region UTILS
 	

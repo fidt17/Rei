@@ -1,4 +1,7 @@
-﻿#pragma once
+#pragma once
+#include <condition_variable>
+#include <functional>
+#include <mutex>
 
 namespace rei
 {
@@ -14,6 +17,8 @@ namespace rei
         REI_API void WaitForCompletion() const;
 
     private:
+        mutable std::condition_variable _completionCondition;
+        mutable std::mutex _completionMutex;
         bool _isComplete;
         std::function<void()> _action;
     };

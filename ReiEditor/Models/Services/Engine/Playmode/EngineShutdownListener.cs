@@ -9,7 +9,7 @@ public class EngineShutdownListener : IEngineShutdownListener
 {
     public event Action<int>? EngineShutdownEvent;
 
-    private readonly IEngineApi.IntPtrCallbackDelegate _shutdownCallbackDelegate;
+    private readonly IEngineApi.IntCallbackDelegate _shutdownCallbackDelegate;
     private readonly IEngineApi _engineApi;
 
     public EngineShutdownListener(IEngineApi engineApi)
@@ -23,13 +23,13 @@ public class EngineShutdownListener : IEngineShutdownListener
         _engineApi.AddShutdownCallback(Marshal.GetFunctionPointerForDelegate(_shutdownCallbackDelegate));
     }
 
-    private void HandleShutdownEvent(IntPtr args)
+    private void HandleShutdownEvent(int exitCode)
     {
-        Task.Run(async () =>
+        _engineApi.MarkEngineStopped();
+
+        Task.Run(() =>
         {
-            // Delay for engine to completely stop
-            await Task.Delay(100); 
-            EngineShutdownEvent?.Invoke(0);
+            EngineShutdownEvent?.Invoke(exitCode);
         });
     }
 }

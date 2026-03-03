@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Import;
@@ -14,7 +15,7 @@ public class BuildStarter : IBuildStarter, IDisposable
     public ICondition CanStartBuild => _canStartBuildCondition;
 
     private readonly ConditionGroup _canStartBuildCondition;
-	
+
     private readonly IBuildService _buildService;
     private readonly IAssetsService _assetsService;
     private readonly IEngineRunner _engineRunner;
@@ -22,8 +23,8 @@ public class BuildStarter : IBuildStarter, IDisposable
     private readonly IAssetImporter _assetImporter;
     private readonly ILogger<BuildStarter> _logger;
 
-    private bool _commandInProgress;
-    
+    private int _commandInProgress;
+
     public BuildStarter(
         IBuildService buildService,
         IAssetsService assetsService,
@@ -54,21 +55,33 @@ public class BuildStarter : IBuildStarter, IDisposable
 
     public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
     {
-        if (_commandInProgress) return false;
-        _commandInProgress = true;
-        
+        if (Interlocked.Exchange(ref _commandInProgress, 1) == 1) return false;
+
         try
         {
             if (!_canStartBuildCondition.IsTrue.Value) return false;
-            
+
             await _engineRunner.StopEngine();
-            _dllManager.UnloadDll();
+
+            // Engine shutdown and dll unload finalize on background threads.
+            var dllWaitUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            while (_dllManager.DllLoaded.Value && DateTime.UtcNow < dllWaitUntil)
+            {
+                await Task.Delay(25);
+            }
+
+            if (_dllManager.DllLoaded.Value)
+            {
+                _logger.LogError("Cannot build: client dll is still loaded after engine stop.");
+                return false;
+            }
+
             await Task.Delay(250);
             if (!_canStartBuildCondition.IsTrue.Value) return false;
 
             await _assetsService.SaveProject();
             if (!_canStartBuildCondition.IsTrue.Value) return false;
-            
+
             return await _buildService.BuildProject(configuration);
         }
         catch (Exception e)
@@ -78,7 +91,7 @@ public class BuildStarter : IBuildStarter, IDisposable
         }
         finally
         {
-            _commandInProgress = false;
+            Interlocked.Exchange(ref _commandInProgress, 0);
         }
     }
 }

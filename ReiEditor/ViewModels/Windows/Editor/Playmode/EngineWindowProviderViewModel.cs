@@ -20,6 +20,15 @@ public class EngineWindowProviderViewModel
 
     public void ResizeWindow(double width, double height)
     {
-        _engineApi.ResizeWindow(_windowPointer, (int) width, (int) height);
+        if (!_engineApi.IsEngineRunning) return;
+        if (width <= 0 || height <= 0) return;
+
+        try
+        {
+            _engineApi.ResizeWindow(_windowPointer, (int) width, (int) height);
+        }
+        catch
+        {
+        }
     }
 }

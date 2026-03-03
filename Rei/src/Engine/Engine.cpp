@@ -74,7 +74,7 @@ namespace rei::internal::engine
                 _mainThread->CompleteTasks();
             }
 
-            _runEngine = true;
+            _runEngine.store(true);
             _internalWorld->Configure(_app, _mainRenderer, _mainThread, _entityManager);
             _sceneManager->LoadScene(0);
             _app->OnStart();
@@ -86,6 +86,7 @@ namespace rei::internal::engine
         {
             LOG_ERROR("Exception on engine start. {}", exc.what())
             Shutdown(ENGINE_INITIALIZATION_ERROR_EXIT_CODE);
+            return;
         }
 
         RunUpdateLoop();
@@ -97,7 +98,7 @@ namespace rei::internal::engine
         
         try
         {
-            while (_runEngine)
+            while (_runEngine.load())
             {
                 _internalWorld->Run();
             }
@@ -111,12 +112,11 @@ namespace rei::internal::engine
 
     void Engine::Shutdown(const int exitCode)
     {
-        if (!_runEngine) return;
+        if (!_runEngine.exchange(false)) return;
 
         LOG("Engine shutdown")
 
         _exitCode = exitCode;
-        _runEngine = false;
 
         _app->OnShutdown();
         _sceneManager->Shutdown();
@@ -142,6 +142,11 @@ namespace rei::internal::engine
     bool Engine::IsEditor() const
     {
         return _isEditor;
+    }
+
+    bool Engine::IsRunning() const
+    {
+        return _runEngine.load();
     }
 
     int Engine::GetExitCode() const

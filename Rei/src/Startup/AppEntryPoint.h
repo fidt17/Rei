@@ -42,13 +42,27 @@ namespace rei::external
 
     REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
     {
-        engine->ExecuteOnMainThread([&]
+        if (engine == nullptr) return -1;
+
+        if (engine->IsRunning())
+        {
+            engine->ExecuteOnMainThread([engine, exitCode]
+            {
+                engine->Shutdown(exitCode);
+            })->WaitForCompletion();
+        }
+        else
         {
             engine->Shutdown(exitCode);
-        })->WaitForCompletion();
+        }
 
-        delete engine;
         return 0;
+    }
+
+    REI_EXTERN_API inline void DestroyEngine(internal::engine::Engine* engine)
+    {
+        if (engine == nullptr) return;
+        delete engine;
     }
 }
 

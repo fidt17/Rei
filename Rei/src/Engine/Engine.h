@@ -1,4 +1,6 @@
-﻿#pragma once
+#pragma once
+#include <atomic>
+
 #include "InternalEngineWorld.h"
 #include "Api/EditorEventsRelay.h"
 #include "Common/Tasks/TaskExecutor.h"
@@ -31,6 +33,7 @@ namespace rei::internal::engine
         REI_API bool IsPlaymode() const;
         REI_API bool IsEditorMode() const;
         REI_API bool IsEditor() const;
+        REI_API bool IsRunning() const;
 
         REI_API int GetExitCode() const;
 
@@ -40,8 +43,8 @@ namespace rei::internal::engine
     private:
         EngineMode _mode;
         bool _isEditor;
-        
-        bool _runEngine = false;
+
+        std::atomic<bool> _runEngine = false;
         int _exitCode;
 
         std::shared_ptr<window::WindowManager> _windowManager;

@@ -88,6 +88,8 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         
         Task.Run(() =>
         {
+            var enginePtr = IntPtr.Zero;
+            
             if (!LoadClientDll())
             {
                 _isEngineStarting.Value = false;
@@ -99,14 +101,15 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 ActiveMode = mode;
                 
-                _enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
+                enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
+                _enginePtr = enginePtr;
 
                 _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
                 _engineLogger.SubscribeToClient();
                 _shutdownListener.SubscribeToClient();
                 _engineWindowController.SetupWindow();
                 
-                _engineApi.Start(_enginePtr.Value);
+                _engineApi.Start(enginePtr);
             }
             catch (Exception e)
             {
@@ -114,7 +117,33 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
                 _logger.LogException(e);
                 _isEngineStarting.Value = false;
                 EndStartProcedure();
-                _ = StopEngine();
+                HandleEngineStartFailure();
+            }
+            finally
+            {
+                if (enginePtr != IntPtr.Zero)
+                {
+                    try
+                    {
+                        _engineApi.DestroyEngine(enginePtr);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogException(e);
+                    }
+                }
+
+                try
+                {
+                    if (_clientDllManager.DllLoaded.Value)
+                    {
+                        _clientDllManager.UnloadDll();
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogException(e);
+                }
             }
         });
 
@@ -128,9 +157,9 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         try
         {
             if (_enginePtr == null) return;
+            if (!_engineApi.IsEngineRunning) return;
             
             _engineApi?.Shutdown(_enginePtr.Value, 1);
-            _clientDllManager.UnloadDll();
         }
         catch (Exception e)
         {
@@ -149,6 +178,18 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _engineWindowController.DestroyWindow();
         _enginePtr = null;
         
+        _isActive.Value = false;
+        _isPlaymodeActive.Value = false;
+        _isEditormodeActive.Value = false;
+        _isEngineStarting.Value = false;
+    }
+
+    private void HandleEngineStartFailure()
+    {
+        _engineApi.MarkEngineStopped();
+        _engineWindowController.DestroyWindow();
+        _enginePtr = null;
+
         _isActive.Value = false;
         _isPlaymodeActive.Value = false;
         _isEditormodeActive.Value = false;
