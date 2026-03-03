@@ -115,7 +115,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
     private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
     private CancellationTokenSource? _runtimeSyncDebounceCTS;
-    private CancellationTokenSource? _runtimePullCTS;
+    private DispatcherTimer? _runtimePullTimer;
     private bool _suppressRuntimeSync;
     private string _lastRuntimeJson = "";
     private const int RuntimeSyncDebounceDelayMs = 40;
@@ -396,54 +396,46 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private void StartRuntimePullLoop()
     {
         CancelRuntimePullLoop();
-        _runtimePullCTS = new CancellationTokenSource();
-        var token = _runtimePullCTS.Token;
-
-        _ = Task.Run(async () =>
+        _runtimePullTimer = new DispatcherTimer
         {
-            while (!token.IsCancellationRequested)
+            Interval = TimeSpan.FromMilliseconds(RuntimePullIntervalMs)
+        };
+
+        _runtimePullTimer.Tick += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(AssetId)) return;
+            if (_runtimeSyncDebounceCTS != null) return;
+
+            try
             {
-                try
-                {
-                    await Task.Delay(RuntimePullIntervalMs, token);
-                    if (token.IsCancellationRequested) return;
-                    if (string.IsNullOrWhiteSpace(AssetId)) continue;
-                    if (_runtimeSyncDebounceCTS != null) continue;
+                if (!_assetRuntimeSyncService.TryGetAssetData(AssetId, out var jsonData)) return;
+                if (string.IsNullOrWhiteSpace(jsonData)) return;
+                if (string.Equals(_lastRuntimeJson, jsonData, StringComparison.Ordinal)) return;
 
-                    if (!_assetRuntimeSyncService.TryGetAssetData(AssetId, out var jsonData)) continue;
-                    if (string.IsNullOrWhiteSpace(jsonData)) continue;
-                    if (string.Equals(_lastRuntimeJson, jsonData, StringComparison.Ordinal)) continue;
+                var runtimeMaterial = JsonConvert.DeserializeObject<Material>(jsonData);
+                if (runtimeMaterial == null) return;
 
-                    var runtimeMaterial = JsonConvert.DeserializeObject<Material>(jsonData);
-                    if (runtimeMaterial == null) continue;
-
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        _suppressRuntimeSync = true;
-                        _material = runtimeMaterial;
-                        _lastRuntimeJson = jsonData;
-                        ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
-                        UseDepth = _material.UseDepth;
-                        SortingOrder = _material.SortingOrder;
-                        RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
-                        _suppressRuntimeSync = false;
-                    });
-                }
-                catch (TaskCanceledException)
-                {
-                    return;
-                }
-                catch
-                {
-                }
+                _suppressRuntimeSync = true;
+                _material = runtimeMaterial;
+                _lastRuntimeJson = jsonData;
+                ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
+                UseDepth = _material.UseDepth;
+                SortingOrder = _material.SortingOrder;
+                RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
+                _suppressRuntimeSync = false;
             }
-        }, token);
+            catch
+            {
+            }
+        };
+
+        _runtimePullTimer.Start();
     }
 
     private void CancelRuntimePullLoop()
     {
-        _runtimePullCTS?.Cancel();
-        _runtimePullCTS?.Dispose();
-        _runtimePullCTS = null;
+        if (_runtimePullTimer == null) return;
+        _runtimePullTimer.Stop();
+        _runtimePullTimer = null;
     }
 }

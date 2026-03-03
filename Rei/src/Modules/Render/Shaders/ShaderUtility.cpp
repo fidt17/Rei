@@ -11,37 +11,67 @@ namespace rei::render
         Fragment
     };
 
-    void VerifyShaderCompilation(const unsigned int shader, const ShaderTypeEnum shaderType)
+    std::string ReadShaderInfoLog(const unsigned int shader)
+    {
+        int logLength = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength <= 1) return {};
+
+        std::string log(static_cast<std::size_t>(logLength), '\0');
+        GLsizei written = 0;
+        glGetShaderInfoLog(shader, logLength, &written, log.data());
+        if (written <= 0) return {};
+
+        log.resize(static_cast<std::size_t>(written));
+        return log;
+    }
+
+    std::string ReadProgramInfoLog(const unsigned int shaderProgram)
+    {
+        int logLength = 0;
+        glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength <= 1) return {};
+
+        std::string log(static_cast<std::size_t>(logLength), '\0');
+        GLsizei written = 0;
+        glGetProgramInfoLog(shaderProgram, logLength, &written, log.data());
+        if (written <= 0) return {};
+
+        log.resize(static_cast<std::size_t>(written));
+        return log;
+    }
+
+    bool VerifyShaderCompilation(const unsigned int shader, const ShaderTypeEnum shaderType)
     {
         int success;
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (!success)
+        if (success != GL_TRUE)
         {
-            constexpr int LOG_BUFFER_SIZE = 512;
-            char infoLog[LOG_BUFFER_SIZE];
-            glGetShaderInfoLog(shader, LOG_BUFFER_SIZE, nullptr, infoLog);
+            const auto infoLog = ReadShaderInfoLog(shader);
 
             if (shaderType == Vertex)
             {
-                LOG_ERROR("Vertex shader compilation failed\n,{}", std::string(infoLog))
+                LOG_ERROR("Vertex shader compilation failed\n{}", infoLog)
             }
             else if (shaderType == Fragment)
             {
-                LOG_ERROR("Fragment shader compilation failed\n{}", std::string(infoLog))
+                LOG_ERROR("Fragment shader compilation failed\n{}", infoLog)
             }
+
+            return false;
         }
+
+        return true;
     }
 
     bool VerifyShaderProgramLinking(const unsigned shaderProgram)
     {
         int success;
         glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-        if (success <= 0)
+        if (success != GL_TRUE)
         {
-            constexpr int LOG_BUFFER_SIZE = 512;
-            char infoLog[LOG_BUFFER_SIZE];
-            glGetProgramInfoLog(shaderProgram, LOG_BUFFER_SIZE, nullptr, infoLog);
-            LOG_ERROR("Shader linking failed\n{}", std::string(infoLog))
+            const auto infoLog = ReadProgramInfoLog(shaderProgram);
+            LOG_ERROR("Shader linking failed\n{}", infoLog)
             
             return false;
         }
@@ -52,7 +82,14 @@ namespace rei::render
     unsigned ShaderUtility::CreateShaderProgram(const char* vertexShaderSrc, const char* fragmentShaderSrc) const
     {
         const unsigned int vertexShader = CompileVertexShader(vertexShaderSrc);
+        if (vertexShader == 0) return 0;
+
         const unsigned int fragmentShader = CompileFragmentShader(fragmentShaderSrc);
+        if (fragmentShader == 0)
+        {
+            glDeleteShader(vertexShader);
+            return 0;
+        }
 
         const unsigned shaderProgram = glCreateProgram();
         glAttachShader(shaderProgram, vertexShader);
@@ -63,7 +100,10 @@ namespace rei::render
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
 
-        return VerifyShaderProgramLinking(shaderProgram) ? shaderProgram : 0;
+        if (VerifyShaderProgramLinking(shaderProgram)) return shaderProgram;
+
+        glDeleteProgram(shaderProgram);
+        return 0;
     }
 
     unsigned ShaderUtility::CompileVertexShader(const char* src) const
@@ -72,9 +112,10 @@ namespace rei::render
         glShaderSource(vertexShader, 1, &src, nullptr);
         glCompileShader(vertexShader);
 
-        VerifyShaderCompilation(vertexShader, Vertex);
+        if (VerifyShaderCompilation(vertexShader, Vertex)) return vertexShader;
 
-        return vertexShader;
+        glDeleteShader(vertexShader);
+        return 0;
     }
 
     unsigned ShaderUtility::CompileFragmentShader(const char* src) const
@@ -83,8 +124,9 @@ namespace rei::render
         glShaderSource(fragmentShader, 1, &src, nullptr);
         glCompileShader(fragmentShader);
 
-        VerifyShaderCompilation(fragmentShader, Fragment);
+        if (VerifyShaderCompilation(fragmentShader, Fragment)) return fragmentShader;
 
-        return fragmentShader;
+        glDeleteShader(fragmentShader);
+        return 0;
     }
 }

@@ -60,20 +60,29 @@ REI_EXTERN_API inline bool GetAssetData(const char* assetId, const char* assetTy
 {
     if (assetId == nullptr || assetType == nullptr || outputBuffer == nullptr || bufferSize <= 0) return false;
 
-    try
-    {
-        return DispatchTryGetAssetData(assetId, assetType, outputBuffer, bufferSize);
-    }
-    catch (const std::exception& e)
-    {
-        LOG_ERROR("GetAssetData failed for assetId='{}'. Error: {}", assetId, e.what())
-    }
-    catch (...)
-    {
-        LOG_ERROR("GetAssetData failed for assetId='{}'", assetId)
-    }
+    bool success = false;
+    const std::string assetIdStr = assetId;
+    const std::string assetTypeStr = assetType;
 
-    return false;
+    rei::GetEngine().ExecuteOnMainThread([&]
+    {
+        try
+        {
+            success = DispatchTryGetAssetData(assetIdStr, assetTypeStr, outputBuffer, bufferSize);
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("GetAssetData failed for assetId='{}'. Error: {}", assetIdStr, e.what())
+            success = false;
+        }
+        catch (...)
+        {
+            LOG_ERROR("GetAssetData failed for assetId='{}'", assetIdStr)
+            success = false;
+        }
+    })->WaitForCompletion();
+
+    return success;
 }
 
 REI_EXTERN_API inline bool SetAssetData(const char* assetId, const char* assetType, const char* json)

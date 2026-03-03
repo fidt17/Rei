@@ -18,6 +18,7 @@ namespace rei::render
         REI_API void Use() const;
 
         REI_API assets::AssetRef<Shader>& GetShaderAsset();
+        REI_API const assets::AssetRef<Shader>& GetShaderAsset() const;
         REI_API const Shader& GetShader() const;
         REI_API std::vector<assets::AssetRef<Texture>>& GetTextures();
 

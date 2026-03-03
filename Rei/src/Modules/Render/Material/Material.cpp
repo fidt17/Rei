@@ -8,11 +8,6 @@ namespace rei::render
 
     Material::Material(resources::BinaryReader& reader)
     {
-        auto assignFallbackShader = [this]()
-        {
-            _shader = GetAssetManager().GetById<Shader>(REI_SHADER_ERROR_ASSET_ID);
-        };
-
         try
         {
             const auto rawData = reader.GetStr();
@@ -20,32 +15,28 @@ namespace rei::render
 
             if (!data.contains("ShaderAssetId") || !data.at("ShaderAssetId").is_string())
             {
-                LOG_ERROR("Material asset is missing valid 'ShaderAssetId'. Falling back to {}", REI_SHADER_ERROR_ASSET_ID)
-                assignFallbackShader();
+                LOG_ERROR("Material asset is missing valid 'ShaderAssetId'.")
                 return;
             }
 
             const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
             if (shaderAssetId.empty())
             {
-                LOG_ERROR("Material asset has empty 'ShaderAssetId'. Falling back to {}", REI_SHADER_ERROR_ASSET_ID)
-                assignFallbackShader();
+                LOG_ERROR("Material asset has empty 'ShaderAssetId'.")
                 return;
             }
 
             _shader = GetAssetManager().GetById<Shader>(shaderAssetId);
             if (!_shader.IsLoaded())
             {
-                LOG_ERROR("Failed to load shader '{}' for material. Falling back to {}", shaderAssetId, REI_SHADER_ERROR_ASSET_ID)
-                assignFallbackShader();
+                LOG_ERROR("Failed to load shader '{}' for material.", shaderAssetId)
             }
 
             LoadSerializableFields(data);
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR("Failed to parse material asset. Falling back to {}. Error: {}", REI_SHADER_ERROR_ASSET_ID, e.what())
-            assignFallbackShader();
+            LOG_ERROR("Failed to parse material asset. Error: {}", e.what())
         }
     }
 
@@ -109,6 +100,11 @@ namespace rei::render
     }
 
     assets::AssetRef<Shader>& Material::GetShaderAsset()
+    {
+        return _shader;
+    }
+
+    const assets::AssetRef<Shader>& Material::GetShaderAsset() const
     {
         return _shader;
     }
@@ -301,14 +297,9 @@ namespace rei::render
         if (data.contains("ShaderAssetId") && data.at("ShaderAssetId").is_string())
         {
             const auto shaderAssetId = data.at("ShaderAssetId").get<std::string>();
-            if (!shaderAssetId.empty())
-            {
-                const auto shader = GetAssetManager().GetById<Shader>(shaderAssetId);
-                if (shader.IsLoaded())
-                {
-                    _shader = shader;
-                }
-            }
+            _shader = shaderAssetId.empty()
+                ? assets::AssetRef<Shader>()
+                : GetAssetManager().GetById<Shader>(shaderAssetId);
         }
 
         if (data.contains("UseDepth") && data.at("UseDepth").is_boolean())
