@@ -77,6 +77,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
+    private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
 
 #pragma warning disable CS8618
     public MaterialMonitorDrawerViewModel() { }
@@ -111,6 +112,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     public override void Dispose()
     {
         base.Dispose();
+        PersistUniformValuesFromEditors();
         UnsubscribeFromUniformPropertyChanges();
         ShaderProperties.ClearAndDispose();
         ShaderPicker.Dispose();
@@ -118,26 +120,45 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private async Task LoadMaterialState()
     {
-        if (string.IsNullOrWhiteSpace(AssetId))
+        try
         {
-            StatusText = "Material id is missing.";
-            return;
-        }
+            if (string.IsNullOrWhiteSpace(AssetId))
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    StatusText = "Material id is missing.";
+                    IsMaterialLoaded = false;
+                });
+                return;
+            }
 
-        _material = await _assetsService.Load<Material>(AssetId);
-        if (_material == null)
-        {
-            StatusText = "Failed to load material asset.";
-            return;
-        }
+            _material = await _assetsService.Load<Material>(AssetId);
+            if (_material == null)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    StatusText = "Failed to load material asset.";
+                    IsMaterialLoaded = false;
+                });
+                return;
+            }
 
-        await Dispatcher.UIThread.InvokeAsync(() =>
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
+                RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
+                StatusText = "";
+                IsMaterialLoaded = true;
+            });
+        }
+        catch (Exception e)
         {
-            ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
-            RebuildShaderProperties(_material.ShaderAssetId, _material.Properties);
-            StatusText = "";
-            IsMaterialLoaded = true;
-        });
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                StatusText = $"Failed to load material asset. {e.Message}";
+                IsMaterialLoaded = false;
+            });
+        }
     }
 
     private void HandleShaderChanged(string? shaderAssetId, string? _fullPath)
@@ -147,6 +168,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         var targetShaderAssetId = shaderAssetId ?? "";
         if (string.Equals(_material.ShaderAssetId, targetShaderAssetId, StringComparison.Ordinal)) return;
 
+        PersistUniformValuesFromEditors();
         var existingValues = new Dictionary<string, object?>(_material.Properties);
         _material.SetShaderAssetId(targetShaderAssetId);
         RebuildShaderProperties(targetShaderAssetId, existingValues);
@@ -156,6 +178,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     {
         UnsubscribeFromUniformPropertyChanges();
         ShaderProperties.ClearAndDispose();
+        _uniformProperties.Clear();
 
         if (_material == null)
         {
@@ -164,10 +187,9 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             return;
         }
 
-        _material.Properties.Clear();
-
         if (string.IsNullOrWhiteSpace(shaderAssetId))
         {
+            _material.Properties.Clear();
             HasShaderProperties = false;
             ShaderPropertiesStatusText = "Material shader is not set.";
             return;
@@ -175,22 +197,44 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
         if (!_shaderRegistry.TryGetById(shaderAssetId, out var shader))
         {
+            _material.Properties.Clear();
             HasShaderProperties = false;
             ShaderPropertiesStatusText = "Selected shader asset was not found.";
             return;
         }
 
+        var nextValues = new Dictionary<string, object?>();
+
         foreach (var uniform in shader.Uniforms.Where(x => x.IsSupported))
         {
             existingValues.TryGetValue(uniform.Name, out var rawValue);
+            try
+            {
+                var rootProperty = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, rawValue);
+                var viewModel = CreatePropertyViewModel(uniform, rootProperty);
+                if (viewModel == null)
+                {
+                    continue;
+                }
 
-            var rootProperty = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, rawValue);
-            var viewModel = CreatePropertyViewModel(uniform, rootProperty);
-            if (viewModel == null) continue;
+                ShaderProperties.Add(viewModel);
+                _uniformProperties.Add((uniform, rootProperty));
+                SubscribeToUniformPropertyChanges(uniform, rootProperty);
+                nextValues[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, rootProperty);
+            }
+            catch
+            {
+                if (rawValue != null)
+                {
+                    nextValues[uniform.Name] = rawValue;
+                }
+            }
+        }
 
-            ShaderProperties.Add(viewModel);
-            SubscribeToUniformPropertyChanges(uniform, rootProperty);
-            ApplyUniformPropertyValue(uniform, rootProperty);
+        _material.Properties.Clear();
+        foreach (var (name, value) in nextValues)
+        {
+            _material.Properties[name] = value;
         }
 
         HasShaderProperties = ShaderProperties.Count > 0;
@@ -234,5 +278,15 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     {
         if (_material == null) return;
         _material.Properties[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
+    }
+
+    private void PersistUniformValuesFromEditors()
+    {
+        if (_material == null) return;
+
+        foreach (var (uniform, rootProperty) in _uniformProperties)
+        {
+            ApplyUniformPropertyValue(uniform, rootProperty);
+        }
     }
 }

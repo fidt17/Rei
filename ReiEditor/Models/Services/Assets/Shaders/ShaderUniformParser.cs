@@ -8,7 +8,7 @@ namespace ReiEditor.Models.Services.Assets.Shaders;
 public class ShaderUniformParser : IShaderUniformParser
 {
     private static readonly Regex UniformRegex = new(
-        @"uniform\s+(?<type>[A-Za-z0-9_]+)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?)\s*;",
+        @"uniform\s+(?:(?:lowp|mediump|highp)\s+)?(?<type>[A-Za-z0-9_]+)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]+\])?)\s*(?:=\s*[^;]+)?;",
         RegexOptions.Compiled);
 
     private static readonly Regex CommentsRegex = new(
@@ -38,22 +38,22 @@ public class ShaderUniformParser : IShaderUniformParser
 
     private static ShaderUniformType MapType(string sourceType)
     {
-        if (string.Equals(sourceType, "float", StringComparison.Ordinal))
+        if (string.Equals(sourceType, "float", StringComparison.OrdinalIgnoreCase))
         {
             return ShaderUniformType.Float;
         }
 
-        if (string.Equals(sourceType, "int", StringComparison.Ordinal))
+        if (string.Equals(sourceType, "int", StringComparison.OrdinalIgnoreCase))
         {
             return ShaderUniformType.Integer;
         }
 
-        if (string.Equals(sourceType, "vec4", StringComparison.Ordinal))
+        if (string.Equals(sourceType, "vec4", StringComparison.OrdinalIgnoreCase))
         {
             return ShaderUniformType.Color;
         }
 
-        if (string.Equals(sourceType, "sampler2D", StringComparison.Ordinal))
+        if (string.Equals(sourceType, "sampler2D", StringComparison.OrdinalIgnoreCase))
         {
             return ShaderUniformType.Texture;
         }

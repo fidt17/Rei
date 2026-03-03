@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -63,13 +64,13 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
     private void HandleIdValueChangedEvent(object? value)
     {
         if (!_isInitialized) return;
-        AssetPicker?.SyncSelectedAsset(value as string);
+        AssetPicker?.SyncSelectedAsset(ConvertToString(value));
     }
 
     private string? GetAssetId()
     {
         var idProperty = GetNestedProperty("Id");
-        return idProperty?.Value as string;
+        return ConvertToString(idProperty?.Value);
     }
 
     private void SelectAsset(string? assetId)
@@ -78,5 +79,12 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         if (idProperty == null) return;
 
         idProperty.Value = assetId ?? "";
+    }
+
+    private static string? ConvertToString(object? value)
+    {
+        if (value is null) return null;
+        if (value is JToken token) value = token.ToObject<object?>();
+        return value as string ?? value?.ToString();
     }
 }

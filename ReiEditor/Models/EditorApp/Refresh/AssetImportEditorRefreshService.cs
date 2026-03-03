@@ -44,7 +44,6 @@ public sealed class AssetImportEditorRefreshService : IDisposable
 
     private void HandleImportedAssetsEvent()
     {
-        if (!_engineRunner.IsEditorActive.Value) return;
         if (_buildService.BuildInProgress.Value) return;
 
         lock (_refreshLock)
@@ -60,7 +59,6 @@ public sealed class AssetImportEditorRefreshService : IDisposable
     {
         try
         {
-            if (!_engineRunner.IsEditorActive.Value) return;
             if (_buildService.BuildInProgress.Value) return;
             if (!_buildStarter.CanStartBuild.IsTrue.Value) return;
 

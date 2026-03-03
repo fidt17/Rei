@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Collections;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
@@ -121,7 +124,59 @@ public static class MaterialShaderPropertyUtils
     private static object? GetNestedValue(object? value, string nestedName)
     {
         if (value == null) return null;
+        value = UnwrapValue(value);
         if (value is string stringValue && nestedName.Equals("Id", StringComparison.OrdinalIgnoreCase)) return stringValue;
+
+        if (value is JArray jArray && (nestedName.Equals("r", StringComparison.OrdinalIgnoreCase) ||
+                                       nestedName.Equals("g", StringComparison.OrdinalIgnoreCase) ||
+                                       nestedName.Equals("b", StringComparison.OrdinalIgnoreCase) ||
+                                       nestedName.Equals("a", StringComparison.OrdinalIgnoreCase)))
+        {
+            var index = nestedName.ToLowerInvariant() switch
+            {
+                "r" => 0,
+                "g" => 1,
+                "b" => 2,
+                "a" => 3,
+                _ => -1
+            };
+
+            if (index >= 0 && index < jArray.Count)
+            {
+                return UnwrapValue(jArray[index]);
+            }
+        }
+
+        if (value is IEnumerable enumerable &&
+            value is not string &&
+            value is not JObject &&
+            value is not JToken &&
+            value is not IDictionary &&
+            value is not IDictionary<string, object?> &&
+            value is not Dictionary<string, object?> &&
+            value is not Dictionary<string, SerializedProperty>)
+        {
+            var items = enumerable.Cast<object?>().ToList();
+            if (items.Count > 0 && (nestedName.Equals("r", StringComparison.OrdinalIgnoreCase) ||
+                                    nestedName.Equals("g", StringComparison.OrdinalIgnoreCase) ||
+                                    nestedName.Equals("b", StringComparison.OrdinalIgnoreCase) ||
+                                    nestedName.Equals("a", StringComparison.OrdinalIgnoreCase)))
+            {
+                var index = nestedName.ToLowerInvariant() switch
+                {
+                    "r" => 0,
+                    "g" => 1,
+                    "b" => 2,
+                    "a" => 3,
+                    _ => -1
+                };
+
+                if (index >= 0 && index < items.Count)
+                {
+                    return UnwrapValue(items[index]);
+                }
+            }
+        }
 
         if (value is Dictionary<string, object?> rawDictionary)
         {
@@ -129,7 +184,15 @@ public static class MaterialShaderPropertyUtils
             {
                 if (key.Equals(nestedName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return nestedValue;
+                    return UnwrapValue(nestedValue);
+                }
+
+                if ((nestedName.Equals("r", StringComparison.OrdinalIgnoreCase) && key.Equals("x", StringComparison.OrdinalIgnoreCase)) ||
+                    (nestedName.Equals("g", StringComparison.OrdinalIgnoreCase) && key.Equals("y", StringComparison.OrdinalIgnoreCase)) ||
+                    (nestedName.Equals("b", StringComparison.OrdinalIgnoreCase) && key.Equals("z", StringComparison.OrdinalIgnoreCase)) ||
+                    (nestedName.Equals("a", StringComparison.OrdinalIgnoreCase) && key.Equals("w", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return UnwrapValue(nestedValue);
                 }
             }
             return null;
@@ -141,10 +204,22 @@ public static class MaterialShaderPropertyUtils
             {
                 if (key.Equals(nestedName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return nestedProperty.Value;
+                    return UnwrapValue(nestedProperty.Value);
                 }
             }
             return null;
+        }
+
+        if (value is IDictionary genericDictionary)
+        {
+            foreach (DictionaryEntry entry in genericDictionary)
+            {
+                var key = entry.Key?.ToString() ?? "";
+                if (key.Equals(nestedName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return UnwrapValue(entry.Value);
+                }
+            }
         }
 
         if (value is JObject jObject)
@@ -153,7 +228,15 @@ public static class MaterialShaderPropertyUtils
             {
                 if (property.Name.Equals(nestedName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return property.Value;
+                    return UnwrapValue(property.Value);
+                }
+
+                if ((nestedName.Equals("r", StringComparison.OrdinalIgnoreCase) && property.Name.Equals("x", StringComparison.OrdinalIgnoreCase)) ||
+                    (nestedName.Equals("g", StringComparison.OrdinalIgnoreCase) && property.Name.Equals("y", StringComparison.OrdinalIgnoreCase)) ||
+                    (nestedName.Equals("b", StringComparison.OrdinalIgnoreCase) && property.Name.Equals("z", StringComparison.OrdinalIgnoreCase)) ||
+                    (nestedName.Equals("a", StringComparison.OrdinalIgnoreCase) && property.Name.Equals("w", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return UnwrapValue(property.Value);
                 }
             }
         }
@@ -164,6 +247,7 @@ public static class MaterialShaderPropertyUtils
     private static float ConvertToFloat(object? value, float defaultValue)
     {
         if (value is null) return defaultValue;
+        value = UnwrapValue(value);
         if (value is JToken token) value = token.ToObject<object?>();
         if (value is float f) return f;
         if (value is double d) return (float)d;
@@ -172,6 +256,11 @@ public static class MaterialShaderPropertyUtils
         if (value is decimal dec) return (float)dec;
 
         var text = value?.ToString();
+        if (!string.IsNullOrWhiteSpace(text) && float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedInvariant))
+        {
+            return parsedInvariant;
+        }
+
         if (!string.IsNullOrWhiteSpace(text) && float.TryParse(text, out var parsed))
         {
             return parsed;
@@ -183,6 +272,7 @@ public static class MaterialShaderPropertyUtils
     private static int ConvertToInt(object? value, int defaultValue)
     {
         if (value is null) return defaultValue;
+        value = UnwrapValue(value);
         if (value is JToken token) value = token.ToObject<object?>();
         if (value is int i) return i;
         if (value is long l) return (int)l;
@@ -201,10 +291,35 @@ public static class MaterialShaderPropertyUtils
     private static string ConvertToString(object? value, string defaultValue)
     {
         if (value is null) return defaultValue;
+        value = UnwrapValue(value);
         if (value is JToken token) value = token.ToObject<object?>();
         if (value is string stringValue) return stringValue;
 
         var text = value?.ToString();
         return string.IsNullOrWhiteSpace(text) ? defaultValue : text;
+    }
+
+    private static object? UnwrapValue(object? value)
+    {
+        if (value is JObject jObj && jObj.TryGetValue("Value", StringComparison.OrdinalIgnoreCase, out var nested))
+        {
+            return UnwrapValue(nested);
+        }
+
+        if (value is IDictionary<string, object?> dict && dict.TryGetValue("Value", out var dictNested))
+        {
+            return UnwrapValue(dictNested);
+        }
+
+        if (value is JToken token && token.Type == JTokenType.Object)
+        {
+            var valueNode = token["Value"];
+            if (valueNode != null)
+            {
+                return UnwrapValue(valueNode);
+            }
+        }
+
+        return value;
     }
 }

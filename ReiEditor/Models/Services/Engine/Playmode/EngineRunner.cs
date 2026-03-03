@@ -182,6 +182,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _isPlaymodeActive.Value = false;
         _isEditormodeActive.Value = false;
         _isEngineStarting.Value = false;
+        EndStartProcedure();
     }
 
     private void HandleEngineStartFailure()
@@ -194,6 +195,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _isPlaymodeActive.Value = false;
         _isEditormodeActive.Value = false;
         _isEngineStarting.Value = false;
+        EndStartProcedure();
     }
 
     private bool LoadClientDll()

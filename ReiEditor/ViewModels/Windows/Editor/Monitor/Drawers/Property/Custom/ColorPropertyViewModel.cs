@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Globalization;
+using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Components;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
@@ -127,36 +129,74 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     private void HandleAValueChangedEvent(object? obj)
     {
-        A = Convert.ToSingle(obj);
+        A = ConvertToFloat(obj, 1f);
     }
 
     private void HandleBValueChangedEvent(object? obj)
     {
-        B = Convert.ToSingle(obj);
+        B = ConvertToFloat(obj, 0f);
     }
 
     private void HandleGValueChangedEvent(object? obj)
     {
-        G = Convert.ToSingle(obj);
+        G = ConvertToFloat(obj, 0f);
     }
 
     private void HandleRValueChangedEvent(object? obj)
     {
-        R = Convert.ToSingle(obj);
+        R = ConvertToFloat(obj, 0f);
     }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
-        R = Convert.ToSingle(GetNestedProperty("r")?.Value ?? 0);
-        G = Convert.ToSingle(GetNestedProperty("g")?.Value ?? 0);
-        B = Convert.ToSingle(GetNestedProperty("b")?.Value ?? 0);
-        A = Convert.ToSingle(GetNestedProperty("a")?.Value ?? 1);
+        R = ConvertToFloat(GetNestedProperty("r")?.Value, 0f);
+        G = ConvertToFloat(GetNestedProperty("g")?.Value, 0f);
+        B = ConvertToFloat(GetNestedProperty("b")?.Value, 0f);
+        A = ConvertToFloat(GetNestedProperty("a")?.Value, 1f);
         UpdateColorHex();
     }
 
     private void UpdateColorHex()
     {
-        var hex = ColorTranslator.ToHtml(Color.FromArgb((int) (_a * 255), (int) (_r * 255), (int) (_g * 255), (int) (_b * 255)));
+        var a = (int)(Clamp01(_a) * 255);
+        var r = (int)(Clamp01(_r) * 255);
+        var g = (int)(Clamp01(_g) * 255);
+        var b = (int)(Clamp01(_b) * 255);
+        var hex = ColorTranslator.ToHtml(Color.FromArgb(a, r, g, b));
         ColorHex = hex;
+    }
+
+    private static float ConvertToFloat(object? value, float defaultValue)
+    {
+        if (value is null) return defaultValue;
+        if (value is JToken token) value = token.ToObject<object?>();
+        if (value is float f) return f;
+        if (value is double d) return (float)d;
+        if (value is int i) return i;
+        if (value is long l) return l;
+        if (value is decimal dec) return (float)dec;
+
+        var text = value?.ToString();
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedInvariant))
+            {
+                return parsedInvariant;
+            }
+
+            if (float.TryParse(text, out var parsedCurrent))
+            {
+                return parsedCurrent;
+            }
+        }
+
+        return defaultValue;
+    }
+
+    private static float Clamp01(float value)
+    {
+        if (value < 0f) return 0f;
+        if (value > 1f) return 1f;
+        return value;
     }
 }
