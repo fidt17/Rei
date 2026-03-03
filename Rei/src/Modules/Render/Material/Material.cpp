@@ -56,8 +56,19 @@ namespace rei::render
 
     nlohmann::json Material::REI_GET() const
     {
-        auto properties = nlohmann::json::object();
+        std::vector<std::pair<std::string, nlohmann::json>> orderedProperties;
+        orderedProperties.reserve(_properties.size());
         for (const auto& [key, value] : _properties)
+        {
+            orderedProperties.emplace_back(key, value);
+        }
+        std::sort(orderedProperties.begin(), orderedProperties.end(), [](const auto& lhs, const auto& rhs)
+        {
+            return lhs.first < rhs.first;
+        });
+
+        auto properties = nlohmann::json::object();
+        for (const auto& [key, value] : orderedProperties)
         {
             properties[key] = value;
         }
@@ -120,6 +131,51 @@ namespace rei::render
     void Material::SetDepth(const bool value)
     {
         _useDepth = value;
+    }
+
+    void Material::SetInt(const std::string& name, const i32 value)
+    {
+        if (name.empty()) return;
+        _properties[name] = value;
+        ApplyShaderProperties();
+    }
+
+    void Material::SetFloat(const std::string& name, const float value)
+    {
+        if (name.empty()) return;
+        _properties[name] = value;
+        ApplyShaderProperties();
+    }
+
+    void Material::SetColor(const std::string& name, const Color& value)
+    {
+        if (name.empty()) return;
+
+        _properties[name] = nlohmann::json::object({
+            {"r", value.r},
+            {"g", value.g},
+            {"b", value.b},
+            {"a", value.a}
+        });
+        ApplyShaderProperties();
+    }
+
+    void Material::SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture)
+    {
+        if (name.empty()) return;
+        if (!texture.IsLoaded()) return;
+
+        _properties[name] = nlohmann::json::object({
+            {"Id", texture.Id}
+        });
+        ApplyShaderProperties();
+    }
+
+    void Material::ClearProperty(const std::string& name)
+    {
+        if (name.empty()) return;
+        _properties.erase(name);
+        ApplyShaderProperties();
     }
 
     assets::AssetRef<Material> Material::CreateInstanceFrom(const Material& source)

@@ -23,6 +23,11 @@ namespace rei::render
 
         REI_API bool UseDepth() const;
         REI_API void SetDepth(bool value);
+        REI_API void SetInt(const std::string& name, i32 value);
+        REI_API void SetFloat(const std::string& name, float value);
+        REI_API void SetColor(const std::string& name, const Color& value);
+        REI_API void SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture);
+        REI_API void ClearProperty(const std::string& name);
 
         REI_API void SetSortingOrder(const i32 value) { _sortingOrder = value; }
         REI_API i32 GetSortingOrder() const { return _sortingOrder; }

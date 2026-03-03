@@ -115,8 +115,11 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
     private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
     private CancellationTokenSource? _runtimeSyncDebounceCTS;
+    private CancellationTokenSource? _runtimePullCTS;
     private bool _suppressRuntimeSync;
+    private string _lastRuntimeJson = "";
     private const int RuntimeSyncDebounceDelayMs = 40;
+    private const int RuntimePullIntervalMs = 200;
 
 #pragma warning disable CS8618
     public MaterialMonitorDrawerViewModel() { }
@@ -148,6 +151,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         ShaderPicker.RefreshSearchResultsForAll();
 
         _ = LoadMaterialState();
+        StartRuntimePullLoop();
     }
 
     public override void Dispose()
@@ -155,6 +159,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         base.Dispose();
         PersistUniformValuesFromEditors();
         CancelRuntimeSyncDebounce();
+        CancelRuntimePullLoop();
         SyncRuntimeMaterialImmediate();
         UnsubscribeFromUniformPropertyChanges();
         ShaderProperties.ClearAndDispose();
@@ -375,7 +380,10 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         if (string.IsNullOrWhiteSpace(AssetId)) return;
 
         var jsonData = JsonConvert.SerializeObject(_material);
-        _assetRuntimeSyncService.TrySetAssetData(AssetId, jsonData);
+        if (_assetRuntimeSyncService.TrySetAssetData(AssetId, jsonData))
+        {
+            _lastRuntimeJson = jsonData;
+        }
     }
 
     private void CancelRuntimeSyncDebounce()
@@ -383,5 +391,59 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         _runtimeSyncDebounceCTS?.Cancel();
         _runtimeSyncDebounceCTS?.Dispose();
         _runtimeSyncDebounceCTS = null;
+    }
+
+    private void StartRuntimePullLoop()
+    {
+        CancelRuntimePullLoop();
+        _runtimePullCTS = new CancellationTokenSource();
+        var token = _runtimePullCTS.Token;
+
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(RuntimePullIntervalMs, token);
+                    if (token.IsCancellationRequested) return;
+                    if (string.IsNullOrWhiteSpace(AssetId)) continue;
+                    if (_runtimeSyncDebounceCTS != null) continue;
+
+                    if (!_assetRuntimeSyncService.TryGetAssetData(AssetId, out var jsonData)) continue;
+                    if (string.IsNullOrWhiteSpace(jsonData)) continue;
+                    if (string.Equals(_lastRuntimeJson, jsonData, StringComparison.Ordinal)) continue;
+
+                    var runtimeMaterial = JsonConvert.DeserializeObject<Material>(jsonData);
+                    if (runtimeMaterial == null) continue;
+
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        _suppressRuntimeSync = true;
+                        _material = runtimeMaterial;
+                        _lastRuntimeJson = jsonData;
+                        ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
+                        UseDepth = _material.UseDepth;
+                        SortingOrder = _material.SortingOrder;
+                        RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
+                        _suppressRuntimeSync = false;
+                    });
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+                catch
+                {
+                }
+            }
+        }, token);
+    }
+
+    private void CancelRuntimePullLoop()
+    {
+        _runtimePullCTS?.Cancel();
+        _runtimePullCTS?.Dispose();
+        _runtimePullCTS = null;
     }
 }

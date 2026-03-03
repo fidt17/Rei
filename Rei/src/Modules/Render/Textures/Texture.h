@@ -15,17 +15,17 @@ namespace rei::render
     class Texture
     {
     public:
-        explicit Texture(resources::BinaryReader& reader);
+        REI_API explicit Texture(resources::BinaryReader& reader);
         REI_API void PostLoad();
 
-        void Use(i32 idx = 0) const;
+        REI_API void Use(i32 idx = 0) const;
 
-        u32 GetId() const;
+        REI_API u32 GetId() const;
         
-        TextureType GetType() const;
-        void SetType(TextureType type);
+        REI_API TextureType GetType() const;
+        REI_API void SetType(TextureType type);
 
-        std::string GetTag() const;
+        REI_API std::string GetTag() const;
 
     private:
         u32 _id = 0;
