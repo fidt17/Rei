@@ -18,6 +18,7 @@ public interface IAssetRegistry
     void UnregisterUnderDirectory(string directoryPath);
     
     IEnumerable<Asset> GetDirtyAssets();
+    IEnumerable<AssetInfo> GetLoadedAssetInfos();
     IEnumerable<AssetInfo> GetAllAssets();
     IEnumerable<AssetInfo> GetAllAssetsByExtensions(IReadOnlyCollection<string> extensions);
     bool IsUniqueAssetName(string assetName, string assetExtension);

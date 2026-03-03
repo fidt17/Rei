@@ -416,12 +416,19 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
                 if (runtimeMaterial == null) return;
 
                 _suppressRuntimeSync = true;
-                _material = runtimeMaterial;
+                ApplyRuntimeMaterial(runtimeMaterial);
+                var currentMaterial = _material;
+                if (currentMaterial == null)
+                {
+                    _suppressRuntimeSync = false;
+                    return;
+                }
+
                 _lastRuntimeJson = jsonData;
-                ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
-                UseDepth = _material.UseDepth;
-                SortingOrder = _material.SortingOrder;
-                RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
+                ShaderPicker.SyncSelectedAsset(currentMaterial.ShaderAssetId);
+                UseDepth = currentMaterial.UseDepth;
+                SortingOrder = currentMaterial.SortingOrder;
+                RebuildShaderProperties(currentMaterial.ShaderAssetId, new Dictionary<string, object?>(currentMaterial.Properties));
                 _suppressRuntimeSync = false;
             }
             catch
@@ -437,5 +444,24 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         if (_runtimePullTimer == null) return;
         _runtimePullTimer.Stop();
         _runtimePullTimer = null;
+    }
+
+    private void ApplyRuntimeMaterial(Material runtimeMaterial)
+    {
+        if (_material == null)
+        {
+            _material = runtimeMaterial;
+            return;
+        }
+
+        _material.SetShaderAssetId(runtimeMaterial.ShaderAssetId);
+        _material.SetUseDepth(runtimeMaterial.UseDepth);
+        _material.SetSortingOrder(runtimeMaterial.SortingOrder);
+
+        _material.Properties.Clear();
+        foreach (var (name, value) in runtimeMaterial.Properties)
+        {
+            _material.Properties[name] = value;
+        }
     }
 }

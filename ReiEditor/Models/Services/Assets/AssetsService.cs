@@ -1,5 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
@@ -26,11 +30,11 @@ public class AssetsService : IAssetsService
     private readonly IAssetRegistry _assetRegistry;
 
     public AssetsService(
-        ILogger<AssetsService> logger, 
-        IResourceService resourceService, 
-        ISerializer serializer, 
-        IActiveProjectService activeProject, 
-        IEditorProceduresService editorProceduresService, 
+        ILogger<AssetsService> logger,
+        IResourceService resourceService,
+        ISerializer serializer,
+        IActiveProjectService activeProject,
+        IEditorProceduresService editorProceduresService,
         IAssetRegistry assetRegistry)
     {
         _logger = logger;
@@ -45,7 +49,7 @@ public class AssetsService : IAssetsService
     {
         if (_assetRegistry.TryGetLoadedAsset(assetId, out var loadedAsset)) return (T?) loadedAsset;
         if (!_assetRegistry.TryGetById(assetId, out var assetInfo)) return null;
-		
+
         return await Load<T>(assetInfo);
     }
 
@@ -60,7 +64,7 @@ public class AssetsService : IAssetsService
         {
             // meta is missing
         }
-        
+
         var fullPath = _resourceService.GetProjectPath(projectPath);
         if (!_assetRegistry.TryGetByPath(fullPath, out var assetInfo)) return null;
 
@@ -70,12 +74,12 @@ public class AssetsService : IAssetsService
     public async Task<T?> Load<T>(AssetInfo assetInfo) where T : Asset
     {
         var asset = await _resourceService.TryLoad<T>(assetInfo.FullPath);
-		
+
         if (asset != null)
         {
             _assetRegistry.AddToLoadedAssets(assetInfo, asset);
         }
-		
+
         return asset;
     }
 
@@ -86,10 +90,37 @@ public class AssetsService : IAssetsService
         _assetRegistry.RemoveFromLoadedAssets(assetInfo);
     }
 
+    public async Task ReloadLoadedAssetsFromDisk(IReadOnlyCollection<string> ignoredExtensions)
+    {
+        var loadedAssetInfos = _assetRegistry.GetLoadedAssetInfos().ToList();
+
+        foreach (var assetInfo in loadedAssetInfos)
+        {
+            var extension = Path.GetExtension(assetInfo.FullPath);
+            if (ignoredExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
+            if (!_assetRegistry.TryGetLoadedAsset(assetInfo.Meta.AssetId, out var loadedAsset)) continue;
+
+            try
+            {
+                var jsonData = await File.ReadAllTextAsync(assetInfo.FullPath);
+                JsonConvert.PopulateObject(jsonData, loadedAsset);
+
+                if (loadedAsset is IOnDeserialized onDeserialized)
+                {
+                    onDeserialized.OnDeserialized();
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogException(e);
+            }
+        }
+    }
+
     public async Task SaveProject()
     {
         if (_saveInProcess) return;
-		
+
         _logger.Log("Saving project");
         _saveInProcess.Value = true;
         var saveProcedure = new Procedure("Saving project");
@@ -100,7 +131,7 @@ public class AssetsService : IAssetsService
             var project = _activeProject.GetActiveProject();
             project.SetProjectLastEditTime(DateTime.Now);
             await _resourceService.Write(_serializer.Serialize(project), project.ProjectFilePath);
-		
+
             foreach (var asset in _assetRegistry.GetDirtyAssets())
             {
                 try

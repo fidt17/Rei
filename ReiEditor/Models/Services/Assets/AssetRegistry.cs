@@ -56,6 +56,15 @@ public class AssetRegistry : IAssetRegistry
         }
     }
 
+    public IEnumerable<AssetInfo> GetLoadedAssetInfos()
+    {
+        foreach (var assetId in _loadedAssets.Keys)
+        {
+            if (!_idToAssetInfoMap.TryGetValue(assetId, out var assetInfo)) continue;
+            yield return assetInfo;
+        }
+    }
+
     public IEnumerable<AssetInfo> GetAllAssets() => _idToAssetInfoMap.Values;
 
     public IEnumerable<AssetInfo> GetAllAssetsByExtensions(IReadOnlyCollection<string> extensions)
