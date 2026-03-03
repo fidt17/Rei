@@ -142,8 +142,8 @@ public class SceneManagementService : ISceneManagementService, IDisposable
     private void HandleEngineIsRunningValueChangedEvent(bool isRunning)
     {
         if (isRunning) return;
+        if (_engineRunner.ActiveMode != EngineRunMode.PlayMode) return;
 
         Task.Run(ReloadCurrentScene);
     }
-
 }
