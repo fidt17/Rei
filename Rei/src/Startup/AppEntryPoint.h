@@ -2,6 +2,7 @@
 
 #include "App.h"
 #include "Engine/Engine.h"
+#include "Common/Diagnostics/CrashReporter.h"
 #include "Modules/EntityManagement/EntityManager.h"
 
 #ifdef REI_APP
@@ -20,6 +21,8 @@ namespace rei::external
     {
         try
         {
+            rei::common::diagnostics::CrashReporter::Initialize(resourcesDir, "ReiEngine");
+
             #ifdef REI_EDITOR
             const bool IS_EDITOR = true;
             #else
@@ -74,6 +77,7 @@ int main()
     try
     {
         const auto initialWorkingDirectory = std::filesystem::current_path();
+        rei::common::diagnostics::CrashReporter::Initialize(initialWorkingDirectory, "ReiApp");
         const auto projectName = initialWorkingDirectory.filename().string();
         const auto engine = rei::external::CreateEngine(initialWorkingDirectory.string().c_str(), rei::internal::engine::EngineMode::PlayMode);
 
@@ -123,6 +127,7 @@ int main()
 {
     try
     {
+        rei::common::diagnostics::CrashReporter::Initialize(std::filesystem::current_path(), "ReiApp");
         auto engine = new rei::internal::engine::Engine(std::make_shared<BlankApp>(), rei::internal::engine::EngineMode::PlayMode, false);
         engine->Start();
         return engine->GetExitCode();

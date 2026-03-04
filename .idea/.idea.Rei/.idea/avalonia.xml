@@ -44,6 +44,7 @@
         <entry key="ReiEditor/Views/Resources/Colors.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/CustomTemplates/ComboBox.xaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Resources/Styles.axaml" value="ReiEditor/ReiEditor.csproj" />
+        <entry key="ReiEditor/Views/Windows/Editor/BuildProject/BuildProjectWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindow.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindowHeaderView.axaml" value="ReiEditor/ReiEditor.csproj" />
         <entry key="ReiEditor/Views/Windows/Editor/Console/ConsoleEditorWindowView.axaml" value="ReiEditor/ReiEditor.csproj" />

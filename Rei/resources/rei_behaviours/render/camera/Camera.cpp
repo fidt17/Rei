@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "Camera.h"
 
+#include <algorithm>
+
 #include "glm/ext/matrix_clip_space.hpp"
 #include "rei_behaviours/transformation/Transform.h"
 
@@ -44,8 +46,8 @@ namespace rei::render
 
     void Camera::SetOutputSize(int width, int height)
     {
-        _outputWidth = width;
-        _outputHeight = height;
+        _outputWidth = width <= 0 ? 1 : width;
+        _outputHeight = height <= 0 ? 1 : height;
     }
 
     void Camera::SetRenderMode(const RenderMode mode)
@@ -62,7 +64,12 @@ namespace rei::render
     {
         glm::mat4 projection;
 
-        const f32 aspect = static_cast<float>(_outputWidth) / static_cast<float>(_outputHeight);
+        const i32 safeOutputWidth = _outputWidth <= 0 ? 1 : _outputWidth;
+        const i32 safeOutputHeight = _outputHeight <= 0 ? 1 : _outputHeight;
+        const f32 safeNear = std::max(0.01f, static_cast<f32>(_nearClipPlane) + 0.01f);
+        const f32 safeFar = std::max(safeNear + 0.01f, static_cast<f32>(_farClipPlane));
+        const f32 safeFov = std::clamp(_fov, 0.01f, 179.0f);
+        const f32 aspect = static_cast<float>(safeOutputWidth) / static_cast<float>(safeOutputHeight);
         if (_perspective == Orthographic)
         {
             projection = glm::ortho(-_orthographicSize * aspect, _orthographicSize * aspect,
@@ -71,7 +78,7 @@ namespace rei::render
         }
         else
         {
-            projection = glm::perspective(glm::radians(_fov), aspect, static_cast<float>(_nearClipPlane) + 0.01f, static_cast<float>(_farClipPlane));
+            projection = glm::perspective(glm::radians(safeFov), aspect, safeNear, safeFar);
         }
 
         projection = scale(projection, glm::vec3(-1.0f, 1.0f, 1.0f));

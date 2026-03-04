@@ -17,7 +17,7 @@ namespace ReiEditor.Models.Services.Build.ProjectBuild;
 
 public class ProjectBuildService : IProjectBuildService
 {
-    private const string BUILD_VERSION = "0.0.0";
+    private const string BUILD_VERSION = "0.0.1";
     private static readonly string[] REQUIRED_RESOURCES_FILE_PATTERNS = { "*.bin" };
 
     private const int TOTAL_STEPS = 5;
@@ -280,7 +280,7 @@ public class ProjectBuildService : IProjectBuildService
             lines.Add($"  - {extensionLabel}: {extensionGroup.Count()}");
         }
 
-        lines.Add("- Assets (sorted by size):");
+        lines.Add("- Assets:");
         foreach (var asset in assetEntries.OrderByDescending(x => x.Size))
         {
             lines.Add($"  - {FormatBytes(asset.Size)} | {asset.Name} | {asset.ProjectRelativePath}");

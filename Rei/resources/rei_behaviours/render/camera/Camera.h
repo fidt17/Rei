@@ -20,8 +20,8 @@ namespace rei::render
 
         SERIALIZE CameraPerspectiveEnum _perspective = Perspective;
 
-        i32 _outputWidth;
-        i32 _outputHeight;
+        i32 _outputWidth = 1;
+        i32 _outputHeight = 1;
 
         RenderMode _renderMode = Shaded;
 

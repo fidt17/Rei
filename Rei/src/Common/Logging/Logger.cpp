@@ -1,12 +1,22 @@
-﻿#include "Logger.h"
+#include "Logger.h"
 #include "windows.h"
+#include <deque>
 #include <mutex>
 
 namespace rei::common::logging
 {
     namespace
     {
-        std::mutex g_consoleWriteMutex;
+        std::mutex _consoleWriteMutex;
+        std::mutex _recentLogsMutex;
+        std::deque<std::string> _recentLogs;
+        constexpr size_t _recentLogsCapacity = 256;
+    }
+
+    std::vector<std::string> GetRecentLogEntriesSnapshot()
+    {
+        const std::lock_guard lock(_recentLogsMutex);
+        return {_recentLogs.begin(), _recentLogs.end()};
     }
 
     Logger::Logger(std::string loggerScope): _loggerScope(std::move(loggerScope))
@@ -42,8 +52,9 @@ namespace rei::common::logging
         if (!_enabled) return;
         if (logLevel < _minLogLevel) return;
 
+        std::string snapshotLine;
         {
-            const std::lock_guard lock(g_consoleWriteMutex);
+            const std::lock_guard lock(_consoleWriteMutex);
             UpdateConsoleColor(logLevel);
 
             if (logLevel == Error)
@@ -83,6 +94,22 @@ namespace rei::common::logging
             }
 
             std::cout << "\n";
+
+            snapshotLine = std::string(level) + " | " + message;
+            if (!details.empty())
+            {
+                snapshotLine += " | " + details;
+            }
+        }
+
+        {
+            const std::lock_guard snapshotLock(_recentLogsMutex);
+            if (_recentLogs.size() >= _recentLogsCapacity)
+            {
+                _recentLogs.pop_front();
+            }
+
+            _recentLogs.push_back(std::move(snapshotLine));
         }
 
         const auto logMessage = LogMessage("Engine", logLevel, message.c_str(), details.c_str());

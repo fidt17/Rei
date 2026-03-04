@@ -1,11 +1,14 @@
 ﻿#pragma once
 #include <string>
+#include <vector>
 
 #include "LogLevelEnum.h"
 #include "LogMessage.h"
 
 namespace rei::common::logging
 {
+    REI_API std::vector<std::string> GetRecentLogEntriesSnapshot();
+
     class Logger
     {
     public:
