@@ -48,13 +48,13 @@ namespace rei::common::logging
     #define LOG_USE_COUNT(x) LOG("Use count of " + std::string(#x) + " = " + STRING(x.use_count()))
 #else
     #define LOG_DEBUG(...)
-    #define LOG(...)
-    #define LOG_WARNING(...)
-    #define LOG_ERROR(...)
+    #define LOG(...) rei::common::logging::Log::GetLogger()->Log(rei::common::logging::LogLevelEnum::Info, std::format(__VA_ARGS__), rei::common::logging::internal::BuildSourceDetails());
+    #define LOG_WARNING(...) rei::common::logging::Log::GetLogger()->Log(rei::common::logging::LogLevelEnum::Warning, std::format(__VA_ARGS__), rei::common::logging::internal::BuildSourceDetails());
+    #define LOG_ERROR(...) rei::common::logging::Log::GetLogger()->Log(rei::common::logging::LogLevelEnum::Error, std::format(__VA_ARGS__), rei::common::logging::internal::BuildSourceDetails());
     #define LOG_DEBUG_D(extra_details, ...)
-    #define LOG_D(extra_details, ...)
-    #define LOG_WARNING_D(extra_details, ...)
-    #define LOG_ERROR_D(extra_details, ...)
+    #define LOG_D(extra_details, ...) rei::common::logging::Log::GetLogger()->Log(rei::common::logging::LogLevelEnum::Info, std::format(__VA_ARGS__), rei::common::logging::internal::BuildDetails((extra_details)));
+    #define LOG_WARNING_D(extra_details, ...) rei::common::logging::Log::GetLogger()->Log(rei::common::logging::LogLevelEnum::Warning, std::format(__VA_ARGS__), rei::common::logging::internal::BuildDetails((extra_details)));
+    #define LOG_ERROR_D(extra_details, ...) rei::common::logging::Log::GetLogger()->Log(rei::common::logging::LogLevelEnum::Error, std::format(__VA_ARGS__), rei::common::logging::internal::BuildDetails((extra_details)));
     #define LOGGER_ENABLE() rei::common::logging::Log::GetLogger()->Enable();
     #define LOGGER_DISABLE() rei::common::logging::Log::GetLogger()->Disable();
     #define LOG_USE_COUNT(x)

@@ -63,6 +63,19 @@
         <SolidColorBrush x:Key="CheckBoxForegroundIndeterminatePressed" Color="#8E969D" />
         <SolidColorBrush x:Key="CheckBoxForegroundIndeterminateDisabled" Color="#7C848B" />
 
+        <SolidColorBrush x:Key="RadioButtonForeground" Color="#8E969D" />
+        <SolidColorBrush x:Key="RadioButtonForegroundPointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="RadioButtonForegroundPressed" Color="#8E969D" />
+        <SolidColorBrush x:Key="RadioButtonForegroundDisabled" Color="#7C848B" />
+        <SolidColorBrush x:Key="RadioButtonForegroundUnchecked" Color="#8E969D" />
+        <SolidColorBrush x:Key="RadioButtonForegroundUncheckedPointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="RadioButtonForegroundUncheckedPressed" Color="#8E969D" />
+        <SolidColorBrush x:Key="RadioButtonForegroundUncheckedDisabled" Color="#7C848B" />
+        <SolidColorBrush x:Key="RadioButtonForegroundChecked" Color="#8E969D" />
+        <SolidColorBrush x:Key="RadioButtonForegroundCheckedPointerOver" Color="#B8BFC5" />
+        <SolidColorBrush x:Key="RadioButtonForegroundCheckedPressed" Color="#8E969D" />
+        <SolidColorBrush x:Key="RadioButtonForegroundCheckedDisabled" Color="#7C848B" />
+        
         <SolidColorBrush x:Key="SliderTrackValueFill" Color="#60686F" />
         <SolidColorBrush x:Key="SliderThumbBackground" Color="#8e969d" />
         <x:Double x:Key="SliderHorizontalThumbWidth">13</x:Double>
@@ -190,18 +203,6 @@
     <!-- Toggle Button Styles -->
     <Style Selector="ToggleButton">
         <Setter Property="Cursor" Value="Hand" />
-    </Style>
-    <Style Selector="RadioButton /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Foreground" Value="{StaticResource CheckBoxForegroundUnchecked}" />
-    </Style>
-    <Style Selector="RadioButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Foreground" Value="{StaticResource CheckBoxForegroundUncheckedPointerOver}" />
-    </Style>
-    <Style Selector="RadioButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Foreground" Value="{StaticResource CheckBoxForegroundUncheckedPressed}" />
-    </Style>
-    <Style Selector="RadioButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Foreground" Value="{StaticResource CheckBoxForegroundUncheckedDisabled}" />
     </Style>
     <!-- END Toggle Button Styles -->
 

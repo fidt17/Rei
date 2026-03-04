@@ -11,6 +11,7 @@
         Title="Build Project"
         Icon="/Assets/Images/Rei Icon.png"
         WindowStartupLocation="CenterOwner"
+        CanResize="False"
         Background="{StaticResource Dark_0}">
 
     <Design.DataContext>
@@ -101,7 +102,7 @@
             <Border Grid.RowSpan="6"
                     Grid.ColumnSpan="2"
                     IsVisible="{Binding IsBuildInProgress}"
-                    Background="#CC000000">
+                    Background="Transparent">
                 <Border Width="430"
                         Padding="14"
                         CornerRadius="5"

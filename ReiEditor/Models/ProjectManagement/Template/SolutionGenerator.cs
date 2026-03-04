@@ -76,32 +76,19 @@ public class SolutionGenerator : ISolutionGenerator
         var projectFile = await File.ReadAllTextAsync(projectFilePath);
         if (projectFile == null) throw new Exception($"Missing project file. Path: {projectFilePath}");
         
-        var includesList = includes.ToList();
+        var includesList = includes
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => NormalizeIncludePath(x!))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         for (var index = includesList.Count - 1; index >= 0; index--)
         {
-            var include = includesList[index];
-            if (include == null)
-            {
-                _logger.LogError("Missing include path");
-                includesList.RemoveAt(index);
-                continue;
-            }
-            
-            include = include.Replace("/", "\\");
-
-            if (include[0] == '\\')
-            {
-                include = include.Remove(0, 1);
-            }
-
-            if (projectFile.Contains(include))
+            if (!includesList[index].EndsWith(".cpp", StringComparison.OrdinalIgnoreCase)
+                && !includesList[index].EndsWith(".h", StringComparison.OrdinalIgnoreCase))
             {
                 includesList.RemoveAt(index);
-                continue;
             }
-
-            includesList[index] = include;
         }
 
         var compileStr = new StringBuilder();
@@ -118,15 +105,35 @@ public class SolutionGenerator : ISolutionGenerator
             }
         }
         
-        const string COMPILE_GROUP = "<ItemGroup Label=\"ClCompile\">";
-        var compileGroupIdx = projectFile.IndexOf(COMPILE_GROUP, StringComparison.Ordinal) + COMPILE_GROUP.Length;
-        projectFile = projectFile.Insert(compileGroupIdx, $"\n{compileStr}");
-        
-        const string INCLUDE_GROUP = "<ItemGroup Label=\"ClInclude\">";
-        var includeGroupIdx = projectFile.IndexOf(INCLUDE_GROUP, StringComparison.Ordinal) + INCLUDE_GROUP.Length;
-        projectFile = projectFile.Insert(includeGroupIdx, $"\n{includeStr}");
+        projectFile = ReplaceItemGroupContents(projectFile, "ClCompile", compileStr.ToString());
+        projectFile = ReplaceItemGroupContents(projectFile, "ClInclude", includeStr.ToString());
         
         await File.WriteAllTextAsync(projectFilePath, projectFile);
+    }
+
+    private static string NormalizeIncludePath(string includePath)
+    {
+        var normalized = includePath.Replace("/", "\\");
+        return normalized.StartsWith("\\")
+            ? normalized.Remove(0, 1)
+            : normalized;
+    }
+
+    private static string ReplaceItemGroupContents(string projectFile, string itemGroupName, string itemGroupContent)
+    {
+        var itemGroupStartTag = $"<ItemGroup Label=\"{itemGroupName}\">";
+        var itemGroupStartIndex = projectFile.IndexOf(itemGroupStartTag, StringComparison.Ordinal);
+        if (itemGroupStartIndex < 0) throw new Exception($"Could not find item group: {itemGroupName}");
+
+        var itemGroupEndTag = "</ItemGroup>";
+        var itemGroupContentStartIndex = itemGroupStartIndex + itemGroupStartTag.Length;
+        var itemGroupEndIndex = projectFile.IndexOf(itemGroupEndTag, itemGroupContentStartIndex, StringComparison.Ordinal);
+        if (itemGroupEndIndex < 0) throw new Exception($"Could not find item group end tag for: {itemGroupName}");
+
+        return projectFile.Substring(0, itemGroupContentStartIndex)
+             + Environment.NewLine
+             + itemGroupContent
+             + projectFile.Substring(itemGroupEndIndex);
     }
 
     private async Task<string> CreateSolutionFile(string projectName, string solutionFolderPath, Guid solutionGuid, Guid projectGuid)

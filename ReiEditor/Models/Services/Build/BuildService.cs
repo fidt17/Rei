@@ -101,7 +101,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         _discardBuild = false;
         _buildInProgress.Value = true;
         _isBuildReady.Value = false;
-            
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -142,17 +142,17 @@ public class BuildService : IBuildService, IAsyncDisposable
             _logger.LogError($"Build Failed in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
             _logger.LogException(e);
             _isBuildReady.Value = false;
-            _buildInProgress.Value = false;
             return false;
+        }
+        finally
+        {
+            _buildInProgress.Value = false;
+            buildProcedure.Complete();
         }
 
         _editorConsoleService.ClearConsole();
         _logger.Log($"Build Complete in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
         _isBuildReady.Value = true;
-        _buildInProgress.Value = false;
-        
-        buildProcedure.Complete();
-        
         return true;
     }
 }
