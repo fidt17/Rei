@@ -17,6 +17,7 @@ namespace ReiEditor.Models.Services.Build.ProjectBuild;
 
 public class ProjectBuildService : IProjectBuildService
 {
+    private const string BUILD_VERSION = "0.0.0";
     private static readonly string[] REQUIRED_RESOURCES_FILE_PATTERNS = { "*.bin" };
 
     private const int TOTAL_STEPS = 5;
@@ -199,10 +200,15 @@ public class ProjectBuildService : IProjectBuildService
         var outputDirectory = Path.GetFullPath(request.OutputPath);
         var resourcesDirectory = Path.Combine(outputDirectory, "Resources");
         var reportFilePath = Path.Combine(outputDirectory, "BuildResult_DO_NOT_SHIP.txt");
+        var sourceResourcesDirectoryPath = _outputPathUtility.GetResourcesDirectory();
+        var sourceMapJsonPath = Path.Combine(sourceResourcesDirectoryPath, "map.json");
+        var packagedAssetsBinPath = Path.Combine(resourcesDirectory, "assets.bin");
+        var assetEntries = GetAssetEntriesWithSizes(sourceMapJsonPath, packagedAssetsBinPath);
 
         var report = new StringBuilder();
         report.AppendLine("REI BUILD RESULT");
         report.AppendLine("================");
+        report.AppendLine($"Build Version: {BUILD_VERSION}");
         report.AppendLine($"Timestamp (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine($"Configuration: {request.Configuration}");
         report.AppendLine($"Console: {(request.ShowConsole ? "Enabled" : "Disabled")}");
@@ -233,11 +239,15 @@ public class ProjectBuildService : IProjectBuildService
         }
         report.AppendLine();
 
-        report.AppendLine("Asset Payload Summary:");
-        var sourceResourcesDirectoryPath = _outputPathUtility.GetResourcesDirectory();
-        var sourceMapJsonPath = Path.Combine(sourceResourcesDirectoryPath, "map.json");
-        var packagedAssetsBinPath = Path.Combine(resourcesDirectory, "assets.bin");
-        foreach (var line in BuildAssetSummaryLines(sourceMapJsonPath, packagedAssetsBinPath))
+        report.AppendLine("Assets Summary:");
+        foreach (var line in BuildAssetSummaryLines(assetEntries))
+        {
+            report.AppendLine(line);
+        }
+        report.AppendLine();
+
+        report.AppendLine("Built Scenes:");
+        foreach (var line in BuildScenesSummaryLines(assetEntries))
         {
             report.AppendLine(line);
         }
@@ -250,16 +260,58 @@ public class ProjectBuildService : IProjectBuildService
         File.WriteAllText(reportFilePath, report.ToString());
     }
 
-    private static IEnumerable<string> BuildAssetSummaryLines(string mapJsonPath, string assetsBinPath)
+    private static IEnumerable<string> BuildAssetSummaryLines(IReadOnlyList<BuildAssetEntry> assetEntries)
     {
-        if (!File.Exists(mapJsonPath))
+        if (assetEntries.Count == 0)
         {
-            return new[] { "- map.json not found. Asset breakdown unavailable." };
+            return new[] { "- No assets found in map.json." };
         }
 
-        if (!File.Exists(assetsBinPath))
+        var lines = new List<string> { $"- Total assets: {assetEntries.Count}" };
+
+        lines.Add("- Assets by extension:");
+        var groupedByExtension = assetEntries
+            .GroupBy(x => x.Extension, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(x => x.Count())
+            .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase);
+        foreach (var extensionGroup in groupedByExtension)
         {
-            return new[] { "- assets.bin not found. Asset breakdown unavailable." };
+            var extensionLabel = string.IsNullOrWhiteSpace(extensionGroup.Key) ? "(no extension)" : extensionGroup.Key;
+            lines.Add($"  - {extensionLabel}: {extensionGroup.Count()}");
+        }
+
+        lines.Add("- Assets (sorted by size):");
+        foreach (var asset in assetEntries.OrderByDescending(x => x.Size))
+        {
+            lines.Add($"  - {FormatBytes(asset.Size)} | {asset.Name} | {asset.ProjectRelativePath}");
+        }
+
+        return lines;
+    }
+
+    private static IEnumerable<string> BuildScenesSummaryLines(IReadOnlyList<BuildAssetEntry> assetEntries)
+    {
+        var scenes = assetEntries
+            .Where(x => string.Equals(x.Extension, ".scene", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => x.ProjectRelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (scenes.Count == 0) return new[] { "- No scene assets found." };
+
+        var lines = new List<string> { $"- Scenes built: {scenes.Count}" };
+        foreach (var scene in scenes)
+        {
+            lines.Add($"  - {scene.ProjectRelativePath}");
+        }
+
+        return lines;
+    }
+
+    private static IReadOnlyList<BuildAssetEntry> GetAssetEntriesWithSizes(string mapJsonPath, string assetsBinPath)
+    {
+        if (!File.Exists(mapJsonPath) || !File.Exists(assetsBinPath))
+        {
+            return Array.Empty<BuildAssetEntry>();
         }
 
         var mapJson = File.ReadAllText(mapJsonPath);
@@ -267,38 +319,52 @@ public class ProjectBuildService : IProjectBuildService
         var assets = root["Assets"] as JArray;
         if (assets == null || assets.Count == 0)
         {
-            return new[] { "- No assets found in map.json." };
+            return Array.Empty<BuildAssetEntry>();
         }
 
-        var assetEntries = new List<(string name, string path, long offset)>();
+        var entries = new List<(string Name, string AssetPath, string ProjectRelativePath, string Extension, long Offset)>();
         foreach (var item in assets.OfType<JObject>())
         {
             var offsetToken = item["Offset"];
-            if (offsetToken == null) continue;
-            if (!long.TryParse(offsetToken.ToString(), out var offset)) continue;
+            if (offsetToken == null || !long.TryParse(offsetToken.ToString(), out var offset)) continue;
 
             var name = item["Name"]?.ToString() ?? "unknown";
             var path = item["AssetPath"]?.ToString() ?? "unknown";
-            assetEntries.Add((name, path, offset));
+            var projectRelativePath = GetProjectRelativePath(path);
+            var extension = Path.GetExtension(path);
+
+            entries.Add((name, path, projectRelativePath, extension, offset));
         }
 
-        if (assetEntries.Count == 0)
+        if (entries.Count == 0)
         {
-            return new[] { "- No assets with valid offsets found in map.json." };
+            return Array.Empty<BuildAssetEntry>();
         }
 
-        assetEntries.Sort((a, b) => a.offset.CompareTo(b.offset));
+        entries.Sort((a, b) => a.Offset.CompareTo(b.Offset));
         var assetsBinSize = new FileInfo(assetsBinPath).Length;
-        var lines = new List<string> { $"- Total assets: {assetEntries.Count}", $"- assets.bin size: {FormatBytes(assetsBinSize)}", "- Assets:" };
-        for (var i = 0; i < assetEntries.Count; i++)
+        var result = new List<BuildAssetEntry>(entries.Count);
+        for (var i = 0; i < entries.Count; i++)
         {
-            var current = assetEntries[i];
-            var nextOffset = i + 1 < assetEntries.Count ? assetEntries[i + 1].offset : assetsBinSize;
-            var size = Math.Max(0, nextOffset - current.offset);
-            lines.Add($"  - {current.name} | {FormatBytes(size)} | {current.path}");
+            var current = entries[i];
+            var nextOffset = i + 1 < entries.Count ? entries[i + 1].Offset : assetsBinSize;
+            var size = Math.Max(0, nextOffset - current.Offset);
+            result.Add(new BuildAssetEntry(current.Name, current.AssetPath, current.ProjectRelativePath, current.Extension, size));
         }
 
-        return lines;
+        return result;
+    }
+
+    private static string GetProjectRelativePath(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath)) return "unknown";
+
+        var normalizedPath = assetPath.Replace('/', '\\');
+        const string PROJECT_SEGMENT = "\\Project\\";
+        var projectSegmentIndex = normalizedPath.IndexOf(PROJECT_SEGMENT, StringComparison.OrdinalIgnoreCase);
+        if (projectSegmentIndex < 0) return normalizedPath;
+
+        return normalizedPath[(projectSegmentIndex + PROJECT_SEGMENT.Length)..];
     }
 
     private static string FormatBytes(long bytes)
@@ -315,4 +381,11 @@ public class ProjectBuildService : IProjectBuildService
 
         return $"{readable:0.##} {suffixes[i]}";
     }
+
+    private readonly record struct BuildAssetEntry(
+        string Name,
+        string AssetPath,
+        string ProjectRelativePath,
+        string Extension,
+        long Size);
 }

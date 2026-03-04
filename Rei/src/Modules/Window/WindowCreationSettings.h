@@ -9,4 +9,5 @@ struct WindowCreationSettings
     
     bool HideCursor;
     bool CenterCursor;
+    bool FullScreen = false;
 };

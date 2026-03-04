@@ -6,8 +6,24 @@ namespace rei::window
     Window::Window(const WindowCreationSettings& settings)
     {
         settings.HideOnCreation ? glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE) : glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+        GLFWmonitor* monitor = nullptr;
+        i32 width = settings.Width;
+        i32 height = settings.Height;
+        if (settings.FullScreen)
+        {
+            monitor = glfwGetPrimaryMonitor();
+            if (monitor != nullptr)
+            {
+                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                if (mode != nullptr)
+                {
+                    width = mode->width;
+                    height = mode->height;
+                }
+            }
+        }
 
-        _glfwWindow = glfwCreateWindow(settings.Width, settings.Height, settings.Name.c_str(), nullptr, nullptr);
+        _glfwWindow = glfwCreateWindow(width, height, settings.Name.c_str(), monitor, nullptr);
         REI_THROW_IF(!_glfwWindow, std::format("Window creation failed"))
 
         glfwSetWindowUserPointer(_glfwWindow, this);
@@ -25,7 +41,7 @@ namespace rei::window
 
         if (settings.CenterCursor)
         {
-            glfwSetCursorPos(_glfwWindow, settings.Width / 2., settings.Height / 2.);
+            glfwSetCursorPos(_glfwWindow, width / 2., height / 2.);
         }
         
         glfwSetCursorPosCallback(_glfwWindow, [](GLFWwindow* w, const double xPos, const double yPos)
@@ -33,7 +49,10 @@ namespace rei::window
             static_cast<Window*>(glfwGetWindowUserPointer(w))->OnMouseMoveEvent(xPos, yPos);
         });
 
-        CenterWindow();
+        if (!settings.FullScreen)
+        {
+            CenterWindow();
+        }
     }
 
     void Window::OnUpdate()

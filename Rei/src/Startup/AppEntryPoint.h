@@ -84,6 +84,11 @@ int main()
         windowSettings.HideOnCreation = false;
         windowSettings.CenterCursor = true;
         windowSettings.HideCursor = false;
+        #ifdef REI_EDITOR
+        windowSettings.FullScreen = false;
+        #else
+        windowSettings.FullScreen = true;
+        #endif
         engine->CreateMainWindow(windowSettings);
         
         rei::external::Start(engine);
