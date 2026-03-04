@@ -6,7 +6,8 @@
 
 #include "rei_behaviours/transformation/Transform.h"
 #include "rei_behaviours/transformation/TransformHierarchyUtility.h"
-#include "Common/Time/ScopedTimer.h"
+#include "Engine/Engine.h"
+#include "Engine/Services.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Components/EntityInfo.h"
@@ -112,7 +113,11 @@ namespace rei
 
     void EntityManager::DeleteBehaviour(const ecs::Entity e, const i32 behaviourId)
     {
-        GetBehaviourRegistry().GetBehaviour(e, behaviourId).Dispose();
+        if (GetEngine().IsPlaymode())
+        {
+            GetBehaviourRegistry().GetBehaviour(e, behaviourId).Dispose();
+        }
+
         GetBehaviourRegistry().DeleteBehaviour(e, behaviourId);
     }
 
@@ -167,7 +172,10 @@ namespace rei
             {
                 for (const auto behaviour : GET(entity, BehaviourCollection).Behaviours)
                 {
-                    GetBehaviour(entity, behaviour).Dispose();
+                    if (GetEngine().IsPlaymode())
+                    {
+                        GetBehaviour(entity, behaviour).Dispose();
+                    }
                 }
             }
 
@@ -307,7 +315,7 @@ namespace rei
         FOR(e, _entityInfoFilter)
         {
             const i32 id = GET(e, EntityInfo).Id;
-            maxId = std::max(id, maxId);
+            maxId = max(id, maxId);
         }
 
         return maxId + 1;

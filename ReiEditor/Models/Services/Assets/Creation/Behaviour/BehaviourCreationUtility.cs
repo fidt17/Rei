@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -48,17 +49,25 @@ public class BehaviourCreationUtility : IBehaviourCreationUtility
             if (!ValidBehaviourNameRegex.IsMatch(settings.BehaviourName.Trim())) throw new Exception($"Behaviour name '{settings.BehaviourName}' is invalid");
             if (!IsBehaviourNameUnique(settings.BehaviourName)) throw new Exception($"Behaviour name '{settings.BehaviourName}' is not unique");
 
-            var targetPath = Path.Combine(settings.TargetDirectory, $"{settings.BehaviourName}.h");
-            if (_resourceService.Exists(targetPath)) throw new Exception($"Asset at '{targetPath}' already exists");
+            var targetHeaderPath = Path.Combine(settings.TargetDirectory, $"{settings.BehaviourName}.h");
+            var targetSourcePath = Path.Combine(settings.TargetDirectory, $"{settings.BehaviourName}.cpp");
+            if (_resourceService.Exists(targetHeaderPath)) throw new Exception($"Asset at '{targetHeaderPath}' already exists");
+            if (_resourceService.Exists(targetSourcePath)) throw new Exception($"Asset at '{targetSourcePath}' already exists");
 
-            var source = BuildBehaviourTemplate(settings.BehaviourName, settings.OverrideInit, settings.OverrideStart, settings.OverrideUpdate, settings.OverrideDispose);
-            var didWrite = await _resourceService.Write(source, targetPath);
-            if (!didWrite) throw new Exception($"Failed to write behaviour data to '{targetPath}'");
+            var methods = GetOverrideMethods(settings.OverrideInit, settings.OverrideStart, settings.OverrideUpdate, settings.OverrideDispose).ToArray();
+
+            var headerSource = BuildBehaviourHeaderTemplate(settings.BehaviourName, methods);
+            var didWriteHeader = await _resourceService.Write(headerSource, targetHeaderPath);
+            if (!didWriteHeader) throw new Exception($"Failed to write behaviour data to '{targetHeaderPath}'");
+
+            var cppSource = BuildBehaviourCppTemplate(settings.BehaviourName, methods);
+            var didWriteSource = await _resourceService.Write(cppSource, targetSourcePath);
+            if (!didWriteSource) throw new Exception($"Failed to write behaviour data to '{targetSourcePath}'");
 
             var meta = new AssetMeta(_assetCreator.AllocateAssetId());
             meta.AddData(BehaviourMeta.Key, new BehaviourMeta(_behaviourRegistry.AllocateBehaviourId()));
-            await _metaFilesService.CreateMetaFile(meta, targetPath);
-            await _assetImporter.ReimportPaths(new[] { targetPath });
+            await _metaFilesService.CreateMetaFile(meta, targetHeaderPath);
+            await _assetImporter.ReimportPaths(new[] { targetHeaderPath, targetSourcePath });
 
             return true;
         }
@@ -75,7 +84,7 @@ public class BehaviourCreationUtility : IBehaviourCreationUtility
             .Any(x => string.Equals(x.ObjectName, behaviourName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string BuildBehaviourTemplate(string behaviourName, bool overrideInit, bool overrideStart, bool overrideUpdate, bool overrideDispose)
+    private static string BuildBehaviourHeaderTemplate(string behaviourName, string[] methods)
     {
         var builder = new StringBuilder();
         builder.AppendLine("#pragma once");
@@ -88,23 +97,49 @@ public class BehaviourCreationUtility : IBehaviourCreationUtility
         builder.AppendLine();
         builder.AppendLine("public:");
 
-        AppendMethodOverride(builder, overrideInit, "Init");
-        AppendMethodOverride(builder, overrideStart, "Start");
-        AppendMethodOverride(builder, overrideUpdate, "Update");
-        AppendMethodOverride(builder, overrideDispose, "Dispose");
+        AppendMethodDeclarations(builder, methods);
 
         builder.AppendLine("};");
 
         return builder.ToString();
     }
 
-    private static void AppendMethodOverride(StringBuilder builder, bool shouldAppend, string methodName)
+    private static string BuildBehaviourCppTemplate(string behaviourName, string[] methods)
     {
-        if (!shouldAppend) return;
+        var builder = new StringBuilder();
+        builder.AppendLine($"#include \"{behaviourName}.h\"");
+
+        if (methods.Length == 0)
+        {
+            return builder.ToString();
+        }
 
         builder.AppendLine();
-        builder.AppendLine($"    void {methodName}() override");
-        builder.AppendLine("    {");
-        builder.AppendLine("    }");
+        foreach (var methodName in methods)
+        {
+            builder.AppendLine($"void {behaviourName}::{methodName}()");
+            builder.AppendLine("{");
+            builder.AppendLine("}");
+            builder.AppendLine();
+        }
+
+        return builder.ToString().TrimEnd() + Environment.NewLine;
+    }
+
+    private static void AppendMethodDeclarations(StringBuilder builder, string[] methods)
+    {
+        foreach (var methodName in methods)
+        {
+            builder.AppendLine();
+            builder.AppendLine($"    void {methodName}() override;");
+        }
+    }
+
+    private static IEnumerable<string> GetOverrideMethods(bool overrideInit, bool overrideStart, bool overrideUpdate, bool overrideDispose)
+    {
+        if (overrideInit) yield return "Init";
+        if (overrideStart) yield return "Start";
+        if (overrideUpdate) yield return "Update";
+        if (overrideDispose) yield return "Dispose";
     }
 }
