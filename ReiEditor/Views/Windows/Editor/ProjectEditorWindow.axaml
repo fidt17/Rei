@@ -7,7 +7,8 @@
         xmlns:statusBar="clr-namespace:ReiEditor.Views.Windows.Editor.StatusBar"
         xmlns:hierarchies="clr-namespace:ReiEditor.Views.Windows.Editor.Hierarchies"
         xmlns:monitor="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor"
-        xmlns:tabs="clr-namespace:ReiEditor.Views.Windows.Editor.WindowTabs"
+        xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
+        xmlns:project="clr-namespace:ReiEditor.Views.Windows.Editor.Project"
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
@@ -82,17 +83,45 @@
             </Grid>
 
             <!-- Footer -->
-            <Grid 
+            <Grid
                 Height="320"
                 Grid.Row="1"
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
                 RowDefinitions="*, Auto">
-                <tabs:WindowContainer
-                    DataContext="{Binding FooterWindowContainer}" />
+
+                <!-- Tabs -->
+                <Border>
+                    <Grid
+                        ColumnDefinitions="*, *">
+                        <!-- Project Window -->
+                        <Border
+                            Grid.Column="0"
+                            Classes="Window">
+                            <project:ProjectWindowView
+                                DataContext="{Binding ProjectWindow}" />
+                        </Border>
+
+                        <!-- Console Window -->
+                        <Border
+                            Classes="Window"
+                            Grid.Column="1">
+                            <Grid
+                                Grid.RowDefinitions="Auto, *">
+                                <console:ConsoleEditorWindowHeaderView
+                                    Grid.Row="0"
+                                    HorizontalAlignment="Right"
+                                    DataContext="{Binding ConsoleHeader}" />
+                                <console:ConsoleEditorWindowView
+                                    Grid.Row="1"
+                                    DataContext="{Binding Console}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
 
                 <!-- Status Bar -->
-                <statusBar:StatusBarView 
+                <statusBar:StatusBarView
                     Grid.Row="1"
                     DataContext="{Binding StatusBar}" />
             </Grid>
