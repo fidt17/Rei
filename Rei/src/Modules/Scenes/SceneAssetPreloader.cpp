@@ -33,17 +33,17 @@ namespace rei::scenes
             LOG_DEBUG("Scene asset dependencies loaded: 0 | ids=[]")
             return true;
         }
-
+        
         std::vector<std::future<void>> loadFutures;
         const u32 hardwareConcurrency = std::thread::hardware_concurrency();
         const std::size_t suggestedWorkerCount = std::max(1u, hardwareConcurrency);
         const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
         loadFutures.reserve(workerCount);
-
-        LOG_DEBUG("Loading scene dependencies using {} workers", workerCount)
+        
+        LOG_D(std::format("workersThreads={}, dependenciesCount={}, ids=[{}]", workerCount, dependencies.size(), JoinDependencyIds(dependencies)), "Loading scene dependencies")
 
         std::atomic<std::size_t> nextDependencyIndex = 0;
-        std::atomic<bool> hasDependencyLoadFailure = false;
+        std::atomic hasDependencyLoadFailure = false;
         std::mutex failedDependencyIdsMutex;
         std::vector<std::string> failedDependencyIds;
         failedDependencyIds.reserve(uniqueDependencies.size());

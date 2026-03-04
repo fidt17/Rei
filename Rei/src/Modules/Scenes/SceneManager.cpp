@@ -18,6 +18,20 @@ namespace rei::scenes
     {
     }
 
+    void SceneManager::CreateSceneEntities()
+    {
+        REI_THROW_IF(!_activeScene.IsLoaded(), "Active scene is not loaded")
+        
+        LOG_D(std::format("count={}", STRING(_activeScene->GetEntities().size())), "Creating scene entities")
+        for (const auto& sceneEntity : _activeScene->GetEntities())
+        {
+            _entityManager->Create(sceneEntity);
+        }
+        GetInternalWorld()->RefreshAll();
+        
+        _entityManager->ResolveTransformParents();
+    }
+
     void SceneManager::LoadScene(const int id)
     {
         REI_ASSERT(_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
@@ -26,15 +40,9 @@ namespace rei::scenes
         _activeScene = _buildScenesConfig->GetScene(id);
         _assetManager->Load(_activeScene);
 
-        const auto sceneAssetDependencies = CollectSceneAssetDependencies();
+        _sceneAssetPreloader.Preload(CollectSceneAssetDependencies());
 
-        for (const auto& sceneEntity : _activeScene->GetEntities())
-        {
-            _entityManager->Create(sceneEntity);
-        }
-        GetInternalWorld()->RefreshAll();
-        
-        _entityManager->ResolveTransformParents();
+        CreateSceneEntities();
 
         LOG("Loaded scene {}", _activeScene->GetName())
     }
