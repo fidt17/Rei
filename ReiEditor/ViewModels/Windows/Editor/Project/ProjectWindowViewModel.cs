@@ -104,6 +104,7 @@ public class ProjectWindowViewModel : BaseViewModel
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
         _editorRefreshService.RefreshedEvent += HandleEditorRefreshedEvent;
         _projectAssetFocusService.FocusAssetRequested += HandleFocusAssetRequestedEvent;
+        _projectAssetFocusService.FocusAssetPathRequested += HandleFocusAssetPathRequestedEvent;
     }
 
     public override void Dispose()
@@ -118,6 +119,7 @@ public class ProjectWindowViewModel : BaseViewModel
         if (_projectAssetFocusService != null)
         {
             _projectAssetFocusService.FocusAssetRequested -= HandleFocusAssetRequestedEvent;
+            _projectAssetFocusService.FocusAssetPathRequested -= HandleFocusAssetPathRequestedEvent;
         }
 
         ResetDirectoryTree();
@@ -138,6 +140,13 @@ public class ProjectWindowViewModel : BaseViewModel
         if (!_assetRegistry.TryGetById(assetId, out var assetInfo) || assetInfo == null) return;
 
         Dispatcher.UIThread.InvokeAsync(() => FocusAssetByPath(assetInfo.FullPath));
+    }
+
+    private void HandleFocusAssetPathRequestedEvent(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath)) return;
+
+        Dispatcher.UIThread.InvokeAsync(() => FocusAssetByPath(assetPath));
     }
 
 

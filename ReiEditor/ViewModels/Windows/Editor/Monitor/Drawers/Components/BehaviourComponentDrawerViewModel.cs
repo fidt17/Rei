@@ -7,6 +7,7 @@ using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls;
@@ -32,6 +33,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
     private readonly IProjectAssetFocusService _projectAssetFocusService;
+    private readonly ITextEditorFileOpener _textEditorFileOpener;
 
 #pragma warning disable CS8618
     public BehaviourComponentDrawerViewModel() { }
@@ -46,7 +48,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
-        IProjectAssetFocusService projectAssetFocusService)
+        IProjectAssetFocusService projectAssetFocusService,
+        ITextEditorFileOpener textEditorFileOpener)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
@@ -57,6 +60,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
         _projectAssetFocusService = projectAssetFocusService;
+        _textEditorFileOpener = textEditorFileOpener;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
         {
@@ -64,7 +68,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         }
         
         Name = behaviourInfo.ObjectName;
-        ContextMenu = SetupContextMenu();
+        ContextMenu = SetupContextMenu(behaviourInfo);
         SetupProperties();
     }
 
@@ -80,11 +84,23 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
 
     private void DeleteComponent() => _entityManagementService.DeleteBehaviour(_entity, BehaviourComponent.Id);
 
-    private ContextMenuViewModel SetupContextMenu()
+    private ContextMenuViewModel SetupContextMenu(BehaviourAssetInfo behaviourInfo)
     {
         var contextMenu = new ContextMenuViewModel();
+        contextMenu.AddOption(new ContextMenuOption("Show in project", () => ShowInProject(behaviourInfo)));
+        contextMenu.AddOption(new ContextMenuOption("Edit", () => EditBehaviourSource(behaviourInfo)));
         contextMenu.AddOption(new ContextMenuOption("Delete Component", DeleteComponent));
         return contextMenu;
+    }
+
+    private void ShowInProject(BehaviourAssetInfo behaviourInfo)
+    {
+        _projectAssetFocusService.FocusAssetPath(behaviourInfo.Source.FullPath);
+    }
+
+    private void EditBehaviourSource(BehaviourAssetInfo behaviourInfo)
+    {
+        _textEditorFileOpener.Open(behaviourInfo.Source.FullPath);
     }
     
     private void SetupProperties()
