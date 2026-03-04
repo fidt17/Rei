@@ -1,10 +1,13 @@
 using Autofac;
+using ReiEditor.Models.EditorApp.ProjectBuildWindow;
 using ReiEditor.Models.Services.Build;
+using ReiEditor.Models.Services.Build.ProjectBuild;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Build.Assets.Cache;
 using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Commands;
+using ReiEditor.ViewModels.Windows.Editor.BuildProject;
 
 namespace ReiEditor.Startup.Scopes.Editor.Modules;
 
@@ -19,9 +22,15 @@ public class BuildModule : Module
         builder.RegisterSingleton<AssetBuildCachePipeline>().As<IAssetBuildCachePipeline>();
         builder.RegisterSingleton<AssetBuilder>().As<IAssetBuilder>();
         builder.RegisterSingleton<BuildStarter>().As<IBuildStarter>();
+        builder.RegisterSingleton<ProjectBuildWindowService>().As<IProjectBuildWindowService>();
+        builder.RegisterSingleton<ProjectBuildService>().As<IProjectBuildService>();
+        builder.RegisterType<ProjectBuildConfigurationUtility>();
+        builder.RegisterType<ProjectBuildOutputPathUtility>();
         builder.RegisterNonLazy<BuildProcedureTracker>();
         
         builder.RegisterType<BuildProjectCommand>();
+        builder.RegisterType<OpenBuildProjectWindowCommand>();
         builder.RegisterType<ImportEngineResourcesCommand>();
+        builder.RegisterType<BuildProjectWindowViewModel>();
     }
 }

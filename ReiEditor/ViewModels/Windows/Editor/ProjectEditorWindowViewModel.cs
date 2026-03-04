@@ -20,6 +20,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public BuildProjectCommand BuildProjectCommand { get; }
     public ImportEngineResourcesCommand ImportEngineResourcesCommand { get; }
     public OpenSettingsWindowCommand OpenSettingsCommand { get; }
+    public OpenBuildProjectWindowCommand OpenBuildProjectWindowCommand { get; }
 
     public PlaymodePanelViewModel PlaymodePanel { get; } = new();
     public ConsoleEditorWindowViewModel Console { get; } = new();
@@ -48,6 +49,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         IFactory<BuildProjectCommand> buildProjectCommandFactory,
         IFactory<ImportEngineResourcesCommand> importEngineResourcesCommandFactory,
         IFactory<OpenSettingsWindowCommand> openSettingsCommandFactory,
+        IFactory<OpenBuildProjectWindowCommand> openBuildProjectWindowCommandFactory,
         IFactory<StatusBarViewModel> statusBarViewModelFactory,
         IFactory<HierarchyWindowViewModel> hierarchyFactory,
         IFactory<SaveProjectCommand> saveProjectCommand,
@@ -59,6 +61,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         BuildProjectCommand = buildProjectCommandFactory.CreateInstance();
         ImportEngineResourcesCommand = importEngineResourcesCommandFactory.CreateInstance();
         OpenSettingsCommand = openSettingsCommandFactory.CreateInstance();
+        OpenBuildProjectWindowCommand = openBuildProjectWindowCommandFactory.CreateInstance();
 
         PlaymodePanel = playmodePanel.CreateInstance();
         Console = console.CreateInstance();
@@ -76,6 +79,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         Console.Dispose();
         BuildProjectCommand.Dispose();
         OpenSettingsCommand.Dispose();
+        OpenBuildProjectWindowCommand.Dispose();
         StatusBar.Dispose();
         Hierarchy.Dispose();
         ProjectWindow.Dispose();

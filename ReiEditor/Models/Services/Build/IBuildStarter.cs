@@ -1,11 +1,16 @@
-﻿using System.Threading.Tasks;
+using System.Threading;
+using System.Threading.Tasks;
 using ReiEditor.Utils.Common.Condition;
 
 namespace ReiEditor.Models.Services.Build;
 
 public interface IBuildStarter
 {
-	ICondition CanStartBuild { get; }
+    ICondition CanStartBuild { get; }
 
-	Task<bool> BuildProject(BuildConfigurationEnum configurationEnum);
+    Task<bool> BuildProject(
+        BuildConfigurationEnum configurationEnum,
+        bool forceSolutionRebuild = false,
+        bool forceCleanSolutionBuild = false,
+        CancellationToken cancellationToken = default);
 }

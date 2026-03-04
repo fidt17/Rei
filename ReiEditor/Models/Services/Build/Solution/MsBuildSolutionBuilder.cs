@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
@@ -27,7 +28,10 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
         _logger = logger;
     }
 
-    public async Task Build(BuildConfigurationEnum configuration)
+    public async Task Build(
+        BuildConfigurationEnum configuration,
+        bool cleanBuild = false,
+        CancellationToken cancellationToken = default)
     {
         _logger.Log($"Building solution. Configuration: {configuration}");
         
@@ -36,7 +40,7 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
 		
         var msBuildProcess = new Process();
         msBuildProcess.StartInfo.FileName = msBuildPath;
-        if (_didCleanBuild)
+        if (_didCleanBuild && !cleanBuild)
         {
             msBuildProcess.StartInfo.Arguments = $"\"{_resourceService.GetRootPath()}\" -v:q /t:Build /p:Configuration={configuration}";
         }
@@ -49,8 +53,24 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
         msBuildProcess.StartInfo.RedirectStandardOutput = true;
 			
         msBuildProcess.Start();
+        using var _ = cancellationToken.Register(() =>
+        {
+            try
+            {
+                if (!msBuildProcess.HasExited)
+                {
+                    msBuildProcess.Kill(entireProcessTree: true);
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+        });
         string output = await msBuildProcess.StandardOutput.ReadToEndAsync();
         await msBuildProcess.WaitForExitAsync();
+
+        cancellationToken.ThrowIfCancellationRequested();
         
         _logger.Log($"Solution build finished");
 

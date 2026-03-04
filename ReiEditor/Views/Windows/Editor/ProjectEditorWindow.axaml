@@ -52,10 +52,16 @@
                         Content="Import" />
                 </StackPanel>
 
-                <Button Grid.Column="2"
-                        Command="{Binding OpenSettingsCommand}">
-                    Settings
-                </Button>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="6">
+                    <Button Command="{Binding OpenBuildProjectWindowCommand}">
+                        Release
+                    </Button>
+                    <Button Command="{Binding OpenSettingsCommand}">
+                        Settings
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 

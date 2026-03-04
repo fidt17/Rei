@@ -53,21 +53,28 @@ public class BuildStarter : IBuildStarter, IDisposable
         _canStartBuildCondition.Dispose();
     }
 
-    public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
+    public async Task<bool> BuildProject(
+        BuildConfigurationEnum configuration,
+        bool forceSolutionRebuild = false,
+        bool forceCleanSolutionBuild = false,
+        CancellationToken cancellationToken = default)
     {
         if (Interlocked.Exchange(ref _commandInProgress, 1) == 1) return false;
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!_canStartBuildCondition.IsTrue.Value) return false;
 
             await _engineRunner.StopEngine();
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Engine shutdown and dll unload finalize on background threads.
             var dllWaitUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
             while (_dllManager.DllLoaded.Value && DateTime.UtcNow < dllWaitUntil)
             {
                 await Task.Delay(25);
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
             if (_dllManager.DllLoaded.Value)
@@ -77,12 +84,22 @@ public class BuildStarter : IBuildStarter, IDisposable
             }
 
             await Task.Delay(250);
+            cancellationToken.ThrowIfCancellationRequested();
             if (!_canStartBuildCondition.IsTrue.Value) return false;
 
             await _assetsService.SaveProject();
+            cancellationToken.ThrowIfCancellationRequested();
             if (!_canStartBuildCondition.IsTrue.Value) return false;
 
-            return await _buildService.BuildProject(configuration);
+            return await _buildService.BuildProject(
+                configuration,
+                forceSolutionRebuild,
+                forceCleanSolutionBuild,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
         }
         catch (Exception e)
         {

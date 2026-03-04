@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
@@ -78,7 +79,11 @@ public class BuildService : IBuildService, IAsyncDisposable
         }
     }
 
-    public async Task<bool> BuildProject(BuildConfigurationEnum configuration)
+    public async Task<bool> BuildProject(
+        BuildConfigurationEnum configuration,
+        bool forceSolutionRebuild = false,
+        bool forceCleanSolutionBuild = false,
+        CancellationToken cancellationToken = default)
     {
         if (_buildInProgress)
         {
@@ -99,16 +104,24 @@ public class BuildService : IBuildService, IAsyncDisposable
             
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await _assetImporter.ReimportAll();
+            cancellationToken.ThrowIfCancellationRequested();
             if (!_sourceFilesUtility.AreSourceFilesValid) throw new Exception("Cannot build project with source files validation errors");
             
             await _assetsService.SaveProject();
+            cancellationToken.ThrowIfCancellationRequested();
 
-            if (!_clientDllManager.DllExists() || await _sourceTracker.ChangedOrNewSourcesExist())
+            var shouldBuildSolution = forceSolutionRebuild
+                || !_clientDllManager.DllExists()
+                || await _sourceTracker.ChangedOrNewSourcesExist();
+
+            if (shouldBuildSolution)
             {
-                await _solutionBuilder.Build(configuration);
+                await _solutionBuilder.Build(configuration, forceCleanSolutionBuild, cancellationToken);
             }
             
+            cancellationToken.ThrowIfCancellationRequested();
             await _assetBuilder.BuildAssets(buildFolder);
             stopwatch.Stop();
 
@@ -116,6 +129,13 @@ public class BuildService : IBuildService, IAsyncDisposable
             {
                 throw new Exception("Build was discarded");
             }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Build canceled.");
+            _isBuildReady.Value = false;
+            _buildInProgress.Value = false;
+            return false;
         }
         catch (Exception e)
         {

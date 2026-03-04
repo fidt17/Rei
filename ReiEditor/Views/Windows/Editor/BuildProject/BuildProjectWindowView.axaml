@@ -1,0 +1,135 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:buildProject="clr-namespace:ReiEditor.ViewModels.Windows.Editor.BuildProject"
+        mc:Ignorable="d"
+        x:Class="ReiEditor.Views.Windows.Editor.BuildProject.BuildProjectWindowView"
+        x:DataType="buildProject:BuildProjectWindowViewModel"
+        Width="700"
+        Height="460"
+        Title="Build Project"
+        Icon="/Assets/Images/Rei Icon.png"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Dark_0}">
+
+    <Design.DataContext>
+        <buildProject:BuildProjectWindowViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Classes="Window"
+                Padding="14">
+            <TextBlock Classes="h2"
+                       Text="Build Project" />
+        </Border>
+
+        <Grid Grid.Row="1"
+              Margin="14"
+              RowDefinitions="Auto,Auto,Auto,Auto,*,Auto"
+              ColumnDefinitions="Auto,*">
+            <TextBlock Text="Configuration"
+                       VerticalAlignment="Center"
+                       Margin="0,0,10,0" />
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="14">
+                <RadioButton Content="Debug"
+                             GroupName="buildConfig"
+                             IsChecked="{Binding IsDebugSelected, Mode=TwoWay}" />
+                <RadioButton Content="Release"
+                             GroupName="buildConfig"
+                             IsChecked="{Binding IsReleaseSelected, Mode=TwoWay}" />
+            </StackPanel>
+
+            <TextBlock Grid.Row="1"
+                       Text="Output Path"
+                       VerticalAlignment="Center"
+                       Margin="0,5,10,0" />
+            <Grid Grid.Row="1"
+                  Grid.Column="1"
+                  ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding OutputPath, Mode=TwoWay}" />
+                <Button Grid.Column="1"
+                        Margin="8,0,0,0"
+                        Command="{Binding SelectOutputPathCommand}"
+                        Content="Browse" />
+            </Grid>
+
+            <TextBlock Grid.Row="2"
+                       Text="App Icon (.ico)"
+                       VerticalAlignment="Center"
+                       Margin="0,5,10,0" />
+            <Grid Grid.Row="2"
+                  Grid.Column="1"
+                  ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding IconPath, Mode=TwoWay}" />
+                <Button Grid.Column="1"
+                        Margin="8,0,0,0"
+                        Command="{Binding SelectIconPathCommand}"
+                        Content="Browse" />
+            </Grid>
+
+            <TextBlock Grid.Row="3"
+                       Text="Console"
+                       VerticalAlignment="Center"
+                       Margin="0,5,10,0" />
+            <CheckBox Grid.Row="3"
+                      Grid.Column="1"
+                      IsChecked="{Binding ShowConsole, Mode=TwoWay}"
+                      Content="Show console window" />
+
+            <TextBlock Grid.Row="4"
+                       Grid.ColumnSpan="2"
+                       Foreground="{StaticResource Error}"
+                       Text="{Binding ErrorText}" />
+
+            <StackPanel Grid.Row="5"
+                        Grid.ColumnSpan="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="10">
+                <Button Command="{Binding CancelCommand}"
+                        Content="Cancel" />
+                <Button Command="{Binding BuildCommand}"
+                        Content="Build"
+                        Classes="success" />
+            </StackPanel>
+
+            <Border Grid.RowSpan="6"
+                    Grid.ColumnSpan="2"
+                    Classes.Visible="{Binding IsBuildInProgress}"
+                    Background="#CC000000">
+                <Border.Styles>
+                    <Style Selector="Border:not(.Visible)">
+                        <Setter Property="IsVisible" Value="False" />
+                    </Style>
+                </Border.Styles>
+                <Border Width="430"
+                        Padding="14"
+                        CornerRadius="5"
+                        Background="{StaticResource Dark_1}"
+                        BorderBrush="{StaticResource Gray_0}"
+                        BorderThickness="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="h4"
+                                   Text="Building..." />
+                        <ProgressBar Minimum="0"
+                                     Maximum="1"
+                                     Value="{Binding ProgressValue}" />
+                        <TextBlock Text="{Binding ProgressStatus}" />
+                        <TextBlock Text="{Binding ElapsedTimeText, StringFormat=Elapsed: {0}}" />
+                        <TextBlock Foreground="{StaticResource Warning}"
+                                   IsVisible="{Binding IsCancelRequested}"
+                                   Text="Cancel requested. Waiting for active step to end." />
+                        <Button HorizontalAlignment="Right"
+                                Command="{Binding CancelCommand}"
+                                Content="Cancel Build" />
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
