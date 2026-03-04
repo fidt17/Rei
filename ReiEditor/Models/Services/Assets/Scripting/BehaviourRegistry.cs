@@ -16,13 +16,22 @@ namespace ReiEditor.Models.Services.Assets.Scripting;
 
 public class BehaviourRegistry : IBehaviourRegistry
 {
-    public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours => _behaviours;
+    public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours
+    {
+        get
+        {
+            lock (_registryLock)
+            {
+                return new Dictionary<int, BehaviourAssetInfo>(_behaviours);
+            }
+        }
+    }
     
     private int _maxBehaviourId = -1;
-    private readonly object _behaviourIdLock = new();
+    private readonly object _registryLock = new();
     
-    private readonly Dictionary<int, BehaviourAssetInfo> _behaviours = new();
-    private readonly Dictionary<string, BehaviourAssetInfo> _behavioursByName = new();
+    private Dictionary<int, BehaviourAssetInfo> _behaviours = new();
+    private Dictionary<string, BehaviourAssetInfo> _behavioursByName = new();
     
     private readonly IBehaviourFileUtility _utility;
     private readonly IAssetCreator _assetCreator;
@@ -58,17 +67,26 @@ public class BehaviourRegistry : IBehaviourRegistry
         _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService, serializableObjectsRegistry);
     }
 
-    public bool TryGetById(int id, [NotNullWhen(returnValue: true)] out BehaviourAssetInfo? behaviour) => _behaviours.TryGetValue(id, out behaviour);
+    public bool TryGetById(int id, [NotNullWhen(returnValue: true)] out BehaviourAssetInfo? behaviour)
+    {
+        lock (_registryLock)
+        {
+            return _behaviours.TryGetValue(id, out behaviour);
+        }
+    }
     
     public int? GetIdByName(string name)
     {
-        if (_behavioursByName.TryGetValue(name, out var value)) return value.BehaviourId;
-        return null;
+        lock (_registryLock)
+        {
+            if (_behavioursByName.TryGetValue(name, out var value)) return value.BehaviourId;
+            return null;
+        }
     }
 
     public int AllocateBehaviourId()
     {
-        lock (_behaviourIdLock)
+        lock (_registryLock)
         {
             _maxBehaviourId++;
             return _maxBehaviourId;
@@ -80,34 +98,49 @@ public class BehaviourRegistry : IBehaviourRegistry
         _logger.Log("Refreshing behaviours...");
         
         await _serializableObjectsRegistry.Refresh();
-        
-        _behaviours.Clear();
-        _behavioursByName.Clear();
-        
+
         var behaviourFiles = _utility.GetAllBehaviours();
         var metaFiles = await _utility.GetAllBehaviourMetas();
 
-        await RegisterBehaviours(behaviourFiles, metaFiles);
-        await _behaviourRegistrySourceGenerator.GenerateBehaviourRegistrySourceFile(_behaviours, _serializableObjectsRegistry.GetObjects());
-        await UpdateSolutionFile();
-        
-        foreach (var behaviourAssetInfo in _behaviours)
+        var refreshedBehaviours = new Dictionary<int, BehaviourAssetInfo>();
+        var refreshedBehavioursByName = new Dictionary<string, BehaviourAssetInfo>();
+        var maxBehaviourId = await RegisterBehaviours(behaviourFiles, metaFiles, refreshedBehaviours);
+
+        foreach (var behaviourAssetInfo in refreshedBehaviours)
         {
-            _behavioursByName.Add(behaviourAssetInfo.Value.ObjectName, behaviourAssetInfo.Value);
+            refreshedBehavioursByName.Add(behaviourAssetInfo.Value.ObjectName, behaviourAssetInfo.Value);
+        }
+
+        await _behaviourRegistrySourceGenerator.GenerateBehaviourRegistrySourceFile(refreshedBehaviours, _serializableObjectsRegistry.GetObjects());
+        await UpdateSolutionFile();
+
+        lock (_registryLock)
+        {
+            _behaviours = refreshedBehaviours;
+            _behavioursByName = refreshedBehavioursByName;
+            _maxBehaviourId = maxBehaviourId;
         }
         
-        _logger.Log($"Total behaviours found: {_behaviours.Count}");
+        _logger.Log($"Total behaviours found: {refreshedBehaviours.Count}");
     }
 
-    private async Task RegisterBehaviours(List<BehaviourFileUtility.BehaviourPathData> behaviourFiles, List<ObjectFile<AssetMeta>> metaFiles)
+    private async Task<int> RegisterBehaviours(
+        List<BehaviourFileUtility.BehaviourPathData> behaviourFiles,
+        List<ObjectFile<AssetMeta>> metaFiles,
+        Dictionary<int, BehaviourAssetInfo> behaviours)
     {
+        var maxBehaviourId = -1;
+
         void registerBehaviour(BehaviourFileUtility.BehaviourPathData behaviourFile, string name, BehaviourMeta behaviourMeta)
         {
             if (behaviourMeta == null) throw new Exception($"Could not find behaviour meta. {behaviourFile.Path}");
             
             var namespaceStr = SourceFilesUtility.GetObjectNamespaceFrom(behaviourFile.Content, behaviourFile.Path);
             var properties = _sourceFilesUtility.GetSerializedProperties(behaviourFile.Content);
-            RegisterBehaviour(new BehaviourAssetInfo(namespaceStr, name, behaviourMeta.BehaviourId, new ObjectFile<string>(behaviourFile.Content, behaviourFile.Path), properties, behaviourFile.Path));
+            RegisterBehaviour(
+                new BehaviourAssetInfo(namespaceStr, name, behaviourMeta.BehaviourId, new ObjectFile<string>(behaviourFile.Content, behaviourFile.Path), properties, behaviourFile.Path),
+                behaviours,
+                ref maxBehaviourId);
         }
 
         var newBehaviours = new List<BehaviourFileUtility.BehaviourPathData>();
@@ -140,7 +173,7 @@ public class BehaviourRegistry : IBehaviourRegistry
             {
                 if (!_utility.TryGetBehaviourNameFrom(behaviourFile.Content, out var name)) throw new Exception($"Invalid behaviour file. {behaviourFile.Path}");
             
-                var behaviourMeta = new BehaviourMeta(_maxBehaviourId + 1);
+                var behaviourMeta = new BehaviourMeta(maxBehaviourId + 1);
                 await CreateMetaFile(behaviourFile, behaviourMeta);
                 
                 registerBehaviour(behaviourFile, name, behaviourMeta);
@@ -150,18 +183,23 @@ public class BehaviourRegistry : IBehaviourRegistry
                 throw new Exception($"Behaviour registration exception. {behaviourFile.Path}.\n{e}");
             }
         }
+
+        return maxBehaviourId;
     }
 
-    private void RegisterBehaviour(BehaviourAssetInfo behaviourAssetInfo)
+    private void RegisterBehaviour(
+        BehaviourAssetInfo behaviourAssetInfo,
+        Dictionary<int, BehaviourAssetInfo> behaviours,
+        ref int maxBehaviourId)
     {
         var behaviourId = behaviourAssetInfo.BehaviourId;
-        if (_behaviours.ContainsKey(behaviourId))
+        if (behaviours.ContainsKey(behaviourId))
         {
-            throw new Exception($"Behaviour with id {behaviourId} already exists. Existing value: {_behaviours[behaviourId].Source.FullPath}. New value: {behaviourAssetInfo.Source.FullPath}");
+            throw new Exception($"Behaviour with id {behaviourId} already exists. Existing value: {behaviours[behaviourId].Source.FullPath}. New value: {behaviourAssetInfo.Source.FullPath}");
         }
         
-        _behaviours.Add(behaviourId, behaviourAssetInfo);
-        _maxBehaviourId = Math.Max(_maxBehaviourId, behaviourId);
+        behaviours.Add(behaviourId, behaviourAssetInfo);
+        maxBehaviourId = Math.Max(maxBehaviourId, behaviourId);
     }
 
     private Task<ObjectFile<AssetMeta>> CreateMetaFile(BehaviourFileUtility.BehaviourPathData behaviourFile, BehaviourMeta behaviourMeta)

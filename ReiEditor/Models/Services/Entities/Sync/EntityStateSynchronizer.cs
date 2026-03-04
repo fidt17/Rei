@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
@@ -22,6 +23,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
+    private readonly IAssetImporter _assetImporter;
     private readonly IEngineRunner _engineRunner;
     private readonly IEntityApi _entityApi;
     private readonly ISelectionService _selectionService;
@@ -31,6 +33,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     
     public EntityStateSynchronizer(
         IBehaviourRegistry behaviourRegistry,
+        IAssetImporter assetImporter,
         IEntityApi entityApi,
         ISelectionService selectionService,
         ILogger<EntityStateSynchronizer> logger,
@@ -39,6 +42,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         IBehaviourComponentsService behaviourComponentsService)
     {
         _behaviourRegistry = behaviourRegistry;
+        _assetImporter = assetImporter;
         _entityApi = entityApi;
         _selectionService = selectionService;
         _logger = logger;
@@ -64,6 +68,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     public void UpdateEntityState(GameEntity e)
     {
         if (!_engineRunner.IsActive.Value) return;
+        if (_assetImporter.IsImporting.Value) return;
         
         var state = _entityApi.GetEntityData(e.Id);
         var needsHierarchyRefresh = UpdateEntityStateFromEngineState(e, state);
@@ -77,6 +82,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     private void HandleEntityBehaviourPropertyChangedEvent(EntityBehaviourPropertyChangeEventArgs args)
     {
         if (!_engineRunner.IsActive.Value) return;
+        if (_assetImporter.IsImporting.Value) return;
         
         if (_ignorePropertyChanges) return;
 
@@ -168,6 +174,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         try
         {
             if (!_engineRunner.IsActive.Value) return;
+            if (_assetImporter.IsImporting.Value) return;
             
             var entities = _entityApi.GetSceneEntities();
             if (entities == null) return;

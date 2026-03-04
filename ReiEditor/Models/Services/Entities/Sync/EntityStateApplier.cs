@@ -33,6 +33,7 @@ public class EntityStateApplier
         int? transformParent = null;
         int? transformOrder = null;
         var needsHierarchyRefresh = false;
+        var hasBehaviourResolutionErrors = false;
 
         foreach (var behaviourState in state.Behaviours)
         {
@@ -44,7 +45,12 @@ public class EntityStateApplier
                 if (string.IsNullOrWhiteSpace(reiType)) continue;
 
                 var behaviourId = _behaviourRegistry.GetIdByName(reiType);
-                if (behaviourId == null) throw new Exception($"Could not find behaviour by REI_TYPE: {reiType}");
+                if (behaviourId == null)
+                {
+                    hasBehaviourResolutionErrors = true;
+                    _logger.LogError($"Could not find behaviour by REI_TYPE: {reiType}");
+                    continue;
+                }
                 behaviourIds.Add(behaviourId.Value);
 
                 // try to add new behaviour
@@ -90,11 +96,14 @@ public class EntityStateApplier
             }
         }
 
-        // delete behaviours that no longer exist on this entity
-        foreach (var behaviour in entity.Behaviours.ToList())
+        if (!hasBehaviourResolutionErrors)
         {
-            if (behaviourIds.Contains(behaviour.Id)) continue;
-            _behaviourComponentsService.DeleteComponent(entity, behaviour);
+            // delete behaviours that no longer exist on this entity
+            foreach (var behaviour in entity.Behaviours.ToList())
+            {
+                if (behaviourIds.Contains(behaviour.Id)) continue;
+                _behaviourComponentsService.DeleteComponent(entity, behaviour);
+            }
         }
 
         if (transformParent.HasValue && transformOrder.HasValue)
