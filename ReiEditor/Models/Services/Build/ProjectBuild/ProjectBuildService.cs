@@ -13,6 +13,8 @@ namespace ReiEditor.Models.Services.Build.ProjectBuild;
 
 public class ProjectBuildService : IProjectBuildService
 {
+    private static readonly string[] REQUIRED_RESOURCES_FILE_PATTERNS = { "*.bin" };
+
     private const int TOTAL_STEPS = 5;
 
     private readonly IBuildStarter _buildStarter;
@@ -155,7 +157,7 @@ public class ProjectBuildService : IProjectBuildService
             throw new Exception($"Resources directory is missing: {resourcesDirectoryPath}");
         }
 
-        CopyDirectoryRecursively(resourcesDirectoryPath, Path.Combine(outputDirectory, "Resources"));
+        CopyRequiredResources(resourcesDirectoryPath, Path.Combine(outputDirectory, "Resources"));
     }
 
     private static void PrepareOutputDirectory(string outputDirectory)
@@ -168,18 +170,16 @@ public class ProjectBuildService : IProjectBuildService
         Directory.CreateDirectory(outputDirectory);
     }
 
-    private static void CopyDirectoryRecursively(string source, string target)
+    private static void CopyRequiredResources(string source, string target)
     {
         Directory.CreateDirectory(target);
 
-        foreach (var dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
+        foreach (var filePattern in REQUIRED_RESOURCES_FILE_PATTERNS)
         {
-            Directory.CreateDirectory(dirPath.Replace(source, target));
-        }
-
-        foreach (var sourcePath in Directory.GetFiles(source, "*.*", SearchOption.AllDirectories))
-        {
-            File.Copy(sourcePath, sourcePath.Replace(source, target), overwrite: true);
+            foreach (var sourcePath in Directory.GetFiles(source, filePattern, SearchOption.TopDirectoryOnly))
+            {
+                File.Copy(sourcePath, Path.Combine(target, Path.GetFileName(sourcePath)), overwrite: true);
+            }
         }
     }
 }

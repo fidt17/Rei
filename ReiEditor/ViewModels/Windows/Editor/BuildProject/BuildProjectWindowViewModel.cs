@@ -1,9 +1,12 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 using ReiEditor.Models.EditorApp.ProjectBuildWindow;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Build.ProjectBuild;
@@ -20,6 +23,8 @@ public class BuildProjectWindowViewModel : BaseViewModel
     public RelayCommand CancelCommand { get; }
     public RelayCommand SelectOutputPathCommand { get; }
     public RelayCommand SelectIconPathCommand { get; }
+    public RelayCommand SelectDebugConfigurationCommand { get; }
+    public RelayCommand SelectReleaseConfigurationCommand { get; }
 
     private readonly IProjectBuildService _projectBuildService;
     private readonly IProjectBuildWindowService _windowService;
@@ -110,27 +115,9 @@ public class BuildProjectWindowViewModel : BaseViewModel
         private set => SetField(ref _errorText, value);
     }
 
-    public bool IsDebugSelected
-    {
-        get => SelectedConfiguration == BuildConfigurationEnum.Debug;
-        set
-        {
-            if (!value) return;
-            SelectedConfiguration = BuildConfigurationEnum.Debug;
-            this.RaisePropertyChanged(nameof(IsReleaseSelected));
-        }
-    }
+    public bool IsDebugSelected => SelectedConfiguration == BuildConfigurationEnum.Debug;
 
-    public bool IsReleaseSelected
-    {
-        get => SelectedConfiguration == BuildConfigurationEnum.Release;
-        set
-        {
-            if (!value) return;
-            SelectedConfiguration = BuildConfigurationEnum.Release;
-            this.RaisePropertyChanged(nameof(IsDebugSelected));
-        }
-    }
+    public bool IsReleaseSelected => SelectedConfiguration == BuildConfigurationEnum.Release;
 
 #pragma warning disable CS8618
     public BuildProjectWindowViewModel() { }
@@ -153,6 +140,8 @@ public class BuildProjectWindowViewModel : BaseViewModel
         CancelCommand = new RelayCommand(CancelOrClose);
         SelectOutputPathCommand = new RelayCommand(SelectOutputPathAsync);
         SelectIconPathCommand = new RelayCommand(SelectIconPathAsync);
+        SelectDebugConfigurationCommand = new RelayCommand(SelectDebugConfiguration);
+        SelectReleaseConfigurationCommand = new RelayCommand(SelectReleaseConfiguration);
     }
 
     public override void Dispose()
@@ -166,33 +155,51 @@ public class BuildProjectWindowViewModel : BaseViewModel
     private async void StartBuildAsync()
     {
         if (IsBuildInProgress) return;
+        if (!await ConfirmOutputDirectoryDeletionAsync()) return;
 
-        ErrorText = string.Empty;
-        IsCancelRequested = false;
-        IsBuildInProgress = true;
-        ProgressStatus = "Starting build...";
-        ProgressValue = 0;
-        StartElapsedTimer();
+        ProjectBuildResult result = default;
+        var hasResult = false;
+        try
+        {
+            ErrorText = string.Empty;
+            IsCancelRequested = false;
+            IsBuildInProgress = true;
+            ProgressStatus = "Starting build...";
+            ProgressValue = 0;
+            StartElapsedTimer();
 
-        _buildCancellationTokenSource = new CancellationTokenSource();
-        var request = new ProjectBuildRequest(
-            SelectedConfiguration,
-            OutputPath,
-            ShowConsole,
-            IconPath);
+            _buildCancellationTokenSource = new CancellationTokenSource();
+            var request = new ProjectBuildRequest(
+                SelectedConfiguration,
+                OutputPath,
+                ShowConsole,
+                IconPath);
 
-        var result = await _projectBuildService.BuildAsync(
-            request,
-            progress => Dispatcher.UIThread.Post(() =>
-            {
-                ProgressStatus = progress.Status;
-                ProgressValue = progress.ProgressValue;
-            }),
-            _buildCancellationTokenSource.Token);
+            result = await _projectBuildService.BuildAsync(
+                request,
+                progress => Dispatcher.UIThread.Post(() =>
+                {
+                    ProgressStatus = progress.Status;
+                    ProgressValue = progress.ProgressValue;
+                }),
+                _buildCancellationTokenSource.Token);
+            hasResult = true;
+        }
+        catch (Exception e)
+        {
+            ErrorText = e.Message;
+            ProgressStatus = "Build failed";
+        }
+        finally
+        {
+            StopElapsedTimer();
+            IsBuildInProgress = false;
+            IsCancelRequested = false;
+            _buildCancellationTokenSource?.Dispose();
+            _buildCancellationTokenSource = null;
+        }
 
-        StopElapsedTimer();
-        IsBuildInProgress = false;
-        IsCancelRequested = false;
+        if (!hasResult) return;
 
         if (result.IsSuccess)
         {
@@ -201,6 +208,7 @@ public class BuildProjectWindowViewModel : BaseViewModel
         }
 
         ErrorText = result.ErrorMessage;
+        ProgressStatus = "Build failed";
         if (result.IsCancelled)
         {
             ProgressStatus = "Build canceled";
@@ -252,6 +260,39 @@ public class BuildProjectWindowViewModel : BaseViewModel
         var path = files[0].Path.LocalPath;
         if (string.IsNullOrWhiteSpace(path)) return;
         IconPath = Path.GetFullPath(path);
+    }
+
+    private void SelectDebugConfiguration()
+    {
+        SelectedConfiguration = BuildConfigurationEnum.Debug;
+    }
+
+    private void SelectReleaseConfiguration()
+    {
+        SelectedConfiguration = BuildConfigurationEnum.Release;
+    }
+
+    private async Task<bool> ConfirmOutputDirectoryDeletionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(OutputPath))
+        {
+            ErrorText = "Output path is required.";
+            return false;
+        }
+
+        var fullOutputPath = Path.GetFullPath(OutputPath);
+        if (!Directory.Exists(fullOutputPath)) return true;
+        if (!Directory.EnumerateFileSystemEntries(fullOutputPath).Any()) return true;
+
+        var prompt = MessageBoxManager.GetMessageBoxStandard(
+            "Output Folder",
+            "Output folder is not empty. Delete all contents and continue?",
+            ButtonEnum.YesNo);
+        var result = await prompt.ShowAsync();
+        if (result == ButtonResult.Yes) return true;
+
+        ErrorText = "Build canceled. Select an empty output folder or confirm deletion.";
+        return false;
     }
 
     private void StartElapsedTimer()

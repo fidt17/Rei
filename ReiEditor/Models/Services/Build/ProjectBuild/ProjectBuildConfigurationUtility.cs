@@ -58,6 +58,21 @@ public class ProjectBuildConfigurationUtility
             }
 
             subSystem.Value = request.ShowConsole ? "Console" : "Windows";
+
+            var entryPointSymbol = link.Element(ns + "EntryPointSymbol");
+            if (request.ShowConsole)
+            {
+                entryPointSymbol?.Remove();
+                continue;
+            }
+
+            if (entryPointSymbol == null)
+            {
+                entryPointSymbol = new XElement(ns + "EntryPointSymbol");
+                link.Add(entryPointSymbol);
+            }
+
+            entryPointSymbol.Value = "mainCRTStartup";
         }
 
         var scriptsDirectoryPath = Path.GetDirectoryName(projectFilePath);

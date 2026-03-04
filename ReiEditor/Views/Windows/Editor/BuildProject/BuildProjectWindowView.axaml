@@ -36,10 +36,12 @@
                         Spacing="14">
                 <RadioButton Content="Debug"
                              GroupName="buildConfig"
-                             IsChecked="{Binding IsDebugSelected, Mode=TwoWay}" />
+                             IsChecked="{Binding IsDebugSelected, Mode=OneWay}"
+                             Command="{Binding SelectDebugConfigurationCommand}" />
                 <RadioButton Content="Release"
                              GroupName="buildConfig"
-                             IsChecked="{Binding IsReleaseSelected, Mode=TwoWay}" />
+                             IsChecked="{Binding IsReleaseSelected, Mode=OneWay}"
+                             Command="{Binding SelectReleaseConfigurationCommand}" />
             </StackPanel>
 
             <TextBlock Grid.Row="1"
@@ -98,13 +100,8 @@
 
             <Border Grid.RowSpan="6"
                     Grid.ColumnSpan="2"
-                    Classes.Visible="{Binding IsBuildInProgress}"
+                    IsVisible="{Binding IsBuildInProgress}"
                     Background="#CC000000">
-                <Border.Styles>
-                    <Style Selector="Border:not(.Visible)">
-                        <Setter Property="IsVisible" Value="False" />
-                    </Style>
-                </Border.Styles>
                 <Border Width="430"
                         Padding="14"
                         CornerRadius="5"

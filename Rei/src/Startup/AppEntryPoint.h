@@ -20,8 +20,11 @@ namespace rei::external
     {
         try
         {
-            // todo: pass via params
+            #ifdef REI_EDITOR
             const bool IS_EDITOR = true;
+            #else
+            const bool IS_EDITOR = false;
+            #endif
             
             std::filesystem::current_path(resourcesDir);
             auto engine = new internal::engine::Engine(CreateApp(), static_cast<internal::engine::EngineMode>(mode), IS_EDITOR);
@@ -70,10 +73,12 @@ int main()
 {
     try
     {
-        const auto engine = rei::external::CreateEngine(std::filesystem::current_path().string().c_str(), rei::internal::engine::EngineMode::PlayMode);
+        const auto initialWorkingDirectory = std::filesystem::current_path();
+        const auto projectName = initialWorkingDirectory.filename().string();
+        const auto engine = rei::external::CreateEngine(initialWorkingDirectory.string().c_str(), rei::internal::engine::EngineMode::PlayMode);
 
         WindowCreationSettings windowSettings;
-        windowSettings.Name = "Main Window";
+        windowSettings.Name = projectName.empty() ? "Rei App" : projectName;
         windowSettings.Width = 1080;
         windowSettings.Height = 720;
         windowSettings.HideOnCreation = false;
