@@ -20,6 +20,7 @@ public static class MonitorDrawerUtils
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
         IAssetRuntimeSyncService assetRuntimeSyncService,
+        IProjectAssetFocusService projectAssetFocusService,
         out GameEntity? entityToSync)
     {
         entityToSync = null;
@@ -47,6 +48,7 @@ public static class MonitorDrawerUtils
             shaderRegistry,
             assetRegistry,
             assetTypeMapper,
-            assetRuntimeSyncService);
+            assetRuntimeSyncService,
+            projectAssetFocusService);
     }
 }

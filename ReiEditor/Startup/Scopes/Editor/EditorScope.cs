@@ -85,6 +85,7 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
 
         b.RegisterSingleton<SelectionService>().As<ISelectionService>();
+        b.RegisterSingleton<ProjectAssetFocusService>().As<IProjectAssetFocusService>();
 
         b.RegisterModule<EngineModule>();
         b.RegisterModule<EditorConsoleModule>();

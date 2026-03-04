@@ -37,6 +37,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
     private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
+    private readonly IProjectAssetFocusService _projectAssetFocusService;
 
     private readonly IEntityStateSynchronizer _entityStateSynchronizer;
 
@@ -56,6 +57,7 @@ public class MonitorWindowViewModel : BaseViewModel
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
         IAssetRuntimeSyncService assetRuntimeSyncService,
+        IProjectAssetFocusService projectAssetFocusService,
         IEntityStateSynchronizer entityStateSynchronizer)
     {
         _selectionService = selectionService;
@@ -67,6 +69,7 @@ public class MonitorWindowViewModel : BaseViewModel
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
         _assetRuntimeSyncService = assetRuntimeSyncService;
+        _projectAssetFocusService = projectAssetFocusService;
         _entityStateSynchronizer = entityStateSynchronizer;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
@@ -112,6 +115,7 @@ public class MonitorWindowViewModel : BaseViewModel
             _assetRegistry,
             _assetTypeMapper,
             _assetRuntimeSyncService,
+            _projectAssetFocusService,
             out var entityToSync);
 
         if (entityToSync != null)

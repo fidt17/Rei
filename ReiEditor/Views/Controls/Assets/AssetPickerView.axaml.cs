@@ -55,14 +55,40 @@ public partial class AssetPickerView : UserControl
     private void LabelBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         LabelBorder.Focus();
+        if (_viewModel == null) return;
+
+        if (_viewModel.HasActiveAsset)
+        {
+            _viewModel.ActivateAsset();
+            e.Handled = true;
+            return;
+        }
+
+        OpenSearchFlyout();
+        e.Handled = true;
     }
 
     private void LabelBorder_OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key is not Key.Delete) return;
         if (_viewModel == null) return;
 
-        _viewModel.ClearAsset();
+        if (e.Key is Key.Delete)
+        {
+            _viewModel.ClearAsset();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key is not Key.Enter and not Key.Space) return;
+
+        if (_viewModel.HasActiveAsset)
+        {
+            _viewModel.ActivateAsset();
+            e.Handled = true;
+            return;
+        }
+
+        OpenSearchFlyout();
         e.Handled = true;
     }
 
@@ -103,6 +129,14 @@ public partial class AssetPickerView : UserControl
             e.DragEffects = DragDropEffects.Copy;
             e.Handled = true;
         }
+    }
+
+    private void OpenSearchFlyout()
+    {
+        if (_viewModel == null) return;
+        if (!_viewModel.IsSelectionSupported) return;
+
+        SelectButton.Flyout?.ShowAt(SelectButton);
     }
 
     private static bool TryGetAssetPath(DragEventArgs e, out string path)

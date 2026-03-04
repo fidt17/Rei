@@ -56,6 +56,8 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IMaterialCreationWindowService? _materialCreationWindowService;
     private readonly IShaderCreationWindowService? _shaderCreationWindowService;
     private readonly ISelectionService? _selectionService;
+    private readonly IProjectAssetFocusService? _projectAssetFocusService;
+    private ProjectAssetItemViewModel? _highlightedAsset;
     private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
@@ -79,7 +81,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IBehaviourCreationWindowService behaviourCreationWindowService,
         IMaterialCreationWindowService materialCreationWindowService,
         IShaderCreationWindowService shaderCreationWindowService,
-        ISelectionService selectionService)
+        ISelectionService selectionService,
+        IProjectAssetFocusService projectAssetFocusService)
     {
         _resourceService = resourceService;
         _storageProvider = storageProvider;
@@ -94,11 +97,13 @@ public class ProjectWindowViewModel : BaseViewModel
         _materialCreationWindowService = materialCreationWindowService;
         _shaderCreationWindowService = shaderCreationWindowService;
         _selectionService = selectionService;
+        _projectAssetFocusService = projectAssetFocusService;
         
         SetupContextMenus();
         BuildDirectoryTree(resourceService);
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
         _editorRefreshService.RefreshedEvent += HandleEditorRefreshedEvent;
+        _projectAssetFocusService.FocusAssetRequested += HandleFocusAssetRequestedEvent;
     }
 
     public override void Dispose()
@@ -109,6 +114,12 @@ public class ProjectWindowViewModel : BaseViewModel
         {
             _editorRefreshService.RefreshedEvent -= HandleEditorRefreshedEvent;
         }
+
+        if (_projectAssetFocusService != null)
+        {
+            _projectAssetFocusService.FocusAssetRequested -= HandleFocusAssetRequestedEvent;
+        }
+
         ResetDirectoryTree();
     }
 
@@ -118,6 +129,15 @@ public class ProjectWindowViewModel : BaseViewModel
         {
             RefreshView(affectsTree: true);
         });
+    }
+
+    private void HandleFocusAssetRequestedEvent(string assetId)
+    {
+        if (string.IsNullOrWhiteSpace(assetId)) return;
+        if (_assetRegistry == null) return;
+        if (!_assetRegistry.TryGetById(assetId, out var assetInfo) || assetInfo == null) return;
+
+        Dispatcher.UIThread.InvokeAsync(() => FocusAssetByPath(assetInfo.FullPath));
     }
 
 
@@ -269,6 +289,7 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void UpdateActiveItems(string directoryPath)
     {
+        _highlightedAsset = null;
         ActiveItems.ClearAndDispose();
         _allAssets.Clear();
 
@@ -554,6 +575,29 @@ public class ProjectWindowViewModel : BaseViewModel
         var match = ActiveItems.FirstOrDefault(item => string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase));
         if (match == null) return;
         match.Select();
+    }
+
+    private void FocusAssetByPath(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath)) return;
+
+        var directoryPath = IOPath.GetDirectoryName(assetPath);
+        if (string.IsNullOrWhiteSpace(directoryPath)) return;
+
+        OpenDirectory(directoryPath);
+        HighlightAssetByPath(assetPath);
+    }
+
+    private void HighlightAssetByPath(string path)
+    {
+        _highlightedAsset?.ClearHighlight();
+        _highlightedAsset = null;
+
+        var match = ActiveItems.FirstOrDefault(item => string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase));
+        if (match == null) return;
+
+        match.PulseHighlight(TimeSpan.FromSeconds(1));
+        _highlightedAsset = match;
     }
 
     private void ResetDirectoryTree()

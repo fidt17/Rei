@@ -112,6 +112,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
     private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
+    private readonly IProjectAssetFocusService _projectAssetFocusService;
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
     private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
     private CancellationTokenSource? _runtimeSyncDebounceCTS;
@@ -132,7 +133,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         IShaderRegistry shaderRegistry,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
-        IAssetRuntimeSyncService assetRuntimeSyncService)
+        IAssetRuntimeSyncService assetRuntimeSyncService,
+        IProjectAssetFocusService projectAssetFocusService)
     {
         AssetName = assetSelection.AssetName;
         AssetId = assetSelection.AssetId;
@@ -143,6 +145,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
         _assetRuntimeSyncService = assetRuntimeSyncService;
+        _projectAssetFocusService = projectAssetFocusService;
 
         ShaderPicker = new AssetPickerViewModel(
             assetRegistry,
@@ -303,7 +306,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             ShaderUniformType.Float => new FloatPropertyViewModel(property),
             ShaderUniformType.Integer => new IntegerPropertyViewModel(property),
             ShaderUniformType.Color => new ColorPropertyViewModel(property),
-            ShaderUniformType.Texture => new AssetPropertyViewModel(property, _assetSearchService, _assetRegistry, _assetTypeMapper),
+            ShaderUniformType.Texture => new AssetPropertyViewModel(property, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService),
             _ => null
         };
     }

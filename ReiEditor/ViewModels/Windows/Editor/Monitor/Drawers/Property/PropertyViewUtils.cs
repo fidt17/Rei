@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Linq;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
@@ -17,7 +18,8 @@ public static class PropertyViewUtils
         ISerializableObjectsRegistry serializableObjectsRegistry,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper)
+        IAssetTypeMapper assetTypeMapper,
+        IProjectAssetFocusService projectAssetFocusService)
     {
         return property.Type switch
         {
@@ -26,7 +28,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -50,7 +52,8 @@ public static class PropertyViewUtils
         ISerializableObjectsRegistry serializableObjectsRegistry,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper)
+        IAssetTypeMapper assetTypeMapper,
+        IProjectAssetFocusService projectAssetFocusService)
     {
         if (property.SourceType == "Vector3")
         {
@@ -62,9 +65,9 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
         {
-            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper);
+            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService);
         }
 
-        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService);
     }
 }

@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
@@ -24,6 +25,7 @@ public class CustomPropertyViewModel : BaseViewModel
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
+    private readonly IProjectAssetFocusService _projectAssetFocusService;
 
 #pragma warning disable CS8618
     public CustomPropertyViewModel() { }
@@ -34,7 +36,8 @@ public class CustomPropertyViewModel : BaseViewModel
         ISerializableObjectsRegistry serializableObjectsRegistry,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper)
+        IAssetTypeMapper assetTypeMapper,
+        IProjectAssetFocusService projectAssetFocusService)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
         
@@ -43,6 +46,7 @@ public class CustomPropertyViewModel : BaseViewModel
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
+        _projectAssetFocusService = projectAssetFocusService;
 
         PropertyName = new(property);
         _property.ValueChangedEvent += HandlePropertyValueChangedEvent;
@@ -73,7 +77,7 @@ public class CustomPropertyViewModel : BaseViewModel
             
             foreach (var subProperty in subProperties)
             {
-                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper));
+                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService));
             }
         }
         else

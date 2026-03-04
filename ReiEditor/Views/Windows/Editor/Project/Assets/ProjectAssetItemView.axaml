@@ -14,6 +14,7 @@
     <Border x:Name="RootBorder"
             Padding="6,3"
             Classes.IsSelected="{Binding Selected.Value}"
+            Classes.IsHighlighted="{Binding Highlighted.Value}"
             Cursor="Hand"
             Focusable="True"
             PointerPressed="RootBorder_OnPointerPressed"
@@ -30,6 +31,12 @@
                 <Setter Property="Background" Value="{StaticResource Dark_2}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="BorderBrush" Value="{StaticResource Dark_2}" />
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <BrushTransition Property="Background" Duration="0:0:0.18" />
+                        <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                    </Transitions>
+                </Setter>
             </Style>
 
             <Style Selector="Border#RootBorder:pointerover">
@@ -39,6 +46,11 @@
             <Style Selector="Border#RootBorder.IsSelected">
                 <Setter Property="Background" Value="{StaticResource Dark_4}" />
                 <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+            </Style>
+
+            <Style Selector="Border#RootBorder.IsHighlighted:not(.IsSelected)">
+                <Setter Property="Background" Value="{StaticResource Dark_3}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Info}" />
             </Style>
         </Border.Styles>
 

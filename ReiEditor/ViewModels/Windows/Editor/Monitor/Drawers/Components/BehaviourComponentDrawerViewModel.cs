@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -30,6 +31,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
+    private readonly IProjectAssetFocusService _projectAssetFocusService;
 
 #pragma warning disable CS8618
     public BehaviourComponentDrawerViewModel() { }
@@ -43,7 +45,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         ISerializableObjectsRegistry serializableObjectsRegistry,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper)
+        IAssetTypeMapper assetTypeMapper,
+        IProjectAssetFocusService projectAssetFocusService)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
@@ -53,6 +56,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
+        _projectAssetFocusService = projectAssetFocusService;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
         {
@@ -94,7 +98,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
                 throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
             
             var property = BehaviourComponent.GetProperty(propertyName);
-            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper));
+            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService));
         }
     }
 }

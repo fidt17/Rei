@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Media;
 using ReactiveUI;
@@ -26,6 +28,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
     public ObservableField<string> Name { get; }
     public ObservableField<string> RenameValue { get; } = new("");
     public ObservableField<bool> Selected { get; } = new(false);
+    public ObservableField<bool> Highlighted { get; } = new(false);
 
     public string FullPath { get; }
     public ProjectAssetType AssetType { get; }
@@ -40,6 +43,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
     public ContextMenuViewModel CombinedContextMenu { get; } = new();
 
     private readonly ISelectionService? _selectionService;
+    private CancellationTokenSource? _highlightCTS;
 
 #pragma warning disable CS8618
     public ProjectAssetItemViewModel() { }
@@ -83,6 +87,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
     public override void Dispose()
     {
         base.Dispose();
+        CancelHighlightPulse();
 
         if (_selectionService == null) return;
 
@@ -110,6 +115,50 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         }
 
         _selectionService?.Deselect(this, sendToEngine: false);
+    }
+
+    public void Highlight()
+    {
+        Highlighted.Value = true;
+    }
+
+    public void ClearHighlight()
+    {
+        CancelHighlightPulse();
+        Highlighted.Value = false;
+    }
+
+    public void PulseHighlight(TimeSpan duration)
+    {
+        CancelHighlightPulse();
+        _highlightCTS = new CancellationTokenSource();
+        var token = _highlightCTS.Token;
+
+        _ = RunHighlightPulse(duration, token);
+    }
+
+    private async Task RunHighlightPulse(TimeSpan duration, CancellationToken token)
+    {
+        Highlighted.Value = true;
+
+        try
+        {
+            await Task.Delay(duration, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested) return;
+        Highlighted.Value = false;
+    }
+
+    private void CancelHighlightPulse()
+    {
+        _highlightCTS?.Cancel();
+        _highlightCTS?.Dispose();
+        _highlightCTS = null;
     }
 
     private void StartRename() => RenameValue.Value = PathNamingUtils.GetRenameValue(Name.Value, IsDirectory);

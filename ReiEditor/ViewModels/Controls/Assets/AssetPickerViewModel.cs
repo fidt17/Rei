@@ -29,11 +29,13 @@ public sealed class AssetPickerViewModel : BaseViewModel
     public const string EmptyAssetName = "empty";
     public const string MissingAssetName = "missing asset";
     public event Action? AssetSelectedEvent;
+    public event Action? AssetActivatedEvent;
 
     public SearchFieldViewModel SearchField { get; } = new();
     public ObservableCollection<AssetSearchItemViewModel> SearchResults { get; } = new();
 
     public bool IsSelectionSupported => _useEntriesMode ? _entries.Count > 0 : _allowedExtensions.Count > 0;
+    public bool HasActiveAsset => !string.IsNullOrWhiteSpace(SelectedAssetId) && !IsMissingAsset;
 
     #region AssetName
 
@@ -120,6 +122,13 @@ public sealed class AssetPickerViewModel : BaseViewModel
     public void ClearAsset()
     {
         CommitSelection("", null);
+    }
+
+    public void ActivateAsset()
+    {
+        if (!HasActiveAsset) return;
+
+        AssetActivatedEvent?.Invoke();
     }
 
     public bool CanAcceptAssetPath(string path)

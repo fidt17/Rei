@@ -1,5 +1,6 @@
 using System;
 using Newtonsoft.Json.Linq;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -13,6 +14,7 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
     public AssetPickerViewModel? AssetPicker { get; private set; }
 
     private bool _isInitialized;
+    private readonly IProjectAssetFocusService? _projectAssetFocusService;
 
 #pragma warning disable CS8618
     public AssetPropertyViewModel() { }
@@ -22,9 +24,12 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         SerializedProperty property,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper) : base(property)
+        IAssetTypeMapper assetTypeMapper,
+        IProjectAssetFocusService projectAssetFocusService) : base(property)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
+
+        _projectAssetFocusService = projectAssetFocusService;
 
         var templateTypeName = property.TemplateTypeName;
         var assetType = assetTypeMapper.GetAssetTypeForTemplateType(templateTypeName);
@@ -33,6 +38,7 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
             assetRegistry,
             assetTypeMapper.GetExtensionsForAssetType(assetType),
             (assetId, _) => SelectAsset(assetId));
+        AssetPicker.AssetActivatedEvent += HandleAssetActivatedEvent;
 
         var idProperty = GetNestedProperty("Id");
         if (idProperty != null)
@@ -47,6 +53,11 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
     public override void Dispose()
     {
         base.Dispose();
+        if (AssetPicker != null)
+        {
+            AssetPicker.AssetActivatedEvent -= HandleAssetActivatedEvent;
+        }
+
         AssetPicker?.Dispose();
         var idProperty = GetNestedProperty("Id");
         if (idProperty != null)
@@ -79,6 +90,16 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         if (idProperty == null) return;
 
         idProperty.Value = assetId ?? "";
+    }
+
+    private void HandleAssetActivatedEvent()
+    {
+        if (!_isInitialized) return;
+
+        var assetId = GetAssetId();
+        if (string.IsNullOrWhiteSpace(assetId)) return;
+
+        _projectAssetFocusService?.FocusAsset(assetId);
     }
 
     private static string? ConvertToString(object? value)
