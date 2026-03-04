@@ -11,9 +11,21 @@
     </Design.DataContext>
 
     <Border Padding="10">
-        <StackPanel Spacing="6">
+        <Grid RowDefinitions="Auto,Auto,*">
             <TextBlock Classes="h4" Text="{Binding AssetName}" />
-            <TextBlock Text="{Binding AssetIdLabel}" Foreground="{StaticResource Gray_2}" />
-        </StackPanel>
+            <TextBlock Grid.Row="1"
+                       Text="{Binding AssetIdLabel}"
+                       IsVisible="{Binding ShowAssetIdLabel}"
+                       Margin="0,6,0,0"
+                       Foreground="{StaticResource Gray_2}" />
+            <TextBox Grid.Row="2"
+                     Text="{Binding FileContent}"
+                     Margin="0,6,0,0"
+                     IsVisible="{Binding HasFileContentPreview}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     MinHeight="220" />
+        </Grid>
     </Border>
 </UserControl>
