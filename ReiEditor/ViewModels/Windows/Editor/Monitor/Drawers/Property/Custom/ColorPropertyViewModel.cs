@@ -1,14 +1,15 @@
-using System;
-using System.Drawing;
 using System.Globalization;
+using Avalonia.Media;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Models.Services.Render;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
 public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 {
-    #region R
+    private bool _isSyncing;
+    private bool _suppressComponentValueChanged;
 
     private float _r;
     public float R
@@ -16,21 +17,11 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         get => _r;
         set
         {
-            if (SetField(ref _r, value))
-            {
-                var property = GetNestedProperty("r");
-                if (property != null)
-                {
-                    property.Value = value;
-                }
-                UpdateColorHex();
-            }
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (!SetField(ref _r, clamped) || _isSyncing) return;
+            ApplyFromRgba();
         }
     }
-
-    #endregion
-    
-    #region G
 
     private float _g;
     public float G
@@ -38,21 +29,11 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         get => _g;
         set
         {
-            if (SetField(ref _g, value))
-            {
-                var property = GetNestedProperty("g");
-                if (property != null)
-                {
-                    property.Value = value;
-                }
-                UpdateColorHex();
-            }
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (!SetField(ref _g, clamped) || _isSyncing) return;
+            ApplyFromRgba();
         }
     }
-
-    #endregion
-    
-    #region B
 
     private float _b;
     public float B
@@ -60,110 +41,226 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         get => _b;
         set
         {
-            if (SetField(ref _b, value))
-            {
-                var property = GetNestedProperty("b");
-                if (property != null)
-                {
-                    property.Value = value;
-                }
-                UpdateColorHex();
-            }
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (!SetField(ref _b, clamped) || _isSyncing) return;
+            ApplyFromRgba();
         }
     }
 
-    #endregion
-    
-    #region A
-
-    private float _a;
+    private float _a = 1f;
     public float A
     {
         get => _a;
         set
         {
-            if (SetField(ref _a, value))
-            {
-                var property = GetNestedProperty("a");
-                if (property != null)
-                {
-                    property.Value = value;
-                }
-                UpdateColorHex();
-            }
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (!SetField(ref _a, clamped) || _isSyncing) return;
+            ApplyFromRgba();
         }
     }
 
-    #endregion
+    private float _h;
+    public float H
+    {
+        get => _h;
+        set
+        {
+            var clamped = ColorConversionUtility.ClampHue(value);
+            if (_isSyncing) return;
+            SetField(ref _h, clamped);
+            ApplyFromHsv();
+        }
+    }
 
-    #region ColorHex
+    private float _s = 1f;
+    public float S
+    {
+        get => _s;
+        set
+        {
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (_isSyncing) return;
+            SetField(ref _s, clamped);
+            ApplyFromHsv();
+        }
+    }
 
-    private string _colorHex = "#000";
+    private float _v = 1f;
+    public float V
+    {
+        get => _v;
+        set
+        {
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (_isSyncing) return;
+            SetField(ref _v, clamped);
+            ApplyFromHsv();
+        }
+    }
+
+    private string _hex = "#FFFFFFFF";
+    public string Hex
+    {
+        get => _hex;
+        set
+        {
+            if (!SetField(ref _hex, value) || _isSyncing) return;
+
+            if (!ColorConversionUtility.TryParseHex(value, out var r, out var g, out var b, out var a))
+            {
+                return;
+            }
+
+            RunSync(() =>
+            {
+                SetField(ref _r, r, nameof(R));
+                SetField(ref _g, g, nameof(G));
+                SetField(ref _b, b, nameof(B));
+                SetField(ref _a, a, nameof(A));
+                ColorConversionUtility.RgbToHsv(r, g, b, out var h, out var s, out var v);
+                SetField(ref _h, h, nameof(H));
+                SetField(ref _s, s, nameof(S));
+                SetField(ref _v, v, nameof(V));
+                SetField(ref _hex, ColorConversionUtility.ToHex(r, g, b, a), nameof(Hex));
+                SetField(ref _colorHex, ColorConversionUtility.ToHex(r, g, b, 1f), nameof(ColorHex));
+                SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(r, g, b, 1f)), nameof(PreviewBrush));
+            });
+
+            PushRgbaToProperty();
+        }
+    }
+
+    private string _colorHex = "#FFFFFF";
     public string ColorHex
     {
         get => _colorHex;
         private set => SetField(ref _colorHex, value);
     }
 
-    #endregion
-    
+    private IBrush _previewBrush = Brushes.White;
+    public IBrush PreviewBrush
+    {
+        get => _previewBrush;
+        private set => SetField(ref _previewBrush, value);
+    }
+
     public ColorPropertyViewModel() { }
 
     public ColorPropertyViewModel(SerializedProperty property) : base(property)
     {
-        GetNestedProperty("r")!.ValueChangedEvent += HandleRValueChangedEvent;
-        GetNestedProperty("g")!.ValueChangedEvent += HandleGValueChangedEvent;
-        GetNestedProperty("b")!.ValueChangedEvent += HandleBValueChangedEvent;
-        GetNestedProperty("a")!.ValueChangedEvent += HandleAValueChangedEvent;
+        GetNestedProperty("r")!.ValueChangedEvent += HandleComponentValueChanged;
+        GetNestedProperty("g")!.ValueChangedEvent += HandleComponentValueChanged;
+        GetNestedProperty("b")!.ValueChangedEvent += HandleComponentValueChanged;
+        GetNestedProperty("a")!.ValueChangedEvent += HandleComponentValueChanged;
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        
-        GetNestedProperty("r")!.ValueChangedEvent -= HandleRValueChangedEvent;
-        GetNestedProperty("g")!.ValueChangedEvent -= HandleGValueChangedEvent;
-        GetNestedProperty("b")!.ValueChangedEvent -= HandleBValueChangedEvent;
-        GetNestedProperty("a")!.ValueChangedEvent -= HandleAValueChangedEvent;
-    }
 
-    private void HandleAValueChangedEvent(object? obj)
-    {
-        A = ConvertToFloat(obj, 1f);
-    }
-
-    private void HandleBValueChangedEvent(object? obj)
-    {
-        B = ConvertToFloat(obj, 0f);
-    }
-
-    private void HandleGValueChangedEvent(object? obj)
-    {
-        G = ConvertToFloat(obj, 0f);
-    }
-
-    private void HandleRValueChangedEvent(object? obj)
-    {
-        R = ConvertToFloat(obj, 0f);
+        GetNestedProperty("r")!.ValueChangedEvent -= HandleComponentValueChanged;
+        GetNestedProperty("g")!.ValueChangedEvent -= HandleComponentValueChanged;
+        GetNestedProperty("b")!.ValueChangedEvent -= HandleComponentValueChanged;
+        GetNestedProperty("a")!.ValueChangedEvent -= HandleComponentValueChanged;
     }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
-        R = ConvertToFloat(GetNestedProperty("r")?.Value, 0f);
-        G = ConvertToFloat(GetNestedProperty("g")?.Value, 0f);
-        B = ConvertToFloat(GetNestedProperty("b")?.Value, 0f);
-        A = ConvertToFloat(GetNestedProperty("a")?.Value, 1f);
-        UpdateColorHex();
+        var r = ConvertToFloat(GetNestedProperty("r")?.Value, 0f);
+        var g = ConvertToFloat(GetNestedProperty("g")?.Value, 0f);
+        var b = ConvertToFloat(GetNestedProperty("b")?.Value, 0f);
+        var a = ConvertToFloat(GetNestedProperty("a")?.Value, 1f);
+
+        RunSync(() =>
+        {
+            SetField(ref _r, ColorConversionUtility.Clamp01(r), nameof(R));
+            SetField(ref _g, ColorConversionUtility.Clamp01(g), nameof(G));
+            SetField(ref _b, ColorConversionUtility.Clamp01(b), nameof(B));
+            SetField(ref _a, ColorConversionUtility.Clamp01(a), nameof(A));
+
+            ColorConversionUtility.RgbToHsv(_r, _g, _b, out var h, out var s, out var v);
+            SetField(ref _h, h, nameof(H));
+            SetField(ref _s, s, nameof(S));
+            SetField(ref _v, v, nameof(V));
+
+            SetField(ref _hex, ColorConversionUtility.ToHex(_r, _g, _b, _a), nameof(Hex));
+            SetField(ref _colorHex, ColorConversionUtility.ToHex(_r, _g, _b, 1f), nameof(ColorHex));
+            SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(_r, _g, _b, 1f)), nameof(PreviewBrush));
+        });
     }
 
-    private void UpdateColorHex()
+    private void HandleComponentValueChanged(object? _)
     {
-        var a = (int)(Clamp01(_a) * 255);
-        var r = (int)(Clamp01(_r) * 255);
-        var g = (int)(Clamp01(_g) * 255);
-        var b = (int)(Clamp01(_b) * 255);
-        var hex = ColorTranslator.ToHtml(Color.FromArgb(a, r, g, b));
-        ColorHex = hex;
+        if (_suppressComponentValueChanged) return;
+        HandlePropertyValueChangedEvent(null);
+    }
+
+    private void ApplyFromRgba()
+    {
+        PushRgbaToProperty();
+
+        RunSync(() =>
+        {
+            ColorConversionUtility.RgbToHsv(_r, _g, _b, out var h, out var s, out var v);
+            SetField(ref _h, h, nameof(H));
+            SetField(ref _s, s, nameof(S));
+            SetField(ref _v, v, nameof(V));
+            SetField(ref _hex, ColorConversionUtility.ToHex(_r, _g, _b, _a), nameof(Hex));
+            SetField(ref _colorHex, ColorConversionUtility.ToHex(_r, _g, _b, 1f), nameof(ColorHex));
+            SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(_r, _g, _b, 1f)), nameof(PreviewBrush));
+        });
+    }
+
+    private void ApplyFromHsv()
+    {
+        ColorConversionUtility.HsvToRgb(_h, _s, _v, out var r, out var g, out var b);
+
+        RunSync(() =>
+        {
+            SetField(ref _r, r, nameof(R));
+            SetField(ref _g, g, nameof(G));
+            SetField(ref _b, b, nameof(B));
+            SetField(ref _hex, ColorConversionUtility.ToHex(_r, _g, _b, _a), nameof(Hex));
+            SetField(ref _colorHex, ColorConversionUtility.ToHex(_r, _g, _b, 1f), nameof(ColorHex));
+            SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(_r, _g, _b, 1f)), nameof(PreviewBrush));
+        });
+
+        PushRgbaToProperty();
+    }
+
+    private void PushRgbaToProperty()
+    {
+        var rProperty = GetNestedProperty("r");
+        var gProperty = GetNestedProperty("g");
+        var bProperty = GetNestedProperty("b");
+        var aProperty = GetNestedProperty("a");
+        if (rProperty == null || gProperty == null || bProperty == null || aProperty == null) return;
+
+        _suppressComponentValueChanged = true;
+        try
+        {
+            rProperty.Value = _r;
+            gProperty.Value = _g;
+            bProperty.Value = _b;
+            aProperty.Value = _a;
+        }
+        finally
+        {
+            _suppressComponentValueChanged = false;
+        }
+    }
+
+    private void RunSync(System.Action action)
+    {
+        _isSyncing = true;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            _isSyncing = false;
+        }
     }
 
     private static float ConvertToFloat(object? value, float defaultValue)
@@ -177,26 +274,18 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         if (value is decimal dec) return (float)dec;
 
         var text = value?.ToString();
-        if (!string.IsNullOrWhiteSpace(text))
-        {
-            if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedInvariant))
-            {
-                return parsedInvariant;
-            }
+        if (string.IsNullOrWhiteSpace(text)) return defaultValue;
 
-            if (float.TryParse(text, out var parsedCurrent))
-            {
-                return parsedCurrent;
-            }
+        if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedInvariant))
+        {
+            return parsedInvariant;
+        }
+
+        if (float.TryParse(text, out var parsedCurrent))
+        {
+            return parsedCurrent;
         }
 
         return defaultValue;
-    }
-
-    private static float Clamp01(float value)
-    {
-        if (value < 0f) return 0f;
-        if (value > 1f) return 1f;
-        return value;
     }
 }

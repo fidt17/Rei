@@ -157,7 +157,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             {
                 while (_engineRunner.IsActive.Value && !token.IsCancellationRequested)
                 {
-                    await Task.Delay(100, token);
+                    await Task.Delay(33, token);
 
                     UpdateSceneEntitiesFromEngine();
                 }
