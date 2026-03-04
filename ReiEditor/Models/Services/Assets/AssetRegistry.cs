@@ -12,6 +12,7 @@ public class AssetRegistry : IAssetRegistry
 {
     private readonly Dictionary<string, AssetInfo> _idToAssetInfoMap = new();
     private readonly Dictionary<string, Asset> _loadedAssets = new();
+    private readonly object _lock = new();
     
     private readonly ILogger<AssetRegistry> _logger;
 
@@ -20,9 +21,21 @@ public class AssetRegistry : IAssetRegistry
         _logger = logger;
     }
 
-    public bool Exists<T>(string assetId) where T : Asset => _idToAssetInfoMap.ContainsKey(assetId) && _idToAssetInfoMap[assetId].GetType() == typeof(T);
+    public bool Exists<T>(string assetId) where T : Asset
+    {
+        lock (_lock)
+        {
+            return _idToAssetInfoMap.ContainsKey(assetId) && _idToAssetInfoMap[assetId].GetType() == typeof(T);
+        }
+    }
 
-    public bool TryGetById(string assetId, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo) => _idToAssetInfoMap.TryGetValue(assetId, out assetInfo);
+    public bool TryGetById(string assetId, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo)
+    {
+        lock (_lock)
+        {
+            return _idToAssetInfoMap.TryGetValue(assetId, out assetInfo);
+        }
+    }
 
     public bool TryGetByIdAndExtensions(string assetId, IReadOnlyCollection<string> extensions, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo)
     {
@@ -30,9 +43,13 @@ public class AssetRegistry : IAssetRegistry
 
         if (string.IsNullOrWhiteSpace(assetId)) return false;
         if (extensions.Count == 0) return false;
-        if (!_idToAssetInfoMap.TryGetValue(assetId, out var resolvedAssetInfo)) return false;
+        AssetInfo? resolvedAssetInfo;
+        lock (_lock)
+        {
+            if (!_idToAssetInfoMap.TryGetValue(assetId, out resolvedAssetInfo)) return false;
+        }
 
-        var extension = Path.GetExtension(resolvedAssetInfo.FullPath);
+        var extension = Path.GetExtension(resolvedAssetInfo!.FullPath);
         if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) return false;
 
         assetInfo = resolvedAssetInfo;
@@ -41,37 +58,74 @@ public class AssetRegistry : IAssetRegistry
     
     public bool TryGetByPath(string fullPath, [NotNullWhen(returnValue: true)] out AssetInfo? assetInfo)
     {
-        assetInfo = _idToAssetInfoMap.FirstOrDefault(x => x.Value.FullPath == fullPath).Value;
+        lock (_lock)
+        {
+            assetInfo = _idToAssetInfoMap.FirstOrDefault(x => x.Value.FullPath == fullPath).Value;
+        }
         return assetInfo != null;
     }
 
-    public bool TryGetLoadedAsset(string assetId, [NotNullWhen(returnValue: true)] out Asset? asset) => _loadedAssets.TryGetValue(assetId, out asset);
+    public bool TryGetLoadedAsset(string assetId, [NotNullWhen(returnValue: true)] out Asset? asset)
+    {
+        lock (_lock)
+        {
+            return _loadedAssets.TryGetValue(assetId, out asset);
+        }
+    }
 
     public IEnumerable<Asset> GetDirtyAssets()
     {
-        foreach (var keyValuePair in _loadedAssets)
+        List<Asset> loadedAssets;
+        lock (_lock)
         {
-            var asset = keyValuePair.Value;
+            loadedAssets = _loadedAssets.Values.ToList();
+        }
+
+        foreach (var asset in loadedAssets)
+        {
             yield return asset;
         }
     }
 
     public IEnumerable<AssetInfo> GetLoadedAssetInfos()
     {
-        foreach (var assetId in _loadedAssets.Keys)
+        List<string> loadedAssetIds;
+        lock (_lock)
         {
-            if (!_idToAssetInfoMap.TryGetValue(assetId, out var assetInfo)) continue;
-            yield return assetInfo;
+            loadedAssetIds = _loadedAssets.Keys.ToList();
+        }
+
+        foreach (var assetId in loadedAssetIds)
+        {
+            AssetInfo? assetInfo;
+            lock (_lock)
+            {
+                if (!_idToAssetInfoMap.TryGetValue(assetId, out assetInfo)) continue;
+            }
+
+            yield return assetInfo!;
         }
     }
 
-    public IEnumerable<AssetInfo> GetAllAssets() => _idToAssetInfoMap.Values;
+    public IEnumerable<AssetInfo> GetAllAssets()
+    {
+        lock (_lock)
+        {
+            return _idToAssetInfoMap.Values.ToList();
+        }
+    }
 
     public IEnumerable<AssetInfo> GetAllAssetsByExtensions(IReadOnlyCollection<string> extensions)
     {
         if (extensions.Count == 0) yield break;
 
-        foreach (var asset in _idToAssetInfoMap.Values)
+        List<AssetInfo> allAssets;
+        lock (_lock)
+        {
+            allAssets = _idToAssetInfoMap.Values.ToList();
+        }
+
+        foreach (var asset in allAssets)
         {
             var extension = Path.GetExtension(asset.FullPath);
             if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
@@ -88,22 +142,28 @@ public class AssetRegistry : IAssetRegistry
 
     public void UpdateRegistry(IEnumerable<AssetInfo> assets)
     {
-        _idToAssetInfoMap.Clear();
-        foreach (var asset in assets)
+        lock (_lock)
         {
-            _idToAssetInfoMap[asset.Meta.AssetId] = asset;
-        }
+            _idToAssetInfoMap.Clear();
+            foreach (var asset in assets)
+            {
+                _idToAssetInfoMap[asset.Meta.AssetId] = asset;
+            }
 
-        PruneLoadedAssetsWithoutRegistryEntries();
+            PruneLoadedAssetsWithoutRegistryEntries();
+        }
     }
     
     public void RegisterNewAssets(IEnumerable<AssetInfo> assets)
     {
-        foreach (var asset in assets)
+        lock (_lock)
         {
-            if (!_idToAssetInfoMap.TryAdd(asset.Meta.AssetId, asset))
+            foreach (var asset in assets)
             {
-                _logger.LogWarning($"Asset {asset.Meta.AssetId} {asset.FullPath} already registered");
+                if (!_idToAssetInfoMap.TryAdd(asset.Meta.AssetId, asset))
+                {
+                    _logger.LogWarning($"Asset {asset.Meta.AssetId} {asset.FullPath} already registered");
+                }
             }
         }
     }
@@ -115,7 +175,11 @@ public class AssetRegistry : IAssetRegistry
         var oldFullPath = oldPath.ToFullPath();
         var newFullPath = newPath.ToFullPath();
 
-        var assets = _idToAssetInfoMap.Values.ToList();
+        List<AssetInfo> assets;
+        lock (_lock)
+        {
+            assets = _idToAssetInfoMap.Values.ToList();
+        }
         var updated = new List<AssetInfo>();
         var changed = false;
 
@@ -165,21 +229,32 @@ public class AssetRegistry : IAssetRegistry
 
     public void AddToLoadedAssets(AssetInfo assetInfo, Asset asset)
     {
-        if (_loadedAssets.ContainsKey(assetInfo.Meta.AssetId)) throw new Exception($"Asset {assetInfo.Meta.AssetId} {assetInfo.FullPath} is already loaded");
+        lock (_lock)
+        {
+            if (_loadedAssets.ContainsKey(assetInfo.Meta.AssetId)) throw new Exception($"Asset {assetInfo.Meta.AssetId} {assetInfo.FullPath} is already loaded");
         
-        asset.SetAssetInfo(assetInfo);
-        _loadedAssets[assetInfo.Meta.AssetId] = asset;
-        _idToAssetInfoMap[assetInfo.Meta.AssetId] = assetInfo;
+            asset.SetAssetInfo(assetInfo);
+            _loadedAssets[assetInfo.Meta.AssetId] = asset;
+            _idToAssetInfoMap[assetInfo.Meta.AssetId] = assetInfo;
+        }
     }
 
     public void RemoveFromLoadedAssets(AssetInfo assetInfo)
     {
-        _loadedAssets.Remove(assetInfo.Meta.AssetId);
+        lock (_lock)
+        {
+            _loadedAssets.Remove(assetInfo.Meta.AssetId);
+        }
     }
 
     private void UpdateRegistryWithFilter(Func<AssetInfo, bool> keepPredicate)
     {
-        var assets = _idToAssetInfoMap.Values.ToList();
+        List<AssetInfo> assets;
+        lock (_lock)
+        {
+            assets = _idToAssetInfoMap.Values.ToList();
+        }
+
         var updated = assets.Where(keepPredicate).ToList();
         if (updated.Count == assets.Count) return;
         UpdateRegistry(updated);

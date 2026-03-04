@@ -293,20 +293,15 @@ public class BehaviourRegistrySourceGenerator
 
     private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData, out string templateType)
     {
-        templateType = (propertyData.TemplateTypeName ?? GetTemplateTypeName(propertyData.SourceType)) ?? string.Empty;
+        templateType = (GetTemplateTypeNameWithNamespace(propertyData.SourceType) ??
+                        propertyData.TemplateTypeName ??
+                        GetTemplateTypeName(propertyData.SourceType)) ?? string.Empty;
         if (string.IsNullOrWhiteSpace(templateType))
         {
             return false;
         }
 
-        var sourceType = propertyData.SourceType;
-        var indexOfTemplateStart = sourceType.IndexOf('<');
-        if (indexOfTemplateStart != -1)
-        {
-            sourceType = sourceType.Remove(indexOfTemplateStart, sourceType.Length - indexOfTemplateStart);
-        }
-
-        return sourceType == "AssetRef";
+        return GetSourceTypeBaseName(propertyData.SourceType) == "AssetRef";
     }
 
     private static string GetQualifiedTemplateType(string templateType, string objectNamespace)
@@ -329,6 +324,24 @@ public class BehaviourRegistrySourceGenerator
 
         var templateType = type.Substring(startIndex + 1, endIndex - startIndex - 1);
         return templateType.Split("::").Last().Trim();
+    }
+
+    private static string? GetTemplateTypeNameWithNamespace(string type)
+    {
+        var startIndex = type.IndexOf('<');
+        if (startIndex == -1) return null;
+
+        var endIndex = type.LastIndexOf('>');
+        if (endIndex == -1 || endIndex <= startIndex) return null;
+
+        return type.Substring(startIndex + 1, endIndex - startIndex - 1).Trim();
+    }
+
+    private static string GetSourceTypeBaseName(string sourceType)
+    {
+        var templateStart = sourceType.IndexOf('<');
+        var baseType = templateStart == -1 ? sourceType : sourceType.Substring(0, templateStart);
+        return baseType.Split("::").Last().Trim();
     }
 
     private static string GenerateAssetDependenciesCollector(BehaviourAssetInfo behaviour)

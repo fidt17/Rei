@@ -254,7 +254,7 @@ public class SourceFilesUtility
                 if (serializedType == SerializedTypeEnum.Invalid) continue;
 
                 var variableName = words[equalsIdx - 1];
-                var variableTypeWithoutNamespace = variableType.Split("::").Last();
+                var variableTypeWithoutNamespace = GetSourceTypeWithoutOuterNamespace(variableType);
                 var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
 
                 var defaultValue = words[equalsIdx + 1];
@@ -268,13 +268,28 @@ public class SourceFilesUtility
                 if (serializedType == SerializedTypeEnum.Invalid) continue;
 
                 var variableName = words[^1];
-                var variableTypeWithoutNamespace = variableType.Split("::").Last();
+                var variableTypeWithoutNamespace = GetSourceTypeWithoutOuterNamespace(variableType);
                 var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
                 result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, null, hideInEditor));
             }
         }
 
         return result;
+    }
+
+    private static string GetSourceTypeWithoutOuterNamespace(string type)
+    {
+        var trimmedType = type.Trim();
+        var templateStartIndex = trimmedType.IndexOf('<');
+        if (templateStartIndex == -1)
+        {
+            return trimmedType.Split("::").Last();
+        }
+
+        var outerType = trimmedType.Substring(0, templateStartIndex);
+        var suffix = trimmedType.Substring(templateStartIndex);
+        var outerTypeWithoutNamespace = outerType.Split("::").Last();
+        return outerTypeWithoutNamespace + suffix;
     }
 
     private SerializedTypeEnum GetSerializedTypeForVariableType(string type)
