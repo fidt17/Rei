@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Build;
+using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
@@ -17,10 +18,12 @@ namespace ReiEditor.Models.Services.Build.ProjectBuild;
 
 public class ProjectBuildService : IProjectBuildService
 {
+    private sealed record BuildStep(
+        string Status,
+        Func<CancellationToken, int, int, Task<ProjectBuildResult?>> ExecuteAsync);
+
     private const string BUILD_VERSION = "0.0.1";
     private static readonly string[] REQUIRED_RESOURCES_FILE_PATTERNS = { "*.bin" };
-
-    private const int TOTAL_STEPS = 5;
 
     private readonly IBuildStarter _buildStarter;
     private readonly IEditorModeStarter _editorModeStarter;
@@ -55,39 +58,29 @@ public class ProjectBuildService : IProjectBuildService
     {
         var stopwatch = Stopwatch.StartNew();
 
+        void PostProgress(ProjectBuildProgress p)
+        {
+            _logger.Log(p.Status);
+            progressCallback(p);
+        }
+
+        var steps = CreateBuildSteps(request, stopwatch, PostProgress);
+        var totalSteps = steps.Count;
+
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            progressCallback(new ProjectBuildProgress("Preparing build settings", 1, TOTAL_STEPS));
-            ValidateRequest(request);
-            _configurationUtility.ApplyExecutableBuildSettings(request);
-            ValidateEngineArtifacts(request.Configuration);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            progressCallback(new ProjectBuildProgress("Rebuilding solution and assets", 2, TOTAL_STEPS));
-
-            var didBuild = await _buildStarter.BuildProject(
-                request.Configuration,
-                forceSolutionRebuild: true,
-                forceCleanSolutionBuild: true,
-                cancellationToken);
-
-            if (!didBuild)
+            for (var i = 0; i < totalSteps; i++)
             {
-                return new ProjectBuildResult(false, false, "Build failed. Check editor console for details.");
+                cancellationToken.ThrowIfCancellationRequested();
+                var stepNumber = i + 1;
+                PostProgress(new ProjectBuildProgress(steps[i].Status, stepNumber, totalSteps));
+                var result = await steps[i].ExecuteAsync(cancellationToken, stepNumber, totalSteps);
+                if (result.HasValue)
+                {
+                    return result.Value;
+                }
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            progressCallback(new ProjectBuildProgress("Packaging executable", 3, TOTAL_STEPS));
-            PackageBuildOutput(request);
-            WriteBuildResultFile(request, stopwatch.Elapsed);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            progressCallback(new ProjectBuildProgress("Opening output folder", 4, TOTAL_STEPS));
-            _fileExplorerProvider.OpenDirectory(request.OutputPath);
-
-            progressCallback(new ProjectBuildProgress("Done", 5, TOTAL_STEPS));
-            _editorModeStarter.Start();
             return new ProjectBuildResult(true, false, string.Empty);
         }
         catch (OperationCanceledException)
@@ -103,6 +96,107 @@ public class ProjectBuildService : IProjectBuildService
         {
             stopwatch.Stop();
         }
+    }
+
+    private List<BuildStep> CreateBuildSteps(ProjectBuildRequest request, Stopwatch stopwatch, Action<ProjectBuildProgress> postProgress)
+    {
+        return new List<BuildStep>
+        {
+            new(
+                "Preparing build settings",
+                (ct, _, _) => PrepareBuildSettingsStepAsync(request, ct)),
+            new(
+                "Building solution",
+                (ct, _, _) => BuildSolutionStepAsync(request, ct)),
+            new(
+                "Building assets",
+                (ct, currentStep, totalSteps) => BuildAssetsStepAsync(request, ct, currentStep, totalSteps, postProgress)),
+            new(
+                "Packaging executable",
+                (ct, _, _) => PackageExecutableStepAsync(request, stopwatch, ct)),
+            new(
+                "Opening output folder",
+                (ct, _, _) => OpenOutputFolderStepAsync(request, ct)),
+            new(
+                "Done",
+                (ct, _, _) => FinalizeStepAsync(ct)),
+        };
+    }
+
+    private async Task<ProjectBuildResult?> PrepareBuildSettingsStepAsync(ProjectBuildRequest request, CancellationToken cancellationToken)
+    {
+        ValidateRequest(request);
+        _configurationUtility.ApplyExecutableBuildSettings(request);
+        ValidateEngineArtifacts(request.Configuration);
+
+        // delay for a better visual experience
+        await Task.Delay(1000, cancellationToken);
+        return null;
+    }
+
+    private async Task<ProjectBuildResult?> BuildSolutionStepAsync(
+        ProjectBuildRequest request,
+        CancellationToken cancellationToken)
+    {
+        var didBuild = await _buildStarter.BuildProject(
+            request.Configuration,
+            forceSolutionRebuild: true,
+            forceCleanSolutionBuild: true,
+            buildSolution: true,
+            buildAssets: false,
+            cancellationToken: cancellationToken);
+
+        return didBuild ? null : new ProjectBuildResult(false, false, "Build failed. Check editor console for details.");
+    }
+
+    private async Task<ProjectBuildResult?> BuildAssetsStepAsync(
+        ProjectBuildRequest request,
+        CancellationToken cancellationToken,
+        int currentStep,
+        int totalSteps,
+        Action<ProjectBuildProgress> postProgress)
+    {
+        void ReportAssetBuilding(AssetBuildProgressInfo progress)
+        {
+            var assetName = Path.GetFileName(progress.AssetPath);
+            var label = string.IsNullOrWhiteSpace(assetName) ? progress.AssetPath : assetName;
+            postProgress(new ProjectBuildProgress($"Building asset {progress.CurrentAssetIndex}/{progress.TotalAssets}: {label}", currentStep, totalSteps));
+        }
+
+        var didBuild = await _buildStarter.BuildProject(
+            request.Configuration,
+            forceAssetRebuild: true,
+            buildSolution: false,
+            buildAssets: true,
+            onAssetBuilding: ReportAssetBuilding,
+            cancellationToken: cancellationToken);
+
+        return didBuild ? null : new ProjectBuildResult(false, false, "Build failed. Check editor console for details.");
+    }
+
+    private Task<ProjectBuildResult?> PackageExecutableStepAsync(
+        ProjectBuildRequest request,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        PackageBuildOutput(request);
+        WriteBuildResultFile(request, stopwatch.Elapsed);
+        return Task.FromResult<ProjectBuildResult?>(null);
+    }
+
+    private Task<ProjectBuildResult?> OpenOutputFolderStepAsync(ProjectBuildRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _fileExplorerProvider.OpenDirectory(request.OutputPath);
+        return Task.FromResult<ProjectBuildResult?>(null);
+    }
+
+    private Task<ProjectBuildResult?> FinalizeStepAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        _editorModeStarter.Start();
+        return Task.FromResult<ProjectBuildResult?>(null);
     }
 
     private void ValidateRequest(ProjectBuildRequest request)

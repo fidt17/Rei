@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,7 +34,7 @@ public class AssetBuilder : IAssetBuilder
         _logger = logger;
     }
 
-    public async Task BuildAssets(string buildFolder)
+    public async Task BuildAssets(string buildFolder, bool forceRebuild = false, Action<AssetBuildProgressInfo>? onAssetBuilding = null)
     {
         if (!_dllManager.DllLoaded.Value)
         {
@@ -53,7 +54,7 @@ public class AssetBuilder : IAssetBuilder
             .Where(ShouldBuild)
             .OrderBy(asset => asset.Meta.AssetId);
         
-        var buildResult = _assetBuildCachePipeline.BuildAssets(assets, buildFolder, assetsBinPath);
+        var buildResult = _assetBuildCachePipeline.BuildAssets(assets, buildFolder, assetsBinPath, forceRebuild, onAssetBuilding);
         LogBuildSummary(buildResult.Report);
         
         await SerializeAssetMap(buildResult.Map, buildFolder, "map");

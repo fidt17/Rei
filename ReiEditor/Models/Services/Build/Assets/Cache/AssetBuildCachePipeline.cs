@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System.Diagnostics;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -20,14 +23,19 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
         _cacheService = cacheService;
     }
 
-    public AssetsBuildResult BuildAssets(IEnumerable<AssetInfo> assetInfos, string buildFolder, string assetsBinPath)
+    public AssetsBuildResult BuildAssets(
+        IEnumerable<AssetInfo> assetInfos,
+        string buildFolder,
+        string assetsBinPath,
+        bool forceRebuild = false,
+        Action<AssetBuildProgressInfo>? onAssetBuilding = null)
     {
         var totalStopwatch = Stopwatch.StartNew();
         
         var manifest = _cacheService.LoadOrCreateManifest(buildFolder);
         var report = new AssetsBuildCacheReport();
         
-        var map = BuildInternal(assetInfos, buildFolder, assetsBinPath, manifest, report);
+        var map = BuildInternal(assetInfos, buildFolder, assetsBinPath, manifest, report, forceRebuild, onAssetBuilding);
         _cacheService.SaveManifest(buildFolder, manifest);
         _cacheService.PruneUnusedCacheFiles(buildFolder, manifest);
         
@@ -37,11 +45,20 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
         return new AssetsBuildResult(map, report);
     }
 
-    private BuildAssetMap BuildInternal(IEnumerable<AssetInfo> assetInfos, string buildFolder, string assetsBinPath, AssetBuildCacheManifest manifest, AssetsBuildCacheReport report)
+    private BuildAssetMap BuildInternal(
+        IEnumerable<AssetInfo> assetInfos,
+        string buildFolder,
+        string assetsBinPath,
+        AssetBuildCacheManifest manifest,
+        AssetsBuildCacheReport report,
+        bool forceRebuild,
+        Action<AssetBuildProgressInfo>? onAssetBuilding)
     {
         const string INNER_PATH = "assets.bin";
         
         var map = new BuildAssetMap();
+        var assetList = assetInfos.ToList();
+        var totalAssets = assetList.Count;
 
         var total = 0;
         var cacheHits = 0;
@@ -49,11 +66,13 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
         long totalBytes = 0L;
         
         long offset = 0L;
-        foreach (var assetInfo in assetInfos)
+        for (var i = 0; i < totalAssets; i++)
         {
+            var assetInfo = assetList[i];
+            onAssetBuilding?.Invoke(new AssetBuildProgressInfo(i + 1, totalAssets, assetInfo.FullPath));
             total++;
             var contentHash = _cacheService.ComputeContentHash(assetInfo.FullPath);
-            if (_cacheService.TryGetCacheEntry(buildFolder, manifest, assetInfo, contentHash, out _, out var cacheFilePath))
+            if (!forceRebuild && _cacheService.TryGetCacheEntry(buildFolder, manifest, assetInfo, contentHash, out _, out var cacheFilePath))
             {
                 cacheHits++;
                 var bytesWritten = AppendCacheToAssets(assetsBinPath, cacheFilePath);

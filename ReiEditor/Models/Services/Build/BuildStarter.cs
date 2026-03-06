@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Import;
+using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -57,6 +58,10 @@ public class BuildStarter : IBuildStarter, IDisposable
         BuildConfigurationEnum configuration,
         bool forceSolutionRebuild = false,
         bool forceCleanSolutionBuild = false,
+        bool forceAssetRebuild = false,
+        bool buildSolution = true,
+        bool buildAssets = true,
+        Action<AssetBuildProgressInfo>? onAssetBuilding = null,
         CancellationToken cancellationToken = default)
     {
         if (Interlocked.Exchange(ref _commandInProgress, 1) == 1) return false;
@@ -95,6 +100,10 @@ public class BuildStarter : IBuildStarter, IDisposable
                 configuration,
                 forceSolutionRebuild,
                 forceCleanSolutionBuild,
+                forceAssetRebuild,
+                buildSolution,
+                buildAssets,
+                onAssetBuilding,
                 cancellationToken);
         }
         catch (OperationCanceledException)

@@ -175,14 +175,21 @@ public class BuildProjectWindowViewModel : BaseViewModel
                 ShowConsole,
                 IconPath);
 
-            result = await _projectBuildService.BuildAsync(
-                request,
-                progress => Dispatcher.UIThread.Post(() =>
-                {
-                    ProgressStatus = progress.Status;
-                    ProgressValue = progress.ProgressValue;
-                }),
+            result = await Task.Run(
+                () => _projectBuildService.BuildAsync(
+                    request,
+                    progress => Dispatcher.UIThread.Post(() =>
+                    {
+                        ProgressStatus = progress.Status;
+                        ProgressValue = progress.ProgressValue;
+                    }),
+                    _buildCancellationTokenSource.Token),
                 _buildCancellationTokenSource.Token);
+            hasResult = true;
+        }
+        catch (OperationCanceledException)
+        {
+            result = new ProjectBuildResult(false, true, "Build canceled.");
             hasResult = true;
         }
         catch (Exception e)

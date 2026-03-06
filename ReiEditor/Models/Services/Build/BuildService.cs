@@ -83,6 +83,10 @@ public class BuildService : IBuildService, IAsyncDisposable
         BuildConfigurationEnum configuration,
         bool forceSolutionRebuild = false,
         bool forceCleanSolutionBuild = false,
+        bool forceAssetRebuild = false,
+        bool buildSolution = true,
+        bool buildAssets = true,
+        Action<AssetBuildProgressInfo>? onAssetBuilding = null,
         CancellationToken cancellationToken = default)
     {
         if (_buildInProgress)
@@ -116,13 +120,16 @@ public class BuildService : IBuildService, IAsyncDisposable
                 || !_clientDllManager.DllExists()
                 || await _sourceTracker.ChangedOrNewSourcesExist();
 
-            if (shouldBuildSolution)
+            if (buildSolution && shouldBuildSolution)
             {
                 await _solutionBuilder.Build(configuration, forceCleanSolutionBuild, cancellationToken);
             }
             
-            cancellationToken.ThrowIfCancellationRequested();
-            await _assetBuilder.BuildAssets(buildFolder);
+            if (buildAssets)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await _assetBuilder.BuildAssets(buildFolder, forceAssetRebuild, onAssetBuilding);
+            }
             stopwatch.Stop();
 
             if (_discardBuild)

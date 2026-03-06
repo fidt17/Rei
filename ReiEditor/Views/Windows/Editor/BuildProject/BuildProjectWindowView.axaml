@@ -116,7 +116,14 @@
                                    Text="Building..." />
                         <ProgressBar Minimum="0"
                                      Maximum="1"
-                                     Value="{Binding ProgressValue}" />
+                                     Value="{Binding ProgressValue}">
+                            <ProgressBar.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Value"
+                                                      Duration="0:0:0.2" />
+                                </Transitions>
+                            </ProgressBar.Transitions>
+                        </ProgressBar>
                         <TextBlock Text="{Binding ProgressStatus}" />
                         <TextBlock Text="{Binding ElapsedTimeText, StringFormat=Elapsed: {0}}" />
                         <TextBlock Foreground="{StaticResource Warning}"
