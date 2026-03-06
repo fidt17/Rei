@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
+using ReiEditor.Models.Services.Assets.Migrations;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -37,6 +38,7 @@ public class AssetImporter : IAssetImporter
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourFileUtility _behaviourFileUtility;
     private readonly ISerializer _serializer;
+    private readonly IAssetSerializerMigrationService _assetSerializerMigrationService;
     private readonly IEditorProceduresService _editorProceduresService;
 
     public AssetImporter(
@@ -50,6 +52,7 @@ public class AssetImporter : IAssetImporter
         IBehaviourComponentsService behaviourComponentsService, 
         IBehaviourFileUtility behaviourFileUtility,
         ISerializer serializer, 
+        IAssetSerializerMigrationService assetSerializerMigrationService,
         IAssetsService assetsService,
         IEditorProceduresService editorProceduresService)
     {
@@ -63,6 +66,7 @@ public class AssetImporter : IAssetImporter
         _behaviourComponentsService = behaviourComponentsService;
         _behaviourFileUtility = behaviourFileUtility;
         _serializer = serializer;
+        _assetSerializerMigrationService = assetSerializerMigrationService;
         _assetsService = assetsService;
         _editorProceduresService = editorProceduresService;
     }
@@ -137,6 +141,7 @@ public class AssetImporter : IAssetImporter
                     }
 
                     importedAssets.Add(new AssetInfo(meta, assetPath));
+                    await _assetSerializerMigrationService.TryMigrateAssetFile(assetPath);
                 }
                 catch (Exception e)
                 {
@@ -235,6 +240,8 @@ public class AssetImporter : IAssetImporter
                     meta = await EnsureEngineResourceAssetId(meta, assetPath);
                     importedAssets.Add(new AssetInfo(meta, assetPath));
                 }
+                
+                await _assetSerializerMigrationService.TryMigrateAssetFile(assetPath);
             }
             catch (Exception e)
             {

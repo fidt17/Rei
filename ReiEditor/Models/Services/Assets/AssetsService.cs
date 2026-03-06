@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.Assets.Migrations;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -25,6 +26,7 @@ public class AssetsService : IAssetsService
     private readonly ILogger<AssetsService> _logger;
     private readonly IResourceService _resourceService;
     private readonly ISerializer _serializer;
+    private readonly IAssetSerializerMigrationService _assetSerializerMigrationService;
     private readonly IActiveProjectService _activeProject;
     private readonly IEditorProceduresService _editorProceduresService;
     private readonly IAssetRegistry _assetRegistry;
@@ -33,6 +35,7 @@ public class AssetsService : IAssetsService
         ILogger<AssetsService> logger,
         IResourceService resourceService,
         ISerializer serializer,
+        IAssetSerializerMigrationService assetSerializerMigrationService,
         IActiveProjectService activeProject,
         IEditorProceduresService editorProceduresService,
         IAssetRegistry assetRegistry)
@@ -40,6 +43,7 @@ public class AssetsService : IAssetsService
         _logger = logger;
         _resourceService = resourceService;
         _serializer = serializer;
+        _assetSerializerMigrationService = assetSerializerMigrationService;
         _activeProject = activeProject;
         _editorProceduresService = editorProceduresService;
         _assetRegistry = assetRegistry;
@@ -73,7 +77,23 @@ public class AssetsService : IAssetsService
 
     public async Task<T?> Load<T>(AssetInfo assetInfo) where T : Asset
     {
-        var asset = await _resourceService.TryLoad<T>(assetInfo.FullPath);
+        T? asset;
+        try
+        {
+            var sourceJson = await File.ReadAllTextAsync(assetInfo.FullPath);
+            var migrationResult = _assetSerializerMigrationService.MigrateAssetJson(typeof(T), sourceJson);
+            asset = _serializer.Deserialize<T>(migrationResult.Json);
+
+            if (migrationResult.IsUpdated)
+            {
+                await _resourceService.Write(migrationResult.Json, assetInfo.FullPath);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogException(e);
+            return null;
+        }
 
         if (asset != null)
         {
@@ -103,7 +123,13 @@ public class AssetsService : IAssetsService
             try
             {
                 var jsonData = await File.ReadAllTextAsync(assetInfo.FullPath);
-                JsonConvert.PopulateObject(jsonData, loadedAsset);
+                var migrationResult = _assetSerializerMigrationService.MigrateAssetJson(loadedAsset.GetType(), jsonData);
+                JsonConvert.PopulateObject(migrationResult.Json, loadedAsset);
+
+                if (migrationResult.IsUpdated)
+                {
+                    await _resourceService.Write(migrationResult.Json, assetInfo.FullPath);
+                }
 
                 if (loadedAsset is IOnDeserialized onDeserialized)
                 {
