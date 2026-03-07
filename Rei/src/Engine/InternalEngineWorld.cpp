@@ -2,6 +2,8 @@
 #include "InternalEngineWorld.h"
 
 #include "Engine.h"
+#include "Engine/Services.h"
+#include "Common/Diagnostics/Systems/DiagnosticsRunnerSystem.h"
 #include "Ecs/Systems/DeleteHere.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
@@ -11,6 +13,7 @@
 #include "Modules/Editor/TransformationControls/Systems/TransformationControlsModule.h"
 #include "Modules/Physics/Systems/PointerCollisionSystem.h"
 #include "Modules/Render/Camera/AssignMainCameraSystem.h"
+#include "Modules/Render/Systems/DebugOverlayToggleSystem.h"
 #include "Modules/Window/WindowManager.h"
 
 namespace rei::internal::engine
@@ -19,7 +22,24 @@ namespace rei::internal::engine
                                         const std::shared_ptr<TaskExecutor>& mainThread,
                                         const std::shared_ptr<EntityManager>& entityManager) const
     {
-        _world->AddSystem([&] { GetWindowManager().OnUpdate(); });
+        using clock = std::chrono::high_resolution_clock;
+
+        struct FrameTimings
+        {
+            clock::time_point FrameStart = {};
+            float RenderTimeMs = 0.0f;
+        };
+
+        const auto frameTimings = std::make_shared<FrameTimings>();
+
+        _world->AddSystem([frameTimings]
+        {
+            frameTimings->FrameStart = clock::now();
+            frameTimings->RenderTimeMs = 0.0f;
+            GetWindowManager().OnUpdate();
+        });
+
+        _world->AddSystem<common::diagnostics::DiagnosticsRunnerSystem>();
 
         if (GetEngine().IsPlaymode())
         {
@@ -29,6 +49,8 @@ namespace rei::internal::engine
             _world->AddSystem<behaviour::UpdateBehavioursSystem>(entityManager);
             _world->AddSystem([&] { app->OnUpdate(); });
         }
+
+        _world->AddSystem<render::DebugOverlayToggleSystem>();
 
         _world->AddSystem<render::AssignMainCameraSystem>(renderer);
 
@@ -42,9 +64,25 @@ namespace rei::internal::engine
             _world->AddModule<editor::TransformationControlsModule>();
         }
 
-        _world->AddSystem([&] { renderer->Render(); });
+        _world->AddSystem([renderer, frameTimings]
+        {
+            const auto renderStart = clock::now();
+            renderer->Render();
+            const auto renderEnd = clock::now();
+            frameTimings->RenderTimeMs = static_cast<float>(std::chrono::duration<double, std::milli>(renderEnd - renderStart).count());
+        });
 
-        _world->AddSystem([&] { mainThread->CompleteTasks(); });
+        _world->AddSystem([mainThread, frameTimings]
+        {
+            mainThread->CompleteTasks();
+
+            const auto frameEnd = clock::now();
+            const auto totalFrameTimeMs = static_cast<float>(std::chrono::duration<double, std::milli>(frameEnd - frameTimings->FrameStart).count());
+            const auto coreTimeMs = totalFrameTimeMs > frameTimings->RenderTimeMs
+                ? totalFrameTimeMs - frameTimings->RenderTimeMs
+                : 0.0f;
+            GetDiagnostics().SetExecutionTimes(coreTimeMs, frameTimings->RenderTimeMs);
+        });
         
         LOG_DEBUG("Configured internal world")
     }

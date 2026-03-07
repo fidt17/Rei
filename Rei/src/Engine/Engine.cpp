@@ -26,7 +26,8 @@ namespace rei::internal::engine
         _assetManager(std::make_shared<assets::AssetManager>()),
         _entityManager(std::make_shared<EntityManager>(_internalWorld->GetWorld())),
         _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager)),
-        _editorEventsRelay(std::make_shared<api::EditorEventsRelay>())
+        _editorEventsRelay(std::make_shared<api::EditorEventsRelay>()),
+        _diagnostics(std::make_shared<common::diagnostics::DiagnosticsService>())
     {
         Services::GetInstance()->SetEngine(this);
         Services::GetInstance()->SetAssetManager(_assetManager);
@@ -34,6 +35,7 @@ namespace rei::internal::engine
         Services::GetInstance()->SetEntityManager(_entityManager);
         Services::GetInstance()->SetWindowManager(_windowManager);
         Services::GetInstance()->SetEditorEventsRelay(_editorEventsRelay);
+        Services::GetInstance()->SetDiagnostics(_diagnostics);
 
         render::ShaderGenerator::GetInstance().Initialize();
     }

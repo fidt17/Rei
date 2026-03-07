@@ -683,4 +683,100 @@
     <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
     <ClInclude Include="tests\render\model\model_e0.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src\Common\Diagnostics">
+      <UniqueIdentifier>{9A1FB973-6E23-4CF7-9149-8B46FA8E59A4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Diagnostics\Systems">
+      <UniqueIdentifier>{CFDB3D97-C5FD-446F-AB30-4C9B7DCC4F4F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Modules\Render\Modules">
+      <UniqueIdentifier>{EAA6EA2C-FE4D-41CC-A1A6-35D68AFDBB17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Modules\Render\Systems">
+      <UniqueIdentifier>{0C2538C0-33C9-4859-BE2A-A76D71A79778}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\imgui">
+      <UniqueIdentifier>{C5CCB462-20EA-49DE-A00C-B5D0C2AE1E43}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\imgui\backends">
+      <UniqueIdentifier>{24450EA2-8DAA-46EB-9852-5AB7642B5309}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Common\Diagnostics\DiagnosticsService.cpp">
+      <Filter>src\Common\Diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.cpp">
+      <Filter>src\Common\Diagnostics\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Modules\Render\Modules\DebugOverlayModule.cpp">
+      <Filter>src\Modules\Render\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.cpp">
+      <Filter>src\Modules\Render\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_draw.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_tables.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_widgets.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp">
+      <Filter>external\imgui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>external\imgui\backends</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Common\Diagnostics\DiagnosticsService.h">
+      <Filter>src\Common\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Diagnostics\DiagnosticsSnapshot.h">
+      <Filter>src\Common\Diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.h">
+      <Filter>src\Common\Diagnostics\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Modules\Render\Modules\DebugOverlayModule.h">
+      <Filter>src\Modules\Render\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.h">
+      <Filter>src\Modules\Render\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\imgui.h">
+      <Filter>external\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\imgui_internal.h">
+      <Filter>external\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\imconfig.h">
+      <Filter>external\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\imstb_rectpack.h">
+      <Filter>external\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\imstb_textedit.h">
+      <Filter>external\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\imstb_truetype.h">
+      <Filter>external\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\backends\imgui_impl_glfw.h">
+      <Filter>external\imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\backends\imgui_impl_opengl3.h">
+      <Filter>external\imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\backends\imgui_impl_opengl3_loader.h">
+      <Filter>external\imgui\backends</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

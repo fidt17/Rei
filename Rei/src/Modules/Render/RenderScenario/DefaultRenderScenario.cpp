@@ -7,7 +7,6 @@
 #include <limits>
 #include "Modules/Components/ActiveTag.h"
 #include "Modules/EntityManagement/EntityManager.h"
-#include "Modules/Input/Input.h"
 
 #include "Modules/Render/Shaders/Shader.h"
 #include "rei_behaviours/render/MeshRenderer.h"
@@ -21,7 +20,8 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
       _lighting(std::make_shared<LightingRenderModule>(_cameraModule)),
       _outline(std::make_shared<OutlineRenderModule>(_cameraModule)),
       _postProcessingModule(std::make_shared<PostProcessingModule>(_cameraModule)),
-      _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos))
+      _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos)),
+      _debugOverlayModule(std::make_shared<DebugOverlayModule>())
 {
     Services::GetInstance()->SetGizmos(_gizmos);
 }
@@ -44,6 +44,7 @@ void rei::render::DefaultRenderScenario::Setup()
     _outline->Setup();
     _postProcessingModule->Setup();
     _gridRenderModule->Setup();
+    _debugOverlayModule->Setup(_target);
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
@@ -74,6 +75,8 @@ void rei::render::DefaultRenderScenario::Render()
     {
         RenderInNormalMode();
     }
+
+    _debugOverlayModule->Render();
 
     glfwSwapBuffers(_target);
 }
@@ -153,6 +156,7 @@ void rei::render::DefaultRenderScenario::RenderInDepthMode() const
 
 void rei::render::DefaultRenderScenario::Dispose()
 {
+    _debugOverlayModule->Dispose();
 }
 
 void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) const

@@ -3,13 +3,15 @@ file(GLOB_RECURSE REI_ENGINE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/resources/rei_behaviours/*.cpp"
 )
 
-list(REMOVE_ITEM REI_ENGINE_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Modules/Render/Textures/Texture2D.cpp"
-)
-
 set(REI_THIRD_PARTY_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/external/glad.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/external/glm/detail/glm.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui_draw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui_tables.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui_widgets.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends/imgui_impl_glfw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends/imgui_impl_opengl3.cpp"
 )
 
 add_library(Rei SHARED
@@ -26,12 +28,14 @@ target_include_directories(Rei
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${REI_EXTERNAL_DIR}"
+        "${REI_EXTERNAL_DIR}/imgui"
         "${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
 
 target_compile_definitions(Rei
     PRIVATE
         REI_ENGINE
+        IMGUI_IMPL_OPENGL_LOADER_GLAD
         $<$<CONFIG:Debug>:DEBUG>
         $<$<CONFIG:Release>:RELEASE>
 )
@@ -43,6 +47,7 @@ endif()
 target_link_libraries(Rei
     PRIVATE
         opengl32
+        Psapi
         "${REI_GLFW_LIB}"
         "${REI_ASSIMP_LIB}"
 )

@@ -572,6 +572,9 @@
     <ClInclude Include="src\Api\EditorEventsRelay.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
+    <ClInclude Include="src\Common\Diagnostics\DiagnosticsService.h" />
+    <ClInclude Include="src\Common\Diagnostics\DiagnosticsSnapshot.h" />
+    <ClInclude Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
     <ClInclude Include="src\Common\Math\math.h" />
     <ClInclude Include="src\Common\Math\Plane.h" />
@@ -668,6 +671,8 @@
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
+    <ClInclude Include="src\Modules\Render\Modules\DebugOverlayModule.h" />
+    <ClInclude Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\CameraModule.h" />
@@ -713,6 +718,12 @@
   <ItemGroup>
     <ClCompile Include="external\glad.cpp" />
     <ClCompile Include="external\glm\detail\glm.cpp" />
+    <ClCompile Include="external\imgui\imgui.cpp" />
+    <ClCompile Include="external\imgui\imgui_draw.cpp" />
+    <ClCompile Include="external\imgui\imgui_tables.cpp" />
+    <ClCompile Include="external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="external\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\camera\Camera.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
@@ -720,6 +731,8 @@
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
+    <ClCompile Include="src\Common\Diagnostics\DiagnosticsService.cpp" />
+    <ClCompile Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.cpp" />
     <ClCompile Include="src\Common\Math\math.cpp" />
     <ClCompile Include="src\Common\Math\Plane.cpp" />
     <ClCompile Include="src\Common\Math\Ray.cpp" />
@@ -775,6 +788,7 @@
     <ClCompile Include="src\Modules\Physics\SphereCollider.cpp" />
     <ClCompile Include="src\Modules\Physics\Systems\PointerCollisionSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Camera\AssignMainCameraSystem.cpp" />
+    <ClCompile Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Color\Color.cpp" />
     <ClCompile Include="src\Modules\Render\Material\Material.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\Mesh.cpp" />
@@ -792,6 +806,7 @@
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />
+    <ClCompile Include="src\Modules\Render\Modules\DebugOverlayModule.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\BaseRenderScenario.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\CameraModule.cpp" />
@@ -910,20 +925,21 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;REI_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;REI_ENGINE;IMGUI_IMPL_OPENGL_LOADER_GLAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)resources;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)external\imgui;$(ProjectDir)resources;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)external\glfw\lib-vc2022;$(ProjectDir)external\assimp;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc143-mt.lib;Psapi.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
@@ -938,20 +954,21 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>DEBUG;REI_TEST;REI_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;REI_TEST;REI_ENGINE;IMGUI_IMPL_OPENGL_LOADER_GLAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)resources;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)external\imgui;$(ProjectDir)resources;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)external\glfw\lib-vc2022;$(ProjectDir)external\assimp;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc143-mt.lib;Psapi.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
@@ -968,13 +985,14 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>RELEASE;REI_ENGINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RELEASE;REI_ENGINE;IMGUI_IMPL_OPENGL_LOADER_GLAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)resources;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)external\imgui;$(ProjectDir)resources;</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <ExceptionHandling>false</ExceptionHandling>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -985,7 +1003,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)external\glfw\lib-vc2022;$(ProjectDir)external\assimp;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc143-mt.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glfw3.lib;opengl32.lib;assimp-vc143-mt.lib;Psapi.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"

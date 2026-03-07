@@ -3,6 +3,7 @@
 
 #include "InternalEngineWorld.h"
 #include "Api/EditorEventsRelay.h"
+#include "Common/Diagnostics/DiagnosticsService.h"
 #include "Common/Tasks/TaskExecutor.h"
 #include "Modules/Render/Renderer.h"
 #include "Modules/Scenes/SceneManager.h"
@@ -61,6 +62,7 @@ namespace rei::internal::engine
         std::shared_ptr<scenes::SceneManager> _sceneManager;
 
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
+        std::shared_ptr<common::diagnostics::DiagnosticsService> _diagnostics;
 
         void RunUpdateLoop();
     };

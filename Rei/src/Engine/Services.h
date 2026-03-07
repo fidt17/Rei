@@ -7,6 +7,11 @@ namespace rei::window
 
 namespace rei
 {
+    namespace common::diagnostics
+    {
+        class DiagnosticsService;
+    }
+
     namespace render
     {
         class Gizmos;
@@ -47,6 +52,9 @@ namespace rei
 
         void SetEditorEventsRelay(const std::shared_ptr<api::EditorEventsRelay>& relay) { _editorEventsRelay = relay; }
         REI_API api::EditorEventsRelay& GetEditorEventsRelay() const { return *_editorEventsRelay; }
+
+        void SetDiagnostics(const std::shared_ptr<common::diagnostics::DiagnosticsService>& diagnostics) { _diagnostics = diagnostics; }
+        REI_API common::diagnostics::DiagnosticsService& GetDiagnostics() const { return *_diagnostics; }
         
         void SetGizmos(const std::shared_ptr<render::Gizmos>& gizmos) { _gizmos = gizmos; }
         REI_API render::Gizmos& GetGizmos() const { return *_gizmos; }
@@ -63,6 +71,7 @@ namespace rei
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<window::WindowManager> _windowManager;
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
+        std::shared_ptr<common::diagnostics::DiagnosticsService> _diagnostics;
         std::shared_ptr<render::Gizmos> _gizmos;
     };
 
@@ -72,5 +81,6 @@ namespace rei
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline window::WindowManager& GetWindowManager() { return Services::GetInstance()->GetWindowManager(); }
     inline api::EditorEventsRelay& GetEditorEventsRelay() { return Services::GetInstance()->GetEditorEventsRelay(); }
+    inline common::diagnostics::DiagnosticsService& GetDiagnostics() { return Services::GetInstance()->GetDiagnostics(); }
     inline render::Gizmos& GetGizmos() { return Services::GetInstance()->GetGizmos(); }
 }

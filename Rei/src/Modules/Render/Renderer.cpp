@@ -67,8 +67,12 @@ namespace rei::render
 
     void Renderer::Dispose()
     {
+        if (_renderScenario != nullptr)
+        {
+            _renderScenario->Dispose();
+        }
+
         SetTarget(nullptr);
-        _renderScenario->Dispose();
     }
 
     void Renderer::PrepareMaterials() const
