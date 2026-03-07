@@ -104,6 +104,8 @@ public class AssetBuilder : IAssetBuilder
     private static bool ShouldBuildPath(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return false;
+        if (path.Contains("Project\\Scripts\\crash_reports")) return false;
+        if (path.Contains("Project\\Scripts\\bin")) return false;
         
         var extension = Path.GetExtension(path);
         return extension switch
