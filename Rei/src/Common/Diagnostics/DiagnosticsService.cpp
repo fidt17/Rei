@@ -12,10 +12,10 @@ namespace rei::common::diagnostics
 {
     namespace
     {
-        constexpr float BYTES_TO_MEGABYTES = 1.0f / (1024.0f * 1024.0f);
+        constexpr f32 BYTES_TO_MEGABYTES = 1.0f / (1024.0f * 1024.0f);
     }
 
-    void DiagnosticsService::PushSample(std::array<float, SAMPLE_COUNT>& samples, i32& sampleIndex, i32& sampleSize, const float value) const
+    void DiagnosticsService::PushSample(std::array<f32, SAMPLE_COUNT>& samples, i32& sampleIndex, i32& sampleSize, const f32 value) const
     {
         samples[sampleIndex] = value;
         sampleIndex = (sampleIndex + 1) % SAMPLE_COUNT;
@@ -25,37 +25,34 @@ namespace rei::common::diagnostics
         }
     }
 
-    float DiagnosticsService::ComputeAverage(const std::array<float, SAMPLE_COUNT>& samples, const i32 sampleSize)
+    f32 DiagnosticsService::ComputeAverage(const std::array<f32, SAMPLE_COUNT>& samples, const i32 sampleSize)
     {
         if (sampleSize <= 0) return 0.0f;
 
-        float sum = 0.0f;
+        f32 sum = 0.0f;
         for (i32 i = 0; i < sampleSize; i++)
         {
             sum += samples[i];
         }
 
-        return sum / static_cast<float>(sampleSize);
+        return sum / static_cast<f32>(sampleSize);
     }
 
     void DiagnosticsService::Update()
     {
-        if (_hasPendingTimingSample)
-        {
-            const auto renderWithoutDiagnosticsMs = _rawRenderTimeMs > _rawDiagnosticsTimeMs
-                ? _rawRenderTimeMs - _rawDiagnosticsTimeMs
-                : 0.0f;
+        const auto coreTimeMs = _rawExecutionTimes.WindowTimeMs + _rawExecutionTimes.UpdateTimeMs;
+        const auto activeFrameTimeMs = coreTimeMs + _rawExecutionTimes.RenderCpuTimeMs + _rawExecutionTimes.DiagnosticsTimeMs;
 
-            PushSample(_coreTimeSamples, _coreTimeSampleIndex, _coreTimeSampleSize, _rawCoreTimeMs);
-            PushSample(_renderTimeSamples, _renderTimeSampleIndex, _renderTimeSampleSize, renderWithoutDiagnosticsMs);
-            PushSample(_diagnosticsTimeSamples, _diagnosticsTimeSampleIndex, _diagnosticsTimeSampleSize, _rawDiagnosticsTimeMs);
+        PushSample(_coreTimeSamples, _coreTimeSampleIndex, _coreTimeSampleSize, coreTimeMs);
+        PushSample(_renderTimeSamples, _renderTimeSampleIndex, _renderTimeSampleSize, _rawExecutionTimes.RenderCpuTimeMs);
+        PushSample(_presentTimeSamples, _presentTimeSampleIndex, _presentTimeSampleSize, _rawExecutionTimes.PresentTimeMs);
+        PushSample(_diagnosticsTimeSamples, _diagnosticsTimeSampleIndex, _diagnosticsTimeSampleSize, _rawExecutionTimes.DiagnosticsTimeMs);
 
-            _snapshot.CoreTimeMs = ComputeAverage(_coreTimeSamples, _coreTimeSampleSize);
-            _snapshot.RenderTimeMs = ComputeAverage(_renderTimeSamples, _renderTimeSampleSize);
-            _snapshot.DiagnosticsTimeMs = ComputeAverage(_diagnosticsTimeSamples, _diagnosticsTimeSampleSize);
-
-            _hasPendingTimingSample = false;
-        }
+        _snapshot.CoreTimeMs = ComputeAverage(_coreTimeSamples, _coreTimeSampleSize);
+        _snapshot.RenderTimeMs = ComputeAverage(_renderTimeSamples, _renderTimeSampleSize);
+        _snapshot.PresentTimeMs = ComputeAverage(_presentTimeSamples, _presentTimeSampleSize);
+        _snapshot.DiagnosticsTimeMs = ComputeAverage(_diagnosticsTimeSamples, _diagnosticsTimeSampleSize);
+        _snapshot.FrameTimeMs = activeFrameTimeMs;
 
         const double now = glfwGetTime();
         if (_lastFrameTime > 0.0)
@@ -63,11 +60,10 @@ namespace rei::common::diagnostics
             const double delta = now - _lastFrameTime;
             if (delta > 0.0)
             {
-                const auto fps = static_cast<float>(1.0 / delta);
-                const auto frameTimeMs = static_cast<float>(delta * 1000.0);
+                const auto fps = static_cast<f32>(1.0 / delta);
 
                 PushSample(_fpsSamples, _fpsSampleIndex, _fpsSampleSize, fps);
-                PushSample(_frameTimeSamples, _frameTimeSampleIndex, _frameTimeSampleSize, frameTimeMs);
+                PushSample(_frameTimeSamples, _frameTimeSampleIndex, _frameTimeSampleSize, activeFrameTimeMs);
 
                 _snapshot.Fps = ComputeAverage(_fpsSamples, _fpsSampleSize);
                 _snapshot.FrameTimeMs = ComputeAverage(_frameTimeSamples, _frameTimeSampleSize);
@@ -76,8 +72,8 @@ namespace rei::common::diagnostics
 
         _lastFrameTime = now;
 
-        float workingSetMegabytes = 0.0f;
-        float privateMegabytes = 0.0f;
+        f32 workingSetMegabytes = 0.0f;
+        f32 privateMegabytes = 0.0f;
         if (!TryGetProcessMemoryMegabytes(workingSetMegabytes, privateMegabytes)) return;
 
         _snapshot.WorkingSetMemoryMb = workingSetMegabytes;
@@ -87,20 +83,28 @@ namespace rei::common::diagnostics
     void DiagnosticsService::SetLoadedAssets(const i32 loadedAssetCount, const i64 loadedAssetsSizeBytes)
     {
         _snapshot.LoadedAssetCount = loadedAssetCount;
-        _snapshot.LoadedAssetsMemoryMb = static_cast<float>(loadedAssetsSizeBytes) * BYTES_TO_MEGABYTES;
+        _snapshot.LoadedAssetsMemoryMb = static_cast<f32>(loadedAssetsSizeBytes) * BYTES_TO_MEGABYTES;
     }
 
-    void DiagnosticsService::SetExecutionTimes(const float coreTimeMs, const float renderTimeMs)
+    void DiagnosticsService::SetExecutionTimes(const ExecutionTimes& executionTimes)
     {
-        _rawCoreTimeMs = coreTimeMs;
-        _rawRenderTimeMs = renderTimeMs;
-        _hasPendingTimingSample = true;
+        _rawExecutionTimes.WindowTimeMs = executionTimes.WindowTimeMs;
+        _rawExecutionTimes.UpdateTimeMs = executionTimes.UpdateTimeMs;
     }
 
-    void DiagnosticsService::SetDiagnosticsTime(const float diagnosticsTimeMs)
+    void DiagnosticsService::SetRenderCpuTime(const f32 renderCpuTimeMs)
     {
-        _rawDiagnosticsTimeMs = diagnosticsTimeMs;
-        _hasPendingTimingSample = true;
+        _rawExecutionTimes.RenderCpuTimeMs = renderCpuTimeMs;
+    }
+
+    void DiagnosticsService::SetPresentTime(const f32 presentTimeMs)
+    {
+        _rawExecutionTimes.PresentTimeMs = presentTimeMs;
+    }
+
+    void DiagnosticsService::SetDiagnosticsTime(const f32 diagnosticsTimeMs)
+    {
+        _rawExecutionTimes.DiagnosticsTimeMs = diagnosticsTimeMs;
     }
 
     void DiagnosticsService::ToggleDebugOverlay()
@@ -118,7 +122,7 @@ namespace rei::common::diagnostics
         return _snapshot;
     }
 
-    bool DiagnosticsService::TryGetProcessMemoryMegabytes(float& workingSetMegabytes, float& privateMegabytes)
+    bool DiagnosticsService::TryGetProcessMemoryMegabytes(f32& workingSetMegabytes, f32& privateMegabytes)
     {
 #ifdef _WIN32
         PROCESS_MEMORY_COUNTERS_EX counters = {};
@@ -127,8 +131,8 @@ namespace rei::common::diagnostics
             return false;
         }
 
-        workingSetMegabytes = static_cast<float>(counters.WorkingSetSize) * BYTES_TO_MEGABYTES;
-        privateMegabytes = static_cast<float>(counters.PrivateUsage) * BYTES_TO_MEGABYTES;
+        workingSetMegabytes = static_cast<f32>(counters.WorkingSetSize) * BYTES_TO_MEGABYTES;
+        privateMegabytes = static_cast<f32>(counters.PrivateUsage) * BYTES_TO_MEGABYTES;
         return true;
 #else
         workingSetMegabytes = 0.0f;

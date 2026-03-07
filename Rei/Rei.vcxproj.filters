@@ -684,6 +684,9 @@
     <ClInclude Include="tests\render\model\model_e0.h" />
   </ItemGroup>
   <ItemGroup>
+    <Filter Include="src\Common\Time">
+      <UniqueIdentifier>{E32C22EA-1A6B-4347-B556-2B55713D1E3B}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\Common\Diagnostics">
       <UniqueIdentifier>{9A1FB973-6E23-4CF7-9149-8B46FA8E59A4}</UniqueIdentifier>
     </Filter>
@@ -704,6 +707,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Common\Time\Stopwatch.cpp">
+      <Filter>src\Common\Time</Filter>
+    </ClCompile>
     <ClCompile Include="src\Common\Diagnostics\DiagnosticsService.cpp">
       <Filter>src\Common\Diagnostics</Filter>
     </ClCompile>
@@ -736,6 +742,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Common\Time\Stopwatch.h">
+      <Filter>src\Common\Time</Filter>
+    </ClInclude>
     <ClInclude Include="src\Common\Diagnostics\DiagnosticsService.h">
       <Filter>src\Common\Diagnostics</Filter>
     </ClInclude>

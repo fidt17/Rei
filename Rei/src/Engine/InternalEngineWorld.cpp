@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "Engine/Services.h"
 #include "Common/Diagnostics/Systems/DiagnosticsRunnerSystem.h"
+#include "Common/Time/Stopwatch.h"
 #include "Ecs/Systems/DeleteHere.h"
 #include "Modules/Behaviour/Components/StartBehavioursEvent.h"
 #include "Modules/Behaviour/Systems/StartBehavioursSystem.h"
@@ -22,21 +23,23 @@ namespace rei::internal::engine
                                         const std::shared_ptr<TaskExecutor>& mainThread,
                                         const std::shared_ptr<EntityManager>& entityManager) const
     {
-        using clock = std::chrono::high_resolution_clock;
-
         struct FrameTimings
         {
-            clock::time_point FrameStart = {};
-            float RenderTimeMs = 0.0f;
+            f32 WindowTimeMs = 0.0f;
+            f32 UpdateTimeMs = 0.0f;
         };
 
         const auto frameTimings = std::make_shared<FrameTimings>();
+        auto updateStopwatch = std::make_shared<time::Stopwatch>();
 
-        _world->AddSystem([frameTimings]
+        _world->AddSystem([frameTimings, updateStopwatch]
         {
-            frameTimings->FrameStart = clock::now();
-            frameTimings->RenderTimeMs = 0.0f;
+            time::Stopwatch windowStopwatch;
+            windowStopwatch.Start();
             GetWindowManager().OnUpdate();
+            windowStopwatch.Stop();
+            frameTimings->WindowTimeMs = windowStopwatch.ElapsedMs();
+            updateStopwatch->Start();
         });
 
         _world->AddSystem<common::diagnostics::DiagnosticsRunnerSystem>();
@@ -64,24 +67,25 @@ namespace rei::internal::engine
             _world->AddModule<editor::TransformationControlsModule>();
         }
 
-        _world->AddSystem([renderer, frameTimings]
+        _world->AddSystem([updateStopwatch]
         {
-            const auto renderStart = clock::now();
-            renderer->Render();
-            const auto renderEnd = clock::now();
-            frameTimings->RenderTimeMs = static_cast<float>(std::chrono::duration<double, std::milli>(renderEnd - renderStart).count());
+            updateStopwatch->Stop();
         });
 
-        _world->AddSystem([mainThread, frameTimings]
+        _world->AddSystem([renderer]
         {
+            renderer->Render();
+        });
+
+        _world->AddSystem([mainThread, frameTimings, updateStopwatch]
+        {
+            updateStopwatch->Stop();
             mainThread->CompleteTasks();
 
-            const auto frameEnd = clock::now();
-            const auto totalFrameTimeMs = static_cast<float>(std::chrono::duration<double, std::milli>(frameEnd - frameTimings->FrameStart).count());
-            const auto coreTimeMs = totalFrameTimeMs > frameTimings->RenderTimeMs
-                ? totalFrameTimeMs - frameTimings->RenderTimeMs
-                : 0.0f;
-            GetDiagnostics().SetExecutionTimes(coreTimeMs, frameTimings->RenderTimeMs);
+            common::diagnostics::DiagnosticsService::ExecutionTimes executionTimes = {};
+            executionTimes.WindowTimeMs = frameTimings->WindowTimeMs;
+            executionTimes.UpdateTimeMs = updateStopwatch->ElapsedMs();
+            GetDiagnostics().SetExecutionTimes(executionTimes);
         });
         
         LOG_DEBUG("Configured internal world")

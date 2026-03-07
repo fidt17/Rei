@@ -583,6 +583,7 @@
     <ClInclude Include="src\Common\Tasks\Task.h" />
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />
     <ClInclude Include="src\Common\Time\ScopedTimer.h" />
+    <ClInclude Include="src\Common\Time\Stopwatch.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\RefComponent.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
@@ -751,6 +752,7 @@
     <ClCompile Include="src\Common\Tasks\Task.cpp" />
     <ClCompile Include="src\Common\Tasks\TaskExecutor.cpp" />
     <ClCompile Include="src\Common\Time\ScopedTimer.cpp" />
+    <ClCompile Include="src\Common\Time\Stopwatch.cpp" />
     <ClCompile Include="src\Ecs\BitMask.cpp" />
     <ClCompile Include="src\Ecs\EcsRegistry.cpp" />
     <ClCompile Include="src\Ecs\Entity.cpp" />

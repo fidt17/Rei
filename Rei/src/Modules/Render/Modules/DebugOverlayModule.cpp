@@ -3,6 +3,7 @@
 
 #include "Engine/Services.h"
 #include "Common/Diagnostics/DiagnosticsService.h"
+#include "Common/Time/Stopwatch.h"
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
@@ -42,7 +43,8 @@ namespace rei::render
         if (!_isInitialized) return;
         if (!GetDiagnostics().IsDebugOverlayEnabled()) return;
 
-        const auto diagnosticsStart = std::chrono::high_resolution_clock::now();
+        time::Stopwatch diagnosticsStopwatch;
+        diagnosticsStopwatch.Start();
         const auto& diagnostics = GetDiagnostics().GetSnapshot();
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -55,9 +57,10 @@ namespace rei::render
         ImGui::Begin("Diagnostics", nullptr, WINDOW_FLAGS);
         
         ImGui::Text("FPS: %d", static_cast<int>(diagnostics.Fps + 0.5f));
-        ImGui::Text("Frame Time: %.2f ms", diagnostics.FrameTimeMs);
+        ImGui::Text("Frame: %.2f ms", diagnostics.FrameTimeMs);
         ImGui::Text("Core: %.2f ms", diagnostics.CoreTimeMs);
         ImGui::Text("Render: %.2f ms", diagnostics.RenderTimeMs);
+        ImGui::Text("Swap Buffers: %.2f ms", diagnostics.PresentTimeMs);
         ImGui::Text("Diagnostics: %.2f ms", diagnostics.DiagnosticsTimeMs);
         ImGui::NewLine();
         ImGui::Text("Working Set: %.2f MB", diagnostics.WorkingSetMemoryMb);
@@ -70,8 +73,7 @@ namespace rei::render
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        const auto diagnosticsEnd = std::chrono::high_resolution_clock::now();
-        const auto diagnosticsTimeMs = static_cast<float>(std::chrono::duration<double, std::milli>(diagnosticsEnd - diagnosticsStart).count());
-        GetDiagnostics().SetDiagnosticsTime(diagnosticsTimeMs);
+        diagnosticsStopwatch.Stop();
+        GetDiagnostics().SetDiagnosticsTime(diagnosticsStopwatch.ElapsedMs());
     }
 }

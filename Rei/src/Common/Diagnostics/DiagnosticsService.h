@@ -9,10 +9,22 @@ namespace rei::common::diagnostics
     class DiagnosticsService
     {
     public:
+        struct ExecutionTimes
+        {
+            f32 WindowTimeMs = 0.0f;
+            f32 UpdateTimeMs = 0.0f;
+            f32 RenderCpuTimeMs = 0.0f;
+            f32 PresentTimeMs = 0.0f;
+            f32 DiagnosticsTimeMs = 0.0f;
+        };
+
+    public:
         REI_API void Update();
         REI_API void SetLoadedAssets(i32 loadedAssetCount, i64 loadedAssetsSizeBytes);
-        REI_API void SetExecutionTimes(float coreTimeMs, float renderTimeMs);
-        REI_API void SetDiagnosticsTime(float diagnosticsTimeMs);
+        REI_API void SetExecutionTimes(const ExecutionTimes& executionTimes);
+        REI_API void SetRenderCpuTime(f32 renderCpuTimeMs);
+        REI_API void SetPresentTime(f32 presentTimeMs);
+        REI_API void SetDiagnosticsTime(f32 diagnosticsTimeMs);
         REI_API void ToggleDebugOverlay();
         REI_API bool IsDebugOverlayEnabled() const;
 
@@ -21,37 +33,37 @@ namespace rei::common::diagnostics
     private:
         static constexpr i32 SAMPLE_COUNT = 60;
 
-        void PushSample(std::array<float, SAMPLE_COUNT>& samples, i32& sampleIndex, i32& sampleSize, float value) const;
-        static float ComputeAverage(const std::array<float, SAMPLE_COUNT>& samples, i32 sampleSize);
+        void PushSample(std::array<f32, SAMPLE_COUNT>& samples, i32& sampleIndex, i32& sampleSize, f32 value) const;
+        static f32 ComputeAverage(const std::array<f32, SAMPLE_COUNT>& samples, i32 sampleSize);
 
-        static bool TryGetProcessMemoryMegabytes(float& workingSetMegabytes, float& privateMegabytes);
+        static bool TryGetProcessMemoryMegabytes(f32& workingSetMegabytes, f32& privateMegabytes);
 
     private:
         DiagnosticsSnapshot _snapshot = {};
         double _lastFrameTime = 0.0;
         bool _isDebugOverlayEnabled = false;
 
-        std::array<float, SAMPLE_COUNT> _fpsSamples = {};
-        std::array<float, SAMPLE_COUNT> _frameTimeSamples = {};
-        std::array<float, SAMPLE_COUNT> _coreTimeSamples = {};
-        std::array<float, SAMPLE_COUNT> _renderTimeSamples = {};
-        std::array<float, SAMPLE_COUNT> _diagnosticsTimeSamples = {};
+        std::array<f32, SAMPLE_COUNT> _fpsSamples = {};
+        std::array<f32, SAMPLE_COUNT> _frameTimeSamples = {};
+        std::array<f32, SAMPLE_COUNT> _coreTimeSamples = {};
+        std::array<f32, SAMPLE_COUNT> _renderTimeSamples = {};
+        std::array<f32, SAMPLE_COUNT> _presentTimeSamples = {};
+        std::array<f32, SAMPLE_COUNT> _diagnosticsTimeSamples = {};
 
         i32 _fpsSampleIndex = 0;
         i32 _frameTimeSampleIndex = 0;
         i32 _coreTimeSampleIndex = 0;
         i32 _renderTimeSampleIndex = 0;
+        i32 _presentTimeSampleIndex = 0;
         i32 _diagnosticsTimeSampleIndex = 0;
 
         i32 _fpsSampleSize = 0;
         i32 _frameTimeSampleSize = 0;
         i32 _coreTimeSampleSize = 0;
         i32 _renderTimeSampleSize = 0;
+        i32 _presentTimeSampleSize = 0;
         i32 _diagnosticsTimeSampleSize = 0;
 
-        float _rawRenderTimeMs = 0.0f;
-        float _rawCoreTimeMs = 0.0f;
-        float _rawDiagnosticsTimeMs = 0.0f;
-        bool _hasPendingTimingSample = false;
+        ExecutionTimes _rawExecutionTimes = {};
     };
 }

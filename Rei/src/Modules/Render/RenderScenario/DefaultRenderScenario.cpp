@@ -2,6 +2,7 @@
 #include "DefaultRenderScenario.h"
 
 #include "FrameBuffer.h"
+#include "Common/Time/Stopwatch.h"
 #include "Engine/Engine.h"
 #include "glad/glad.h"
 #include <limits>
@@ -62,6 +63,8 @@ void rei::render::DefaultRenderScenario::OnBeforeRender()
 
 void rei::render::DefaultRenderScenario::Render()
 {
+    time::Stopwatch renderStopwatch;
+    renderStopwatch.Start();
     const auto renderMode = _camera.Get().GetRenderMode();
     if (renderMode == WireframeLines || renderMode == WireframePoints)
     {
@@ -76,9 +79,16 @@ void rei::render::DefaultRenderScenario::Render()
         RenderInNormalMode();
     }
 
+    renderStopwatch.Stop();
+    GetDiagnostics().SetRenderCpuTime(renderStopwatch.ElapsedMs());
+
     _debugOverlayModule->Render();
 
+    time::Stopwatch presentStopwatch;
+    presentStopwatch.Start();
     glfwSwapBuffers(_target);
+    presentStopwatch.Stop();
+    GetDiagnostics().SetPresentTime(presentStopwatch.ElapsedMs());
 }
 
 void rei::render::DefaultRenderScenario::RenderInWireframeMode() const

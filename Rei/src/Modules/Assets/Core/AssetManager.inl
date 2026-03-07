@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include "Common/Time/Stopwatch.h"
 #include "Modules/Resources/AssetBuilder.h"
 
 namespace rei::assets
@@ -84,7 +85,8 @@ namespace rei::assets
     bool AssetManager::Load(AssetRef<T>& ref)
     {
         const bool wasLoadedBefore = ref.IsLoaded();
-        const auto startedAt = std::chrono::high_resolution_clock::now();
+        time::Stopwatch stopwatch;
+        stopwatch.Start();
         const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
         if (!LoadInternal(ref, true))
         {
@@ -107,8 +109,8 @@ namespace rei::assets
 
         if (!wasLoadedBefore)
         {
-            const auto finishedAt = std::chrono::high_resolution_clock::now();
-            const auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(finishedAt - startedAt).count();
+            stopwatch.Stop();
+            const auto durationMs = static_cast<i64>(stopwatch.ElapsedMs());
             const i32 size = ref.Record != nullptr ? ref.Record->AssetSize : 0;
             LOG_DEBUG("Asset loaded name={}, id={} type={} size={} duration={}", ref.GetName(), ref.Id, typeName, common::logging::utility::FormatSize(size),
                       common::logging::utility::FormatDurationMs(durationMs))

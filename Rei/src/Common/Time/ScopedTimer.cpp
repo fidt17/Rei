@@ -3,7 +3,7 @@
 
 rei::time::ScopedTimer::ScopedTimer(std::string msg, const bool log): _name(std::move(msg)), _log(log)
 {
-    _start = std::chrono::high_resolution_clock::now();
+    _stopwatch.Start();
 }
 
 rei::time::ScopedTimer::~ScopedTimer()
@@ -16,10 +16,8 @@ long long rei::time::ScopedTimer::Stop()
     if (_stopped) return 0;
     _stopped = true;
 
-    const auto end = std::chrono::high_resolution_clock::now();
-    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - _start);
-
-    const long long ms = duration.count();
+    _stopwatch.Stop();
+    const auto ms = static_cast<long long>(_stopwatch.ElapsedMs());
 
     if (_log)
     {
