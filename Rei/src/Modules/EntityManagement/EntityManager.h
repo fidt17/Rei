@@ -131,9 +131,9 @@ namespace rei
         }
 
         template <typename R>
-        i32 GetId()
+        i32 GetId() const
         {
-            return _behaviourIdMap[std::type_index(typeid(R))];
+            return _behaviourIdMap.at(std::type_index(typeid(R)));
         }
 
     private:
@@ -160,7 +160,7 @@ namespace rei
         REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 behaviourId, const nlohmann::json& data, bool init = true) const;
 
         template <typename T>
-        REI_API T& AddBehaviour(const ecs::Entity e)
+        REI_API T& AddBehaviour(const ecs::Entity e) const
         {
             const i32 id = _behaviourRegistry.GetId<T>();
             return static_cast<T&>(AddBehaviour(e, id, nlohmann::json()));

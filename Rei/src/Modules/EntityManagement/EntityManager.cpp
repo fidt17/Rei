@@ -241,12 +241,15 @@ namespace rei
 
             const auto& srcInfo = GET(src, EntityInfo);
             const auto& srcTransform = GET(src, Transform);
+            const i32 transformBehaviourId = _behaviourRegistry.GetId<Transform>();
 
             const auto clone = NEW_ENTITY();
             GET(clone, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = nameOverride.empty() ? srcInfo.Name : nameOverride};
 
             for (const auto behaviourId : GET(src, BehaviourCollection).Behaviours)
             {
+                if (behaviourId == transformBehaviourId) continue;
+
                 const auto behaviourData = _behaviourRegistry.GetBehaviourData(src, behaviourId);
                 nlohmann::json behaviourSetData = nlohmann::json::object();
 
@@ -265,10 +268,12 @@ namespace rei
                 AddBehaviour(clone, behaviourId, behaviourSetData, true);
             }
 
-            auto& transform = GET(clone, Transform);
+            auto& transform = AddBehaviour<Transform>(clone);
             transform.Reset();
-            transform.SetChildOrder(transform_utility::GetMaxOrderForParent(ecs::NULL_ENTITY) + 1);
-            transform.SetParent(parent, order);
+            transform.GetLocalPosition() = srcTransform.GetLocalPosition();
+            transform.GetLocalScale() = srcTransform.GetLocalScale();
+            transform.SetRotation(srcTransform.GetLocalRotation());
+            transform_utility::InsertWithOrder(transform, parent, order);
 
             if (includeChildren)
             {

@@ -25,7 +25,9 @@ namespace rei
         REI_API void BeforeREI_GET() override;
 
         REI_API math::Vector3& GetLocalPosition();
+        REI_API const math::Vector3& GetLocalPosition() const;
         REI_API math::Vector3& GetLocalScale();
+        REI_API const math::Vector3& GetLocalScale() const;
         REI_API const glm::quat& GetLocalRotation() const;
         REI_API void SetWorldPosition(const math::Vector3& worldPosition);
         REI_API void SetWorldRotation(const glm::quat& worldRotation);

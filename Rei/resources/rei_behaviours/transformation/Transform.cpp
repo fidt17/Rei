@@ -64,7 +64,17 @@ namespace rei
         return _position;
     }
 
+    const math::Vector3& Transform::GetLocalPosition() const
+    {
+        return _position;
+    }
+
     math::Vector3& Transform::GetLocalScale()
+    {
+        return _scale;
+    }
+
+    const math::Vector3& Transform::GetLocalScale() const
     {
         return _scale;
     }

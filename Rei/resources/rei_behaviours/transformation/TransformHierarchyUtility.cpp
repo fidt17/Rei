@@ -108,11 +108,12 @@ namespace rei::transform_utility
         return maxOrder;
     }
 
-    void NormalizeSiblingOrders(const ecs::Entity parentEntity)
+    void NormalizeSiblingOrders(const ecs::Entity parentEntity, const ecs::Entity excludeEntity)
     {
         ECS_WORLD(GetInternalWorld())
 
         auto siblings = CollectSiblings(parentEntity);
+        siblings.erase(std::remove(siblings.begin(), siblings.end(), excludeEntity), siblings.end());
         std::ranges::sort(siblings, [&](const ecs::Entity& a, const ecs::Entity& b)
         {
             const auto& aTransform = GET(a, Transform);
@@ -134,6 +135,25 @@ namespace rei::transform_utility
         }
     }
 
+    void InsertWithOrder(Transform& transform, const ecs::Entity parent, const i32 order)
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        const auto entity = transform.GetEntity();
+        if (IS_DEAD(entity) || !HAS(entity, Transform)) return;
+
+        NormalizeSiblingOrders(parent, entity);
+
+        i32 newOrder = std::max(0, order);
+        const i32 maxOrder = GetMaxOrderForParent(parent, entity);
+        newOrder = std::min(newOrder, maxOrder + 1);
+
+        IncrementOrdersFrom(parent, entity, newOrder);
+
+        transform.SetParent(parent);
+        transform.SetChildOrder(newOrder);
+    }
+
     void MoveWithOrder(Transform& transform, const ecs::Entity parent, const i32 order)
     {
         ECS_WORLD(GetInternalWorld())
@@ -146,10 +166,10 @@ namespace rei::transform_utility
         const auto worldRotation = transform.GetWorldRotation();
         const auto worldScale = transform.GetWorldScale();
 
-        NormalizeSiblingOrders(oldParent);
+        NormalizeSiblingOrders(oldParent, entity);
         if (oldParent != parent)
         {
-            NormalizeSiblingOrders(parent);
+            NormalizeSiblingOrders(parent, entity);
         }
 
         const i32 oldOrder = transform.GetChildOrder();
