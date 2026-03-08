@@ -1,4 +1,5 @@
 #pragma once
+#include "Common/Primitives.h"
 
 namespace rei::api
 {
@@ -13,9 +14,9 @@ namespace rei::api
     struct EditorInputEvent
     {
         EditorInputEventType Type;
-        int Code;
-        int Mods;
-        float MouseX;
-        float MouseY;
+        i32 Code;
+        i32 Mods;
+        f32 MouseX;
+        f32 MouseY;
     };
 }

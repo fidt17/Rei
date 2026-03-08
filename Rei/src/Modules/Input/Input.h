@@ -8,15 +8,15 @@ namespace rei
         static void SetSource(GLFWwindow* window);
         static void Update();
     
-        REI_API static bool IsKeyDown(int key);
-        REI_API static bool IsKeyUp(int key);
-        REI_API static bool IsKeyPressed(int key);
-        REI_API static bool IsKeyReleased(int key);
+        REI_API static bool IsKeyDown(i32 key);
+        REI_API static bool IsKeyUp(i32 key);
+        REI_API static bool IsKeyPressed(i32 key);
+        REI_API static bool IsKeyReleased(i32 key);
     
-        REI_API static bool IsMouseButtonDown(int button);
-        REI_API static bool IsMouseButtonUp(int button);
-        REI_API static bool IsMouseButtonPressed(int button);
-        REI_API static bool IsMouseButtonReleased(int button);
+        REI_API static bool IsMouseButtonDown(i32 button);
+        REI_API static bool IsMouseButtonUp(i32 button);
+        REI_API static bool IsMouseButtonPressed(i32 button);
+        REI_API static bool IsMouseButtonReleased(i32 button);
     
         REI_API static double GetMouseX();
         REI_API static double GetMouseY();
@@ -40,8 +40,8 @@ namespace rei
         inline static f32 _scrollX = 0;
         inline static f32 _scrollY = 0;
     
-        static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-        static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+        static void KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods);
+        static void MouseButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods);
         static void MousePositionCallback(GLFWwindow* window, double xPos, double yPos);
         static void ScrollCallback(GLFWwindow* window, double xOffset, double yOffset);
     }; 

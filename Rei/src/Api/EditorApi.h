@@ -22,10 +22,10 @@ REI_EXTERN_API inline void AddEngineStartCallback(const EngineStartCallbackDeleg
     });
 }
 
-typedef void (*ShutdownCallbackDelegate)(int exitCode);
+typedef void (*ShutdownCallbackDelegate)(i32 exitCode);
 REI_EXTERN_API inline void AddShutdownCallback(const ShutdownCallbackDelegate callback)
 {
-    rei::GetEngine().ShutdownEvent.append([=](const int exitCode)
+    rei::GetEngine().ShutdownEvent.append([=](const i32 exitCode)
     {
         callback(exitCode);
     });
@@ -100,7 +100,7 @@ REI_EXTERN_API inline void ChangeTransformationMode(const bool worldSpace)
     });
 }
 
-REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const int width, const int height)
+REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const i32 width, const i32 height)
 {
     if (window == nullptr) return;
     if (!rei::GetEngine().IsRunning()) return;

@@ -28,56 +28,56 @@ namespace rei
         _scrollY = 0.0;
     }
 
-    bool Input::IsKeyDown(const int key)
+    bool Input::IsKeyDown(const i32 key)
     {
         if (key < 0 || key >= GLFW_KEY_LAST) return false;
         
         return _currentKeyStates[key];
     }
 
-    bool Input::IsKeyUp(const int key)
+    bool Input::IsKeyUp(const i32 key)
     {
         if (key < 0 || key >= GLFW_KEY_LAST) return false;
         
         return !_currentKeyStates[key];
     }
 
-    bool Input::IsKeyPressed(const int key)
+    bool Input::IsKeyPressed(const i32 key)
     {
         if (key < 0 || key >= GLFW_KEY_LAST) return false;
         
         return _currentKeyStates[key] && !_previousKeyStates[key];
     }
 
-    bool Input::IsKeyReleased(const int key)
+    bool Input::IsKeyReleased(const i32 key)
     {
         if (key < 0 || key >= GLFW_KEY_LAST) return false;
         
         return !_currentKeyStates[key] && _previousKeyStates[key];
     }
 
-    bool Input::IsMouseButtonDown(const int button)
+    bool Input::IsMouseButtonDown(const i32 button)
     {
         if (button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return false;
         
         return _currentMouseStates[button];
     }
 
-    bool Input::IsMouseButtonUp(const int button)
+    bool Input::IsMouseButtonUp(const i32 button)
     {
         if (button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return false;
         
         return !_currentMouseStates[button];
     }
 
-    bool Input::IsMouseButtonPressed(const int button)
+    bool Input::IsMouseButtonPressed(const i32 button)
     {
         if (button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return false;
         
         return _currentMouseStates[button] && !_previousMouseStates[button];
     }
 
-    bool Input::IsMouseButtonReleased(const int button)
+    bool Input::IsMouseButtonReleased(const i32 button)
     {
         if (button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return false;
         
@@ -110,7 +110,7 @@ namespace rei
         return _scrollY;
     }
 
-    void Input::KeyCallback(GLFWwindow* window, const int key, int scancode, const int action, int mods)
+    void Input::KeyCallback(GLFWwindow* window, const i32 key, i32 scancode, const i32 action, i32 mods)
     {
         if (key < 0 || key >= GLFW_KEY_LAST) return;
 
@@ -138,7 +138,7 @@ namespace rei
         }
     }
 
-    void Input::MouseButtonCallback(GLFWwindow* window, const int button, const int action, int mods)
+    void Input::MouseButtonCallback(GLFWwindow* window, const i32 button, const i32 action, i32 mods)
     {
         if (button < 0 || button >= GLFW_MOUSE_BUTTON_LAST) return;
 
@@ -168,13 +168,13 @@ namespace rei
 
     void Input::MousePositionCallback(GLFWwindow* window, const double xPos, const double yPos)
     {
-        _mouseX = static_cast<float>(xPos);
-        _mouseY = static_cast<float>(yPos);
+        _mouseX = static_cast<f32>(xPos);
+        _mouseY = static_cast<f32>(yPos);
     }
 
     void Input::ScrollCallback(GLFWwindow* window, const double xOffset, const double yOffset)
     {
-        _scrollX = static_cast<float>(xOffset);
-        _scrollY = static_cast<float>(yOffset);
+        _scrollX = static_cast<f32>(xOffset);
+        _scrollY = static_cast<f32>(yOffset);
     }
 }
