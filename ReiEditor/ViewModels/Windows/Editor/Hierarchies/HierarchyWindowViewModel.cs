@@ -32,7 +32,7 @@ public class HierarchyWindowViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
-    private readonly ISelectedEntityEditorActionService _selectedEntityEditorActionService;
+    private readonly ISelectedEntityActionService _selectedEntityActionService;
 
 #pragma warning disable CS8618
     public HierarchyWindowViewModel() { }
@@ -43,25 +43,25 @@ public class HierarchyWindowViewModel : BaseViewModel
         ISelectionService selectionService,
         IFactory<HierarchyNodeViewModel> hierarchyElementFactory,
         IFactory<CreateSceneEntityCommand> createSceneEntityCommand,
-        ISelectedEntityEditorActionService selectedEntityEditorActionService)
+        ISelectedEntityActionService selectedEntityActionService)
     {
         _activeHierarchy = hierarchy;
         _selectionService = selectionService;
         _hierarchyElementFactory = hierarchyElementFactory;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
-        _selectedEntityEditorActionService = selectedEntityEditorActionService;
+        _selectedEntityActionService = selectedEntityActionService;
         
         SetHierarchy(hierarchy);
 
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
         RootContextMenu.AddOption(new ContextMenuOption("New Entity", ExecuteCreateNewEntityContextMenu));
-        _selectedEntityEditorActionService.RenameEntityRequested += HandleRenameEntityRequestedEvent;
+        _selectedEntityActionService.RenameEntityRequested += HandleRenameEntityRequestedEvent;
     }
 
     public override void Dispose()
     {
         _createSceneEntityCommand.Dispose();
-        _selectedEntityEditorActionService.RenameEntityRequested -= HandleRenameEntityRequestedEvent;
+        _selectedEntityActionService.RenameEntityRequested -= HandleRenameEntityRequestedEvent;
 
         if (_activeHierarchy != null)
         {

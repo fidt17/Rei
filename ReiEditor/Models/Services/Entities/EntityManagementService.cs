@@ -206,11 +206,7 @@ public class EntityManagementService : IEntityManagementService
                 if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
 
                 var s = _sceneManagement.CurrentScene.Value;
-                var entitiesToDestroy = EntityUtils.GetEntitiesForRecursiveDestroy(s, e);
-                foreach (var entity in entitiesToDestroy)
-                {
-                    s.DeleteEntity(entity);
-                }
+                s.DeleteEntity(e);
             }
         }
         catch (Exception exception)

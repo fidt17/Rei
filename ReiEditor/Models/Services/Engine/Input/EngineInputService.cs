@@ -9,7 +9,7 @@ using ReiEditor.Models.Services.Engine.Api.DTO;
 
 namespace ReiEditor.Models.Services.Engine.Input;
 
-public class EngineEditorInputService : IEngineEditorInputService, IDisposable
+public class EngineInputService : IEngineInputService, IDisposable
 {
     public event Action<EngineEditorInputEvent>? InputReceivedEvent;
 
@@ -23,7 +23,7 @@ public class EngineEditorInputService : IEngineEditorInputService, IDisposable
     private const int MAX_INPUT_BATCH_SIZE = 16;
     private static readonly TimeSpan PumpInterval = TimeSpan.FromMilliseconds(16);
 
-    public EngineEditorInputService(IEngineApi engineApi)
+    public EngineInputService(IEngineApi engineApi)
     {
         _engineApi = engineApi;
         _inputCallbackDelegate = HandleEditorInputEvent;

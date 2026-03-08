@@ -18,7 +18,7 @@ public class EngineModule : Module
         builder.RegisterSingleton<AssetApi>().As<IAssetApi>();
 		
         builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
-        builder.RegisterSingleton<EngineEditorInputService>().As<IEngineEditorInputService>();
+        builder.RegisterSingleton<EngineInputService>().As<IEngineInputService>();
         builder.RegisterSingleton<EngineShutdownListener>().As<IEngineShutdownListener>();
     }
 }

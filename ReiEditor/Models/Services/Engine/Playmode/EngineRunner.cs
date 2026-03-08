@@ -38,7 +38,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
     private readonly IEngineApi _engineApi;
     private readonly ILogger<EngineRunner> _logger;
     private readonly IEngineLogger _engineLogger;
-    private readonly IEngineEditorInputService _engineEditorInputService;
+    private readonly IEngineInputService _engineInputService;
     private readonly IEngineWindowController _engineWindowController;
     private readonly IEngineShutdownListener _shutdownListener;
     private readonly IResourceService _resourceService;
@@ -51,7 +51,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         IEngineApi engineApi,
         ILogger<EngineRunner> logger,
         IEngineLogger engineLogger,
-        IEngineEditorInputService engineEditorInputService,
+        IEngineInputService engineInputService,
         IEngineWindowController engineWindowController,
         IEngineShutdownListener shutdownListener, 
         IResourceService resourceService, 
@@ -61,7 +61,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _engineApi = engineApi;
         _logger = logger;
         _engineLogger = engineLogger;
-        _engineEditorInputService = engineEditorInputService;
+        _engineInputService = engineInputService;
         _engineWindowController = engineWindowController;
         _shutdownListener = shutdownListener;
         _resourceService = resourceService;
@@ -110,7 +110,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
 
                 _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
                 _engineLogger.SubscribeToClient();
-                _engineEditorInputService.SubscribeToClient();
+                _engineInputService.SubscribeToClient();
                 _shutdownListener.SubscribeToClient();
                 _engineWindowController.SetupWindow();
                 

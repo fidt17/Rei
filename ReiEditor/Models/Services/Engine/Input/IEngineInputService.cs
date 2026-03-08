@@ -3,7 +3,7 @@ using ReiEditor.Models.Services.Engine.Api.DTO;
 
 namespace ReiEditor.Models.Services.Engine.Input;
 
-public interface IEngineEditorInputService
+public interface IEngineInputService
 {
     event Action<EngineEditorInputEvent>? InputReceivedEvent;
 

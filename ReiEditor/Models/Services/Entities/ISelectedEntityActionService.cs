@@ -2,7 +2,7 @@ using System;
 
 namespace ReiEditor.Models.Services.Entities;
 
-public interface ISelectedEntityEditorActionService
+public interface ISelectedEntityActionService
 {
     event Action<int>? RenameEntityRequested;
 
