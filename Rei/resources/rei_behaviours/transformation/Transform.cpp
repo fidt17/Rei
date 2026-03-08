@@ -74,6 +74,69 @@ namespace rei
         return _quaternion;
     }
 
+    void Transform::SetWorldPosition(const math::Vector3& worldPosition)
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        if (IS_DEAD(_parentEntity))
+        {
+            _position = worldPosition;
+            return;
+        }
+
+        if (!HAS(_parentEntity, Transform))
+        {
+            REI_THROW("Parent entity is missing Transform")
+        }
+
+        const auto& parentTransform = GET(_parentEntity, Transform);
+        const auto localPosition = glm::inverse(parentTransform.CalculateWorldModelMatrix()) * glm::vec4(glm::vec3(worldPosition), 1.0f);
+        _position = math::Vector3(localPosition);
+    }
+
+    void Transform::SetWorldRotation(const glm::quat& worldRotation)
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        if (IS_DEAD(_parentEntity))
+        {
+            SetRotation(worldRotation);
+            return;
+        }
+
+        if (!HAS(_parentEntity, Transform))
+        {
+            REI_THROW("Parent entity is missing Transform")
+        }
+
+        const auto& parentTransform = GET(_parentEntity, Transform);
+        const auto parentRotation = parentTransform.GetWorldRotation();
+        SetRotation(glm::normalize(glm::inverse(parentRotation) * worldRotation));
+    }
+
+    void Transform::SetWorldScale(const math::Vector3& worldScale)
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        if (IS_DEAD(_parentEntity))
+        {
+            _scale = worldScale;
+            return;
+        }
+
+        if (!HAS(_parentEntity, Transform))
+        {
+            REI_THROW("Parent entity is missing Transform")
+        }
+
+        const auto parentScale = GET(_parentEntity, Transform).GetWorldScale();
+        _scale = {
+            parentScale.x == 0 ? worldScale.x : worldScale.x / parentScale.x,
+            parentScale.y == 0 ? worldScale.y : worldScale.y / parentScale.y,
+            parentScale.z == 0 ? worldScale.z : worldScale.z / parentScale.z
+        };
+    }
+
     math::Vector3 Transform::GetWorldPosition() const
     {
         const auto worldMatrix = CalculateWorldModelMatrix();
@@ -242,9 +305,14 @@ namespace rei
     {
         ECS_WORLD(GetInternalWorld())
 
-        if (IS_DEAD(_parentEntity) || !HAS(_parentEntity, Transform))
+        if (IS_DEAD(_parentEntity))
         {
             return CalculateModelMatrix();
+        }
+
+        if (!HAS(_parentEntity, Transform))
+        {
+            REI_THROW("Parent entity is missing Transform")
         }
 
         const auto& parentTransform = GET(_parentEntity, Transform);

@@ -27,6 +27,9 @@ namespace rei
         REI_API math::Vector3& GetPosition();
         REI_API math::Vector3& GetScale();
         REI_API const glm::quat& GetRotation() const;
+        REI_API void SetWorldPosition(const math::Vector3& worldPosition);
+        REI_API void SetWorldRotation(const glm::quat& worldRotation);
+        REI_API void SetWorldScale(const math::Vector3& worldScale);
         REI_API math::Vector3 GetWorldPosition() const;
         REI_API math::Vector3 GetWorldScale() const;
         REI_API glm::quat GetWorldRotation() const;
