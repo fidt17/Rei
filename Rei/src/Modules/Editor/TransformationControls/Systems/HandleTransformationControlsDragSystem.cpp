@@ -10,9 +10,38 @@
 
 namespace rei::editor
 {
+    namespace
+    {
+        constexpr f32 MOVE_SNAP_STEP = 0.25f;
+        constexpr f32 ROTATION_SNAP_STEP_DEGREES = 10.0f;
+        constexpr f32 SCALE_SNAP_STEP = 0.1f;
+    }
+
     HandleTransformationControlsDragSystem::HandleTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld): System(ecsWorld)
     {
         _controlFilter = FILTER(TransformationControl);
+    }
+
+    bool HandleTransformationControlsDragSystem::IsSnappingEnabled() const
+    {
+        return Input::IsKeyDown(GLFW_KEY_LEFT_CONTROL) || Input::IsKeyDown(GLFW_KEY_RIGHT_CONTROL);
+    }
+
+    f32 HandleTransformationControlsDragSystem::SnapValue(const f32 value, const f32 step) const
+    {
+        if (step <= 0.0f) return value;
+        return std::round(value / step) * step;
+    }
+
+    math::Vector3 HandleTransformationControlsDragSystem::SnapScaleDelta(const math::Vector3& scaleDelta, const math::Vector3& direction, const f32 step) const
+    {
+        math::Vector3 snappedDelta = scaleDelta;
+
+        if (direction.x != 0) snappedDelta.x = SnapValue(scaleDelta.x, step);
+        if (direction.y != 0) snappedDelta.y = SnapValue(scaleDelta.y, step);
+        if (direction.z != 0) snappedDelta.z = SnapValue(scaleDelta.z, step);
+
+        return snappedDelta;
     }
 
     void HandleTransformationControlsDragSystem::OnUpdate()
@@ -119,8 +148,14 @@ namespace rei::editor
                 PlaneRayIntersection(arrow.DragPlane, screenPointRay, planeIntersectionPoint);
 
                 const math::Vector3 projectionOnArrowDirection = math::Vector3::Projection(planeIntersectionPoint - arrow.PartDragStartPosition, arrowForward);
+                const auto axis = math::Vector3::Normalize(arrowForward);
+                const auto rawDelta = projectionOnArrowDirection - offsetScaled;
+                const f32 deltaOnAxis = math::Vector3::Dot(rawDelta, axis);
+                const f32 appliedDeltaOnAxis = IsSnappingEnabled()
+                    ? SnapValue(deltaOnAxis, MOVE_SNAP_STEP)
+                    : deltaOnAxis;
 
-                targetTransform.SetWorldPosition(arrow.PartDragStartPosition + projectionOnArrowDirection - offsetScaled);
+                targetTransform.SetWorldPosition(arrow.PartDragStartPosition + axis * appliedDeltaOnAxis);
             }
 
             return arrow.DragActive;
@@ -188,11 +223,15 @@ namespace rei::editor
                 const f32 scaleSign = static_cast<f32>(math::Sign(math::Vector3::Dot(arrowForward, projectionOnArrowDirection)));
                 const f32 scaleMlt = scaleSign * (projectionOnArrowDirection.Length() / arrow.ArrowDragStartScale) / (arrow.DragOffset.Length());
 
-                math::Vector3 worldScale = targetTransform.GetWorldScale();
-                worldScale.x = arrow.TargetDragStartScale.x + std::abs(arrow.TargetDragStartScale.x) * (arrow.Direction.x != 0 ? (arrow.Direction.x * (scaleMlt - 1)) : 0);
-                worldScale.y = arrow.TargetDragStartScale.y + std::abs(arrow.TargetDragStartScale.y) * (arrow.Direction.y != 0 ? (arrow.Direction.y * (scaleMlt - 1)) : 0);
-                worldScale.z = arrow.TargetDragStartScale.z + std::abs(arrow.TargetDragStartScale.z) * (arrow.Direction.z != 0 ? (arrow.Direction.z * (scaleMlt - 1)) : 0);
-                targetTransform.SetWorldScale(worldScale);
+                math::Vector3 scaleDelta = {};
+                scaleDelta.x = std::abs(arrow.TargetDragStartScale.x) * (arrow.Direction.x != 0 ? (arrow.Direction.x * (scaleMlt - 1)) : 0);
+                scaleDelta.y = std::abs(arrow.TargetDragStartScale.y) * (arrow.Direction.y != 0 ? (arrow.Direction.y * (scaleMlt - 1)) : 0);
+                scaleDelta.z = std::abs(arrow.TargetDragStartScale.z) * (arrow.Direction.z != 0 ? (arrow.Direction.z * (scaleMlt - 1)) : 0);
+
+                const auto appliedScaleDelta = IsSnappingEnabled()
+                    ? SnapScaleDelta(scaleDelta, arrow.Direction, SCALE_SNAP_STEP)
+                    : scaleDelta;
+                targetTransform.SetWorldScale(arrow.TargetDragStartScale + appliedScaleDelta);
 
                 arrow.CurrentScaleMlt = scaleMlt - 1;
             }
@@ -244,7 +283,10 @@ namespace rei::editor
                 else
                 {
                     scaleMlt -= arrow.InitialScaleMlt;
-                    targetTransform.SetWorldScale(arrow.TargetDragStartScale + math::Vector3(scaleMlt, scaleMlt, scaleMlt));
+                    const f32 appliedScaleDelta = IsSnappingEnabled()
+                        ? SnapValue(scaleMlt, SCALE_SNAP_STEP)
+                        : scaleMlt;
+                    targetTransform.SetWorldScale(arrow.TargetDragStartScale + math::Vector3(appliedScaleDelta, appliedScaleDelta, appliedScaleDelta));
                 }
 
                 arrow.CurrentScaleMlt = scaleMlt;
@@ -321,8 +363,11 @@ namespace rei::editor
                 const f32 signedArea = math::Vector3::Dot(ring.DragAxis, math::Vector3::Cross(ring.DragStartDirection, currentDir));
                 const f32 angleRad = std::atan2(signedArea, dotValue);
                 const f32 angleDeg = angleRad * (180.0f / PI);
+                const f32 appliedAngleDeg = IsSnappingEnabled()
+                    ? SnapValue(angleDeg, ROTATION_SNAP_STEP_DEGREES)
+                    : angleDeg;
 
-                const auto delta = glm::angleAxis(glm::radians(angleDeg), glm::vec3(ring.DragAxis));
+                const auto delta = glm::angleAxis(glm::radians(appliedAngleDeg), glm::vec3(ring.DragAxis));
                 targetTransform.SetWorldRotation(glm::normalize(delta * ring.TargetDragStartRotation));
             }
 

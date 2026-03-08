@@ -12,6 +12,10 @@ namespace rei::editor
         void OnUpdate() override;
 
     private:
+        bool IsSnappingEnabled() const;
+        f32 SnapValue(f32 value, f32 step) const;
+        math::Vector3 SnapScaleDelta(const math::Vector3& scaleDelta, const math::Vector3& direction, f32 step) const;
+
         void ResetDragState(TransformationControl& control) const;
         void HandleMovementDrag(TransformationControl& control) const;
         void HandleScaleDrag(TransformationControl& control) const;
