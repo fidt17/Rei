@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "HandleTransformationControlsDragSystem.h"
 
+#include "glm/gtc/quaternion.hpp"
 #include "Modules/Input/Input.h"
 #include <cmath>
 #include "Modules/Physics/PointerCollisionListener.h"
@@ -86,15 +87,17 @@ namespace rei::editor
             auto& arrowTransform = GET(arrow.Entity, Transform);
             const auto& pointerListener = GET(arrow.Entity, physics::PointerCollisionListener);
 
-            const auto& arrowPos = arrowTransform.GetPosition();
-            const auto arrowForward = arrowTransform.GetForward();
+            const auto arrowPos = arrowTransform.GetWorldPosition();
+            const auto arrowRotation = arrowTransform.GetWorldRotation();
+            const auto arrowForward = math::Vector3(arrowRotation * glm::vec3(0, 0, 1));
+            const auto arrowRight = math::Vector3(arrowRotation * glm::vec3(1, 0, 0));
 
             if (!arrow.DragActive && pointerListener.IsInside)
             {
                 arrow.DragActive = true;
                 arrow.PartDragStartPosition = arrowPos;
 
-                arrow.DragPlane = math::Plane(arrowTransform.GetRight(), pointerListener.CollisionPoint);
+                arrow.DragPlane = math::Plane(arrowRight, pointerListener.CollisionPoint);
 
                 const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
                 math::Vector3 planeIntersectionPoint;
@@ -109,7 +112,7 @@ namespace rei::editor
             if (arrow.DragActive)
             {
                 auto& targetTransform = GET(control.TargetEntity, Transform);
-                const auto offsetScaled = arrow.DragOffset * arrowTransform.GetScale();
+                const auto offsetScaled = arrow.DragOffset * arrowTransform.GetWorldScale();
 
                 const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
                 math::Vector3 planeIntersectionPoint;
@@ -117,7 +120,7 @@ namespace rei::editor
 
                 const math::Vector3 projectionOnArrowDirection = math::Vector3::Projection(planeIntersectionPoint - arrow.PartDragStartPosition, arrowForward);
 
-                targetTransform.GetPosition() = arrow.PartDragStartPosition + projectionOnArrowDirection - offsetScaled;
+                targetTransform.SetWorldPosition(arrow.PartDragStartPosition + projectionOnArrowDirection - offsetScaled);
             }
 
             return arrow.DragActive;
@@ -149,7 +152,6 @@ namespace rei::editor
         const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
 
         auto& targetTransform = GET(control.TargetEntity, Transform);
-        auto& targetScale = targetTransform.GetScale();
 
         // for regular scale arrows
         auto tryScale = [&](TransformationControlScaleArrow& arrow) -> bool
@@ -157,16 +159,18 @@ namespace rei::editor
             auto& arrowTransform = GET(arrow.Entity, Transform);
             const auto& pointerListener = GET(arrow.Entity, physics::PointerCollisionListener);
 
-            const auto& arrowPos = arrowTransform.GetPosition();
-            const auto arrowForward = arrowTransform.GetForward();
-            const auto arrowScale = arrowTransform.GetScale().x;
+            const auto arrowPos = arrowTransform.GetWorldPosition();
+            const auto arrowRotation = arrowTransform.GetWorldRotation();
+            const auto arrowForward = math::Vector3(arrowRotation * glm::vec3(0, 0, 1));
+            const auto arrowRight = math::Vector3(arrowRotation * glm::vec3(1, 0, 0));
+            const auto arrowScale = arrowTransform.GetWorldScale().x;
 
             if (!arrow.DragActive && pointerListener.IsInside)
             {
                 arrow.DragActive = true;
-                arrow.TargetDragStartScale = targetTransform.GetScale();
+                arrow.TargetDragStartScale = targetTransform.GetWorldScale();
                 arrow.ArrowDragStartScale = arrowScale;
-                arrow.DragPlane = math::Plane(arrowTransform.GetRight(), pointerListener.CollisionPoint);
+                arrow.DragPlane = math::Plane(arrowRight, pointerListener.CollisionPoint);
 
                 math::Vector3 planeIntersectionPoint;
                 PlaneRayIntersection(arrow.DragPlane, screenPointRay, planeIntersectionPoint);
@@ -184,9 +188,11 @@ namespace rei::editor
                 const f32 scaleSign = static_cast<f32>(math::Sign(math::Vector3::Dot(arrowForward, projectionOnArrowDirection)));
                 const f32 scaleMlt = scaleSign * (projectionOnArrowDirection.Length() / arrow.ArrowDragStartScale) / (arrow.DragOffset.Length());
 
-                targetScale.x = arrow.TargetDragStartScale.x + std::abs(arrow.TargetDragStartScale.x) * (arrow.Direction.x != 0 ? (arrow.Direction.x * (scaleMlt - 1)) : 0);
-                targetScale.y = arrow.TargetDragStartScale.y + std::abs(arrow.TargetDragStartScale.y) * (arrow.Direction.y != 0 ? (arrow.Direction.y * (scaleMlt - 1)) : 0);
-                targetScale.z = arrow.TargetDragStartScale.z + std::abs(arrow.TargetDragStartScale.z) * (arrow.Direction.z != 0 ? (arrow.Direction.z * (scaleMlt - 1)) : 0);
+                math::Vector3 worldScale = targetTransform.GetWorldScale();
+                worldScale.x = arrow.TargetDragStartScale.x + std::abs(arrow.TargetDragStartScale.x) * (arrow.Direction.x != 0 ? (arrow.Direction.x * (scaleMlt - 1)) : 0);
+                worldScale.y = arrow.TargetDragStartScale.y + std::abs(arrow.TargetDragStartScale.y) * (arrow.Direction.y != 0 ? (arrow.Direction.y * (scaleMlt - 1)) : 0);
+                worldScale.z = arrow.TargetDragStartScale.z + std::abs(arrow.TargetDragStartScale.z) * (arrow.Direction.z != 0 ? (arrow.Direction.z * (scaleMlt - 1)) : 0);
+                targetTransform.SetWorldScale(worldScale);
 
                 arrow.CurrentScaleMlt = scaleMlt - 1;
             }
@@ -200,15 +206,16 @@ namespace rei::editor
             auto& arrowTransform = GET(arrow.Entity, Transform);
             const auto& pointerListener = GET(arrow.Entity, physics::PointerCollisionListener);
 
-            const auto& arrowPos = arrowTransform.GetPosition();
-            const auto arrowScale = arrowTransform.GetScale().x;
+            const auto arrowPos = arrowTransform.GetWorldPosition();
+            const auto arrowScale = arrowTransform.GetWorldScale().x;
 
             if (!arrow.DragActive && pointerListener.IsInside)
             {
                 arrow.DragActive = true;
-                arrow.TargetDragStartScale = targetTransform.GetScale();
+                arrow.TargetDragStartScale = targetTransform.GetWorldScale();
                 arrow.ArrowDragStartScale = arrowScale;
-                arrow.DragPlane = math::Plane(mainCamera.Get().GetTransform().GetForward(), arrowPos);
+                const auto cameraForward = math::Vector3(mainCamera.Get().GetTransform().GetWorldRotation() * glm::vec3(0, 0, 1));
+                arrow.DragPlane = math::Plane(cameraForward, arrowPos);
                 arrow.InitialScaleMlt = 0;
                 arrow.CurrentScaleMlt = 0;
             }
@@ -237,7 +244,7 @@ namespace rei::editor
                 else
                 {
                     scaleMlt -= arrow.InitialScaleMlt;
-                    targetScale = arrow.TargetDragStartScale + math::Vector3(scaleMlt, scaleMlt, scaleMlt);
+                    targetTransform.SetWorldScale(arrow.TargetDragStartScale + math::Vector3(scaleMlt, scaleMlt, scaleMlt));
                 }
 
                 arrow.CurrentScaleMlt = scaleMlt;
@@ -271,7 +278,7 @@ namespace rei::editor
         const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
 
         auto& targetTransform = GET(control.TargetEntity, Transform);
-        const auto targetPosition = targetTransform.GetPosition();
+        const auto targetPosition = targetTransform.GetWorldPosition();
 
         auto tryRotate = [&](TransformationControlRotationRing& ring) -> bool
         {
@@ -280,7 +287,7 @@ namespace rei::editor
 
             if (!ring.DragActive && pointerListener.IsInside)
             {
-                ring.DragAxis = math::Vector3::Normalize(ringTransform.GetForward());
+                ring.DragAxis = math::Vector3::Normalize(math::Vector3(ringTransform.GetWorldRotation() * glm::vec3(0, 0, 1)));
                 ring.DragPlane = math::Plane(ring.DragAxis, targetPosition);
                 ring.DragStartDirection = {};
 
@@ -291,7 +298,7 @@ namespace rei::editor
                     if (startDir.Length() > 0.0001f)
                     {
                         ring.DragActive = true;
-                        ring.TargetDragStartRotation = targetTransform.GetRotation();
+                        ring.TargetDragStartRotation = targetTransform.GetWorldRotation();
                         ring.DragStartDirection = math::Vector3::Normalize(startDir);
                     }
                 }
@@ -315,8 +322,8 @@ namespace rei::editor
                 const f32 angleRad = std::atan2(signedArea, dotValue);
                 const f32 angleDeg = angleRad * (180.0f / PI);
 
-                targetTransform.SetRotation(ring.TargetDragStartRotation);
-                targetTransform.RotateWorld(angleDeg, ring.DragAxis);
+                const auto delta = glm::angleAxis(glm::radians(angleDeg), glm::vec3(ring.DragAxis));
+                targetTransform.SetWorldRotation(glm::normalize(delta * ring.TargetDragStartRotation));
             }
 
             return ring.DragActive;

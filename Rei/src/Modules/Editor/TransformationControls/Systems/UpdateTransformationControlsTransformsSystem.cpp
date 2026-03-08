@@ -25,18 +25,18 @@ namespace rei::editor
         controlScale *= isPointerInside ? 1.01f : 1;
 
         auto& t = GET(arrow.Entity, Transform);
-        t.GetPosition() = targetPosition;
+        t.SetWorldPosition(targetPosition);
 
         if (control.UseWorldSpace)
         {
-            t.SetRotation(LookAt(arrow.Direction, math::Vector3::Up()));
+            t.SetWorldRotation(LookAt(arrow.Direction, math::Vector3::Up()));
         }
         else
         {
-            t.SetRotation(LookAt(arrow.Direction.Rotate(targetRotation), math::Vector3::Up()));
+            t.SetWorldRotation(LookAt(arrow.Direction.Rotate(targetRotation), math::Vector3::Up()));
         }
 
-        t.GetScale() = math::Vector3(controlScale, controlScale, controlScale);
+        t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
     }
 
     void UpdateTransformationControlsTransformsSystem::UpdateScaleArrow(const TransformationControl& control, const TransformationControlScaleArrow& arrow,
@@ -47,9 +47,9 @@ namespace rei::editor
         controlScale *= isPointerInside ? 1.01f : 1;
 
         auto& t = GET(arrow.Entity, Transform);
-        t.GetPosition() = targetPosition;
-        t.SetRotation(LookAt(arrow.Direction.Rotate(targetRotation), math::Vector3::Up()));
-        t.GetScale() = {controlScale, controlScale, controlScale * (1 + arrow.CurrentScaleMlt)};
+        t.SetWorldPosition(targetPosition);
+        t.SetWorldRotation(LookAt(arrow.Direction.Rotate(targetRotation), math::Vector3::Up()));
+        t.SetWorldScale({controlScale, controlScale, controlScale * (1 + arrow.CurrentScaleMlt)});
     }
 
     void UpdateTransformationControlsTransformsSystem::UpdateScaleRoot(const TransformationControl& control, const TransformationControlScaleArrow& root,
@@ -60,11 +60,11 @@ namespace rei::editor
         controlScale *= (isPointerInside ? 1.01f : 1) * 0.3f;
 
         auto& t = GET(root.Entity, Transform);
-        t.GetPosition() = targetPosition;
+        t.SetWorldPosition(targetPosition);
 
-        t.SetRotation(targetRotation);
+        t.SetWorldRotation(targetRotation);
 
-        t.GetScale() = math::Vector3(controlScale, controlScale, controlScale);
+        t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
     }
 
     void UpdateTransformationControlsTransformsSystem::UpdateRotationRing(const TransformationControl& control, const TransformationControlRotationRing& ring,
@@ -75,7 +75,7 @@ namespace rei::editor
         controlScale *= isPointerInside ? 1.01f : 1;
 
         auto& t = GET(ring.Entity, Transform);
-        t.GetPosition() = targetPosition;
+        t.SetWorldPosition(targetPosition);
 
         auto axisDirection = ring.Direction;
         if (!control.UseWorldSpace)
@@ -83,8 +83,8 @@ namespace rei::editor
             axisDirection = axisDirection.Rotate(targetRotation);
         }
 
-        t.SetRotation(LookAt(axisDirection, math::Vector3::Up()));
-        t.GetScale() = math::Vector3(controlScale, controlScale, controlScale);
+        t.SetWorldRotation(LookAt(axisDirection, math::Vector3::Up()));
+        t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
     }
 
     void UpdateTransformationControlsTransformsSystem::OnUpdate()
@@ -99,8 +99,8 @@ namespace rei::editor
         if (IS_DEAD(control.TargetEntity)) return;
 
         auto& targetTransform = GET(control.TargetEntity, Transform);
-        const auto& targetPosition = targetTransform.GetPosition();
-        const auto& targetRotation = targetTransform.GetRotation();
+        const auto targetPosition = targetTransform.GetWorldPosition();
+        const auto targetRotation = targetTransform.GetWorldRotation();
 
         const f32 controlScale = mainCamera.Get().CalculateConstantScale(targetPosition, 0.5);
 
