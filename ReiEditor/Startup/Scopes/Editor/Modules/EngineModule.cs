@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Dll;
+using ReiEditor.Models.Services.Engine.Input;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Utils.Extensions;
@@ -17,6 +18,7 @@ public class EngineModule : Module
         builder.RegisterSingleton<AssetApi>().As<IAssetApi>();
 		
         builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
+        builder.RegisterSingleton<EngineEditorInputService>().As<IEngineEditorInputService>();
         builder.RegisterSingleton<EngineShutdownListener>().As<IEngineShutdownListener>();
     }
 }

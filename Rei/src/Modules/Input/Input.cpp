@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Api/EditorApi.h"
 #include "Input.h"
 
 namespace rei
@@ -116,10 +117,24 @@ namespace rei
         if (action == GLFW_PRESS)
         {
             _currentKeyStates[key] = true;
+            api::EditorInputEvent inputEvent;
+            inputEvent.Type = api::EditorInputEventType::KeyDown;
+            inputEvent.Code = key;
+            inputEvent.Mods = mods;
+            inputEvent.MouseX = _mouseX;
+            inputEvent.MouseY = _mouseY;
+            GetEditorEventsRelay().EditorInputReceivedEvent(inputEvent);
         }
         else if (action == GLFW_RELEASE)
         {
             _currentKeyStates[key] = false;
+            api::EditorInputEvent inputEvent;
+            inputEvent.Type = api::EditorInputEventType::KeyUp;
+            inputEvent.Code = key;
+            inputEvent.Mods = mods;
+            inputEvent.MouseX = _mouseX;
+            inputEvent.MouseY = _mouseY;
+            GetEditorEventsRelay().EditorInputReceivedEvent(inputEvent);
         }
     }
 
@@ -130,10 +145,24 @@ namespace rei
         if (action == GLFW_PRESS)
         {
             _currentMouseStates[button] = true;
+            api::EditorInputEvent inputEvent;
+            inputEvent.Type = api::EditorInputEventType::MouseButtonDown;
+            inputEvent.Code = button;
+            inputEvent.Mods = mods;
+            inputEvent.MouseX = _mouseX;
+            inputEvent.MouseY = _mouseY;
+            GetEditorEventsRelay().EditorInputReceivedEvent(inputEvent);
         }
         else if (action == GLFW_RELEASE)
         {
             _currentMouseStates[button] = false;
+            api::EditorInputEvent inputEvent;
+            inputEvent.Type = api::EditorInputEventType::MouseButtonUp;
+            inputEvent.Code = button;
+            inputEvent.Mods = mods;
+            inputEvent.MouseX = _mouseX;
+            inputEvent.MouseY = _mouseY;
+            GetEditorEventsRelay().EditorInputReceivedEvent(inputEvent);
         }
     }
 

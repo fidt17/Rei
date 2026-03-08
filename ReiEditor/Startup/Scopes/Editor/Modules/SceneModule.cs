@@ -17,6 +17,7 @@ public class SceneModule : Module
         b.RegisterSingleton<SceneStateSynchronizer>().As<ISceneStateSynchronizer>();
         
         b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
+        b.RegisterSingleton<SelectedEntityEditorActionService>().As<ISelectedEntityEditorActionService>();
         b.RegisterSingleton<EntityStateSynchronizer>().As<IEntityStateSynchronizer>();
 
         b.RegisterType<CreateSceneEntityCommand>();

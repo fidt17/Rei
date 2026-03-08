@@ -79,6 +79,8 @@ public class EngineApi : IEngineApi
 
     public void AddShutdownCallback(IntPtr callback) => Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddShutdownCallback", callback);
 
+    public void AddEditorInputCallback(IntPtr callback) => Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddEditorInputCallback", callback);
+
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 

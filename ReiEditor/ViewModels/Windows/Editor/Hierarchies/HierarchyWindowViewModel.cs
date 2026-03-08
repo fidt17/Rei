@@ -32,6 +32,7 @@ public class HierarchyWindowViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly IFactory<HierarchyNodeViewModel> _hierarchyElementFactory;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
+    private readonly ISelectedEntityEditorActionService _selectedEntityEditorActionService;
 
 #pragma warning disable CS8618
     public HierarchyWindowViewModel() { }
@@ -41,22 +42,26 @@ public class HierarchyWindowViewModel : BaseViewModel
         Hierarchy<GameEntity> hierarchy,
         ISelectionService selectionService,
         IFactory<HierarchyNodeViewModel> hierarchyElementFactory,
-        IFactory<CreateSceneEntityCommand> createSceneEntityCommand)
+        IFactory<CreateSceneEntityCommand> createSceneEntityCommand,
+        ISelectedEntityEditorActionService selectedEntityEditorActionService)
     {
         _activeHierarchy = hierarchy;
         _selectionService = selectionService;
         _hierarchyElementFactory = hierarchyElementFactory;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
+        _selectedEntityEditorActionService = selectedEntityEditorActionService;
         
         SetHierarchy(hierarchy);
 
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
         RootContextMenu.AddOption(new ContextMenuOption("New Entity", ExecuteCreateNewEntityContextMenu));
+        _selectedEntityEditorActionService.RenameEntityRequested += HandleRenameEntityRequestedEvent;
     }
 
     public override void Dispose()
     {
         _createSceneEntityCommand.Dispose();
+        _selectedEntityEditorActionService.RenameEntityRequested -= HandleRenameEntityRequestedEvent;
 
         if (_activeHierarchy != null)
         {
@@ -219,6 +224,29 @@ public class HierarchyWindowViewModel : BaseViewModel
         foreach (var node in _nodeMap.Values)
         {
             node.Expanded.Value = expandedEntityIds.Contains(node.Node.Content.Id);
+        }
+    }
+
+    private void HandleRenameEntityRequestedEvent(int entityId)
+    {
+        var targetNode = _nodeMap.Values.FirstOrDefault(node => node.Node.Content.Id == entityId);
+        if (targetNode == null) return;
+
+        ExpandAncestors(targetNode);
+        Dispatcher.UIThread.InvokeAsync(() => targetNode.StartRenameCommand.Execute(null));
+    }
+
+    private void ExpandAncestors(HierarchyNodeViewModel node)
+    {
+        var current = node.Node.Parent;
+        while (current != null)
+        {
+            if (_nodeMap.TryGetValue(current, out var currentNodeVm))
+            {
+                currentNodeVm.Expanded.Value = true;
+            }
+
+            current = current.Parent;
         }
     }
 }

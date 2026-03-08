@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "EditorInputEvent.h"
 #include "EditorEventsRelay.h"
 #include "Engine/Engine.h"
 #include "Modules/Editor/TransformationControls/TransformationControl.h"
@@ -27,6 +28,15 @@ REI_EXTERN_API inline void AddShutdownCallback(const ShutdownCallbackDelegate ca
     rei::GetEngine().ShutdownEvent.append([=](const int exitCode)
     {
         callback(exitCode);
+    });
+}
+
+typedef void (*EditorInputCallbackDelegate)(const rei::api::EditorInputEvent& inputEvent);
+REI_EXTERN_API inline void AddEditorInputCallback(const EditorInputCallbackDelegate callback)
+{
+    rei::GetEditorEventsRelay().EditorInputReceivedEvent.append([=](const rei::api::EditorInputEvent& inputEvent)
+    {
+        callback(inputEvent);
     });
 }
 

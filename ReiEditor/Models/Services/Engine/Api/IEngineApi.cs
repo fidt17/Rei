@@ -23,6 +23,7 @@ public interface IEngineApi
     void AddLogCallback(IntPtr ptr);
     void AddEngineStartCallback(IntPtr callback);
     void AddShutdownCallback(IntPtr callback);
+    void AddEditorInputCallback(IntPtr callback);
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 
