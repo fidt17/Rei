@@ -64,7 +64,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         AssetType = assetType;
         AssetId = assetId;
         IsDirectory = assetType == ProjectAssetType.Directory;
-        IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsInteractiveAsset(fullPath, IsDirectory);
+        IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsAssetSupportedInMonitor(fullPath, IsDirectory);
         Icon = ProjectAssetIconProvider.GetAssetIcon(assetType);
         _selectionService = selectionService;
         

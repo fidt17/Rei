@@ -11,14 +11,19 @@
     </Design.DataContext>
 
     <Border Padding="10">
-        <Grid RowDefinitions="Auto,Auto,*">
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
             <TextBlock Classes="h4" Text="{Binding AssetName}" />
             <TextBlock Grid.Row="1"
                        Text="{Binding AssetIdLabel}"
                        IsVisible="{Binding ShowAssetIdLabel}"
                        Margin="0,6,0,0"
                        Foreground="{StaticResource Gray_2}" />
-            <TextBox Grid.Row="2"
+            <TextBlock Grid.Row="2"
+                       Text="{Binding AssetSizeLabel}"
+                       IsVisible="{Binding ShowAssetSizeLabel}"
+                       Margin="0,6,0,0"
+                       Foreground="{StaticResource Gray_2}" />
+            <TextBox Grid.Row="3"
                      Text="{Binding FileContent}"
                      Margin="0,6,0,0"
                      IsVisible="{Binding HasFileContentPreview}"

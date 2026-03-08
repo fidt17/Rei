@@ -77,4 +77,20 @@ public static class FileExtensions
         var extension = Path.GetExtension(filePath);
         return TextEditorOpenExtensions.Contains(extension);
     }
+
+    public static bool HasAnyExtension(string filePath, IReadOnlyCollection<string> extensions)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return false;
+
+        var extension = Path.GetExtension(filePath);
+        foreach (var supportedExtension in extensions)
+        {
+            if (string.Equals(extension, supportedExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

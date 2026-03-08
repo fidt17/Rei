@@ -13,6 +13,7 @@ public class MonitorModule : Module
         builder.RegisterType<EntityMonitorDrawerViewModel>();
         builder.RegisterType<AssetMonitorDrawerViewModel>();
         builder.RegisterType<MaterialMonitorDrawerViewModel>();
+        builder.RegisterType<TextureMonitorDrawerViewModel>();
 
         builder.RegisterType<EntityInfoComponentDrawerViewModel>();
         builder.RegisterType<BehaviourComponentDrawerViewModel>();

@@ -1,11 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using ReiEditor.Utils;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
@@ -140,38 +139,61 @@ public partial class ProjectAssetItemView : UserControl
     private void ConfigureDragAndDrop()
     {
         var target = RootBorder;
-        bool pointerDown;
+        var pointerDown = false;
+        var dragStarted = false;
+        Point pressedPosition = default;
+        const double DRAG_THRESHOLD = 4;
 
-        void DoDrag(object? sender, PointerPressedEventArgs e)
+        target.PointerPressed += (_, e) =>
         {
-            Dispatcher.UIThread.InvokeAsync(async () =>
+            if (_vm == null) return;
+            if (_vm.IsDirectory) return;
+            if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
+
+            pointerDown = true;
+            dragStarted = false;
+            pressedPosition = e.GetPosition(target);
+        };
+
+        target.PointerMoved += async (_, e) =>
+        {
+            if (_vm == null) return;
+            if (!pointerDown || dragStarted) return;
+            if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
+
+            var currentPosition = e.GetPosition(target);
+            var delta = currentPosition - pressedPosition;
+            var movedEnough = Math.Abs(delta.X) >= DRAG_THRESHOLD || Math.Abs(delta.Y) >= DRAG_THRESHOLD;
+            if (!movedEnough) return;
+
+            dragStarted = true;
+            var dragData = new DataObject();
+            dragData.Set(DragDropDataKeys.AssetPath, _vm.FullPath);
+
+            try
             {
-                pointerDown = true;
-                if (_vm == null) return;
-                if (_vm.IsDirectory) return;
-                if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
+                await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Copy);
+            }
+            catch (COMException)
+            {
+            }
+            finally
+            {
+                pointerDown = false;
+            }
+        };
 
-                await Task.Delay(100);
-                if (!pointerDown) return;
-
-                var dragData = new DataObject();
-                dragData.Set(DragDropDataKeys.AssetPath, _vm.FullPath);
-
-                try
-                {
-                    await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Copy);
-                }
-                catch (COMException)
-                {
-                    // ignore
-                }
-            });
-        }
-
-        target.PointerPressed += DoDrag;
-        target.PointerReleased += (_, _) =>
+        target.PointerReleased += (_, e) =>
         {
+            var vm = _vm;
+            var shouldSelect = pointerDown && !dragStarted && vm != null && e.InitialPressMouseButton == MouseButton.Left;
             pointerDown = false;
+            dragStarted = false;
+
+            if (!shouldSelect) return;
+
+            vm!.SelectCommand.Execute(null);
+            RootBorder.Focus();
         };
     }
 }

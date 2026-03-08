@@ -35,6 +35,9 @@
                             <DataTemplate x:DataType="drawers:MaterialMonitorDrawerViewModel">
                                 <drawerViews:MaterialMonitorDrawer />
                             </DataTemplate>
+                            <DataTemplate x:DataType="drawers:TextureMonitorDrawerViewModel">
+                                <drawerViews:TextureMonitorDrawer />
+                            </DataTemplate>
                             <DataTemplate x:DataType="drawers:AssetMonitorDrawerViewModel">
                                 <drawerViews:AssetMonitorDrawer />
                             </DataTemplate>

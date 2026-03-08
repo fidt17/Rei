@@ -36,7 +36,17 @@ public static class MonitorDrawerUtils
             return null;
         }
 
+        if (AssetMonitorSupportUtility.IsTexturePreviewAsset(assetSelection.AssetPath, isDirectory: false))
+        {
+            return new TextureMonitorDrawerViewModel(assetSelection);
+        }
+
         if (!assetSelection.IsAssetSupportedInMonitor)
+        {
+            return new AssetMonitorDrawerViewModel(assetSelection);
+        }
+
+        if (!AssetMonitorSupportUtility.IsMaterialAsset(assetSelection.AssetPath, isDirectory: false))
         {
             return new AssetMonitorDrawerViewModel(assetSelection);
         }
