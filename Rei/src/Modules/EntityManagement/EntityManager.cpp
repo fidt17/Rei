@@ -246,6 +246,13 @@ namespace rei
             const auto clone = NEW_ENTITY();
             GET(clone, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = nameOverride.empty() ? srcInfo.Name : nameOverride};
 
+            auto& transform = AddBehaviour<Transform>(clone);
+            transform.Reset();
+            transform.GetLocalPosition() = srcTransform.GetLocalPosition();
+            transform.GetLocalScale() = srcTransform.GetLocalScale();
+            transform.SetRotation(srcTransform.GetLocalRotation());
+            transform_utility::InsertWithOrder(transform, parent, order);
+
             for (const auto behaviourId : GET(src, BehaviourCollection).Behaviours)
             {
                 if (behaviourId == transformBehaviourId) continue;
@@ -267,13 +274,6 @@ namespace rei
 
                 AddBehaviour(clone, behaviourId, behaviourSetData, true);
             }
-
-            auto& transform = AddBehaviour<Transform>(clone);
-            transform.Reset();
-            transform.GetLocalPosition() = srcTransform.GetLocalPosition();
-            transform.GetLocalScale() = srcTransform.GetLocalScale();
-            transform.SetRotation(srcTransform.GetLocalRotation());
-            transform_utility::InsertWithOrder(transform, parent, order);
 
             if (includeChildren)
             {
