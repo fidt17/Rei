@@ -58,8 +58,8 @@
       <PreprocessorDefinitions>DEBUG;REI_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei\external;$(SolutionDir)Rei\resources;</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\Rei\src;$(MSBuildThisFileDirectory)..\Rei\external;$(MSBuildThisFileDirectory)..\Rei\resources;</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(MSBuildThisFileDirectory)..\Rei\src\Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
     <Link>
@@ -82,8 +82,8 @@
       <PreprocessorDefinitions>RELEASE;REI_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Rei\src;$(SolutionDir)Rei\external;$(SolutionDir)Rei\resources;</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\Rei\src;$(MSBuildThisFileDirectory)..\Rei\external;$(MSBuildThisFileDirectory)..\Rei\resources;</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(MSBuildThisFileDirectory)..\Rei\src\Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>false</ExceptionHandling>
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>

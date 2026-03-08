@@ -2,30 +2,25 @@
 
 #include "PointerEntitySelectionSystem.h"
 
+#include "Modules/Editor/EntitySelectionUtility.h"
 #include "Modules/Components/ActiveTag.h"
 #include "Modules/Editor/Components/SelectableByPointerTag.h"
 #include "Modules/Editor/Components/SelectedTag.h"
 #include "Modules/Editor/Components/SelectionByPointerBlockerTag.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Physics/PointerCollisionListener.h"
-#include "rei_behaviours/render/RenderOutlineTag.h"
 
 namespace rei::editor
 {
     PointerEntitySelectionSystem::PointerEntitySelectionSystem(const std::shared_ptr<ecs::World>& world): System(world)
     {
         _checkEntities = FILTER(physics::PointerCollisionListener, SelectableByPointerTag, ActiveTag);
-        _selectedEntities = FILTER(SelectedTag);
         _blockSelectionEntities = FILTER(SelectionByPointerBlockerTag, physics::PointerCollisionListener, ActiveTag);
     }
 
     void PointerEntitySelectionSystem::ResetAllEntitiesSelection() const
     {
-        FOR(e, _selectedEntities)
-        {
-            DEL(e, rei::editor::SelectedTag);
-            DEL(e, rei::render::RenderOutlineTag);
-        }
+        selection_utility::Reset(_ecsWorld);
     }
 
     void PointerEntitySelectionSystem::OnUpdate()
@@ -50,10 +45,7 @@ namespace rei::editor
 
             if (listener.IsInside)
             {
-                ResetAllEntitiesSelection();
-
-                GET(e, rei::editor::SelectedTag);
-                GET(e, render::RenderOutlineTag);
+                selection_utility::Select(_ecsWorld, e);
                 return;
             }
         }

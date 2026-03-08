@@ -1,8 +1,11 @@
 using System;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
@@ -52,6 +55,7 @@ public partial class HierarchyWindow : UserControl
 
         _vm = vm;
         _vm.RootContextMenu.AnyCommandExecutedEvent += HandleAnyRootContextMenuCommandExecuted;
+        _vm.ScrollToEntityRequested += HandleScrollToEntityRequested;
     }
 
     private void UnsubscribeFromVm()
@@ -59,6 +63,7 @@ public partial class HierarchyWindow : UserControl
         if (_vm == null) return;
 
         _vm.RootContextMenu.AnyCommandExecutedEvent -= HandleAnyRootContextMenuCommandExecuted;
+        _vm.ScrollToEntityRequested -= HandleScrollToEntityRequested;
         _vm = null;
     }
 
@@ -66,5 +71,22 @@ public partial class HierarchyWindow : UserControl
     {
         var flyout = FlyoutBase.GetAttachedFlyout(RootBorder);
         flyout?.Hide();
+    }
+
+    private void HandleScrollToEntityRequested(int entityId)
+    {
+        if (entityId <= 0) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var targetNode = this.GetVisualDescendants()
+                .OfType<HierarchyNode>()
+                .FirstOrDefault(view => view.DataContext is HierarchyNodeViewModel vm &&
+                                        vm.Node.Content.Id == entityId);
+            if (targetNode == null) return;
+
+            RootBorder.Focus();
+            targetNode.BringIntoView();
+        }, DispatcherPriority.Background);
     }
 }

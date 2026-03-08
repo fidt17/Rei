@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ namespace ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 public class HierarchyWindowViewModel : BaseViewModel
 {
+    public event Action<int>? ScrollToEntityRequested;
+
     public ICommand ResetSelectionCommand { get; }
 	
     public ObservableField<string> SceneName { get; } = new("Scene Name");
@@ -56,12 +59,14 @@ public class HierarchyWindowViewModel : BaseViewModel
         ResetSelectionCommand = ReactiveCommand.Create(ResetSelection);
         RootContextMenu.AddOption(new ContextMenuOption("New Entity", ExecuteCreateNewEntityContextMenu));
         _selectedEntityActionService.RenameEntityRequested += HandleRenameEntityRequestedEvent;
+        _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
     }
 
     public override void Dispose()
     {
         _createSceneEntityCommand.Dispose();
         _selectedEntityActionService.RenameEntityRequested -= HandleRenameEntityRequestedEvent;
+        _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
 
         if (_activeHierarchy != null)
         {
@@ -85,6 +90,7 @@ public class HierarchyWindowViewModel : BaseViewModel
         SceneName.Set(hierarchy.Name);
         UpdateEntitiesList(_activeHierarchy);
         RestoreExpandedState(expandedEntityIds);
+        HandleActiveSelectionChangedEvent(_selectionService.ActiveSelection.Value);
     }
 
     private void ResetHierarchy()
@@ -234,6 +240,17 @@ public class HierarchyWindowViewModel : BaseViewModel
 
         ExpandAncestors(targetNode);
         Dispatcher.UIThread.InvokeAsync(() => targetNode.StartRenameCommand.Execute(null));
+    }
+
+    private void HandleActiveSelectionChangedEvent(ISelectable? selection)
+    {
+        if (selection is not IEntitySelectable entitySelection) return;
+
+        var targetNode = _nodeMap.Values.FirstOrDefault(node => node.Node.Content.Id == entitySelection.Entity.Id);
+        if (targetNode == null) return;
+
+        ExpandAncestors(targetNode);
+        ScrollToEntityRequested?.Invoke(entitySelection.Entity.Id);
     }
 
     private void ExpandAncestors(HierarchyNodeViewModel node)

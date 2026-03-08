@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/Editor/EntitySelectionUtility.h"
 #include "Modules/EntityManagement/EntityManager.h"
-#include "rei_behaviours/render/RenderOutlineTag.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 REI_EXTERN_API inline void CreateNewEntity(const char* name)
@@ -119,7 +119,8 @@ REI_EXTERN_API inline void InstantiateEntity(const char* json)
         const auto& sourceEntity = rei::GetEntityManager().GetBySceneId(sourceEntityId);
         if (IS_DEAD(sourceEntity)) return;
 
-        rei::GetEntityManager().Instantiate(sourceEntity, requestedName, includeChildren);
+        const auto clone = rei::GetEntityManager().Instantiate(sourceEntity, requestedName, includeChildren);
+        rei::editor::selection_utility::Select(rei::GetInternalWorld(), clone);
     });
 }
 
@@ -179,8 +180,7 @@ REI_EXTERN_API inline void SelectEntity(const i32 sceneEntityId)
         const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
         if (IS_DEAD(e)) return;
 
-        GET(e, rei::editor::SelectedTag);
-        GET(e, rei::render::RenderOutlineTag);
+        rei::editor::selection_utility::Select(rei::GetInternalWorld(), e);
     });
 }
 
@@ -188,13 +188,6 @@ REI_EXTERN_API inline void ResetEntitySelection()
 {
     rei::GetEngine().ExecuteOnMainThread([=]
     {
-        ECS_WORLD(rei::GetInternalWorld());
-
-        const auto& selectedEntities = FILTER(rei::editor::SelectedTag);
-        FOR(e, selectedEntities)
-        {
-            DEL(e, rei::editor::SelectedTag);
-            DEL(e, rei::render::RenderOutlineTag);
-        }
+        rei::editor::selection_utility::Reset(rei::GetInternalWorld());
     });
 }
