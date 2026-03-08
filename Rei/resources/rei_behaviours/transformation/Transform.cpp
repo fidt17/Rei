@@ -59,17 +59,17 @@ namespace rei
         }
     }
 
-    math::Vector3& Transform::GetPosition()
+    math::Vector3& Transform::GetLocalPosition()
     {
         return _position;
     }
 
-    math::Vector3& Transform::GetScale()
+    math::Vector3& Transform::GetLocalScale()
     {
         return _scale;
     }
 
-    const glm::quat& Transform::GetRotation() const
+    const glm::quat& Transform::GetLocalRotation() const
     {
         return _quaternion;
     }

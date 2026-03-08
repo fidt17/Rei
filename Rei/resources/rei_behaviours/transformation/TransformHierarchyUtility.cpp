@@ -142,6 +142,9 @@ namespace rei::transform_utility
         if (IS_DEAD(entity) || !HAS(entity, Transform)) return;
 
         const ecs::Entity oldParent = transform.GetParent();
+        const auto worldPosition = transform.GetWorldPosition();
+        const auto worldRotation = transform.GetWorldRotation();
+        const auto worldScale = transform.GetWorldScale();
 
         NormalizeSiblingOrders(oldParent);
         if (oldParent != parent)
@@ -174,5 +177,8 @@ namespace rei::transform_utility
 
         transform.SetParent(parent);
         transform.SetChildOrder(newOrder);
+        transform.SetWorldPosition(worldPosition);
+        transform.SetWorldRotation(worldRotation);
+        transform.SetWorldScale(worldScale);
     }
 }

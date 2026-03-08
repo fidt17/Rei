@@ -105,7 +105,7 @@ namespace rei::editor
 
                 const math::Vector3 projectionOnArrowDirection = math::Vector3::Projection(planeIntersectionPoint - arrowPos, arrowForward);
 
-                const auto arrowScale = arrowTransform.GetScale().x;
+                const auto arrowScale = arrowTransform.GetLocalScale().x;
                 arrow.DragOffset = projectionOnArrowDirection / arrowScale;
             }
 
