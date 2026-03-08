@@ -191,7 +191,7 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
 
         const Shader& shader = material.GetShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
         meshRenderer.Render();
     }
 }
@@ -211,7 +211,7 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
 
         const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateModelMatrix());
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
         meshRenderer.Render();
 
         meshRenderer.SetMaterial(originalMaterial);

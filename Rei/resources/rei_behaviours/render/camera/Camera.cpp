@@ -89,9 +89,12 @@ namespace rei::render
     glm::mat4 Camera::GetViewMatrix() const
     {
         auto& transform = GetTransform();
-        const auto& position = transform.GetPosition();
+        const auto position = transform.GetWorldPosition();
+        const auto rotation = transform.GetWorldRotation();
+        const auto forward = rotation * glm::vec3(0, 0, 1);
+        const auto up = rotation * glm::vec3(0, 1, 0);
 
-        return lookAt(glm::vec3(position), glm::vec3(position + transform.GetForward()), glm::vec3(transform.GetUp()));
+        return lookAt(glm::vec3(position), glm::vec3(position + forward), glm::vec3(up));
     }
 
     math::Ray Camera::GetScreenPointToRay(const f32 xPos, const f32 yPos) const
@@ -172,7 +175,7 @@ namespace rei::render
         const glm::vec4 rayWorld = inverse(view) * rayEye;
         const glm::vec3 rayDirection = normalize(glm::vec3(rayWorld));
 
-        return math::Ray(GetTransform().GetPosition(), math::Vector3(rayDirection));
+        return math::Ray(GetTransform().GetWorldPosition(), math::Vector3(rayDirection));
     }
 
     math::Ray Camera::GetOrhographicScreenPointToRay(const f32 xPos, const f32 yPos) const

@@ -27,6 +27,9 @@ namespace rei
         REI_API math::Vector3& GetPosition();
         REI_API math::Vector3& GetScale();
         REI_API const glm::quat& GetRotation() const;
+        REI_API math::Vector3 GetWorldPosition() const;
+        REI_API math::Vector3 GetWorldScale() const;
+        REI_API glm::quat GetWorldRotation() const;
 
         REI_API ecs::Entity GetParent() const;
         REI_API void SetParent(ecs::Entity parent);
@@ -47,6 +50,7 @@ namespace rei
         REI_API void RotateLocal(f32 angle, const math::Vector3& axis);
 
         REI_API glm::mat4 CalculateModelMatrix() const;
+        REI_API glm::mat4 CalculateWorldModelMatrix() const;
 
         REI_API math::Vector3 GetForward() const;
         REI_API math::Vector3 GetRight() const;

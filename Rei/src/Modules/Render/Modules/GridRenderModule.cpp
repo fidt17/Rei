@@ -48,7 +48,7 @@ void rei::render::GridRenderModule::DrawGrids()
 
 void rei::render::GridRenderModule::RenderGridAtCameraXZ(f32 gridSize, f32 cellSize)
 {
-    const auto& cameraPos = _cameraModule->GetCamera().Get().GetTransform().GetPosition();
+    const auto cameraPos = _cameraModule->GetCamera().Get().GetTransform().GetWorldPosition();
 
     const i32 xOffset = (cameraPos.x / cellSize);
     const i32 zOffset = (cameraPos.z / cellSize);
@@ -60,7 +60,7 @@ void rei::render::GridRenderModule::RenderGridAtCameraXZ(f32 gridSize, f32 cellS
 
 void rei::render::GridRenderModule::RenderGridAtCameraXY(f32 gridSize, f32 cellSize)
 {
-    const auto& cameraPos = _cameraModule->GetCamera().Get().GetTransform().GetPosition();
+    const auto cameraPos = _cameraModule->GetCamera().Get().GetTransform().GetWorldPosition();
 
     const i32 xOffset = (cameraPos.x / cellSize);
     const i32 yOffset = (cameraPos.y / cellSize);
@@ -72,7 +72,7 @@ void rei::render::GridRenderModule::RenderGridAtCameraXY(f32 gridSize, f32 cellS
 
 void rei::render::GridRenderModule::RenderGridAtCameraYZ(f32 gridSize, f32 cellSize)
 {
-    const auto& cameraPos = _cameraModule->GetCamera().Get().GetTransform().GetPosition();
+    const auto cameraPos = _cameraModule->GetCamera().Get().GetTransform().GetWorldPosition();
 
     const i32 yOffset = (cameraPos.y / cellSize);
     const i32 zOffset = (cameraPos.z / cellSize);
@@ -100,7 +100,7 @@ void rei::render::GridRenderModule::RenderGrid(const f32 gridSize, const f32 cel
 
     const auto& shader = _gridMaterial->GetShader();
     shader.SetColor("_Color", {1, 1, 1, _settings.Opacity});
-    shader.SetVector3("_CameraPos", _cameraModule->GetCamera().Get().GetTransform().GetPosition());
+    shader.SetVector3("_CameraPos", _cameraModule->GetCamera().Get().GetTransform().GetWorldPosition());
     shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), model);
 
     glEnable(GL_DEPTH_TEST);

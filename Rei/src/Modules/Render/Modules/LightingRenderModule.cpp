@@ -76,7 +76,7 @@ void rei::render::LightingRenderModule::SetPointLights(const Shader& shader) con
         const auto& light = _pointLights[i];
         if (light.IsNull()) continue;
 
-        shader.SetVector3("_PointLights[" + std::to_string(i) + "].Position", light.Get().GetTransform().GetPosition());
+        shader.SetVector3("_PointLights[" + std::to_string(i) + "].Position", light.Get().GetTransform().GetWorldPosition());
         shader.SetFloat("_PointLights[" + std::to_string(i) + "].Strength", light.Get().GetStrength());
         shader.SetColor("_PointLights[" + std::to_string(i) + "].Color", light.Get().GetColor());
     }
@@ -91,9 +91,8 @@ void rei::render::LightingRenderModule::RenderPointLights() const
         const auto& shader = _lightSourceMaterial->GetShader();
         shader.SetColor("_Color", light.Get().GetColor());
         shader.SetFloat("_Strength", light.Get().GetStrength());
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), light.Get().GetTransform().CalculateModelMatrix());
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), light.Get().GetTransform().CalculateWorldModelMatrix());
 
         _cubeVertexData.Render();
     }
 }
-

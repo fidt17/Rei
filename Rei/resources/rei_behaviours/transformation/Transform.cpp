@@ -3,6 +3,7 @@
 #include "Transform.h"
 #include "TransformHierarchyUtility.h"
 
+#include "glm/gtc/quaternion.hpp"
 #include "glm/ext/quaternion_trigonometric.hpp"
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/EntityManagement/EntityManager.h"
@@ -71,6 +72,40 @@ namespace rei
     const glm::quat& Transform::GetRotation() const
     {
         return _quaternion;
+    }
+
+    math::Vector3 Transform::GetWorldPosition() const
+    {
+        const auto worldMatrix = CalculateWorldModelMatrix();
+        return math::Vector3(worldMatrix[3]);
+    }
+
+    math::Vector3 Transform::GetWorldScale() const
+    {
+        const auto worldMatrix = CalculateWorldModelMatrix();
+
+        const glm::vec3 right(worldMatrix[0]);
+        const glm::vec3 up(worldMatrix[1]);
+        const glm::vec3 forward(worldMatrix[2]);
+
+        return {
+            glm::length(right),
+            glm::length(up),
+            glm::length(forward)
+        };
+    }
+
+    glm::quat Transform::GetWorldRotation() const
+    {
+        const auto worldMatrix = CalculateWorldModelMatrix();
+        const auto worldScale = GetWorldScale();
+
+        glm::mat3 rotationMatrix;
+        rotationMatrix[0] = worldScale.x == 0 ? glm::vec3(1, 0, 0) : glm::vec3(worldMatrix[0]) / worldScale.x;
+        rotationMatrix[1] = worldScale.y == 0 ? glm::vec3(0, 1, 0) : glm::vec3(worldMatrix[1]) / worldScale.y;
+        rotationMatrix[2] = worldScale.z == 0 ? glm::vec3(0, 0, 1) : glm::vec3(worldMatrix[2]) / worldScale.z;
+
+        return glm::normalize(glm::quat_cast(rotationMatrix));
     }
 
     ecs::Entity Transform::GetParent() const
@@ -201,6 +236,19 @@ namespace rei
     glm::mat4 Transform::CalculateModelMatrix() const
     {
         return GetTransformationMatrix(_position, _quaternion, _scale);
+    }
+
+    glm::mat4 Transform::CalculateWorldModelMatrix() const
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        if (IS_DEAD(_parentEntity) || !HAS(_parentEntity, Transform))
+        {
+            return CalculateModelMatrix();
+        }
+
+        const auto& parentTransform = GET(_parentEntity, Transform);
+        return parentTransform.CalculateWorldModelMatrix() * CalculateModelMatrix();
     }
 
     math::Vector3 Transform::GetForward() const

@@ -48,7 +48,7 @@ void rei::render::BVHRenderModule::Render() const
         for (const auto& mesh : meshRenderer.GetModel()->GetMeshes())
         {
             auto& transform = meshRenderer.GetTransform();
-            RenderBVH(mesh.BVHRoot, transform.CalculateModelMatrix());
+            RenderBVH(mesh.BVHRoot, transform.CalculateWorldModelMatrix());
         }
     }
 }
