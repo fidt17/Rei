@@ -52,7 +52,7 @@ rei::render::Color rei::render::Color::FromHex(const std::string& hex)
 
     Color c = {0.0f, 0.0f, 0.0f, 1.0f};
 
-    auto parseHexByte = [&](const char* str, unsigned int& value)
+    auto parseHexByte = [&](const char* str, u32& value)
     {
         auto result = std::from_chars(str, str + 2, value, 16);
         if (result.ec != std::errc())
@@ -64,7 +64,7 @@ rei::render::Color rei::render::Color::FromHex(const std::string& hex)
 
     if (cleanHex.length() == 3)
     {
-        unsigned int r, g, b;
+        u32 r, g, b;
         parseHexByte((std::string(2, cleanHex[0])).c_str(), r);
         parseHexByte((std::string(2, cleanHex[1])).c_str(), g);
         parseHexByte((std::string(2, cleanHex[2])).c_str(), b);
@@ -72,7 +72,7 @@ rei::render::Color rei::render::Color::FromHex(const std::string& hex)
     }
     else if (cleanHex.length() == 6)
     {
-        unsigned int r, g, b;
+        u32 r, g, b;
         parseHexByte(cleanHex.substr(0, 2).c_str(), r);
         parseHexByte(cleanHex.substr(2, 2).c_str(), g);
         parseHexByte(cleanHex.substr(4, 2).c_str(), b);
@@ -80,7 +80,7 @@ rei::render::Color rei::render::Color::FromHex(const std::string& hex)
     }
     else if (cleanHex.length() == 8)
     {
-        unsigned int r, g, b, a;
+        u32 r, g, b, a;
         parseHexByte(cleanHex.substr(0, 2).c_str(), r);
         parseHexByte(cleanHex.substr(2, 2).c_str(), g);
         parseHexByte(cleanHex.substr(4, 2).c_str(), b);

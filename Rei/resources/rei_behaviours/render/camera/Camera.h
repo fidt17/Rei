@@ -32,10 +32,10 @@ namespace rei::render
         
         REI_API const Color& GetBackgroundColor() const;
         REI_API RenderMode GetRenderMode() const;
-        REI_API void GetOutputSize(int& width, int& height) const;
+        REI_API void GetOutputSize(i32& width, i32& height) const;
         REI_API CameraPerspectiveEnum GetPerspective() const;
 
-        REI_API void SetOutputSize(int width, int height);
+        REI_API void SetOutputSize(i32 width, i32 height);
         REI_API void SetRenderMode(RenderMode mode);
         REI_API void SetPerspective(CameraPerspectiveEnum perspective);
 

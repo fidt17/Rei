@@ -25,10 +25,10 @@ namespace rei::resources
         _stream.close();
     }
 
-    unsigned char* BinaryReader::GetBytes(i32& length)
+    u8* BinaryReader::GetBytes(i32& length)
     {
         length = GetI32();
-        const auto bytes = new unsigned char[length];
+        const auto bytes = new u8[length];
         _stream.read(reinterpret_cast<char*>(bytes), length);
 
         return bytes;

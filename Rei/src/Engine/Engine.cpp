@@ -53,7 +53,7 @@ namespace rei::internal::engine
             });
         });
 
-        mainWindow->SizeChangedEvent.append([&](const int width, const int height)
+        mainWindow->SizeChangedEvent.append([&](const i32 width, const i32 height)
         {
             if (_mainRenderer->GetCamera().IsNull()) return;
 
@@ -112,7 +112,7 @@ namespace rei::internal::engine
         }
     }
 
-    void Engine::Shutdown(const int exitCode)
+    void Engine::Shutdown(const i32 exitCode)
     {
         if (!_runEngine.exchange(false)) return;
 
@@ -151,7 +151,7 @@ namespace rei::internal::engine
         return _runEngine.load();
     }
 
-    int Engine::GetExitCode() const
+    i32 Engine::GetExitCode() const
     {
         return _exitCode;
     }

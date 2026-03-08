@@ -27,7 +27,7 @@ REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId)
     });
 }
 
-REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const int bufferSize)
+REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const i32 bufferSize)
 {
     ECS_WORLD(rei::GetInternalWorld());
 
@@ -49,7 +49,7 @@ REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const int bu
     strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);
 }
 
-REI_EXTERN_API inline void GetEntityData(const i32 sceneEntityId, char* outputBuffer, const int bufferSize)
+REI_EXTERN_API inline void GetEntityData(const i32 sceneEntityId, char* outputBuffer, const i32 bufferSize)
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);

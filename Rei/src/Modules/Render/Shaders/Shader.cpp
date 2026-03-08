@@ -74,13 +74,13 @@ namespace rei::render
         return glGetUniformLocation(_id, name.c_str());
     }
 
-    void Shader::SetInt(const std::string& name, int value) const
+    void Shader::SetInt(const std::string& name, i32 value) const
     {
         Use();
         glUniform1i(GetLocation(name), value);
     }
 
-    void Shader::SetFloat(const std::string& name, const float value) const
+    void Shader::SetFloat(const std::string& name, const f32 value) const
     {
         Use();
         glUniform1f(GetLocation(name), value);

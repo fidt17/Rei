@@ -14,7 +14,7 @@ public:
     
     explicit CircleVertexData(const i32 segments)
     {
-        std::vector<float> vertices;
+        std::vector<f32> vertices;
         std::vector<u32> indices;
 
         indices.push_back(0);

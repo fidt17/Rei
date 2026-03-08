@@ -19,7 +19,7 @@ namespace rei::editor
 
     f32 lastX = -1, lastY = -1;
     bool didSetCursorPos;
-    int framesToSkip = 5;
+    i32 framesToSkip = 5;
 
     void FlyCameraSystem::MoveCamera(Transform& transform, const f32 cameraSpeed) const
     {
@@ -104,7 +104,7 @@ namespace rei::editor
             didSetCursorPos = false;
         }
 
-        double currentFrame = glfwGetTime();
+        f64 currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 

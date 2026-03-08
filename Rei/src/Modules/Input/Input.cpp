@@ -84,12 +84,12 @@ namespace rei
         return !_currentMouseStates[button] && _previousMouseStates[button];
     }
 
-    double Input::GetMouseX()
+    f64 Input::GetMouseX()
     {
         return _mouseX;
     }
 
-    double Input::GetMouseY()
+    f64 Input::GetMouseY()
     {
         return _mouseY;
     }
@@ -100,12 +100,12 @@ namespace rei
         y = _mouseY;
     }
 
-    double Input::GetScrollX()
+    f64 Input::GetScrollX()
     {
         return _scrollX;
     }
 
-    double Input::GetScrollY()
+    f64 Input::GetScrollY()
     {
         return _scrollY;
     }
@@ -166,13 +166,13 @@ namespace rei
         }
     }
 
-    void Input::MousePositionCallback(GLFWwindow* window, const double xPos, const double yPos)
+    void Input::MousePositionCallback(GLFWwindow* window, const f64 xPos, const f64 yPos)
     {
         _mouseX = static_cast<f32>(xPos);
         _mouseY = static_cast<f32>(yPos);
     }
 
-    void Input::ScrollCallback(GLFWwindow* window, const double xOffset, const double yOffset)
+    void Input::ScrollCallback(GLFWwindow* window, const f64 xOffset, const f64 yOffset)
     {
         _scrollX = static_cast<f32>(xOffset);
         _scrollY = static_cast<f32>(yOffset);

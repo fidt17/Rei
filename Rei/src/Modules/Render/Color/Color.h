@@ -13,7 +13,7 @@ namespace rei::render
         SERIALIZE f32 b = 1;
         SERIALIZE f32 a = 1;
 
-        static Color Lerp(const Color& from, const Color& to, float t)
+        static Color Lerp(const Color& from, const Color& to, f32 t)
         {
             return Color(std::lerp(from.r, to.r, t), std::lerp(from.g, to.g, t), std::lerp(from.b, to.b, t), std::lerp(from.a, to.a, t));
         }

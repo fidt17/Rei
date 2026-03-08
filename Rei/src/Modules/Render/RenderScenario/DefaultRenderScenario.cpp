@@ -48,7 +48,7 @@ void rei::render::DefaultRenderScenario::Setup()
     _debugOverlayModule->Setup(_target);
 }
 
-void rei::render::DefaultRenderScenario::ClearBuffer(const int clearMask, const i32 stencilMask) const
+void rei::render::DefaultRenderScenario::ClearBuffer(const i32 clearMask, const i32 stencilMask) const
 {
     glStencilMask(stencilMask);
     glClear(clearMask);

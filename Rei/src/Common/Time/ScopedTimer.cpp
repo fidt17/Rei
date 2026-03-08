@@ -27,7 +27,7 @@ long long rei::time::ScopedTimer::Stop()
         }
         else
         {
-            const double seconds = ms / 1000.0;
+            const f64 seconds = ms / 1000.0;
             LOG_DEBUG("[{}] {} seconds", _name, seconds)
         }
     }

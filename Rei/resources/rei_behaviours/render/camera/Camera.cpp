@@ -33,7 +33,7 @@ namespace rei::render
         return _renderMode;
     }
 
-    void Camera::GetOutputSize(int& width, int& height) const
+    void Camera::GetOutputSize(i32& width, i32& height) const
     {
         width = _outputWidth;
         height = _outputHeight;
@@ -44,7 +44,7 @@ namespace rei::render
         return _perspective;
     }
 
-    void Camera::SetOutputSize(int width, int height)
+    void Camera::SetOutputSize(i32 width, i32 height)
     {
         _outputWidth = width <= 0 ? 1 : width;
         _outputHeight = height <= 0 ? 1 : height;
@@ -69,7 +69,7 @@ namespace rei::render
         const f32 safeNear = std::max(0.01f, static_cast<f32>(_nearClipPlane) + 0.01f);
         const f32 safeFar = std::max(safeNear + 0.01f, static_cast<f32>(_farClipPlane));
         const f32 safeFov = std::clamp(_fov, 0.01f, 179.0f);
-        const f32 aspect = static_cast<float>(safeOutputWidth) / static_cast<float>(safeOutputHeight);
+        const f32 aspect = static_cast<f32>(safeOutputWidth) / static_cast<f32>(safeOutputHeight);
         if (_perspective == Orthographic)
         {
             projection = glm::ortho(-_orthographicSize * aspect, _orthographicSize * aspect,
@@ -136,7 +136,7 @@ namespace rei::render
         }
         
         // For orthographic projection
-        float orthoHeight = 2.0f / GetProjectionMatrix()[1][1];
+        f32 orthoHeight = 2.0f / GetProjectionMatrix()[1][1];
         return orthoHeight / desiredSize;
     }
 
@@ -178,8 +178,8 @@ namespace rei::render
     math::Ray Camera::GetOrhographicScreenPointToRay(const f32 xPos, const f32 yPos) const
     {
         // Convert screen coordinates to normalized device coordinates (NDC)
-        float ndcX = (2.0f * xPos) / _outputWidth - 1.0f;
-        float ndcY = 1.0f - (2.0f * yPos) / _outputHeight; // Flip Y-axis
+        f32 ndcX = (2.0f * xPos) / _outputWidth - 1.0f;
+        f32 ndcY = 1.0f - (2.0f * yPos) / _outputHeight; // Flip Y-axis
 
         // Get view and projection matrices
         const glm::mat4 view = GetViewMatrix();

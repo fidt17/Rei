@@ -10,7 +10,7 @@ namespace rei::render
 
         const i32 meshCount = reader.GetI32();
 
-        for (int i = 0; i < meshCount; i++)
+        for (i32 i = 0; i < meshCount; i++)
         {
             Mesh mesh(reader);
             _meshes.push_back(mesh);

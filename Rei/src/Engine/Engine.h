@@ -23,20 +23,20 @@ namespace rei::internal::engine
     {
     public:
         REI_EVENT() StartEvent;
-        REI_EVENT(int) ShutdownEvent;
+        REI_EVENT(i32) ShutdownEvent;
 
         REI_API explicit Engine(std::shared_ptr<App> app, EngineMode mode, bool isEditor);
         Engine(const Engine& e) = delete;
 
         REI_API void Start();
-        REI_API void Shutdown(int exitCode);
+        REI_API void Shutdown(i32 exitCode);
 
         REI_API bool IsPlaymode() const;
         REI_API bool IsEditorMode() const;
         REI_API bool IsEditor() const;
         REI_API bool IsRunning() const;
 
-        REI_API int GetExitCode() const;
+        REI_API i32 GetExitCode() const;
 
         REI_API std::shared_ptr<window::Window> CreateMainWindow(const WindowCreationSettings& settings);
         REI_API std::shared_ptr<Task> ExecuteOnMainThread(std::function<void()>) const;
@@ -46,7 +46,7 @@ namespace rei::internal::engine
         bool _isEditor;
 
         std::atomic<bool> _runEngine = false;
-        int _exitCode;
+        i32 _exitCode;
 
         std::shared_ptr<window::WindowManager> _windowManager;
         std::shared_ptr<window::MainWindowHandler> _mainWindowHandler;

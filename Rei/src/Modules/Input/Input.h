@@ -18,12 +18,12 @@ namespace rei
         REI_API static bool IsMouseButtonPressed(i32 button);
         REI_API static bool IsMouseButtonReleased(i32 button);
     
-        REI_API static double GetMouseX();
-        REI_API static double GetMouseY();
+        REI_API static f64 GetMouseX();
+        REI_API static f64 GetMouseY();
         REI_API static void GetMousePosition(f32& x, f32& y);
     
-        REI_API static double GetScrollX();
-        REI_API static double GetScrollY();
+        REI_API static f64 GetScrollX();
+        REI_API static f64 GetScrollY();
 
     private:
         inline static GLFWwindow* _window = nullptr;
@@ -42,7 +42,7 @@ namespace rei
     
         static void KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods);
         static void MouseButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods);
-        static void MousePositionCallback(GLFWwindow* window, double xPos, double yPos);
-        static void ScrollCallback(GLFWwindow* window, double xOffset, double yOffset);
+        static void MousePositionCallback(GLFWwindow* window, f64 xPos, f64 yPos);
+        static void ScrollCallback(GLFWwindow* window, f64 xOffset, f64 yOffset);
     }; 
 }

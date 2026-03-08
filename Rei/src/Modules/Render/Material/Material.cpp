@@ -136,7 +136,7 @@ namespace rei::render
         ApplyShaderProperties();
     }
 
-    void Material::SetFloat(const std::string& name, const float value)
+    void Material::SetFloat(const std::string& name, const f32 value)
     {
         if (name.empty()) return;
         _properties[name] = value;
@@ -187,12 +187,12 @@ namespace rei::render
 
     void Material::BindTextures() const
     {
-        unsigned int diffuseNr = 1;
-        unsigned int specularNr = 1;
-        unsigned int normalNr = 1;
-        unsigned int heightNr = 1;
+        u32 diffuseNr = 1;
+        u32 specularNr = 1;
+        u32 normalNr = 1;
+        u32 heightNr = 1;
 
-        for (unsigned int i = 0; i < _textures.size(); i++)
+        for (u32 i = 0; i < _textures.size(); i++)
         {
             if (!_textures[i].IsLoaded())
             {
@@ -222,7 +222,7 @@ namespace rei::render
                 textureName = "texture_height";
                 break;
             default:
-                LOG_ERROR("Unknown texture type: {}", static_cast<int>(textureType))
+                LOG_ERROR("Unknown texture type: {}", static_cast<i32>(textureType))
                 continue;
             }
 
@@ -252,7 +252,7 @@ namespace rei::render
         {
             if (uniformName.empty()) continue;
 
-            float floatValue = 0.0f;
+            f32 floatValue = 0.0f;
             i32 intValue = 0;
             bool isInteger = false;
             if (TryReadNumber(rawValue, floatValue, intValue, isInteger))
@@ -322,7 +322,7 @@ namespace rei::render
         }
     }
 
-    bool Material::TryReadNumber(const nlohmann::json& value, float& outFloatValue, i32& outIntValue, bool& isInteger)
+    bool Material::TryReadNumber(const nlohmann::json& value, f32& outFloatValue, i32& outIntValue, bool& isInteger)
     {
         isInteger = false;
 
@@ -342,7 +342,7 @@ namespace rei::render
 
         if (!value.is_number_float()) return false;
 
-        outFloatValue = value.get<float>();
+        outFloatValue = value.get<f32>();
         return true;
     }
 
@@ -354,10 +354,10 @@ namespace rei::render
         if (!value.at("r").is_number() || !value.at("g").is_number() || !value.at("b").is_number()) return false;
         if (value.contains("a") && !value.at("a").is_number()) return false;
 
-        outColor.r = value.at("r").get<float>();
-        outColor.g = value.at("g").get<float>();
-        outColor.b = value.at("b").get<float>();
-        outColor.a = value.contains("a") ? value.at("a").get<float>() : 1.0f;
+        outColor.r = value.at("r").get<f32>();
+        outColor.g = value.at("g").get<f32>();
+        outColor.b = value.at("b").get<f32>();
+        outColor.a = value.contains("a") ? value.at("a").get<f32>() : 1.0f;
 
         return true;
     }

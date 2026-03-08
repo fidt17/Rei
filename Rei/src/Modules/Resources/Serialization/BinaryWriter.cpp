@@ -16,7 +16,7 @@ namespace rei::resources
         _stream.close();
     }
 
-    void BinaryWriter::WriteBytes(const unsigned char* bytes, const i32 length)
+    void BinaryWriter::WriteBytes(const u8* bytes, const i32 length)
     {
         WriteI32(length);
         _stream.write(reinterpret_cast<const char*>(bytes), length);
@@ -57,4 +57,3 @@ namespace rei::resources
         _stream.write(value.data(), size);
     }
 }
-

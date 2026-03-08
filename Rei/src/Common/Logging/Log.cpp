@@ -38,7 +38,7 @@ namespace rei::common::logging
 
         size_t FindArgsStart(const std::string_view signature)
         {
-            int templateDepth = 0;
+            i32 templateDepth = 0;
             for (size_t i = 0; i < signature.size(); ++i)
             {
                 const char ch = signature[i];
@@ -73,7 +73,7 @@ namespace rei::common::logging
             }
 
             std::string symbol = std::string(beforeArgs);
-            int reverseTemplateDepth = 0;
+            i32 reverseTemplateDepth = 0;
             for (size_t i = beforeArgs.size(); i > 0; --i)
             {
                 const char ch = beforeArgs[i - 1];
@@ -100,7 +100,7 @@ namespace rei::common::logging
 
             std::string stripped;
             stripped.reserve(symbol.size());
-            int templateDepth = 0;
+            i32 templateDepth = 0;
             for (const char ch : symbol)
             {
                 if (ch == '<')
@@ -194,13 +194,13 @@ namespace rei::common::logging
                 return std::format("{} B", bytes);
             }
 
-            const double kb = static_cast<double>(bytes) / 1024.0;
+            const f64 kb = static_cast<f64>(bytes) / 1024.0;
             if (kb < 1024.0)
             {
                 return std::format("{:.2f} KB", kb);
             }
 
-            const double mb = kb / 1024.0;
+            const f64 mb = kb / 1024.0;
             return std::format("{:.2f} MB", mb);
         }
 
@@ -211,7 +211,7 @@ namespace rei::common::logging
                 return std::format("{} ms", durationMs);
             }
 
-            const double seconds = static_cast<double>(durationMs) / 1000.0;
+            const f64 seconds = static_cast<f64>(durationMs) / 1000.0;
             return std::format("{:.2f} sec", seconds);
         }
     }

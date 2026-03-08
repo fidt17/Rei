@@ -16,8 +16,8 @@ namespace rei::render
 
         if (_target)
         {
-            int windowWidth;
-            int windowHeight;
+            i32 windowWidth;
+            i32 windowHeight;
             glfwGetWindowSize(_target, &windowWidth, &windowHeight);
             camera.Get().SetOutputSize(windowWidth, windowHeight);
         }

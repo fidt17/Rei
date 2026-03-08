@@ -14,7 +14,7 @@ concept SerializableAsset = requires(T t, const T ct, const nlohmann::json& data
 
 template <typename T>
 requires SerializableAsset<T>
-inline bool TryGetAssetDataImpl(const std::string& assetId, char* outputBuffer, const int bufferSize)
+inline bool TryGetAssetDataImpl(const std::string& assetId, char* outputBuffer, const i32 bufferSize)
 {
     auto asset = rei::GetAssetManager().GetById<T>(assetId);
     if (!asset.IsLoaded()) return false;
@@ -36,7 +36,7 @@ inline bool TrySetAssetDataImpl(const std::string& assetId, const std::string& j
     return true;
 }
 
-inline bool DispatchTryGetAssetData(const std::string& assetId, const std::string& assetType, char* outputBuffer, const int bufferSize)
+inline bool DispatchTryGetAssetData(const std::string& assetId, const std::string& assetType, char* outputBuffer, const i32 bufferSize)
 {
     if (assetType == "Material")
     {
@@ -56,7 +56,7 @@ inline bool DispatchTrySetAssetData(const std::string& assetId, const std::strin
     return false;
 }
 
-REI_EXTERN_API inline bool GetAssetData(const char* assetId, const char* assetType, char* outputBuffer, const int bufferSize)
+REI_EXTERN_API inline bool GetAssetData(const char* assetId, const char* assetType, char* outputBuffer, const i32 bufferSize)
 {
     if (assetId == nullptr || assetType == nullptr || outputBuffer == nullptr || bufferSize <= 0) return false;
 

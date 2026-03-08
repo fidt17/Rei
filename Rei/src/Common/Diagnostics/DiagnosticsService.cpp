@@ -54,10 +54,10 @@ namespace rei::common::diagnostics
         _snapshot.DiagnosticsTimeMs = ComputeAverage(_diagnosticsTimeSamples, _diagnosticsTimeSampleSize);
         _snapshot.FrameTimeMs = activeFrameTimeMs;
 
-        const double now = glfwGetTime();
+        const f64 now = glfwGetTime();
         if (_lastFrameTime > 0.0)
         {
-            const double delta = now - _lastFrameTime;
+            const f64 delta = now - _lastFrameTime;
             if (delta > 0.0)
             {
                 const auto fps = static_cast<f32>(1.0 / delta);

@@ -4,7 +4,7 @@
 class LineVertexData
 {
 public:
-    unsigned int _vertexBuffer, _vertexArray;
+    u32 _vertexBuffer, _vertexArray;
 
 public:
     LineVertexData()
@@ -15,11 +15,11 @@ public:
         glBindVertexArray(_vertexArray);
 
         glBindBuffer(GL_ARRAY_BUFFER, _vertexBuffer);
-        float vertices[] = {
+        f32 vertices[] = {
             0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f
         };
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), static_cast<void*>(nullptr));
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(f32), static_cast<void*>(nullptr));
         glEnableVertexAttribArray(0);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);

@@ -13,7 +13,7 @@ namespace rei::render
         std::vector<Face> Faces{};
 
     public:
-        void BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, int depth = 0);
+        void BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, i32 depth = 0);
 
         bool IsRayIntersecting(const math::Ray& ray, const glm::mat4& model, math::Vector3& out_intersectionPoint) const;
 

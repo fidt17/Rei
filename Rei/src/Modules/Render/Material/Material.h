@@ -25,7 +25,7 @@ namespace rei::render
         REI_API bool UseDepth() const;
         REI_API void SetDepth(bool value);
         REI_API void SetInt(const std::string& name, i32 value);
-        REI_API void SetFloat(const std::string& name, float value);
+        REI_API void SetFloat(const std::string& name, f32 value);
         REI_API void SetColor(const std::string& name, const Color& value);
         REI_API void SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture);
         REI_API void ClearProperty(const std::string& name);
@@ -40,7 +40,7 @@ namespace rei::render
         void ApplyShaderProperties() const;
         void LoadSerializableFields(const nlohmann::json& data);
 
-        static bool TryReadNumber(const nlohmann::json& value, float& outFloatValue, i32& outIntValue, bool& isInteger);
+        static bool TryReadNumber(const nlohmann::json& value, f32& outFloatValue, i32& outIntValue, bool& isInteger);
         static bool TryReadColor(const nlohmann::json& value, Color& outColor);
         static bool TryReadTextureAssetId(const nlohmann::json& value, std::string& outTextureAssetId);
 

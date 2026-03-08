@@ -5,11 +5,11 @@ namespace rei::render
     class FrameBuffer
     {
     public:
-        FrameBuffer(int width = 0, int height = 0);
+        FrameBuffer(i32 width = 0, i32 height = 0);
 
         ~FrameBuffer();
 
-        void EnableBuffer(int width, int height);
+        void EnableBuffer(i32 width, i32 height);
 
         u32 GetColorTexture() const;
 

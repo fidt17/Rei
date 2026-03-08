@@ -44,11 +44,11 @@ namespace
 rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
 {
     std::vector<rei::render::Vertex> vertices;
-    std::vector<unsigned int> indices;
+    std::vector<u32> indices;
     std::vector<rei::render::Face> faces;
 
     // process vertices
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+    for (u32 i = 0; i < mesh->mNumVertices; i++)
     {
         rei::render::Vertex vertex;
         vertex.Position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
@@ -67,11 +67,11 @@ rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
     }
 
     // process indices
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+    for (u32 i = 0; i < mesh->mNumFaces; i++)
     {
         const aiFace ai_face = mesh->mFaces[i];
         auto& face = faces.emplace_back();
-        for (unsigned int j = 0; j < ai_face.mNumIndices; j++)
+        for (u32 j = 0; j < ai_face.mNumIndices; j++)
         {
             auto idx = ai_face.mIndices[j];
             indices.push_back(idx);
@@ -85,14 +85,14 @@ rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
 void ModelBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vector<rei::render::Mesh>& meshes) const
 {
     // process node's meshes
-    for (unsigned int i = 0; i < node->mNumMeshes; i++)
+    for (u32 i = 0; i < node->mNumMeshes; i++)
     {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         meshes.push_back(ProcessMesh(mesh));
     }
 
     // recursive call to sub-nodes
-    for (unsigned int i = 0; i < node->mNumChildren; i++)
+    for (u32 i = 0; i < node->mNumChildren; i++)
     {
         ProcessNode(node->mChildren[i], scene, meshes);
     }

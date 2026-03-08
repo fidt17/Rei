@@ -2,7 +2,7 @@
 
 #include "glad/glad.h"
 
-rei::render::FrameBuffer::FrameBuffer(const int width, const int height)
+rei::render::FrameBuffer::FrameBuffer(const i32 width, const i32 height)
     :
     _outputWidth(width),
     _outputHeight(height)
@@ -19,7 +19,7 @@ rei::render::FrameBuffer::~FrameBuffer()
     DisposeTextures();
 }
 
-void rei::render::FrameBuffer::EnableBuffer(const int width, const int height)
+void rei::render::FrameBuffer::EnableBuffer(const i32 width, const i32 height)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
 

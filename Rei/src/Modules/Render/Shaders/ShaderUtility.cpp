@@ -11,9 +11,9 @@ namespace rei::render
         Fragment
     };
 
-    std::string ReadShaderInfoLog(const unsigned int shader)
+    std::string ReadShaderInfoLog(const u32 shader)
     {
-        int logLength = 0;
+        i32 logLength = 0;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
         if (logLength <= 1) return {};
 
@@ -26,9 +26,9 @@ namespace rei::render
         return log;
     }
 
-    std::string ReadProgramInfoLog(const unsigned int shaderProgram)
+    std::string ReadProgramInfoLog(const u32 shaderProgram)
     {
-        int logLength = 0;
+        i32 logLength = 0;
         glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &logLength);
         if (logLength <= 1) return {};
 
@@ -41,9 +41,9 @@ namespace rei::render
         return log;
     }
 
-    bool VerifyShaderCompilation(const unsigned int shader, const ShaderTypeEnum shaderType)
+    bool VerifyShaderCompilation(const u32 shader, const ShaderTypeEnum shaderType)
     {
-        int success;
+        i32 success;
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (success != GL_TRUE)
         {
@@ -64,9 +64,9 @@ namespace rei::render
         return true;
     }
 
-    bool VerifyShaderProgramLinking(const unsigned shaderProgram)
+    bool VerifyShaderProgramLinking(const u32 shaderProgram)
     {
-        int success;
+        i32 success;
         glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
         if (success != GL_TRUE)
         {
@@ -79,19 +79,19 @@ namespace rei::render
         return true;
     }
 
-    unsigned ShaderUtility::CreateShaderProgram(const char* vertexShaderSrc, const char* fragmentShaderSrc) const
+    u32 ShaderUtility::CreateShaderProgram(const char* vertexShaderSrc, const char* fragmentShaderSrc) const
     {
-        const unsigned int vertexShader = CompileVertexShader(vertexShaderSrc);
+        const u32 vertexShader = CompileVertexShader(vertexShaderSrc);
         if (vertexShader == 0) return 0;
 
-        const unsigned int fragmentShader = CompileFragmentShader(fragmentShaderSrc);
+        const u32 fragmentShader = CompileFragmentShader(fragmentShaderSrc);
         if (fragmentShader == 0)
         {
             glDeleteShader(vertexShader);
             return 0;
         }
 
-        const unsigned shaderProgram = glCreateProgram();
+        const u32 shaderProgram = glCreateProgram();
         glAttachShader(shaderProgram, vertexShader);
         glAttachShader(shaderProgram, fragmentShader);
         
@@ -106,9 +106,9 @@ namespace rei::render
         return 0;
     }
 
-    unsigned ShaderUtility::CompileVertexShader(const char* src) const
+    u32 ShaderUtility::CompileVertexShader(const char* src) const
     {
-        const unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        const u32 vertexShader = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertexShader, 1, &src, nullptr);
         glCompileShader(vertexShader);
 
@@ -118,9 +118,9 @@ namespace rei::render
         return 0;
     }
 
-    unsigned ShaderUtility::CompileFragmentShader(const char* src) const
+    u32 ShaderUtility::CompileFragmentShader(const char* src) const
     {
-        const unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+        const u32 fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fragmentShader, 1, &src, nullptr);
         glCompileShader(fragmentShader);
 

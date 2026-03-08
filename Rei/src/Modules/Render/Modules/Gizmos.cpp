@@ -161,7 +161,7 @@ void rei::render::Gizmos::DrawWireSphere(const math::Vector3& center, const f32 
 
     segments = std::max(segments, 4);
 
-    for (int i = 0; i <= segments; i++)
+    for (i32 i = 0; i <= segments; i++)
     {
         const f32 angle = PI * i / segments;
         const f32 circleRadius = radius * sin(angle);
@@ -171,7 +171,7 @@ void rei::render::Gizmos::DrawWireSphere(const math::Vector3& center, const f32 
         DrawCircle(circleCenter, Vector3::Up(), Vector3::Right(), circleRadius, color, 2 * segments * (circleRadius / radius), useDepth);
     }
 
-    for (int i = 0; i <= segments; i++)
+    for (i32 i = 0; i <= segments; i++)
     {
         const f32 angle = PI * i / segments;
         const f32 circleRadius = radius * sin(angle);

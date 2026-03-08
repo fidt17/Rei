@@ -73,8 +73,8 @@ namespace rei::common::diagnostics
                 localTime.tm_hour,
                 localTime.tm_min,
                 localTime.tm_sec,
-                static_cast<int>(milliseconds.count()),
-                static_cast<int>(_getpid()));
+                static_cast<i32>(milliseconds.count()),
+                static_cast<i32>(_getpid()));
 
             const auto filePath = GetCrashDirectory() / fileName;
             std::ofstream stream(filePath, std::ios::out | std::ios::trunc);
@@ -140,11 +140,11 @@ namespace rei::common::diagnostics
             const auto code = exceptionInfo != nullptr && exceptionInfo->ExceptionRecord != nullptr
                 ? exceptionInfo->ExceptionRecord->ExceptionCode
                 : 0;
-            WriteCrash("Unhandled SEH exception", std::format("Exception code: 0x{:08X}", static_cast<unsigned int>(code)));
+            WriteCrash("Unhandled SEH exception", std::format("Exception code: 0x{:08X}", static_cast<u32>(code)));
             return EXCEPTION_EXECUTE_HANDLER;
         }
 
-        static void OnSignal(const int signalCode)
+        static void OnSignal(const i32 signalCode)
         {
             WriteCrash("Signal", std::format("Signal code: {}", signalCode));
             std::_Exit(EXIT_FAILURE);
@@ -174,7 +174,7 @@ namespace rei::common::diagnostics
         }
 
 #ifdef DEBUG
-        static int __cdecl OnCrtReport(const int reportType, char* message, int*)
+        static i32 __cdecl OnCrtReport(const i32 reportType, char* message, i32*)
         {
             if (reportType == _CRT_ASSERT || reportType == _CRT_ERROR)
             {

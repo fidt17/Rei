@@ -6,17 +6,17 @@
 GridVertexData::GridVertexData(const f32 size, const f32 cellSize)
     : _size(size), _cellSize(cellSize)
 {
-    std::vector<float> vertices;
+    std::vector<f32> vertices;
     std::vector<u32> indices;
 
     i32 idxOffset = 0;
 
     const f32 halfCellSize = cellSize / 2.0f;
     const f32 lineHalfWidth = size / 2;
-    const int segments = size / cellSize + 1;
+    const i32 segments = size / cellSize + 1;
 
     const f32 posOffset = -size / 2;
-    for (int i = 0; i < segments * 2; i += 2)
+    for (i32 i = 0; i < segments * 2; i += 2)
     {
         f32 xPos = i * (halfCellSize) + posOffset;
 
@@ -33,7 +33,7 @@ GridVertexData::GridVertexData(const f32 size, const f32 cellSize)
     }
 
     idxOffset = indices.size();
-    for (int i = 0; i < segments * 2; i += 2)
+    for (i32 i = 0; i < segments * 2; i += 2)
     {
         f32 yPos = i * (halfCellSize) + posOffset;
 

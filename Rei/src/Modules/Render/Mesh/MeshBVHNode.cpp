@@ -1,14 +1,14 @@
 ﻿#include "pch.h"
 #include "MeshBVHNode.h"
 
-void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, const int depth)
+void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, const i32 depth)
 {
-    constexpr int MAX_DEPTH = 5;
-    constexpr int MIN_FACES = 16;
+    constexpr i32 MAX_DEPTH = 5;
+    constexpr i32 MIN_FACES = 16;
 
-    constexpr int X_AXIS = 1;
-    constexpr int Y_AXIS = 2;
-    constexpr int Z_AXIS = 3;
+    constexpr i32 X_AXIS = 1;
+    constexpr i32 Y_AXIS = 2;
+    constexpr i32 Z_AXIS = 3;
 
     if (faces.empty()) return;
 
@@ -22,11 +22,11 @@ void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Fac
 
     // Split along longest axis
     const math::Vector3 extent = node.Max - node.Min;
-    int axis = X_AXIS;
+    i32 axis = X_AXIS;
     if (extent.y > extent.x) axis = Y_AXIS;
     if (extent.z > extent.x && extent.z > extent.y) axis = Z_AXIS;
 
-    float center = (node.Min.x + node.Max.x) * 0.5f;
+    f32 center = (node.Min.x + node.Max.x) * 0.5f;
     if (axis == Y_AXIS) center = (node.Min.y + node.Max.y) * 0.5f;
     if (axis == Z_AXIS) center = (node.Min.z + node.Max.z) * 0.5f;
 
@@ -34,7 +34,7 @@ void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Fac
 
     for (const auto& face : faces)
     {
-        float faceCenter = 0.0f;
+        f32 faceCenter = 0.0f;
         for (const auto& vert : face.Vertices)
         {
             if (axis == X_AXIS) faceCenter += vert.Position.x;

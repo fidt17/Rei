@@ -19,7 +19,7 @@ namespace rei::math
     REI_API glm::quat GetQuaternion(const glm::mat4& rotationMatrix);
 
     template <typename T>
-    int Sign(T value)
+    i32 Sign(T value)
     {
         return value >= 0 ? +1 : -1;
     }

@@ -56,7 +56,7 @@ namespace rei::render
         constexpr ImGuiWindowFlags WINDOW_FLAGS = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
         ImGui::Begin("Diagnostics", nullptr, WINDOW_FLAGS);
         
-        ImGui::Text("FPS: %d", static_cast<int>(diagnostics.Fps + 0.5f));
+        ImGui::Text("FPS: %d", static_cast<i32>(diagnostics.Fps + 0.5f));
         ImGui::Text("Frame: %.2f ms", diagnostics.FrameTimeMs);
         ImGui::Text("Core: %.2f ms", diagnostics.CoreTimeMs);
         ImGui::Text("Render: %.2f ms", diagnostics.RenderTimeMs);

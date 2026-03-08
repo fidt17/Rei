@@ -7,7 +7,7 @@ namespace rei::window
 {
     WindowManager::WindowManager()
     {
-        glfwSetErrorCallback([](int error_code, const char* description)
+        glfwSetErrorCallback([](i32 error_code, const char* description)
         {
             LOG_ERROR("GLFW ERROR. {} {}", error_code, description)
         });

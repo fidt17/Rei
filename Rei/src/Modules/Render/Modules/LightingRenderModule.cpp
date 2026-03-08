@@ -69,7 +69,7 @@ void rei::render::LightingRenderModule::SetAmbientLight(const Shader& shader) co
 
 void rei::render::LightingRenderModule::SetPointLights(const Shader& shader) const
 {
-    for (int i = 0; i < _pointLights.size(); i++)
+    for (i32 i = 0; i < _pointLights.size(); i++)
     {
         if (i > REI_MAX_POINT_LIGHTS_COUNT) break;
 

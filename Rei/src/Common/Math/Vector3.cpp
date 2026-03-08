@@ -24,7 +24,7 @@ namespace rei::math
         return Vector3(-x, -y, -z);
     }
 
-    Vector3& Vector3::operator+=(const glm::vec<3, float>& vec)
+    Vector3& Vector3::operator+=(const glm::vec<3, f32>& vec)
     {
         x += vec.x;
         y += vec.y;
@@ -42,7 +42,7 @@ namespace rei::math
         return *this;
     }
 
-    Vector3& Vector3::operator-=(const glm::vec<3, float>& vec)
+    Vector3& Vector3::operator-=(const glm::vec<3, f32>& vec)
     {
         x -= vec.x;
         y -= vec.y;
@@ -151,7 +151,7 @@ namespace rei::math
         return Vector3(min, min, min);
     }
 
-    float Vector3::Dot(const Vector3& a, const Vector3& b)
+    f32 Vector3::Dot(const Vector3& a, const Vector3& b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }

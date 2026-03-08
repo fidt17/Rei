@@ -33,7 +33,7 @@ namespace rei::render
         void RenderInDepthMode() const;
         
         void SetBackgroundColor(const Color& color) const;
-        void ClearBuffer(int clearMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, i32 stencilMask = 0xFF) const;
+        void ClearBuffer(i32 clearMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, i32 stencilMask = 0xFF) const;
 
         void RenderMeshRenderers(i32 minSortingOrder, i32 maxSortingOrder) const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;

@@ -10,7 +10,7 @@ void rei::resources::TextureBuilder::BuildTextureAsset(const std::filesystem::pa
     stbi_set_flip_vertically_on_load(true);
     
     i32 width, height, nrChannels;
-    unsigned char* data = stbi_load(assetPath.string().c_str(), &width, &height, &nrChannels, 0);
+    u8* data = stbi_load(assetPath.string().c_str(), &width, &height, &nrChannels, 0);
     GLenum format;
     if (nrChannels == 1)
     {

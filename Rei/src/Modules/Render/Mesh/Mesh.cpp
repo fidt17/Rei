@@ -64,7 +64,7 @@ rei::render::Mesh::Mesh(resources::BinaryReader& reader)
     _didSetupBvh = true;
 }
 
-rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, const std::vector<Face>& faces)
+rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<u32>& indices, const std::vector<Face>& faces)
     :
     Name(std::move(name)),
     VAO(0), VBO(0), EBO(0)
@@ -88,7 +88,7 @@ void rei::render::Mesh::SetupOpenGlObjects()
     glBufferData(GL_ARRAY_BUFFER, Vertices.size() * sizeof(Vertex), Vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.size() * sizeof(unsigned int), Indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, Indices.size() * sizeof(u32), Indices.data(), GL_STATIC_DRAW);
 
     // vertex positions
     glEnableVertexAttribArray(0);

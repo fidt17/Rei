@@ -32,7 +32,7 @@ namespace rei::scenes
         _entityManager->ResolveTransformParents();
     }
 
-    void SceneManager::LoadScene(const int id)
+    void SceneManager::LoadScene(const i32 id)
     {
         REI_ASSERT(_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
         REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")

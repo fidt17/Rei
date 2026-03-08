@@ -10,7 +10,7 @@ namespace rei::render
         bool RenderXZ = true;
         bool RenderXY = false;
         bool RenderYZ = false;
-        float Opacity = 0.25f;
+        f32 Opacity = 0.25f;
     };
     
     class GridRenderModule

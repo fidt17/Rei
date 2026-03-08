@@ -31,12 +31,12 @@ namespace rei::time
     f32 Stopwatch::ElapsedMs() const
     {
         const auto end = _isRunning ? clock::now() : _end;
-        return static_cast<f32>(std::chrono::duration<double, std::milli>(end - _start).count());
+        return static_cast<f32>(std::chrono::duration<f64, std::milli>(end - _start).count());
     }
 
     f32 Stopwatch::ElapsedSec() const
     {
         const auto end = _isRunning ? clock::now() : _end;
-        return static_cast<f32>(std::chrono::duration<double>(end - _start).count());
+        return static_cast<f32>(std::chrono::duration<f64>(end - _start).count());
     }
 }

@@ -46,7 +46,7 @@ namespace rei::external
         engine->Start();
     }
 
-    REI_EXTERN_API inline int Shutdown(internal::engine::Engine* engine, const int exitCode)
+    REI_EXTERN_API inline i32 Shutdown(internal::engine::Engine* engine, const i32 exitCode)
     {
         if (engine == nullptr) return -1;
 

@@ -165,12 +165,12 @@ namespace rei::math
         const f32 c = Vector3::Dot(m, m) - radius * radius;
 
         if (c > 0.0f && b > 0.0f) return false;
-        const float d = b * b - c;
+        const f32 d = b * b - c;
 
         if (d < 0.0f) return false;
 
         // Calculate the intersection distance along the ray
-        float t = -b - sqrtf(d);
+        f32 t = -b - sqrtf(d);
 
         // If t is negative, ray starts inside sphere, so use the other intersection
         if (t < 0.0f)
@@ -208,7 +208,7 @@ namespace rei::math
 
     bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix, Vector3& out_intersectionPoint)
     {
-        constexpr float EPSILON = 1e-6f;
+        constexpr f32 EPSILON = 1e-6f;
 
         if (face.Vertices.size() != 3)
         {
@@ -235,9 +235,9 @@ namespace rei::math
             return false; // Ray parallel to triangle
         }
 
-        const float f = 1.0f / a;
+        const f32 f = 1.0f / a;
         const Vector3 s = ray.Origin - Vector3(triangle[0]);
-        const float u = f * Vector3::Dot(s, h);
+        const f32 u = f * Vector3::Dot(s, h);
 
         if (u < 0.0f || u > 1.0f)
         {
@@ -245,14 +245,14 @@ namespace rei::math
         }
 
         const Vector3 q = Vector3::Cross(s, edge1);
-        const float v = f * Vector3::Dot(ray.Direction, q);
+        const f32 v = f * Vector3::Dot(ray.Direction, q);
 
         if (v < 0.0f || u + v > 1.0f)
         {
             return false;
         }
 
-        const float t = f * Vector3::Dot(edge2, q);
+        const f32 t = f * Vector3::Dot(edge2, q);
         if (t < EPSILON)
         {
             return false;
