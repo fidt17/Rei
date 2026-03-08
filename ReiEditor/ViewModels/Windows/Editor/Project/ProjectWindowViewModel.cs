@@ -31,6 +31,8 @@ namespace ReiEditor.ViewModels.Windows.Editor.Project;
 
 public class ProjectWindowViewModel : BaseViewModel
 {
+    public event Action<string>? ScrollToAssetRequested;
+
     public ObservableCollection<ProjectDirectoryNodeViewModel> RootDirectories { get; } = new();
     public ObservableCollection<ProjectAssetItemViewModel> ActiveItems { get; } = new();
     public ObservableCollection<ProjectPathSegmentViewModel> PathSegments { get; } = new();
@@ -607,6 +609,7 @@ public class ProjectWindowViewModel : BaseViewModel
 
         match.PulseHighlight(TimeSpan.FromSeconds(1));
         _highlightedAsset = match;
+        ScrollToAssetRequested?.Invoke(path);
     }
 
     private void ResetDirectoryTree()

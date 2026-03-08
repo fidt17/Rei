@@ -4,7 +4,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ReiEditor.ViewModels.Windows.Editor.Project;
+using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.Views.Windows.Editor.Project.Assets;
 
 namespace ReiEditor.Views.Windows.Editor.Project;
@@ -37,12 +40,14 @@ public partial class ProjectWindowView : UserControl
         if (_vm == null) return;
 
         _vm.ActiveFolderContextMenu.AnyCommandExecutedEvent += HandleContextMenuCommandExecuted;
+        _vm.ScrollToAssetRequested += HandleScrollToAssetRequested;
     }
 
     private void UnsubscribeFromContextMenu()
     {
         if (_vm == null) return;
         _vm.ActiveFolderContextMenu.AnyCommandExecutedEvent -= HandleContextMenuCommandExecuted;
+        _vm.ScrollToAssetRequested -= HandleScrollToAssetRequested;
     }
 
     private void HandleContextMenuCommandExecuted()
@@ -88,6 +93,24 @@ public partial class ProjectWindowView : UserControl
 
         SearchFieldControl.FocusInput();
         e.Handled = true;
+    }
+
+    private void HandleScrollToAssetRequested(string assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath)) return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var targetView = ActiveItemsDropTarget
+                .GetVisualDescendants()
+                .OfType<ProjectAssetItemView>()
+                .FirstOrDefault(view => view.DataContext is ProjectAssetItemViewModel vm &&
+                                        string.Equals(vm.FullPath, assetPath, System.StringComparison.OrdinalIgnoreCase));
+            if (targetView == null) return;
+
+            ActiveItemsDropTarget.Focus();
+            targetView.BringIntoView();
+        }, DispatcherPriority.Background);
     }
 
     private void ActiveItemsDropTarget_OnDragEnter(object? sender, DragEventArgs e)

@@ -59,7 +59,8 @@
                                             x:Name="SearchFieldControl"
                                             DataContext="{Binding SearchField}" />
                 </Grid>
-                <ScrollViewer Grid.Row="1">
+                <ScrollViewer Grid.Row="1"
+                              x:Name="ActiveItemsScrollViewer">
                     <Grid x:Name="ActiveItemsDropTarget"
                           Background="{StaticResource Clear}"
                           Focusable="True"
