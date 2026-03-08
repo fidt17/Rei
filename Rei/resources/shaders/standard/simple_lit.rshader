@@ -9,12 +9,14 @@
 #ifdef FRAGMENT
     uniform float _Shininess;
     uniform vec4 _Color;
+    uniform sampler2D _MainTex;
 
     void main()
     {
         vec4 ambient = REI_CalculateAmbientLight();
         vec4 pointLight = REI_CalculatePointLight(_Shininess);
-        
-        FragColor = (ambient + pointLight) * _Color;
+        vec4 texColor = REI_Sample(_MainTex);
+
+        FragColor = texColor * _Color * (ambient + pointLight);
     }
 #endif
