@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:drawers="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers"
-             xmlns:effects="clr-namespace:ReiEditor.Views.Controls.Effects"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.TextureMonitorDrawer"
              x:DataType="drawers:TextureMonitorDrawerViewModel">
@@ -20,18 +19,10 @@
                        IsVisible="{Binding ShowDimensionLabel}"
                        Foreground="{StaticResource Gray_2}" />
 
-            <StackPanel IsVisible="{Binding IsLoading}"
-                        Orientation="Horizontal"
-                        Spacing="8">
-                <effects:RingSpinner Width="14"
-                                     Height="14"
-                                     Thickness="4"
-                                     StokeDashArray="1"
-                                     SpinnerColor="{StaticResource White}" />
-                <TextBlock Text="{Binding StatusText}"
-                           Foreground="{StaticResource Gray_2}"
-                           VerticalAlignment="Center" />
-            </StackPanel>
+            <TextBlock IsVisible="{Binding IsLoading}"
+                       Text="{Binding StatusText}"
+                       Foreground="{StaticResource Gray_2}"
+                       TextWrapping="Wrap" />
 
             <TextBlock IsVisible="{Binding ShowStatusText}"
                        Text="{Binding StatusText}"
