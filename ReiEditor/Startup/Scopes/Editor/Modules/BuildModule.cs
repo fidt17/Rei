@@ -15,10 +15,10 @@ public class BuildModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterSingleton<SourceTracker>().As<ISourceTracker>();
         builder.RegisterSingleton<BuildPreparationService>().As<IBuildPreparationService>();
         builder.RegisterSingleton<EngineBuildGate>().As<IEngineBuildGate>();
         builder.RegisterSingleton<EditorBuildOutputService>().As<IEditorBuildOutputService>();
+        builder.RegisterSingleton<ProjectBuildStateService>().As<IProjectBuildStateService>();
         builder.RegisterSingleton<StagedEditorBuildService>().As<IStagedEditorBuildService>();
         builder.RegisterSingleton<MsBuildSolutionBuilder>().As<ISolutionBuilder>();
         builder.RegisterSingleton<BuildService>().As<IBuildService>();

@@ -1,18 +1,14 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
-using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Build.Solution;
-using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Common.Procedures;
@@ -31,12 +27,10 @@ public class BuildService : IBuildService, IAsyncDisposable
 
     private readonly IResourceService _resourceService;
     private readonly IAssetImporter _assetImporter;
-    private readonly IAssetsService _assetsService;
     private readonly IAssetBuilder _assetBuilder;
     private readonly IBuildPreparationService _buildPreparationService;
-    private readonly ISourceTracker _sourceTracker;
     private readonly ISolutionBuilder _solutionBuilder;
-    private readonly IClientDllManager _clientDllManager;
+    private readonly IProjectBuildStateService _projectBuildStateService;
     private readonly IEditorConsoleService _editorConsoleService;
     private readonly SourceFilesUtility _sourceFilesUtility;
     private readonly ILogger<BuildService> _logger;
@@ -44,12 +38,10 @@ public class BuildService : IBuildService, IAsyncDisposable
 
     public BuildService(
         IResourceService resourceService,
-        IAssetsService assetsService,
         IAssetBuilder assetBuilder,
         IBuildPreparationService buildPreparationService,
-        ISourceTracker sourceTracker,
         ISolutionBuilder solutionBuilder,
-        IClientDllManager clientDllManager,
+        IProjectBuildStateService projectBuildStateService,
         ILogger<BuildService> logger,
         IEditorConsoleService editorConsoleService,
         IAssetImporter assetImporter,
@@ -57,12 +49,10 @@ public class BuildService : IBuildService, IAsyncDisposable
         IEditorProceduresService editorProceduresService)
     {
         _resourceService = resourceService;
-        _assetsService = assetsService;
         _assetBuilder = assetBuilder;
         _buildPreparationService = buildPreparationService;
-        _sourceTracker = sourceTracker;
         _solutionBuilder = solutionBuilder;
-        _clientDllManager = clientDllManager;
+        _projectBuildStateService = projectBuildStateService;
         _logger = logger;
         _editorConsoleService = editorConsoleService;
         _assetImporter = assetImporter;
@@ -119,21 +109,32 @@ public class BuildService : IBuildService, IAsyncDisposable
 
             await _buildPreparationService.Prepare(cancellationToken);
 
-            var shouldBuildSolution = forceSolutionRebuild
-                || !_clientDllManager.DllExists(executionContext.ClientDllPath)
-                || await _sourceTracker.ChangedOrNewSourcesExist();
+            var buildStateEvaluation = await _projectBuildStateService.CalculateState(configuration, executionContext, buildSolution, buildAssets);
+            var shouldBuildSolution = buildSolution && (forceSolutionRebuild || buildStateEvaluation.ShouldBuildSolution);
+            var shouldBuildAssets = buildAssets && (forceAssetRebuild || buildStateEvaluation.ShouldBuildAssets);
 
-            if (buildSolution && shouldBuildSolution)
+            if (!shouldBuildSolution && !shouldBuildAssets)
+            {
+                _logger.Log($"Build skipped. {buildStateEvaluation.Reason}");
+                _isBuildReady.Value = true;
+                return true;
+            }
+
+            _projectBuildStateService.MarkBuildStarted(configuration, executionContext);
+
+            if (shouldBuildSolution)
             {
                 await _solutionBuilder.Build(configuration, forceCleanSolutionBuild, executionContext.SolutionOutputDirectory, cancellationToken);
             }
 
-            if (buildAssets)
+            if (shouldBuildAssets)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await _assetBuilder.BuildAssets(executionContext, forceAssetRebuild, onAssetBuilding);
             }
             stopwatch.Stop();
+
+            await _projectBuildStateService.SaveSuccessfulBuild(configuration, executionContext, buildSolution, buildAssets);
 
             if (_discardBuild)
             {
@@ -143,6 +144,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Build canceled.");
+            _projectBuildStateService.MarkBuildFailed(configuration, executionContext);
             _isBuildReady.Value = false;
             _buildInProgress.Value = false;
             return false;
@@ -151,6 +153,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         {
             _logger.LogError($"Build Failed in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
             _logger.LogException(e);
+            _projectBuildStateService.MarkBuildFailed(configuration, executionContext);
             _isBuildReady.Value = false;
             return false;
         }

@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources;

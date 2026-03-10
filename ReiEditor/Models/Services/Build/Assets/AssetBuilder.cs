@@ -9,7 +9,6 @@ using ReiEditor.Models.Services.Build.Assets.Cache;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Models.Resources;
-using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Build.Assets;
@@ -84,7 +83,7 @@ public class AssetBuilder : IAssetBuilder
         _logger.Log(msg.ToString());
     }
 
-    private static bool ShouldBuild(AssetInfo assetInfo) => ShouldBuildPath(assetInfo.FullPath);
+    private static bool ShouldBuild(AssetInfo assetInfo) => AssetBuildPathUtility.ShouldBuildPath(assetInfo.FullPath);
 
     private async Task BuildAssetsInternal(
         IEngineApi engineApi,
@@ -113,24 +112,5 @@ public class AssetBuilder : IAssetBuilder
         LogBuildSummary(buildResult.Report);
 
         await SerializeAssetMap(buildResult.Map, buildContext.BuildFolder, "map");
-    }
-
-    private static bool ShouldBuildPath(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return false;
-        if (path.Contains("Project\\Scripts\\crash_reports")) return false;
-        if (path.Contains("Project\\Scripts\\bin")) return false;
-        
-        var extension = Path.GetExtension(path);
-        return extension switch
-        {
-            FileExtensions.META => false,
-            FileExtensions.H => false,
-            FileExtensions.CPP => false,
-            FileExtensions.VS_PROJECT => false,
-            FileExtensions.VS_PROJECT_USER => false,
-            FileExtensions.VS_SOLUTION => false,
-            _ => true
-        };
     }
 }
