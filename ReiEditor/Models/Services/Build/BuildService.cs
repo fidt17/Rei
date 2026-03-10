@@ -99,7 +99,7 @@ public class BuildService : IBuildService, IAsyncDisposable
             return false;
         }
 
-        Procedure buildProcedure = new("Building project");
+        Procedure buildProcedure = new(ProcedureTags.BUILD_PROJECT);
         _editorProceduresService.TrackProcedure(buildProcedure);
 
         var stopwatch = new Stopwatch();

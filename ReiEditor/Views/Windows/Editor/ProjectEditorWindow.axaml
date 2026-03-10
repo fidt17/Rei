@@ -9,6 +9,7 @@
         xmlns:monitor="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor"
         xmlns:console="clr-namespace:ReiEditor.Views.Windows.Editor.Console"
         xmlns:project="clr-namespace:ReiEditor.Views.Windows.Editor.Project"
+        xmlns:converters="clr-namespace:ReiEditor.Views.Converters"
         mc:Ignorable="d"
         x:Class="ReiEditor.Views.Windows.Editor.ProjectEditorWindow"
         x:DataType="editor:ProjectEditorWindowViewModel"
@@ -24,80 +25,82 @@
         <editor:ProjectEditorWindowViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto, *, Auto">
-        <!-- Toolbar -->
-        <Border Grid.Row="0"
-                HorizontalAlignment="Stretch"
-                Classes="Window">
-            <Grid ColumnDefinitions="Auto, *, Auto">
+    <Window.Resources>
+        <converters:BoolToDoubleConverter x:Key="BoolToDouble" />
+    </Window.Resources>
 
-                <StackPanel Orientation="Horizontal" Spacing="5">
+    <Grid RowDefinitions="*, Auto">
+        <Grid IsEnabled="{Binding InteractionOverlay.CanInteract}"
+              RowDefinitions="Auto, *">
+            <!-- Toolbar -->
+            <Border Grid.Row="0"
+                    HorizontalAlignment="Stretch"
+                    Classes="Window">
+                <Grid ColumnDefinitions="Auto, *, Auto">
 
-                    <playmode:PlaymodePanelView
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+
+                        <playmode:PlaymodePanelView
+                            DataContext="{Binding PlaymodePanel}" />
+
+                        <Button
+                            HotKey="Ctrl+S"
+                            Command="{Binding SaveProjectCommand}"
+                            Content="Save" />
+
+                        <Button
+                            HotKey="Ctrl+B"
+                            Command="{Binding BuildProjectCommand}"
+                            Content="Build" />
+
+                        <Button
+                            HotKey="Ctrl+I"
+                            Command="{Binding ImportEngineResourcesCommand}"
+                            Content="Import" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                Spacing="6">
+                        <Button Command="{Binding OpenBuildProjectWindowCommand}">
+                            Release
+                        </Button>
+                        <Button Command="{Binding OpenSettingsCommand}">
+                            Settings
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*, Auto" RowDefinitions="*, Auto">
+
+                <Grid Column="0" Row="0" ColumnSpan="2"
+                      ColumnDefinitions="Auto, *, Auto">
+
+                    <hierarchies:HierarchyWindow
+                        Width="230"
+                        Grid.Column="0"
+                        DataContext="{Binding Hierarchy}" />
+
+                    <!--Play Window-->
+                    <playmode:PlayWindow
+                        Grid.Column="1"
                         DataContext="{Binding PlaymodePanel}" />
 
-                    <Button
-                        HotKey="Ctrl+S"
-                        Command="{Binding SaveProjectCommand}"
-                        Content="Save" />
+                    <monitor:MonitorWindow
+                        Width="450"
+                        Grid.Column="2"
+                        DataContext="{Binding Monitor}" />
+                </Grid>
 
-                    <Button
-                        HotKey="Ctrl+B"
-                        Command="{Binding BuildProjectCommand}"
-                        Content="Build" />
-
-                    <Button
-                        HotKey="Ctrl+I"
-                        Command="{Binding ImportEngineResourcesCommand}"
-                        Content="Import" />
-                </StackPanel>
-
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            Spacing="6">
-                    <Button Command="{Binding OpenBuildProjectWindowCommand}">
-                        Release
-                    </Button>
-                    <Button Command="{Binding OpenSettingsCommand}">
-                        Settings
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- Content -->
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*, Auto" RowDefinitions="*, Auto">
-
-            <Grid Column="0" Row="0" ColumnSpan="2"
-                  ColumnDefinitions="Auto, *, Auto">
-
-                <hierarchies:HierarchyWindow
-                    Width="230"
+                <!-- Footer -->
+                <Border
+                    Height="320"
+                    Grid.Row="1"
                     Grid.Column="0"
-                    DataContext="{Binding Hierarchy}" />
-
-                <!--Play Window-->
-                <playmode:PlayWindow
-                    Grid.Column="1"
-                    DataContext="{Binding PlaymodePanel}" />
-
-                <monitor:MonitorWindow
-                    Width="450"
-                    Grid.Column="2"
-                    DataContext="{Binding Monitor}" />
-            </Grid>
-
-            <!-- Footer -->
-            <Grid
-                Height="320"
-                Grid.Row="1"
-                Grid.Column="0"
-                Grid.ColumnSpan="2"
-                RowDefinitions="*, Auto">
-
-                <!-- Tabs -->
-                <Border>
+                    Grid.ColumnSpan="2">
                     <Grid
                         ColumnDefinitions="*, *">
                         <!-- Project Window -->
@@ -125,14 +128,24 @@
                         </Border>
                     </Grid>
                 </Border>
-
-                <!-- Status Bar -->
-                <statusBar:StatusBarView
-                    Grid.Row="1"
-                    DataContext="{Binding StatusBar}" />
             </Grid>
         </Grid>
 
+        <Border
+            Grid.Row="0"
+            Background="#FF000000"
+            Opacity="{Binding InteractionOverlay.IsVisible, Converter={StaticResource BoolToDouble}, ConverterParameter='0.5,0'}"
+            IsHitTestVisible="{Binding InteractionOverlay.IsVisible}">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
+        <statusBar:StatusBarView
+            Grid.Row="1"
+            DataContext="{Binding StatusBar}" />
     </Grid>
 
 </Window>

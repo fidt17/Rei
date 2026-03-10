@@ -149,7 +149,7 @@ public class AssetsService : IAssetsService
 
         _logger.Log("Saving project");
         _saveInProcess.Value = true;
-        var saveProcedure = new Procedure("Saving project");
+        var saveProcedure = new Procedure(ProcedureTags.SAVE_PROJECT);
         _editorProceduresService.TrackProcedure(saveProcedure);
 
         try

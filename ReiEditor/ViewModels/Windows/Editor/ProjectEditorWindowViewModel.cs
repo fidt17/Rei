@@ -26,6 +26,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public ConsoleEditorWindowViewModel Console { get; } = new();
     public ConsoleEditorWindowHeaderViewModel ConsoleHeader { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
+    public EditorInteractionOverlayViewModel InteractionOverlay { get; } = new();
 
     public HierarchyWindowViewModel Hierarchy { get; } = new();
     public MonitorWindowViewModel Monitor { get; } = new();
@@ -50,6 +51,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         IFactory<ImportEngineResourcesCommand> importEngineResourcesCommandFactory,
         IFactory<OpenSettingsWindowCommand> openSettingsCommandFactory,
         IFactory<OpenBuildProjectWindowCommand> openBuildProjectWindowCommandFactory,
+        IFactory<EditorInteractionOverlayViewModel> interactionOverlayViewModelFactory,
         IFactory<StatusBarViewModel> statusBarViewModelFactory,
         IFactory<HierarchyWindowViewModel> hierarchyFactory,
         IFactory<SaveProjectCommand> saveProjectCommand,
@@ -66,6 +68,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         PlaymodePanel = playmodePanel.CreateInstance();
         Console = console.CreateInstance();
         ConsoleHeader = new ConsoleEditorWindowHeaderViewModel(Console);
+        InteractionOverlay = interactionOverlayViewModelFactory.CreateInstance();
         StatusBar = statusBarViewModelFactory.CreateInstance();
         Hierarchy = hierarchyFactory.CreateInstance(new Hierarchy<GameEntity>(""));
         Monitor = monitorWindowFactory.CreateInstance();
@@ -80,6 +83,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         BuildProjectCommand.Dispose();
         OpenSettingsCommand.Dispose();
         OpenBuildProjectWindowCommand.Dispose();
+        InteractionOverlay.Dispose();
         StatusBar.Dispose();
         Hierarchy.Dispose();
         ProjectWindow.Dispose();

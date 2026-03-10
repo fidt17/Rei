@@ -38,7 +38,7 @@ public class BuildProcedureTracker : IDisposable
 
 	private void HandleBuildStartedEvent()
 	{
-		var procedure = new Procedure("Building project");
+		var procedure = new Procedure(ProcedureTags.BUILD_PROJECT);
 		_proceduresService.TrackProcedure(procedure);
 		_activeBuildProcedures.Add(procedure);
 	}

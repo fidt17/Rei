@@ -7,6 +7,7 @@ namespace ReiEditor.Models.EditorApp.EditorProcedures;
 public class EditorProceduresService : IEditorProceduresService
 {
 	public event Action<IProcedure>? ProcedureStartedEvent;
+    public event Action<IProcedure>? ProcedureFinishedEvent;
 	
 	public IEnumerable<IProcedure> ActiveProcedures => _activeProcedures;
 
@@ -20,6 +21,7 @@ public class EditorProceduresService : IEditorProceduresService
 		procedure.FinishedEvent += () =>
 		{
 			_activeProcedures.Remove(procedure);
+            ProcedureFinishedEvent?.Invoke(procedure);
 		};
 		ProcedureStartedEvent?.Invoke(procedure);
 	}

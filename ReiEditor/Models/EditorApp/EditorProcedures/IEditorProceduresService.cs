@@ -7,6 +7,7 @@ namespace ReiEditor.Models.EditorApp.EditorProcedures;
 public interface IEditorProceduresService
 {
 	event Action<IProcedure> ProcedureStartedEvent;
+    event Action<IProcedure> ProcedureFinishedEvent;
 
 	IEnumerable<IProcedure> ActiveProcedures { get; }
 	

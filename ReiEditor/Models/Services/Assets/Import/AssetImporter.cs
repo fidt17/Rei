@@ -194,7 +194,7 @@ public class AssetImporter : IAssetImporter
             
         _isImporting.Value = true;
         
-        var procedure = new Procedure("Importing assets");
+        var procedure = new Procedure(ProcedureTags.IMPORT_ASSETS);
         _editorProceduresService.TrackProcedure(procedure);
         
         return procedure;
