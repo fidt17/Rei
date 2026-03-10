@@ -62,8 +62,10 @@ public sealed class AssetImportEditorRefreshService : IDisposable
             if (_buildService.BuildInProgress.Value) return;
             if (!_buildStarter.CanStartBuild.IsTrue.Value) return;
 
-            await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
-            _editorModeStarter.Start();
+            if (await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug))
+            {
+                _editorModeStarter.Start();
+            }
         }
         catch (Exception e)
         {

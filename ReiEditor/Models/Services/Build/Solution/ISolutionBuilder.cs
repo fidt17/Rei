@@ -8,5 +8,6 @@ public interface ISolutionBuilder
     Task Build(
         BuildConfigurationEnum configuration,
         bool cleanBuild = false,
+        string? outputDirectory = null,
         CancellationToken cancellationToken = default);
 }

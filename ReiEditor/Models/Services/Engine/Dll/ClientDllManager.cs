@@ -33,9 +33,9 @@ public class ClientDllManager : IClientDllManager, IDisposable
         UnloadDll();
     }
 
-    public bool DllExists() => File.Exists(GetDllPath());
+    public bool DllExists(string? dllPath = null) => File.Exists(ResolveDllPath(dllPath));
 
-    public void LoadDll()
+    public void LoadDll(string? dllPath = null)
     {
         if (_dllLoaded)
         {
@@ -43,10 +43,10 @@ public class ClientDllManager : IClientDllManager, IDisposable
             return;
         }
             
-        var dllPath = GetDllPath();
+        var resolvedDllPath = ResolveDllPath(dllPath);
 
-        SetDllDirectory(Path.GetDirectoryName(dllPath)!);
-        _loadedDllPtr = LoadLibrary(GetProjectDllName());
+        SetDllDirectory(Path.GetDirectoryName(resolvedDllPath)!);
+        _loadedDllPtr = LoadLibrary(Path.GetFileName(resolvedDllPath)!);
         _engineApi.SetDllPtr(_loadedDllPtr);
         _dllLoaded.Value = true;
     }
@@ -72,14 +72,22 @@ public class ClientDllManager : IClientDllManager, IDisposable
         }
     }
     
-    private string GetProjectDllName() => $"{_activeProjectService.GetActiveProject().ProjectName}.dll";
-
-    private string GetDllPath()
+    private string GetLiveDllPath()
     {
         var project = _activeProjectService.GetActiveProject();
         var root = project.GetDirectoryPath();
         var buildDllPath = Path.Combine(root, ResourceConstants.BIN_DIR_NAME, "x64EditorDebug", project.ProjectName, $"{project.ProjectName}.dll");
         return buildDllPath;
+    }
+
+    private string ResolveDllPath(string? dllPath)
+    {
+        if (string.IsNullOrWhiteSpace(dllPath))
+        {
+            return GetLiveDllPath();
+        }
+
+        return Path.GetFullPath(dllPath);
     }
     
     [DllImport("kernel32.dll")]

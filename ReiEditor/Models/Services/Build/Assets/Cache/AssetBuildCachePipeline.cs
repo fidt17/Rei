@@ -12,18 +12,17 @@ namespace ReiEditor.Models.Services.Build.Assets.Cache;
 
 public class AssetBuildCachePipeline : IAssetBuildCachePipeline
 {
-    private readonly IEngineApi _engineApi;
     private readonly ILogger<AssetBuildCachePipeline> _logger;
     private readonly IAssetBuildCacheService _cacheService;
 
-    public AssetBuildCachePipeline(IEngineApi engineApi, ILogger<AssetBuildCachePipeline> logger, IAssetBuildCacheService cacheService)
+    public AssetBuildCachePipeline(ILogger<AssetBuildCachePipeline> logger, IAssetBuildCacheService cacheService)
     {
-        _engineApi = engineApi;
         _logger = logger;
         _cacheService = cacheService;
     }
 
     public AssetsBuildResult BuildAssets(
+        IEngineApi engineApi,
         IEnumerable<AssetInfo> assetInfos,
         string buildFolder,
         string assetsBinPath,
@@ -35,7 +34,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
         var manifest = _cacheService.LoadOrCreateManifest(buildFolder);
         var report = new AssetsBuildCacheReport();
         
-        var map = BuildInternal(assetInfos, buildFolder, assetsBinPath, manifest, report, forceRebuild, onAssetBuilding);
+        var map = BuildInternal(engineApi, assetInfos, buildFolder, assetsBinPath, manifest, report, forceRebuild, onAssetBuilding);
         _cacheService.SaveManifest(buildFolder, manifest);
         _cacheService.PruneUnusedCacheFiles(buildFolder, manifest);
         
@@ -46,6 +45,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
     }
 
     private BuildAssetMap BuildInternal(
+        IEngineApi engineApi,
         IEnumerable<AssetInfo> assetInfos,
         string buildFolder,
         string assetsBinPath,
@@ -88,7 +88,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
             var cacheFile = _cacheService.GetCacheFilePath(buildFolder, cacheFileName);
             
             var buildStopwatch = Stopwatch.StartNew();
-            var cacheBytes = BuildAssetToCache(assetInfo.FullPath, cacheFile);
+            var cacheBytes = BuildAssetToCache(engineApi, assetInfo.FullPath, cacheFile);
             buildStopwatch.Stop();
             
             if (cacheBytes > 0)
@@ -120,11 +120,11 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
         return map;
     }
 
-    private long BuildAssetToCache(string assetPath, string cacheFilePath)
+    private long BuildAssetToCache(IEngineApi engineApi, string assetPath, string cacheFilePath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
 
-        _engineApi.BuildAsset(assetPath, cacheFilePath, 0);
+        engineApi.BuildAsset(assetPath, cacheFilePath, 0);
 
         var fileInfo = new FileInfo(cacheFilePath);
         var bytesWritten = fileInfo.Length;

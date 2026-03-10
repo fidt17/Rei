@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Build.Assets;
-using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Common.Condition;
@@ -18,9 +17,8 @@ public class BuildStarter : IBuildStarter, IDisposable
     private readonly ConditionGroup _canStartBuildCondition;
 
     private readonly IBuildService _buildService;
-    private readonly IAssetsService _assetsService;
     private readonly IEngineRunner _engineRunner;
-    private readonly IClientDllManager _dllManager;
+    private readonly IStagedEditorBuildService _stagedEditorBuildService;
     private readonly IAssetImporter _assetImporter;
     private readonly ILogger<BuildStarter> _logger;
 
@@ -30,14 +28,13 @@ public class BuildStarter : IBuildStarter, IDisposable
         IBuildService buildService,
         IAssetsService assetsService,
         IEngineRunner engineRunner,
-        IClientDllManager dllManager,
+        IStagedEditorBuildService stagedEditorBuildService,
         IAssetImporter assetImporter,
         ILogger<BuildStarter> logger)
     {
         _buildService = buildService;
-        _assetsService = assetsService;
         _engineRunner = engineRunner;
-        _dllManager = dllManager;
+        _stagedEditorBuildService = stagedEditorBuildService;
         _assetImporter = assetImporter;
         _logger = logger;
 
@@ -45,7 +42,7 @@ public class BuildStarter : IBuildStarter, IDisposable
             new Condition(_buildService.BuildInProgress, target: false),
             new Condition(_engineRunner.IsPlaymodeActive, target: false),
             new Condition(_engineRunner.IsEngineStarting, target: false),
-            new Condition(_assetsService.SaveInProcess, target: false),
+            new Condition(assetsService.SaveInProcess, target: false),
             new Condition(_assetImporter.IsImporting, target: false));
     }
 
@@ -59,6 +56,7 @@ public class BuildStarter : IBuildStarter, IDisposable
         bool forceSolutionRebuild = false,
         bool forceCleanSolutionBuild = false,
         bool forceAssetRebuild = false,
+        BuildExecutionContext? buildContext = null,
         bool buildSolution = true,
         bool buildAssets = true,
         Action<AssetBuildProgressInfo>? onAssetBuilding = null,
@@ -71,36 +69,25 @@ public class BuildStarter : IBuildStarter, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             if (!_canStartBuildCondition.IsTrue.Value) return false;
 
-            await _engineRunner.StopEngine();
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Engine shutdown and dll unload finalize on background threads.
-            var dllWaitUntil = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-            while (_dllManager.DllLoaded.Value && DateTime.UtcNow < dllWaitUntil)
+            if (_stagedEditorBuildService.ShouldUseStagedEditorBuild(configuration, buildContext))
             {
-                await Task.Delay(25);
-                cancellationToken.ThrowIfCancellationRequested();
+                return await _stagedEditorBuildService.BuildAndPromote(
+                    configuration,
+                    forceSolutionRebuild,
+                    forceCleanSolutionBuild,
+                    forceAssetRebuild,
+                    buildSolution,
+                    buildAssets,
+                    onAssetBuilding,
+                    cancellationToken);
             }
-
-            if (_dllManager.DllLoaded.Value)
-            {
-                _logger.LogError("Cannot build: client dll is still loaded after engine stop.");
-                return false;
-            }
-
-            await Task.Delay(250);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!_canStartBuildCondition.IsTrue.Value) return false;
-
-            await _assetsService.SaveProject();
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!_canStartBuildCondition.IsTrue.Value) return false;
 
             return await _buildService.BuildProject(
                 configuration,
                 forceSolutionRebuild,
                 forceCleanSolutionBuild,
                 forceAssetRebuild,
+                buildContext,
                 buildSolution,
                 buildAssets,
                 onAssetBuilding,

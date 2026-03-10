@@ -16,10 +16,15 @@ public class BuildModule : Module
     protected override void Load(ContainerBuilder builder)
     {
         builder.RegisterSingleton<SourceTracker>().As<ISourceTracker>();
+        builder.RegisterSingleton<BuildPreparationService>().As<IBuildPreparationService>();
+        builder.RegisterSingleton<EngineBuildGate>().As<IEngineBuildGate>();
+        builder.RegisterSingleton<EditorBuildOutputService>().As<IEditorBuildOutputService>();
+        builder.RegisterSingleton<StagedEditorBuildService>().As<IStagedEditorBuildService>();
         builder.RegisterSingleton<MsBuildSolutionBuilder>().As<ISolutionBuilder>();
         builder.RegisterSingleton<BuildService>().As<IBuildService>();
         builder.RegisterSingleton<AssetBuildCacheService>().As<IAssetBuildCacheService>();
         builder.RegisterSingleton<AssetBuildCachePipeline>().As<IAssetBuildCachePipeline>();
+        builder.RegisterSingleton<AssetBuildEngineSessionFactory>().As<IAssetBuildEngineSessionFactory>();
         builder.RegisterSingleton<AssetBuilder>().As<IAssetBuilder>();
         builder.RegisterSingleton<BuildStarter>().As<IBuildStarter>();
         builder.RegisterSingleton<ProjectBuildWindowService>().As<IProjectBuildWindowService>();

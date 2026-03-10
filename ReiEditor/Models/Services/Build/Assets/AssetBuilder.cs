@@ -6,8 +6,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Build.Assets.Cache;
-using ReiEditor.Models.Services.Engine.Dll;
-using ReiEditor.Models.Services.Logging.Engine;
+using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.FileSystem;
@@ -20,46 +19,32 @@ public class AssetBuilder : IAssetBuilder
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetBuildCachePipeline _assetBuildCachePipeline;
     private readonly IBinarySerializer _binarySerializer;
-    private readonly IClientDllManager _dllManager;
-    private readonly IEngineLogger _engineLogger;
+    private readonly IAssetBuildEngineSessionFactory _engineSessionFactory;
     private readonly ILogger<AssetBuilder> _logger;
 
-    public AssetBuilder(IBinarySerializer binarySerializer, IClientDllManager dllManager, IEngineLogger engineLogger, IAssetRegistry assetRegistry, IAssetBuildCachePipeline assetBuildCachePipeline, ILogger<AssetBuilder> logger)
+    public AssetBuilder(
+        IBinarySerializer binarySerializer,
+        IAssetBuildEngineSessionFactory engineSessionFactory,
+        IAssetRegistry assetRegistry,
+        IAssetBuildCachePipeline assetBuildCachePipeline,
+        ILogger<AssetBuilder> logger)
     {
         _binarySerializer = binarySerializer;
-        _dllManager = dllManager;
-        _engineLogger = engineLogger;
+        _engineSessionFactory = engineSessionFactory;
         _assetRegistry = assetRegistry;
         _assetBuildCachePipeline = assetBuildCachePipeline;
         _logger = logger;
     }
 
-    public async Task BuildAssets(string buildFolder, bool forceRebuild = false, Action<AssetBuildProgressInfo>? onAssetBuilding = null)
+    public async Task BuildAssets(
+        BuildExecutionContext buildContext,
+        bool forceRebuild = false,
+        Action<AssetBuildProgressInfo>? onAssetBuilding = null)
     {
-        if (!_dllManager.DllLoaded.Value)
-        {
-            _dllManager.LoadDll();
-        }
-        
-        _engineLogger.SubscribeToClient();
-
-        var resourcesDir = Path.Combine(buildFolder, ResourceConstants.RESOURCES_DIR_NAME);
-        Directory.CreateDirectory(resourcesDir);
-
-        var assetsBinPath = Path.Combine(resourcesDir, "assets.bin");
-        Directory.CreateDirectory(Path.GetDirectoryName(assetsBinPath)!);
-        await using (File.Create(assetsBinPath)) { }
-
-        var assets = _assetRegistry.GetAllAssets()
-            .Where(ShouldBuild)
-            .OrderBy(asset => asset.Meta.AssetId);
-        
-        var buildResult = _assetBuildCachePipeline.BuildAssets(assets, buildFolder, assetsBinPath, forceRebuild, onAssetBuilding);
-        LogBuildSummary(buildResult.Report);
-        
-        await SerializeAssetMap(buildResult.Map, buildFolder, "map");
-        
-        _dllManager.UnloadDll();
+        using var engineSession = string.IsNullOrWhiteSpace(buildContext.ClientDllPath)
+            ? _engineSessionFactory.CreateSharedSession()
+            : _engineSessionFactory.CreateIsolatedSession(buildContext.ClientDllPath);
+        await BuildAssetsInternal(engineSession.EngineApi, buildContext, forceRebuild, onAssetBuilding);
     }
 
     private async Task SerializeAssetMap(BuildAssetMap map, string buildDir, string outputName)
@@ -100,6 +85,29 @@ public class AssetBuilder : IAssetBuilder
     }
 
     private static bool ShouldBuild(AssetInfo assetInfo) => ShouldBuildPath(assetInfo.FullPath);
+
+    private async Task BuildAssetsInternal(
+        IEngineApi engineApi,
+        BuildExecutionContext buildContext,
+        bool forceRebuild,
+        Action<AssetBuildProgressInfo>? onAssetBuilding)
+    {
+        var resourcesDir = buildContext.ResourcesDirectoryPath;
+        Directory.CreateDirectory(resourcesDir);
+
+        var assetsBinPath = Path.Combine(resourcesDir, "assets.bin");
+        Directory.CreateDirectory(Path.GetDirectoryName(assetsBinPath)!);
+        await using (File.Create(assetsBinPath)) { }
+
+        var assets = _assetRegistry.GetAllAssets()
+            .Where(ShouldBuild)
+            .OrderBy(asset => asset.Meta.AssetId);
+
+        var buildResult = _assetBuildCachePipeline.BuildAssets(engineApi, assets, buildContext.BuildFolder, assetsBinPath, forceRebuild, onAssetBuilding);
+        LogBuildSummary(buildResult.Report);
+
+        await SerializeAssetMap(buildResult.Map, buildContext.BuildFolder, "map");
+    }
 
     private static bool ShouldBuildPath(string path)
     {

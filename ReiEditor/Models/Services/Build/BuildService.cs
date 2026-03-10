@@ -33,6 +33,7 @@ public class BuildService : IBuildService, IAsyncDisposable
     private readonly IAssetImporter _assetImporter;
     private readonly IAssetsService _assetsService;
     private readonly IAssetBuilder _assetBuilder;
+    private readonly IBuildPreparationService _buildPreparationService;
     private readonly ISourceTracker _sourceTracker;
     private readonly ISolutionBuilder _solutionBuilder;
     private readonly IClientDllManager _clientDllManager;
@@ -45,18 +46,20 @@ public class BuildService : IBuildService, IAsyncDisposable
         IResourceService resourceService,
         IAssetsService assetsService,
         IAssetBuilder assetBuilder,
+        IBuildPreparationService buildPreparationService,
         ISourceTracker sourceTracker,
         ISolutionBuilder solutionBuilder,
         IClientDllManager clientDllManager,
         ILogger<BuildService> logger,
         IEditorConsoleService editorConsoleService,
         IAssetImporter assetImporter,
-        SourceFilesUtility sourceFilesUtility, 
+        SourceFilesUtility sourceFilesUtility,
         IEditorProceduresService editorProceduresService)
     {
         _resourceService = resourceService;
         _assetsService = assetsService;
         _assetBuilder = assetBuilder;
+        _buildPreparationService = buildPreparationService;
         _sourceTracker = sourceTracker;
         _solutionBuilder = solutionBuilder;
         _clientDllManager = clientDllManager;
@@ -84,6 +87,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         bool forceSolutionRebuild = false,
         bool forceCleanSolutionBuild = false,
         bool forceAssetRebuild = false,
+        BuildExecutionContext? buildContext = null,
         bool buildSolution = true,
         bool buildAssets = true,
         Action<AssetBuildProgressInfo>? onAssetBuilding = null,
@@ -101,7 +105,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         var stopwatch = new Stopwatch();
         stopwatch.Start();
         
-        var buildFolder = Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME);
+        var executionContext = buildContext ?? BuildExecutionContext.CreateLive(_resourceService.GetRootPath());
         _discardBuild = false;
         _buildInProgress.Value = true;
         _isBuildReady.Value = false;
@@ -112,23 +116,22 @@ public class BuildService : IBuildService, IAsyncDisposable
             await _assetImporter.ReimportAll();
             cancellationToken.ThrowIfCancellationRequested();
             if (!_sourceFilesUtility.AreSourceFilesValid) throw new Exception("Cannot build project with source files validation errors");
-            
-            await _assetsService.SaveProject();
-            cancellationToken.ThrowIfCancellationRequested();
+
+            await _buildPreparationService.Prepare(cancellationToken);
 
             var shouldBuildSolution = forceSolutionRebuild
-                || !_clientDllManager.DllExists()
+                || !_clientDllManager.DllExists(executionContext.ClientDllPath)
                 || await _sourceTracker.ChangedOrNewSourcesExist();
 
             if (buildSolution && shouldBuildSolution)
             {
-                await _solutionBuilder.Build(configuration, forceCleanSolutionBuild, cancellationToken);
+                await _solutionBuilder.Build(configuration, forceCleanSolutionBuild, executionContext.SolutionOutputDirectory, cancellationToken);
             }
-            
+
             if (buildAssets)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await _assetBuilder.BuildAssets(buildFolder, forceAssetRebuild, onAssetBuilding);
+                await _assetBuilder.BuildAssets(executionContext, forceAssetRebuild, onAssetBuilding);
             }
             stopwatch.Stop();
 

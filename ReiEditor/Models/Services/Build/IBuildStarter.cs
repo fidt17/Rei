@@ -15,6 +15,7 @@ public interface IBuildStarter
         bool forceSolutionRebuild = false,
         bool forceCleanSolutionBuild = false,
         bool forceAssetRebuild = false,
+        BuildExecutionContext? buildContext = null,
         bool buildSolution = true,
         bool buildAssets = true,
         Action<AssetBuildProgressInfo>? onAssetBuilding = null,

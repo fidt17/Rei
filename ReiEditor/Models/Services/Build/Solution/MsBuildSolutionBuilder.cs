@@ -31,24 +31,23 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
     public async Task Build(
         BuildConfigurationEnum configuration,
         bool cleanBuild = false,
+        string? outputDirectory = null,
         CancellationToken cancellationToken = default)
     {
         _logger.Log($"Building solution. Configuration: {configuration}");
         
         var msBuildPath = _editorPreferencesService.GetMsBuildPath();
         if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
-		
+
         var msBuildProcess = new Process();
         msBuildProcess.StartInfo.FileName = msBuildPath;
-        if (_didCleanBuild && !cleanBuild)
-        {
-            msBuildProcess.StartInfo.Arguments = $"\"{_resourceService.GetRootPath()}\" -v:q /t:Build /p:Configuration={configuration}";
-        }
-        else
+        var buildTarget = _didCleanBuild && !cleanBuild ? "Build" : "Clean;Build";
+        if (!_didCleanBuild || cleanBuild)
         {
             _didCleanBuild = true;
-            msBuildProcess.StartInfo.Arguments = $"\"{_resourceService.GetRootPath()}\" -v:q /t:Clean;Build /p:Configuration={configuration}";
         }
+
+        msBuildProcess.StartInfo.Arguments = MsBuildArgumentsBuilder.Build(_resourceService.GetRootPath(), configuration, buildTarget, outputDirectory);
         msBuildProcess.StartInfo.CreateNoWindow = true;
         msBuildProcess.StartInfo.RedirectStandardOutput = true;
 			

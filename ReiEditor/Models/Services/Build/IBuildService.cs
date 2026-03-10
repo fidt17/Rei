@@ -15,6 +15,7 @@ public interface IBuildService
         bool forceSolutionRebuild = false,
         bool forceCleanSolutionBuild = false,
         bool forceAssetRebuild = false,
+        BuildExecutionContext? buildContext = null,
         bool buildSolution = true,
         bool buildAssets = true,
         global::System.Action<AssetBuildProgressInfo>? onAssetBuilding = null,
