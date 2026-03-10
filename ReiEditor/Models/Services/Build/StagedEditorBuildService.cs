@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Build.Assets;
@@ -50,7 +51,8 @@ public class StagedEditorBuildService : IStagedEditorBuildService
             var stagedContext = new BuildExecutionContext(
                 stagedOutput.BinDirectoryPath,
                 stagedOutput.ClientOutputDirectoryPath,
-                stagedOutput.ClientDllPath);
+                stagedOutput.ClientDllPath,
+                Path.Combine(_editorBuildOutputService.GetLiveOutput().ResourcesDirectoryPath, "Cache"));
 
             var didBuild = await _buildService.BuildProject(
                 configuration,

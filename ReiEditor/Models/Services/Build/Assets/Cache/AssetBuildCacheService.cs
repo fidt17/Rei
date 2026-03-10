@@ -7,13 +7,11 @@ using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Engine.Settings;
-using ReiEditor.Models.Resources;
 
 namespace ReiEditor.Models.Services.Build.Assets.Cache;
 
 public class AssetBuildCacheService : IAssetBuildCacheService
 {
-    private const string CACHE_FOLDER_NAME = "Cache";
     private const string MANIFEST_FILE_NAME = "asset-cache.json";
 
     private readonly ILogger<AssetBuildCacheService> _logger;
@@ -25,22 +23,16 @@ public class AssetBuildCacheService : IAssetBuildCacheService
         _engineSettingsProvider = engineSettingsProvider;
     }
 
-    public string GetCacheDirectory(string buildFolder)
+    public string GetManifestPath(string cacheDirectory)
     {
-        return Path.Combine(buildFolder, ResourceConstants.RESOURCES_DIR_NAME, CACHE_FOLDER_NAME);
+        return Path.Combine(cacheDirectory, MANIFEST_FILE_NAME);
     }
 
-    public string GetManifestPath(string buildFolder)
+    public AssetBuildCacheManifest LoadOrCreateManifest(string cacheDirectory)
     {
-        return Path.Combine(GetCacheDirectory(buildFolder), MANIFEST_FILE_NAME);
-    }
+        Directory.CreateDirectory(cacheDirectory);
 
-    public AssetBuildCacheManifest LoadOrCreateManifest(string buildFolder)
-    {
-        var cacheDir = GetCacheDirectory(buildFolder);
-        Directory.CreateDirectory(cacheDir);
-
-        var manifestPath = GetManifestPath(buildFolder);
+        var manifestPath = GetManifestPath(cacheDirectory);
         var cacheKey = GetCacheKey();
         if (!File.Exists(manifestPath))
         {
@@ -76,12 +68,11 @@ public class AssetBuildCacheService : IAssetBuildCacheService
         }
     }
 
-    public void SaveManifest(string buildFolder, AssetBuildCacheManifest manifest)
+    public void SaveManifest(string cacheDirectory, AssetBuildCacheManifest manifest)
     {
-        var cacheDir = GetCacheDirectory(buildFolder);
-        Directory.CreateDirectory(cacheDir);
+        Directory.CreateDirectory(cacheDirectory);
 
-        var manifestPath = GetManifestPath(buildFolder);
+        var manifestPath = GetManifestPath(cacheDirectory);
         var json = JsonConvert.SerializeObject(manifest, Formatting.Indented);
         File.WriteAllText(manifestPath, json, Encoding.UTF8);
     }
@@ -104,13 +95,13 @@ public class AssetBuildCacheService : IAssetBuildCacheService
         return $"{assetInfo.Meta.AssetId}_{contentHash}.cache";
     }
 
-    public string GetCacheFilePath(string buildFolder, string cacheFileName)
+    public string GetCacheFilePath(string cacheDirectory, string cacheFileName)
     {
-        return Path.Combine(GetCacheDirectory(buildFolder), cacheFileName);
+        return Path.Combine(cacheDirectory, cacheFileName);
     }
 
     public bool TryGetCacheEntry(
-        string buildFolder,
+        string cacheDirectory,
         AssetBuildCacheManifest manifest,
         AssetInfo assetInfo,
         string contentHash,
@@ -124,7 +115,7 @@ public class AssetBuildCacheService : IAssetBuildCacheService
         if (!string.Equals(existing.ContentHash, contentHash, StringComparison.Ordinal)) return false;
         if (!string.Equals(existing.AssetPath, assetInfo.FullPath, StringComparison.Ordinal)) return false;
 
-        cacheFilePath = GetCacheFilePath(buildFolder, existing.CacheFileName);
+        cacheFilePath = GetCacheFilePath(cacheDirectory, existing.CacheFileName);
         if (!File.Exists(cacheFilePath))
         {
             manifest.Entries.Remove(assetInfo.Meta.AssetId);
@@ -164,10 +155,9 @@ public class AssetBuildCacheService : IAssetBuildCacheService
         manifest.Entries[entry.AssetId] = entry;
     }
 
-    public void PruneUnusedCacheFiles(string buildFolder, AssetBuildCacheManifest manifest)
+    public void PruneUnusedCacheFiles(string cacheDirectory, AssetBuildCacheManifest manifest)
     {
-        var cacheDir = GetCacheDirectory(buildFolder);
-        if (!Directory.Exists(cacheDir)) return;
+        if (!Directory.Exists(cacheDirectory)) return;
 
         var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in manifest.Entries.Values)
@@ -178,7 +168,7 @@ public class AssetBuildCacheService : IAssetBuildCacheService
             }
         }
 
-        foreach (var file in Directory.EnumerateFiles(cacheDir, "*.cache", SearchOption.TopDirectoryOnly))
+        foreach (var file in Directory.EnumerateFiles(cacheDirectory, "*.cache", SearchOption.TopDirectoryOnly))
         {
             var name = Path.GetFileName(file);
             if (expected.Contains(name)) continue;

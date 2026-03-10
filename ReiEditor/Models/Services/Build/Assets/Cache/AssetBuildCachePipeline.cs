@@ -24,19 +24,19 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
     public AssetsBuildResult BuildAssets(
         IEngineApi engineApi,
         IEnumerable<AssetInfo> assetInfos,
-        string buildFolder,
+        string cacheDirectory,
         string assetsBinPath,
         bool forceRebuild = false,
         Action<AssetBuildProgressInfo>? onAssetBuilding = null)
     {
         var totalStopwatch = Stopwatch.StartNew();
         
-        var manifest = _cacheService.LoadOrCreateManifest(buildFolder);
+        var manifest = _cacheService.LoadOrCreateManifest(cacheDirectory);
         var report = new AssetsBuildCacheReport();
         
-        var map = BuildInternal(engineApi, assetInfos, buildFolder, assetsBinPath, manifest, report, forceRebuild, onAssetBuilding);
-        _cacheService.SaveManifest(buildFolder, manifest);
-        _cacheService.PruneUnusedCacheFiles(buildFolder, manifest);
+        var map = BuildInternal(engineApi, assetInfos, cacheDirectory, assetsBinPath, manifest, report, forceRebuild, onAssetBuilding);
+        _cacheService.SaveManifest(cacheDirectory, manifest);
+        _cacheService.PruneUnusedCacheFiles(cacheDirectory, manifest);
         
         totalStopwatch.Stop();
         report.TotalBuildMs = totalStopwatch.ElapsedMilliseconds;
@@ -47,7 +47,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
     private BuildAssetMap BuildInternal(
         IEngineApi engineApi,
         IEnumerable<AssetInfo> assetInfos,
-        string buildFolder,
+        string cacheDirectory,
         string assetsBinPath,
         AssetBuildCacheManifest manifest,
         AssetsBuildCacheReport report,
@@ -72,7 +72,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
             onAssetBuilding?.Invoke(new AssetBuildProgressInfo(i + 1, totalAssets, assetInfo.FullPath));
             total++;
             var contentHash = _cacheService.ComputeContentHash(assetInfo.FullPath);
-            if (!forceRebuild && _cacheService.TryGetCacheEntry(buildFolder, manifest, assetInfo, contentHash, out _, out var cacheFilePath))
+            if (!forceRebuild && _cacheService.TryGetCacheEntry(cacheDirectory, manifest, assetInfo, contentHash, out _, out var cacheFilePath))
             {
                 cacheHits++;
                 var bytesWritten = AppendCacheToAssets(assetsBinPath, cacheFilePath);
@@ -85,7 +85,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
             cacheMisses++;
 
             var cacheFileName = _cacheService.GetCacheFileName(assetInfo, contentHash);
-            var cacheFile = _cacheService.GetCacheFilePath(buildFolder, cacheFileName);
+            var cacheFile = _cacheService.GetCacheFilePath(cacheDirectory, cacheFileName);
             
             var buildStopwatch = Stopwatch.StartNew();
             var cacheBytes = BuildAssetToCache(engineApi, assetInfo.FullPath, cacheFile);

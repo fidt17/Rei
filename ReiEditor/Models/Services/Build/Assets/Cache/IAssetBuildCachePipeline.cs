@@ -11,7 +11,7 @@ public interface IAssetBuildCachePipeline
     AssetsBuildResult BuildAssets(
         IEngineApi engineApi,
         IEnumerable<AssetInfo> assetInfos,
-        string buildFolder,
+        string cacheDirectory,
         string assetsBinPath,
         bool forceRebuild = false,
         Action<AssetBuildProgressInfo>? onAssetBuilding = null);

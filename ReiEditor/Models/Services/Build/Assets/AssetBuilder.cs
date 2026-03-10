@@ -103,7 +103,13 @@ public class AssetBuilder : IAssetBuilder
             .Where(ShouldBuild)
             .OrderBy(asset => asset.Meta.AssetId);
 
-        var buildResult = _assetBuildCachePipeline.BuildAssets(engineApi, assets, buildContext.BuildFolder, assetsBinPath, forceRebuild, onAssetBuilding);
+        var buildResult = _assetBuildCachePipeline.BuildAssets(
+            engineApi,
+            assets,
+            buildContext.AssetCacheDirectoryPath,
+            assetsBinPath,
+            forceRebuild,
+            onAssetBuilding);
         LogBuildSummary(buildResult.Report);
 
         await SerializeAssetMap(buildResult.Map, buildContext.BuildFolder, "map");
