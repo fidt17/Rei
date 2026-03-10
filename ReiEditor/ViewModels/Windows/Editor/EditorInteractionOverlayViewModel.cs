@@ -1,4 +1,8 @@
+using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.ViewModels.Common;
@@ -7,6 +11,8 @@ namespace ReiEditor.ViewModels.Windows.Editor;
 
 public class EditorInteractionOverlayViewModel : BaseViewModel
 {
+    private const int HIDE_DELAY_MS = 150;
+
     private bool _canInteract = true;
     private bool _isVisible;
 
@@ -27,6 +33,7 @@ public class EditorInteractionOverlayViewModel : BaseViewModel
     }
 
     private readonly IEditorProceduresService _editorProceduresService;
+    private CancellationTokenSource? _hideOverlayCancellationTokenSource;
 
 #pragma warning disable CS8618
     public EditorInteractionOverlayViewModel() { }
@@ -37,23 +44,53 @@ public class EditorInteractionOverlayViewModel : BaseViewModel
         _editorProceduresService = editorProceduresService;
         _editorProceduresService.ProcedureStartedEvent += HandleProcedureChanged;
         _editorProceduresService.ProcedureFinishedEvent += HandleProcedureChanged;
-        RefreshVisibility();
+        _ = RefreshVisibility();
     }
 
     public override void Dispose()
     {
+        CancelPendingHide();
         _editorProceduresService.ProcedureStartedEvent -= HandleProcedureChanged;
         _editorProceduresService.ProcedureFinishedEvent -= HandleProcedureChanged;
     }
 
-    private void HandleProcedureChanged(IProcedure _)
+    private async void HandleProcedureChanged(IProcedure _)
     {
-        RefreshVisibility();
+        await RefreshVisibility();
     }
 
-    private void RefreshVisibility()
+    private async Task RefreshVisibility()
     {
-        IsVisible = _editorProceduresService.ActiveProcedures.Any(ShouldBlockInteraction);
+        if (_editorProceduresService.ActiveProcedures.Any(ShouldBlockInteraction))
+        {
+            CancelPendingHide();
+            await Dispatcher.UIThread.InvokeAsync(() => IsVisible = true);
+            return;
+        }
+
+        await HideOverlayWithDelay();
+    }
+
+    private async Task HideOverlayWithDelay()
+    {
+        CancelPendingHide();
+        _hideOverlayCancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(HIDE_DELAY_MS, _hideOverlayCancellationTokenSource.Token);
+            await Dispatcher.UIThread.InvokeAsync(() => IsVisible = false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void CancelPendingHide()
+    {
+        _hideOverlayCancellationTokenSource?.Cancel();
+        _hideOverlayCancellationTokenSource?.Dispose();
+        _hideOverlayCancellationTokenSource = null;
     }
 
     private static bool ShouldBlockInteraction(IProcedure procedure)
