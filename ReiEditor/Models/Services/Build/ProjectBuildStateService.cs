@@ -19,13 +19,15 @@ public class ProjectBuildStateService : IProjectBuildStateService
 {
     private sealed class ProjectBuildState
     {
-        public string FormatVersion { get; set; } = "1";
+        public string FormatVersion { get; set; } = "2";
         public string Status { get; set; } = BuildStateStatus.READY;
         public BuildConfigurationEnum Configuration { get; set; }
         public string EngineVersion { get; set; } = "";
         public string ClientDllPath { get; set; } = "";
         public List<TrackedFileState> SourceFiles { get; set; } = new();
         public List<TrackedFileState> AssetFiles { get; set; } = new();
+        public List<TrackedFileState> EngineInputFiles { get; set; } = new();
+        public List<TrackedFileState> EngineOutputFiles { get; set; } = new();
         public List<string> OutputFiles { get; set; } = new();
     }
 
@@ -42,6 +44,13 @@ public class ProjectBuildStateService : IProjectBuildStateService
         public const string IN_PROGRESS = "InProgress";
         public const string FAILED = "Failed";
     }
+
+    private static readonly string[] ENGINE_ARTIFACT_FILE_NAMES =
+    {
+        "Rei.dll",
+        "Rei.lib",
+        "assimp-vc143-mt.dll"
+    };
 
     private static readonly string[] SOURCE_PATTERNS =
     {
@@ -96,6 +105,11 @@ public class ProjectBuildStateService : IProjectBuildStateService
             return new Build.ProjectBuildState(buildSolution, buildAssets, $"Persisted build state is '{state.Status}'.");
         }
 
+        if (!string.Equals(state.FormatVersion, "2", StringComparison.Ordinal))
+        {
+            return new Build.ProjectBuildState(buildSolution, buildAssets, $"Persisted build state format '{state.FormatVersion}' is outdated.");
+        }
+
         var engineVersion = _engineSettingsProvider.GetEngineVersion();
         if (!string.Equals(state.EngineVersion, engineVersion, StringComparison.Ordinal))
         {
@@ -111,6 +125,23 @@ public class ProjectBuildStateService : IProjectBuildStateService
         if (buildSolution && !File.Exists(expectedClientDllPath))
         {
             return new Build.ProjectBuildState(true, buildAssets, "Client dll is missing.");
+        }
+
+        if (buildSolution)
+        {
+            var engineInputFiles = await GetTrackedEngineInputFiles(configuration);
+            if (!TrackedFileListsMatch(engineInputFiles, state.EngineInputFiles))
+            {
+                _logger.Log("Engine input artifacts changed. Forcing solution rebuild.");
+                return new Build.ProjectBuildState(true, buildAssets, "Engine input artifacts changed.");
+            }
+
+            var engineOutputFiles = await GetTrackedEngineOutputFiles(buildContext);
+            if (!TrackedFileListsMatch(engineOutputFiles, state.EngineOutputFiles))
+            {
+                _logger.Log("Live engine artifacts changed or are stale. Forcing solution rebuild.");
+                return new Build.ProjectBuildState(true, buildAssets, "Live engine artifacts changed or are stale.");
+            }
         }
 
         if (buildAssets)
@@ -194,10 +225,15 @@ public class ProjectBuildStateService : IProjectBuildStateService
         if (buildSolution)
         {
             state.SourceFiles = await GetTrackedSourceFiles();
+            state.EngineInputFiles = await GetTrackedEngineInputFiles(configuration);
+            state.EngineOutputFiles = await GetTrackedEngineOutputFiles(buildContext);
         }
         else
         {
-            state.SourceFiles = TryLoadStateSync(GetStateFilePath(buildContext, configuration))?.SourceFiles ?? new List<TrackedFileState>();
+            var existingState = TryLoadStateSync(GetStateFilePath(buildContext, configuration));
+            state.SourceFiles = existingState?.SourceFiles ?? new List<TrackedFileState>();
+            state.EngineInputFiles = existingState?.EngineInputFiles ?? new List<TrackedFileState>();
+            state.EngineOutputFiles = existingState?.EngineOutputFiles ?? new List<TrackedFileState>();
         }
 
         if (buildAssets)
@@ -306,6 +342,58 @@ public class ProjectBuildStateService : IProjectBuildStateService
         }
 
         return trackedFiles;
+    }
+
+    private async Task<List<TrackedFileState>> GetTrackedEngineInputFiles(BuildConfigurationEnum configuration)
+    {
+        var engineIncludeDir = GetEngineIncludeDir(configuration);
+        var trackedFiles = new List<TrackedFileState>(ENGINE_ARTIFACT_FILE_NAMES.Length);
+        foreach (var fileName in ENGINE_ARTIFACT_FILE_NAMES)
+        {
+            var filePath = Path.Combine(engineIncludeDir, fileName);
+            if (!File.Exists(filePath))
+            {
+                _logger.Log($"Tracked engine input artifact is missing: {filePath}");
+                return new List<TrackedFileState>();
+            }
+
+            trackedFiles.Add(await CreateTrackedFileState(engineIncludeDir, filePath));
+        }
+
+        return trackedFiles;
+    }
+
+    private async Task<List<TrackedFileState>> GetTrackedEngineOutputFiles(BuildExecutionContext buildContext)
+    {
+        var clientDllPath = ResolveClientDllPath(buildContext);
+        var clientOutputDir = Path.GetDirectoryName(clientDllPath);
+        if (string.IsNullOrWhiteSpace(clientOutputDir))
+        {
+            _logger.Log($"Could not resolve client output directory for '{clientDllPath}'.");
+            return new List<TrackedFileState>();
+        }
+
+        var trackedFiles = new List<TrackedFileState>(2);
+        foreach (var fileName in new[] { "Rei.dll", "assimp-vc143-mt.dll" })
+        {
+            var filePath = Path.Combine(clientOutputDir, fileName);
+            if (!File.Exists(filePath))
+            {
+                _logger.Log($"Tracked engine output artifact is missing: {filePath}");
+                return new List<TrackedFileState>();
+            }
+
+            trackedFiles.Add(await CreateTrackedFileState(clientOutputDir, filePath));
+        }
+
+        return trackedFiles;
+    }
+
+    private string GetEngineIncludeDir(BuildConfigurationEnum configuration)
+    {
+        return configuration == BuildConfigurationEnum.Release
+            ? _engineSettingsProvider.GetEngineReleaseIncludeDir()
+            : _engineSettingsProvider.GetEngineDebugIncludeDir();
     }
 
     private static bool TrackedFileListsMatch(IReadOnlyList<TrackedFileState> currentFiles, IReadOnlyList<TrackedFileState> persistedFiles)
