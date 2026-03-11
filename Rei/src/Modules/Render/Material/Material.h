@@ -1,5 +1,6 @@
 #pragma once
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
@@ -36,8 +37,9 @@ namespace rei::render
         static REI_API assets::AssetRef<Material> CreateInstanceFrom(const Material& source);
 
     private:
-        void BindTextures() const;
-        void ApplyShaderProperties() const;
+        std::unordered_set<std::string> BindTextures() const;
+        void ApplyShaderProperties(std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const;
+        void BindMissingTextureUniforms(const std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const;
         void LoadSerializableFields(const nlohmann::json& data);
 
         static bool TryReadNumber(const nlohmann::json& value, f32& outFloatValue, i32& outIntValue, bool& isInteger);

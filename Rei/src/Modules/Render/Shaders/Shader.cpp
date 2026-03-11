@@ -112,6 +112,44 @@ namespace rei::render
         glUniformMatrix4fv(GetLocation("_Model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
     }
 
+    std::vector<std::string> Shader::GetUniformNamesByType(const u32 uniformType) const
+    {
+        std::vector<std::string> uniformNames;
+        if (_id == 0) return uniformNames;
+
+        i32 uniformCount = 0;
+        glGetProgramiv(_id, GL_ACTIVE_UNIFORMS, &uniformCount);
+        for (i32 i = 0; i < uniformCount; i++)
+        {
+            constexpr i32 MAX_UNIFORM_NAME_LENGTH = 256;
+            GLchar uniformNameBuffer[MAX_UNIFORM_NAME_LENGTH];
+            GLsizei uniformNameLength = 0;
+            i32 uniformSize = 0;
+            GLenum activeUniformType = 0;
+            glGetActiveUniform(
+                _id,
+                static_cast<u32>(i),
+                MAX_UNIFORM_NAME_LENGTH,
+                &uniformNameLength,
+                &uniformSize,
+                &activeUniformType,
+                uniformNameBuffer);
+
+            if (activeUniformType != uniformType || uniformNameLength <= 0) continue;
+
+            auto uniformName = std::string(uniformNameBuffer, uniformNameLength);
+            const auto arraySuffixPosition = uniformName.find("[0]");
+            if (arraySuffixPosition != std::string::npos)
+            {
+                uniformName = uniformName.substr(0, arraySuffixPosition);
+            }
+
+            uniformNames.push_back(uniformName);
+        }
+
+        return uniformNames;
+    }
+
     Shader Shader::CreateInstanceFrom(const Shader& source)
     {
         Shader instance;

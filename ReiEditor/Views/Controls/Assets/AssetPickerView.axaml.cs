@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using System;
 using ReiEditor.Utils;
 using ReiEditor.ViewModels.Controls.Assets;
@@ -57,18 +58,20 @@ public partial class AssetPickerView : UserControl
         LabelBorder.Focus();
         if (_viewModel == null) return;
 
-        if (_viewModel.HasActiveAsset && e.ClickCount >= 2)
+        if (!string.IsNullOrWhiteSpace(_viewModel.SelectedAssetId))
         {
-            _viewModel.ActivateAsset();
+            if (_viewModel.HasActiveAsset)
+            {
+                _viewModel.ActivateAsset();
+            }
+
+            Dispatcher.UIThread.Post(() => LabelBorder.Focus(), DispatcherPriority.Input);
+
             e.Handled = true;
             return;
         }
 
-        if (!_viewModel.HasActiveAsset)
-        {
-            OpenSearchFlyout();
-        }
-
+        OpenSearchFlyout();
         e.Handled = true;
     }
 

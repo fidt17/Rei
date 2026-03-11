@@ -14,15 +14,24 @@ namespace rei::render
         assets::AssetRef<Texture> GetOrCreateWhiteFallbackTexture()
         {
             auto fallbackTexture = GetAssetManager().GetById<Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
-            if (fallbackTexture.IsLoaded()) return fallbackTexture;
+            if (fallbackTexture.IsLoaded())
+            {
+                if (fallbackTexture->GetId() == 0)
+                {
+                    fallbackTexture->PostLoad();
+                }
+
+                return fallbackTexture;
+            }
 
             LOG_WARNING("White fallback texture '{}' is missing. Creating it lazily for SpriteRenderer.", REI_WHITE_FALLBACK_TEXTURE_ID)
-            return GetAssetManager().CreateAssetWithId<Texture>(
+            auto createdTexture = GetAssetManager().CreateAssetWithId<Texture>(
                 REI_WHITE_FALLBACK_TEXTURE_ID,
                 1,
                 1,
                 GL_RGBA,
                 std::vector<u8> {255, 255, 255, 255});
+            return createdTexture;
         }
     }
 

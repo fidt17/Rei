@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Modules/Render/Color/Color.h"
+#include <vector>
 
 namespace rei::render
 {
@@ -27,6 +28,7 @@ namespace rei::render
 
         REI_API void SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const;
         REI_API void PostLoad();
+        REI_API std::vector<std::string> GetUniformNamesByType(u32 uniformType) const;
         
         static REI_API Shader CreateInstanceFrom(const Shader& source);
         

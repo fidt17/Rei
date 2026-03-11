@@ -108,7 +108,6 @@ public partial class ProjectWindowView : UserControl
                                         string.Equals(vm.FullPath, assetPath, System.StringComparison.OrdinalIgnoreCase));
             if (targetView == null) return;
 
-            ActiveItemsDropTarget.Focus();
             targetView.BringIntoView();
         }, DispatcherPriority.Background);
     }
