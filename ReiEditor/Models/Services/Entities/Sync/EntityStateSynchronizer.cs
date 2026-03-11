@@ -85,36 +85,6 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         if (_assetImporter.IsImporting.Value) return;
         
         if (_ignorePropertyChanges) return;
-
-        KeyValuePair<string, object?>? fillPropertyChangeSequence(List<SerializedProperty> hierarchy)
-        {
-            if (hierarchy.Count == 0) return null;
-
-            var sp = hierarchy[0];
-            hierarchy.RemoveAt(0);
-            
-            if (sp.Type == SerializedTypeEnum.Custom)
-            {
-                var pair = fillPropertyChangeSequence(hierarchy);
-                
-                return new KeyValuePair<string, object?>(sp.Name, new Dictionary<string, object?>
-                {
-                    { 
-                        "Value", new Dictionary<string, object?>
-                        {
-                            {pair!.Value.Key, pair.Value.Value}
-                        }
-                    }
-                });
-            }
-            else
-            {
-                return new KeyValuePair<string, object?>(sp.Name, new Dictionary<string, object?>
-                {
-                    { "Value", sp.Value }
-                });
-            }
-        }
         
         try
         {
@@ -126,14 +96,9 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             
             var behaviourData = new Dictionary<string, object?> { { "REI_BEHAVIOUR_ID", args.Component.Id } };
             request.Behaviours.Add(behaviourData);
-            
-            var propertyHierarchy = new List<SerializedProperty>();
-            args.Property.FillPropertyHierarchy(propertyHierarchy);
 
-            var changeSequence = fillPropertyChangeSequence(propertyHierarchy);
-            if (changeSequence == null) return;
-            
-            behaviourData.Add(changeSequence.Value.Key, changeSequence.Value.Value);
+            var propertyToSync = GetPropertyRootForSync(args.Property);
+            behaviourData.Add(propertyToSync.Name, SerializePropertyChange(propertyToSync));
             
             if (request.Behaviours.Count == 0) return;
 
@@ -143,6 +108,42 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         {
             _logger.LogError(e.ToString());
         }
+    }
+
+    private static SerializedProperty GetPropertyRootForSync(SerializedProperty property)
+    {
+        var current = property;
+        while (current.ParentProperty is { Type: SerializedTypeEnum.Custom } parent)
+        {
+            current = parent;
+        }
+
+        return current;
+    }
+
+    private static Dictionary<string, object?> SerializePropertyChange(SerializedProperty property)
+    {
+        if (property.Type != SerializedTypeEnum.Custom)
+        {
+            return new Dictionary<string, object?>
+            {
+                { "Value", property.Value }
+            };
+        }
+
+        var serializedChildren = new Dictionary<string, object?>();
+        if (property.Value is Dictionary<string, SerializedProperty> nestedProperties)
+        {
+            foreach (var nestedProperty in nestedProperties.Values)
+            {
+                serializedChildren[nestedProperty.Name] = SerializePropertyChange(nestedProperty);
+            }
+        }
+
+        return new Dictionary<string, object?>
+        {
+            { "Value", serializedChildren }
+        };
     }
     
     private void HandleEngineRunningValueChangedEvent(bool isRunning)

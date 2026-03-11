@@ -3,6 +3,7 @@
 
 #include "rei_behaviours/render/MeshRenderer.h"
 #include "rei_behaviours/render/RenderOutlineTag.h"
+#include "rei_behaviours/render/SpriteRenderer.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 rei::render::OutlineRenderModule::OutlineRenderModule(const std::shared_ptr<CameraModule>& cameraModule): _cameraModule(cameraModule)
@@ -40,6 +41,7 @@ void rei::render::OutlineRenderModule::RenderOutlineObjects() const
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto meshRenderers = FILTER(MeshRenderer, RenderOutlineTag);
+    const auto spriteRenderers = FILTER(SpriteRenderer, RenderOutlineTag);
 
     FOR(e, meshRenderers)
     {
@@ -48,6 +50,15 @@ void rei::render::OutlineRenderModule::RenderOutlineObjects() const
         const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
         meshRenderer.Render();
+    }
+
+    FOR(e, spriteRenderers)
+    {
+        const auto& spriteRenderer = GET(e, rei::render::SpriteRenderer);
+
+        const Shader& shader = spriteRenderer.GetRenderMaterial().GetShader();
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        spriteRenderer.Render();
     }
 }
 

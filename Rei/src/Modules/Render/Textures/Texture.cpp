@@ -49,6 +49,16 @@ u32 rei::render::Texture::GetId() const
     return _id;
 }
 
+i32 rei::render::Texture::GetWidth() const
+{
+    return _width;
+}
+
+i32 rei::render::Texture::GetHeight() const
+{
+    return _height;
+}
+
 rei::render::TextureType rei::render::Texture::GetType() const
 {
     return _type;

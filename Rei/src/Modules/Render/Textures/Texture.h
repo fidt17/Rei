@@ -21,6 +21,8 @@ namespace rei::render
         REI_API void Use(i32 idx = 0) const;
 
         REI_API u32 GetId() const;
+        REI_API i32 GetWidth() const;
+        REI_API i32 GetHeight() const;
         
         REI_API TextureType GetType() const;
         REI_API void SetType(TextureType type);

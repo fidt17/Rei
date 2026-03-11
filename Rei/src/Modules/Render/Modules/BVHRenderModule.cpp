@@ -4,6 +4,7 @@
 #include "Modules/Render/Color/Color.h"
 #include "Modules/Render/Mesh/MeshBVHNode.h"
 #include "rei_behaviours/render/MeshRenderer.h"
+#include "rei_behaviours/render/SpriteRenderer.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 rei::render::BVHRenderModule::BVHRenderModule(const std::shared_ptr<Gizmos>& gizmosModule): _gizmosModule(gizmosModule)
@@ -39,6 +40,7 @@ void rei::render::BVHRenderModule::Render() const
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto meshRenderers = FILTER(MeshRenderer);
+    const auto spriteRenderers = FILTER(SpriteRenderer);
 
     FOR(e, meshRenderers)
     {
@@ -48,6 +50,18 @@ void rei::render::BVHRenderModule::Render() const
         for (const auto& mesh : meshRenderer.GetModel()->GetMeshes())
         {
             auto& transform = meshRenderer.GetTransform();
+            RenderBVH(mesh.BVHRoot, transform.CalculateWorldModelMatrix());
+        }
+    }
+
+    FOR(e, spriteRenderers)
+    {
+        auto& spriteRenderer = GET(e, rei::render::SpriteRenderer);
+        if (!spriteRenderer.GetModel().IsLoaded()) continue;
+
+        for (const auto& mesh : spriteRenderer.GetModel()->GetMeshes())
+        {
+            auto& transform = spriteRenderer.GetTransform();
             RenderBVH(mesh.BVHRoot, transform.CalculateWorldModelMatrix());
         }
     }

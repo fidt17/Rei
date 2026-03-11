@@ -10,6 +10,7 @@
 #define REI_DEPTH_MATERIAL_ID "REI_DEPTH_MATERIAL"
 #define REI_COLOR_MATERIAL_ID "REI_COLOR_MATERIAL"
 #define REI_EDITOR_GRID_MATERIAL_ID "REI_EDITOR_GRID_MATERIAL"
+#define REI_SPRITE_MATERIAL_ID "rei_sprite.mat"
 
 // Editor
 #define REI_SHADER_EDITOR_GRID_ASSET_ID "rei_editor_grid.rshader"
@@ -28,6 +29,7 @@
 // Standard
 #define REI_SHADER_SIMPLE_LIT_ASSET_ID "rei_simple_lit.rshader"
 #define REI_SHADER_COLOR_ASSET_ID "rei_color.rshader"
+#define REI_SHADER_SPRITE_ASSET_ID "rei_sprite.rshader"
 
 // Includes
 #define REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID "rei_include_ambient_light.rshader_include"

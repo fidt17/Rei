@@ -566,6 +566,7 @@
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
+    <ClInclude Include="resources\rei_behaviours\render\SpriteRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.h" />
@@ -664,6 +665,7 @@
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\GridVertexData.h" />
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\LineVertexData.h" />
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\QuadVertexData.h" />
+    <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\QuadVertexObject.h" />
     <ClInclude Include="src\Modules\Render\Mesh\VertexObjects\RingVertexObject.h" />
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
@@ -729,6 +731,7 @@
     <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\MeshRenderer.cpp" />
+    <ClCompile Include="resources\rei_behaviours\render\SpriteRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
@@ -800,6 +803,7 @@
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\BaseVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\CubeVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\GridVertexData.cpp" />
+    <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\QuadVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Mesh\VertexObjects\RingVertexObject.cpp" />
     <ClCompile Include="src\Modules\Render\Model\Model.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
@@ -848,6 +852,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\materials\simple_lit.mat" />
+    <Content Include="resources\materials\sprite.mat" />
     <Content Include="resources\meshes\cube.obj" />
     <Content Include="resources\shaders\editor\editor_grid.rshader" />
     <Content Include="resources\shaders\includes\include_ambient_light.rshader_include" />
@@ -864,6 +869,7 @@
     <Content Include="resources\shaders\special\light_source.rshader" />
     <Content Include="resources\shaders\standard\color.rshader" />
     <Content Include="resources\shaders\standard\simple_lit.rshader" />
+    <Content Include="resources\shaders\standard\sprite.rshader" />
     <Content Include="resources\shaders\standard\unlit.rshader" />
     <Content Include="resources\textures\circle.png" />
     <Content Include="resources\textures\test_texture.png" />
