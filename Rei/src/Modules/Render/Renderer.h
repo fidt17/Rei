@@ -25,6 +25,6 @@ namespace rei::render
         ecs::RefComponent<Camera> _camera;
         std::unique_ptr<BaseRenderScenario> _renderScenario = nullptr;
 
-        void PrepareMaterials() const;
+        void PrepareAssets() const;
     };
 }

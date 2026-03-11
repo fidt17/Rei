@@ -2,6 +2,7 @@
 
 #include "Material/Material.h"
 #include "RenderScenario/DefaultRenderScenario.h"
+#include "Textures/Texture.h"
 
 namespace rei::render
 {
@@ -40,7 +41,7 @@ namespace rei::render
             REI_THROW("GLAD Initialization failed")
         }
 
-        PrepareMaterials();
+        PrepareAssets();
         _renderScenario = std::make_unique<DefaultRenderScenario>(_target);
         //_renderScenario = CREATE_RENDER_SCENARIO(_target);
         _renderScenario->Setup();
@@ -75,9 +76,16 @@ namespace rei::render
         SetTarget(nullptr);
     }
 
-    void Renderer::PrepareMaterials() const
+    void Renderer::PrepareAssets() const
     {
-        LOG_DEBUG("Preparing engine materials")
+        LOG_DEBUG("Preparing engine assets")
+
+        GetAssetManager().CreateAssetWithId<Texture>(
+            REI_WHITE_FALLBACK_TEXTURE_ID,
+            1,
+            1,
+            GL_RGBA,
+            std::vector<u8> {255, 255, 255, 255});
         
         const auto errorShader = GetAssetManager().GetById<Shader>(REI_SHADER_ERROR_ASSET_ID);
         auto errorMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_ERROR_MATERIAL_ID,errorShader);

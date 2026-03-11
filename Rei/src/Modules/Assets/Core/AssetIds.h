@@ -12,6 +12,9 @@
 #define REI_EDITOR_GRID_MATERIAL_ID "REI_EDITOR_GRID_MATERIAL"
 #define REI_SPRITE_MATERIAL_ID "rei_sprite.mat"
 
+// Texture IDs
+#define REI_WHITE_FALLBACK_TEXTURE_ID "REI_WHITE_FALLBACK_TEXTURE"
+
 // Editor
 #define REI_SHADER_EDITOR_GRID_ASSET_ID "rei_editor_grid.rshader"
 

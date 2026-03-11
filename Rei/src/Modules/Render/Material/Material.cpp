@@ -5,6 +5,22 @@
 
 namespace rei::render
 {
+    namespace
+    {
+        assets::AssetRef<Texture> GetOrCreateWhiteFallbackTexture()
+        {
+            auto fallbackTexture = GetAssetManager().GetById<Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
+            if (fallbackTexture.IsLoaded()) return fallbackTexture;
+
+            LOG_WARNING("White fallback texture '{}' is missing. Creating it lazily.", REI_WHITE_FALLBACK_TEXTURE_ID)
+            return GetAssetManager().CreateAssetWithId<Texture>(
+                REI_WHITE_FALLBACK_TEXTURE_ID,
+                1,
+                1,
+                GL_RGBA,
+                std::vector<u8> {255, 255, 255, 255});
+        }
+    }
 
     Material::Material(resources::BinaryReader& reader)
     {
@@ -159,7 +175,6 @@ namespace rei::render
     void Material::SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture)
     {
         if (name.empty()) return;
-        if (!texture.IsLoaded()) return;
 
         _properties[name] = nlohmann::json::object({
             {"Id", texture.Id}
@@ -278,11 +293,14 @@ namespace rei::render
             std::string textureAssetId;
             if (TryReadTextureAssetId(rawValue, textureAssetId))
             {
-                const auto texture = GetAssetManager().GetById<Texture>(textureAssetId);
+                auto fallbackTexture = GetOrCreateWhiteFallbackTexture();
+                auto texture = textureAssetId.empty()
+                    ? fallbackTexture
+                    : GetAssetManager().GetById<Texture>(textureAssetId);
                 if (!texture.IsLoaded())
                 {
-                    LOG_ERROR("Texture {} is not loaded", textureAssetId)
-                    continue;
+                    LOG_WARNING("Texture '{}' is not loaded. Using white fallback texture.", textureAssetId)
+                    texture = fallbackTexture;
                 }
 
                 _shader->SetInt(uniformName, textureSlot);
@@ -368,6 +386,6 @@ namespace rei::render
         if (!value.contains("Id") || !value.at("Id").is_string()) return false;
 
         outTextureAssetId = value.at("Id").get<std::string>();
-        return !outTextureAssetId.empty();
+        return true;
     }
 }

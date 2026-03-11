@@ -57,14 +57,18 @@ public partial class AssetPickerView : UserControl
         LabelBorder.Focus();
         if (_viewModel == null) return;
 
-        if (_viewModel.HasActiveAsset)
+        if (_viewModel.HasActiveAsset && e.ClickCount >= 2)
         {
             _viewModel.ActivateAsset();
             e.Handled = true;
             return;
         }
 
-        OpenSearchFlyout();
+        if (!_viewModel.HasActiveAsset)
+        {
+            OpenSearchFlyout();
+        }
+
         e.Handled = true;
     }
 

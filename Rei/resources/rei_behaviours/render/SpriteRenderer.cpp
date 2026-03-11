@@ -9,6 +9,23 @@
 
 namespace rei::render
 {
+    namespace
+    {
+        assets::AssetRef<Texture> GetOrCreateWhiteFallbackTexture()
+        {
+            auto fallbackTexture = GetAssetManager().GetById<Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
+            if (fallbackTexture.IsLoaded()) return fallbackTexture;
+
+            LOG_WARNING("White fallback texture '{}' is missing. Creating it lazily for SpriteRenderer.", REI_WHITE_FALLBACK_TEXTURE_ID)
+            return GetAssetManager().CreateAssetWithId<Texture>(
+                REI_WHITE_FALLBACK_TEXTURE_ID,
+                1,
+                1,
+                GL_RGBA,
+                std::vector<u8> {255, 255, 255, 255});
+        }
+    }
+
     void SpriteRenderer::AfterREI_SET()
     {
         SyncRuntimeState();
@@ -132,17 +149,7 @@ namespace rei::render
         if (!_materialInstance.IsLoaded()) return;
 
         _materialInstance->SetColor("_Color", _color);
-
-        if (_sprite.IsLoaded())
-        {
-            _materialInstance->SetInt("_HasSprite", 1);
-            _materialInstance->SetTexture("_MainTex", _sprite);
-        }
-        else
-        {
-            _materialInstance->SetInt("_HasSprite", 0);
-            _materialInstance->ClearProperty("_MainTex");
-        }
+        _materialInstance->SetTexture("_MainTex", ResolveRenderTexture());
     }
 
     void SpriteRenderer::RebuildQuadModel()
@@ -185,5 +192,12 @@ namespace rei::render
         const auto e = GetEntity();
         GET(e, physics::PointerCollisionListener).Collider = meshCollider;
         GET(e, editor::SelectableByPointerTag);
+    }
+
+    assets::AssetRef<Texture> SpriteRenderer::ResolveRenderTexture() const
+    {
+        if (_sprite.IsLoaded()) return _sprite;
+
+        return GetOrCreateWhiteFallbackTexture();
     }
 }

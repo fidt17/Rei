@@ -16,6 +16,14 @@ rei::render::Texture::Texture(resources::BinaryReader& reader)
     delete[] data;
 }
 
+rei::render::Texture::Texture(const i32 width, const i32 height, const i32 format, std::vector<u8> rawData)
+    : _width(width),
+      _height(height),
+      _format(format),
+      _rawData(std::move(rawData))
+{
+}
+
 void rei::render::Texture::PostLoad()
 {
     if (_id != 0)

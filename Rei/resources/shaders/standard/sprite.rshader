@@ -7,17 +7,10 @@
 
 #ifdef FRAGMENT
     uniform vec4 _Color;
-    uniform int _HasSprite;
     uniform sampler2D _MainTex;
 
     void main()
     {
-        vec4 spriteColor = _Color;
-        if (_HasSprite == 1)
-        {
-            spriteColor *= REI_Sample(_MainTex);
-        }
-
-        FragColor = spriteColor;
+        FragColor = _Color * REI_Sample(_MainTex);
     }
 #endif
