@@ -102,9 +102,7 @@ namespace rei::render
             return;
         }
 
-        _materialInstance = GetAssetManager().CreateAsset<Material>(baseMaterial->GetShaderAsset());
-        _materialInstance->SetDepth(baseMaterial->UseDepth());
-        _materialInstance->SetSortingOrder(baseMaterial->GetSortingOrder());
+        _materialInstance = Material::CreateInstanceFrom(*baseMaterial.Get());
     }
 
     void SpriteRenderer::SyncRuntimeState()

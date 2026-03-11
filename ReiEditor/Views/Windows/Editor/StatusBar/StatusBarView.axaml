@@ -13,35 +13,7 @@
     </Design.DataContext>
 
     <Border Classes="Window" VerticalAlignment="Center"
-            Classes.Visible="{Binding ShowStatusBar}"
             Margin="2,0, 2,0">
-        <Border.Styles>
-            <Style Selector="Border.Visible">
-                <Style.Animations>
-                    <Animation Duration="0:0:0.25" Easing="CircularEaseOut" FillMode="Forward">
-                        <KeyFrame Cue="0%">
-                            <Setter Property="Height" Value="0" />
-                        </KeyFrame>
-                        <KeyFrame Cue="100%">
-                            <Setter Property="Height" Value="28" />
-                        </KeyFrame>
-                    </Animation>
-                </Style.Animations>
-            </Style>
-            <Style Selector="Border:not(.Visible)">
-                <Style.Animations>
-                    <Animation Duration="0:0:0.25" Easing="CircularEaseOut" FillMode="Forward">
-                        <KeyFrame Cue="0%">
-                            <Setter Property="Height" Value="28" />
-                        </KeyFrame>
-                        <KeyFrame Cue="100%">
-                            <Setter Property="Height" Value="0" />
-                        </KeyFrame>
-                    </Animation>
-                </Style.Animations>
-            </Style>
-        </Border.Styles>
-
         <StackPanel Orientation="Horizontal"
                     Spacing="10">
             <effects:RingSpinner
@@ -52,7 +24,9 @@
                 SpinnerColor="{StaticResource White}" 
                 IsVisible="{Binding ShowStatusBar}" />
 
-            <TextBlock Classes="h5" Text="{Binding ActiveProcedureText}" />
+            <TextBlock 
+                IsVisible="{Binding ShowStatusBar}"
+                Classes="h5" Text="{Binding ActiveProcedureText}" />
         </StackPanel>
     </Border>
 </UserControl>

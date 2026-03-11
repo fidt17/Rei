@@ -37,6 +37,8 @@ namespace rei::render
 
         void RenderMeshRenderers(i32 minSortingOrder, i32 maxSortingOrder) const;
         void RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
+        void RenderSpriteRenderers(i32 minSortingOrder, i32 maxSortingOrder) const;
+        void RenderSpriteRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
 
     public:
         void SetCamera(const ecs::RefComponent<Camera>& camera) override

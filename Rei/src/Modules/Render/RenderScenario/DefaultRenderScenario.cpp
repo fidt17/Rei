@@ -179,7 +179,6 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
 {
     ECS_WORLD(rei::GetInternalWorld());
     const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
-    const auto spriteRenderers = FILTER(SpriteRenderer, ActiveTag);
 
     FOR(e, meshRenderers)
     {
@@ -196,6 +195,38 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
         meshRenderer.Render();
     }
+
+    RenderSpriteRenderers(minSortingOrder, maxSortingOrder);
+}
+
+void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const
+{
+    ECS_WORLD(rei::GetInternalWorld());
+    const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
+
+    FOR(e, meshRenderers)
+    {
+        auto& meshRenderer = GET(e, rei::render::MeshRenderer);
+        if (!meshRenderer.IsEnabled()) continue;
+
+        const auto originalMaterial = meshRenderer.GetMaterial();
+        meshRenderer.SetMaterial(material);
+
+        const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
+        _lighting->SetLightValues(shader);
+        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        meshRenderer.Render();
+
+        meshRenderer.SetMaterial(originalMaterial);
+    }
+    
+    RenderSpriteRenderersWithOverrideMaterial(material);
+}
+
+void rei::render::DefaultRenderScenario::RenderSpriteRenderers(const i32 minSortingOrder, const i32 maxSortingOrder) const
+{
+    ECS_WORLD(rei::GetInternalWorld());
+    const auto spriteRenderers = FILTER(SpriteRenderer, ActiveTag);
 
     FOR(e, spriteRenderers)
     {
@@ -214,27 +245,10 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
     }
 }
 
-void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const
+void rei::render::DefaultRenderScenario::RenderSpriteRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const
 {
     ECS_WORLD(rei::GetInternalWorld());
-    const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
     const auto spriteRenderers = FILTER(SpriteRenderer, ActiveTag);
-
-    FOR(e, meshRenderers)
-    {
-        auto& meshRenderer = GET(e, rei::render::MeshRenderer);
-        if (!meshRenderer.IsEnabled()) continue;
-
-        const auto originalMaterial = meshRenderer.GetMaterial();
-        meshRenderer.SetMaterial(material);
-
-        const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
-        _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
-        meshRenderer.Render();
-
-        meshRenderer.SetMaterial(originalMaterial);
-    }
 
     FOR(e, spriteRenderers)
     {
