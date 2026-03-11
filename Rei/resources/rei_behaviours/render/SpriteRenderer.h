@@ -37,7 +37,6 @@ namespace rei::render
         REI_API const Material& GetRenderMaterial() const;
 
     private:
-        assets::AssetRef<Texture> ResolveRenderTexture() const;
         void EnsureMaterialInstance();
         void SyncRuntimeState();
         void SyncMaterialProperties();

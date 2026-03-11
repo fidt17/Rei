@@ -5,32 +5,6 @@
 
 namespace rei::render
 {
-    namespace
-    {
-        assets::AssetRef<Texture> GetOrCreateWhiteFallbackTexture()
-        {
-            auto fallbackTexture = GetAssetManager().GetById<Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
-            if (fallbackTexture.IsLoaded())
-            {
-                if (fallbackTexture->GetId() == 0)
-                {
-                    fallbackTexture->PostLoad();
-                }
-
-                return fallbackTexture;
-            }
-
-            LOG_WARNING("White fallback texture '{}' is missing. Creating it lazily.", REI_WHITE_FALLBACK_TEXTURE_ID)
-            auto createdTexture = GetAssetManager().CreateAssetWithId<Texture>(
-                REI_WHITE_FALLBACK_TEXTURE_ID,
-                1,
-                1,
-                GL_RGBA,
-                std::vector<u8> {255, 255, 255, 255});
-            return createdTexture;
-        }
-    }
-
     Material::Material(resources::BinaryReader& reader)
     {
         try
@@ -111,10 +85,7 @@ namespace rei::render
         }
 
         _shader->Use();
-        auto boundTextureUniforms = BindTextures();
-        auto textureSlot = static_cast<i32>(_textures.size());
-        ApplyShaderProperties(boundTextureUniforms, textureSlot);
-        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+        SyncShaderBindings();
 
         if (UseDepth())
         {
@@ -160,20 +131,14 @@ namespace rei::render
     {
         if (name.empty()) return;
         _properties[name] = value;
-        auto boundTextureUniforms = BindTextures();
-        auto textureSlot = static_cast<i32>(_textures.size());
-        ApplyShaderProperties(boundTextureUniforms, textureSlot);
-        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+        SyncShaderBindings();
     }
 
     void Material::SetFloat(const std::string& name, const f32 value)
     {
         if (name.empty()) return;
         _properties[name] = value;
-        auto boundTextureUniforms = BindTextures();
-        auto textureSlot = static_cast<i32>(_textures.size());
-        ApplyShaderProperties(boundTextureUniforms, textureSlot);
-        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+        SyncShaderBindings();
     }
 
     void Material::SetColor(const std::string& name, const Color& value)
@@ -186,10 +151,7 @@ namespace rei::render
             {"b", value.b},
             {"a", value.a}
         });
-        auto boundTextureUniforms = BindTextures();
-        auto textureSlot = static_cast<i32>(_textures.size());
-        ApplyShaderProperties(boundTextureUniforms, textureSlot);
-        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+        SyncShaderBindings();
     }
 
     void Material::SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture)
@@ -199,20 +161,14 @@ namespace rei::render
         _properties[name] = nlohmann::json::object({
             {"Id", texture.Id}
         });
-        auto boundTextureUniforms = BindTextures();
-        auto textureSlot = static_cast<i32>(_textures.size());
-        ApplyShaderProperties(boundTextureUniforms, textureSlot);
-        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+        SyncShaderBindings();
     }
 
     void Material::ClearProperty(const std::string& name)
     {
         if (name.empty()) return;
         _properties.erase(name);
-        auto boundTextureUniforms = BindTextures();
-        auto textureSlot = static_cast<i32>(_textures.size());
-        ApplyShaderProperties(boundTextureUniforms, textureSlot);
-        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+        SyncShaderBindings();
     }
 
     assets::AssetRef<Material> Material::CreateInstanceFrom(const Material& source)
@@ -224,6 +180,25 @@ namespace rei::render
         material->_properties = source._properties;
 
         return material;
+    }
+
+    void Material::SyncShaderBindings() const
+    {
+        if (!_shader.IsLoaded()) return;
+
+        auto boundTextureUniforms = BindTextures();
+        auto textureSlot = static_cast<i32>(_textures.size());
+        ApplyShaderProperties(boundTextureUniforms, textureSlot);
+        BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
+    }
+
+    assets::AssetRef<Texture> Material::GetWhiteFallbackTexture() const
+    {
+        auto fallbackTexture = GetAssetManager().GetById<Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
+        if (fallbackTexture.IsLoaded()) return fallbackTexture;
+
+        LOG_ERROR("White fallback texture '{}' is not loaded.", REI_WHITE_FALLBACK_TEXTURE_ID)
+        return {};
     }
 
     std::unordered_set<std::string> Material::BindTextures() const
@@ -323,7 +298,7 @@ namespace rei::render
             std::string textureAssetId;
             if (TryReadTextureAssetId(rawValue, textureAssetId))
             {
-                auto fallbackTexture = GetOrCreateWhiteFallbackTexture();
+                auto fallbackTexture = GetWhiteFallbackTexture();
                 auto texture = textureAssetId.empty()
                     ? fallbackTexture
                     : GetAssetManager().GetById<Texture>(textureAssetId);
@@ -332,6 +307,7 @@ namespace rei::render
                     LOG_WARNING("Texture '{}' is not loaded. Using white fallback texture.", textureAssetId)
                     texture = fallbackTexture;
                 }
+                if (!texture.IsLoaded()) continue;
 
                 _shader->SetInt(uniformName, textureSlot);
                 texture->Use(textureSlot);
@@ -345,7 +321,8 @@ namespace rei::render
     {
         if (!_shader.IsLoaded()) return;
 
-        const auto fallbackTexture = GetOrCreateWhiteFallbackTexture();
+        const auto fallbackTexture = GetWhiteFallbackTexture();
+        if (!fallbackTexture.IsLoaded()) return;
         const auto samplerUniformNames = _shader->GetUniformNamesByType(GL_SAMPLER_2D);
         for (const auto& uniformName : samplerUniformNames)
         {

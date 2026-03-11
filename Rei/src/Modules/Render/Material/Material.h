@@ -37,6 +37,8 @@ namespace rei::render
         static REI_API assets::AssetRef<Material> CreateInstanceFrom(const Material& source);
 
     private:
+        void SyncShaderBindings() const;
+        assets::AssetRef<Texture> GetWhiteFallbackTexture() const;
         std::unordered_set<std::string> BindTextures() const;
         void ApplyShaderProperties(std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const;
         void BindMissingTextureUniforms(const std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const;
