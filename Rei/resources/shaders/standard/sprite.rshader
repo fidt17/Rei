@@ -11,6 +11,12 @@
 
     void main()
     {
-        FragColor = _Color * REI_Sample(_MainTex);
+        vec4 color = _Color * REI_Sample(_MainTex);
+        if (color.a <= 0.001)
+        {
+            discard;
+        }
+
+        FragColor = color;
     }
 #endif

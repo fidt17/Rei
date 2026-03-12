@@ -31,59 +31,79 @@ REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId)
 
 REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const i32 bufferSize)
 {
-    ECS_WORLD(rei::GetInternalWorld());
-
-    const auto& entityInfoFilter = FILTER(EntityInfo);
-
-    nlohmann::json data;
-    data["Entities"] = nlohmann::json::array();
-
-    FOR(e, entityInfoFilter)
+    std::string response;
+    auto task = rei::GetEngine().ExecuteOnMainThread([&response]
     {
-        const auto& info = GET(e, EntityInfo);
+        ECS_WORLD(rei::GetInternalWorld());
 
-        data["Entities"].push_back({
-            {"Id", info.Id},
-            {"IsSelected", HAS(e, rei::editor::SelectedTag)}
-        });
-    }
+        const auto& entityInfoFilter = FILTER(EntityInfo);
 
-    strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);
+        nlohmann::json data;
+        data["Entities"] = nlohmann::json::array();
+
+        FOR(e, entityInfoFilter)
+        {
+            const auto& info = GET(e, EntityInfo);
+
+            data["Entities"].push_back({
+                {"Id", info.Id},
+                {"IsSelected", HAS(e, rei::editor::SelectedTag)}
+            });
+        }
+
+        response = data.dump();
+    });
+
+    task->WaitForCompletion();
+    strncpy_s(outputBuffer, bufferSize, response.c_str(), _TRUNCATE);
 }
 
 REI_EXTERN_API inline void GetEntityData(const i32 sceneEntityId, char* outputBuffer, const i32 bufferSize)
 {
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
-    if (IS_DEAD(e)) return;
-
-    nlohmann::json data;
-    data["EntityId"] = e.Id;
-    data["EntityGeneration"] = e.Generation;
-
-    const auto& entityInfo = GET(e, EntityInfo);
-    data["SceneId"] = entityInfo.Id;
-    data["Name"] = entityInfo.Name;
-
-    const auto& behaviourCollection = GET(e, BehaviourCollection);
-    data["Behaviours"] = nlohmann::json::array();
-
-    for (const auto behaviour : behaviourCollection.Behaviours)
+    std::string response;
+    auto task = rei::GetEngine().ExecuteOnMainThread([sceneEntityId, &response]
     {
-        const auto& behaviourData = rei::GetEntityManager().GetBehaviourRegistry().GetBehaviourData(e, behaviour);
-        data["Behaviours"].push_back(behaviourData);
-    }
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+        if (IS_DEAD(e)) return;
 
-    strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);
+        nlohmann::json data;
+        data["EntityId"] = e.Id;
+        data["EntityGeneration"] = e.Generation;
+
+        const auto& entityInfo = GET(e, EntityInfo);
+        data["SceneId"] = entityInfo.Id;
+        data["Name"] = entityInfo.Name;
+
+        const auto& behaviourCollection = GET(e, BehaviourCollection);
+        data["Behaviours"] = nlohmann::json::array();
+
+        for (const auto behaviour : behaviourCollection.Behaviours)
+        {
+            const auto& behaviourData = rei::GetEntityManager().GetBehaviourRegistry().GetBehaviourData(e, behaviour);
+            data["Behaviours"].push_back(behaviourData);
+        }
+
+        response = data.dump();
+    });
+
+    task->WaitForCompletion();
+    strncpy_s(outputBuffer, bufferSize, response.c_str(), _TRUNCATE);
 }
 
 REI_EXTERN_API inline void RenameEntity(const i32 sceneEntityId, const char* newName)
 {
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
-    if (IS_DEAD(e)) return;
+    const std::string newNameStr = newName != nullptr ? newName : "";
+    auto task = rei::GetEngine().ExecuteOnMainThread([sceneEntityId, newNameStr]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+        if (IS_DEAD(e)) return;
 
-    GET(e, EntityInfo).Name = newName;
+        GET(e, EntityInfo).Name = newNameStr;
+    });
+
+    task->WaitForCompletion();
 }
 
 REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 parentSceneEntityId, const i32 order)
