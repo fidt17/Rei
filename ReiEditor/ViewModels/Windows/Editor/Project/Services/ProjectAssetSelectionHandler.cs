@@ -113,7 +113,7 @@ public class ProjectAssetSelectionHandler
 
     public IReadOnlyList<ProjectAssetCommandTarget> ResolveCommandTargets(ProjectAssetItemViewModel sourceItem, IReadOnlyList<ProjectAssetItemViewModel> activeItems)
     {
-        var selectedPaths = IsAssetSelected(sourceItem)
+        IReadOnlyCollection<string> selectedPaths = IsAssetSelected(sourceItem)
             ? _selectedAssetPaths
             : new HashSet<string>(new[] { sourceItem.FullPath }, StringComparer.OrdinalIgnoreCase);
         return ResolveCommandTargets(selectedPaths);
@@ -258,10 +258,15 @@ public class ProjectAssetSelectionHandler
     {
         if (_selectionService == null) return;
 
+        var selectedItems = activeItems
+            .Where(asset => _selectedAssetPaths.Contains(asset.FullPath))
+            .Cast<ISelectable>()
+            .ToList();
+
         var primaryItem = GetPrimarySelectedAssetItem(activeItems);
-        if (primaryItem == null || primaryItem.IsDirectory)
+        if (selectedItems.Count == 0 || primaryItem == null || primaryItem.IsDirectory)
         {
-            if (_selectionService.ActiveSelection.Value is IAssetSelectable)
+            if (_selectionService.SelectedItems.OfType<IAssetSelectable>().Any())
             {
                 _selectionService.ResetSelection(sendToEngine: false);
             }
@@ -269,7 +274,7 @@ public class ProjectAssetSelectionHandler
             return;
         }
 
-        _selectionService.Select(primaryItem);
+        _selectionService.SetSelection(selectedItems, primaryItem);
     }
 
     private void SetPrimarySelectedAsset(ProjectAssetItemViewModel item, IReadOnlyList<ProjectAssetItemViewModel> activeItems)
