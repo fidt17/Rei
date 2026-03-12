@@ -17,8 +17,7 @@
             Classes.IsHighlighted="{Binding Highlighted.Value}"
             Cursor="Hand"
             Focusable="True"
-            PointerPressed="RootBorder_OnPointerPressed"
-            Tapped="RootBorder_OnTapped"
+            DragDrop.AllowDrop="{Binding IsDirectory}"
             DoubleTapped="RootBorder_OnDoubleTapped"
             KeyDown="RootBorder_OnKeyDown">
         <FlyoutBase.AttachedFlyout>

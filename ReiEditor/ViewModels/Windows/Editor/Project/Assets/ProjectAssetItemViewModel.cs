@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Input;
 using Avalonia.Media;
 using ReactiveUI;
 using ReiEditor.Models.EditorApp.Selection;
@@ -17,7 +18,6 @@ namespace ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
 public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
 {
-    public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; }
     public RelayCommand ConfirmRenameCommand { get; }
     public ICommand DeleteCommand { get; }
@@ -42,7 +42,8 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
     public ContextMenuViewModel ContextMenu { get; } = new();
     public ContextMenuViewModel CombinedContextMenu { get; } = new();
 
-    private readonly ISelectionService? _selectionService;
+    private readonly Action<ProjectAssetItemViewModel, KeyModifiers>? _selectAction;
+    private readonly Action<ProjectAssetItemViewModel>? _contextMenuSelectAction;
     private CancellationTokenSource? _highlightCTS;
 
 #pragma warning disable CS8618
@@ -56,8 +57,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         string assetId,
         ProjectAssetItemActions actions,
         ContextMenuViewModel activeFolderContextMenu,
-        IFileExplorerProvider fileExplorerProvider,
-        ISelectionService selectionService)
+        IFileExplorerProvider fileExplorerProvider)
     {
         Name = new ObservableField<string>(name);
         FullPath = fullPath;
@@ -66,9 +66,9 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         IsDirectory = assetType == ProjectAssetType.Directory;
         IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsAssetSupportedInMonitor(fullPath, IsDirectory);
         Icon = ProjectAssetIconProvider.GetAssetIcon(assetType);
-        _selectionService = selectionService;
-        
-        SelectCommand = ReactiveCommand.Create(Select);
+        _selectAction = actions.SelectAction;
+        _contextMenuSelectAction = actions.ContextMenuSelectAction;
+
         StartRenameCommand = new RelayCommand(StartRename);
         ConfirmRenameCommand = new RelayCommand(() => ConfirmRename(actions.RenameAction));
         DeleteCommand = ReactiveCommand.Create(() => actions.DeleteAction(this));
@@ -78,44 +78,20 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
 
         SetupContextMenu(fileExplorerProvider);
         SetupCombinedContextMenu(activeFolderContextMenu);
-        
-        _selectionService.RegisterSelectable(this);
-        _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
-        HandleActiveSelectionChangedEvent(_selectionService.ActiveSelection.Value);
     }
 
     public override void Dispose()
     {
         base.Dispose();
         CancelHighlightPulse();
-
-        if (_selectionService == null) return;
-
-        _selectionService.UnregisterSelectable(this);
-        _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
     }
 
-    public void Select()
-    {
-        if (IsDirectory)
-        {
-            Selected.Value = true;
-            return;
-        }
+    public void RequestSelection(KeyModifiers modifiers) => _selectAction?.Invoke(this, modifiers);
+    public void RequestContextMenuSelection() => _contextMenuSelectAction?.Invoke(this);
 
-        _selectionService?.Select(this);
-    }
-
-    public void Deselect()
-    {
-        if (IsDirectory)
-        {
-            Selected.Value = false;
-            return;
-        }
-
-        _selectionService?.Deselect(this, sendToEngine: false);
-    }
+    public void Select() => Selected.Value = true;
+    public void Deselect() => Selected.Value = false;
+    public void SetSelected(bool selected) => Selected.Value = selected;
 
     public void Highlight()
     {
@@ -198,10 +174,6 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         }
     }
 
-    private void HandleActiveSelectionChangedEvent(ISelectable? selection)
-    {
-        Selected.Value = selection == this;
-    }
 }
 
 

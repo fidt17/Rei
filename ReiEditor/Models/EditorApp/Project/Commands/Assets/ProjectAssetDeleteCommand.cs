@@ -19,7 +19,7 @@ public class ProjectAssetDeleteCommand : IProjectAssetDeleteCommand
 
     public async Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset)
     {
-        _logger.Log($"Execute. Path: {asset.FullPath}. IsDirectory: {asset.IsDirectory}");
+        _logger.Log($"Deleting {asset.FullPath}");
         
         await _assetOperationsService.DeleteAsync(asset.FullPath, asset.IsDirectory);
         

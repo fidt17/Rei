@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using ReiEditor.Utils;
+using ReiEditor.ViewModels.Windows.Editor.Project;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
 namespace ReiEditor.Views.Windows.Editor.Project.Assets;
@@ -17,6 +21,9 @@ public partial class ProjectAssetItemView : UserControl
     public ProjectAssetItemView()
     {
         InitializeComponent();
+        RootBorder.AddHandler(InputElement.PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        RootBorder.AddHandler(DragDrop.DragEnterEvent, RootBorder_OnDragEnter);
+        RootBorder.AddHandler(DragDrop.DropEvent, RootBorder_OnDrop);
         DataContextChanged += HandleDataContextChangedEvent;
         ConfigureDragAndDrop();
     }
@@ -63,19 +70,11 @@ public partial class ProjectAssetItemView : UserControl
         if (_vm == null) return;
         if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
         
-        _vm.SelectCommand.Execute(null);
+        _vm.RequestContextMenuSelection();
         RootBorder.Focus();
 
         FlyoutBase.ShowAttachedFlyout(RootBorder);
         e.Handled = true;
-    }
-
-    private void RootBorder_OnTapped(object? sender, TappedEventArgs e)
-    {
-        if (_vm == null) return;
-
-        _vm.SelectCommand.Execute(null);
-        RootBorder.Focus();
     }
 
     private void RootBorder_OnKeyDown(object? sender, KeyEventArgs e)
@@ -147,7 +146,6 @@ public partial class ProjectAssetItemView : UserControl
         target.PointerPressed += (_, e) =>
         {
             if (_vm == null) return;
-            if (_vm.IsDirectory) return;
             if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
 
             pointerDown = true;
@@ -167,12 +165,21 @@ public partial class ProjectAssetItemView : UserControl
             if (!movedEnough) return;
 
             dragStarted = true;
+            var dragPaths = GetProjectWindowViewModel()?.GetDraggedAssetPaths(_vm) ?? new[] { _vm.FullPath };
+            if (dragPaths.Count == 0)
+            {
+                pointerDown = false;
+                dragStarted = false;
+                return;
+            }
+
             var dragData = new DataObject();
-            dragData.Set(DragDropDataKeys.AssetPath, _vm.FullPath);
+            dragData.Set(DragDropDataKeys.AssetPaths, dragPaths.ToArray());
+            dragData.Set(DragDropDataKeys.AssetPath, dragPaths[0]);
 
             try
             {
-                await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Copy);
+                await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move | DragDropEffects.Copy);
             }
             catch (COMException)
             {
@@ -192,8 +199,57 @@ public partial class ProjectAssetItemView : UserControl
 
             if (!shouldSelect) return;
 
-            vm!.SelectCommand.Execute(null);
+            vm!.RequestSelection(e.KeyModifiers);
             RootBorder.Focus();
         };
+    }
+
+    private void RootBorder_OnDragEnter(object? sender, DragEventArgs e)
+    {
+        if (_vm == null || !_vm.IsDirectory)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        var paths = GetDraggedAssetPaths(e);
+        if (paths.Count == 0 || paths.Any(path => string.Equals(path, _vm.FullPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        e.DragEffects = DragDropEffects.Move;
+        e.Handled = true;
+    }
+
+    private async void RootBorder_OnDrop(object? sender, DragEventArgs e)
+    {
+        if (_vm == null || !_vm.IsDirectory) return;
+
+        var paths = GetDraggedAssetPaths(e);
+        if (paths.Count == 0) return;
+
+        var projectWindowViewModel = GetProjectWindowViewModel();
+        if (projectWindowViewModel == null) return;
+
+        await projectWindowViewModel.MoveAssetsToDirectoryAsync(paths, _vm.FullPath);
+        e.Handled = true;
+    }
+
+    private ProjectWindowViewModel? GetProjectWindowViewModel()
+    {
+        return this.FindAncestorOfType<ProjectWindowView>()?.DataContext as ProjectWindowViewModel;
+    }
+
+    private static IReadOnlyList<string> GetDraggedAssetPaths(DragEventArgs e)
+    {
+        if (!e.Data.Contains(DragDropDataKeys.AssetPaths)) return Array.Empty<string>();
+        if (e.Data.Get(DragDropDataKeys.AssetPaths) is not IEnumerable<string> assetPaths) return Array.Empty<string>();
+
+        return assetPaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

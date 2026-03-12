@@ -1,22 +1,19 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using IOPath = System.IO.Path;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using MsBox.Avalonia;
-using MsBox.Avalonia.Enums;
-using ReiEditor.Models.EditorApp.Project.Commands.Assets;
-using ReiEditor.Models.EditorApp.Selection;
-using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.EditorApp.AssetCreation.Shader;
-using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Refresh;
+using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.EditorApp.SettingsWindow;
+using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.FileSystem;
@@ -27,6 +24,7 @@ using ReiEditor.ViewModels.Utils;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.ViewModels.Windows.Editor.Project.Directories;
 using ReiEditor.ViewModels.Windows.Editor.Project.Path;
+using ReiEditor.ViewModels.Windows.Editor.Project.Services;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Project;
 
@@ -34,43 +32,52 @@ public class ProjectWindowViewModel : BaseViewModel
 {
     public event Action<string>? ScrollToAssetRequested;
 
-    public ObservableCollection<ProjectDirectoryNodeViewModel> RootDirectories { get; } = new();
+    public ObservableCollection<ProjectDirectoryNodeViewModel> RootDirectories => _directoryBrowser.RootDirectories;
     public ObservableCollection<ProjectAssetItemViewModel> ActiveItems { get; } = new();
-    public ObservableCollection<ProjectPathSegmentViewModel> PathSegments { get; } = new();
-    public ObservableField<string> ActiveDirectoryPath { get; } = new("");
+    public ObservableCollection<ProjectPathSegmentViewModel> PathSegments => _directoryBrowser.PathSegments;
+    public ObservableField<string> ActiveDirectoryPath => _directoryBrowser.ActiveDirectoryPath;
     public SearchFieldViewModel SearchField { get; } = new();
 
     public ContextMenuViewModel ActiveFolderContextMenu { get; } = new();
 
-    private readonly List<ProjectDirectoryNodeViewModel> _allNodes = new();
-    private readonly Dictionary<string, ProjectDirectoryNodeViewModel> _nodeByPath = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<ProjectAssetItemViewModel> _allAssets = new();
-    private ProjectDirectoryNodeViewModel? _selectedDirectory;
     private readonly IResourceService? _resourceService;
-    private readonly IStorageProvider? _storageProvider;
     private readonly IAssetRegistry? _assetRegistry;
-    private readonly IAssetOperationsService? _assetOperationsService;
-    private readonly IProjectAssetDeleteCommand? _projectAssetDeleteCommand;
-    private readonly IProjectAssetDuplicateCommand? _projectAssetDuplicateCommand;
-    private readonly IProjectAssetMoveCommand? _projectAssetMoveCommand;
-    private readonly IProjectAssetRenameCommand? _projectAssetRenameCommand;
-    private readonly IFileExplorerProvider? _fileExplorerProvider;
-    private readonly IAssetSearchService? _assetSearchService;
-    private readonly IEditorRefreshService? _editorRefreshService;
-    private readonly ITextEditorFileOpener? _textEditorFileOpener;
-    private readonly ISettingsWindowService? _settingsWindowService;
     private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
     private readonly IMaterialCreationWindowService? _materialCreationWindowService;
     private readonly IShaderCreationWindowService? _shaderCreationWindowService;
-    private readonly ISelectionService? _selectionService;
+    private readonly IEditorRefreshService? _editorRefreshService;
     private readonly IProjectAssetFocusService? _projectAssetFocusService;
+    private readonly IFileExplorerProvider? _fileExplorerProvider;
+
+    private readonly ProjectDirectoryBrowser _directoryBrowser;
+    private readonly ProjectAssetItemBuilder _assetItemBuilder;
+    private readonly ProjectAssetSelectionHandler _assetSelectionHandler;
+    private readonly ProjectAssetOperationsHandler _assetOperationsHandler;
+    private readonly ProjectWindowActionsController _actionsController;
+
     private ProjectAssetItemViewModel? _highlightedAsset;
-    private string _projectRootPath = "";
     private string _pendingSearchSelectionPath = "";
 
 #pragma warning disable CS8618
     public ProjectWindowViewModel()
     {
+        _directoryBrowser = new ProjectDirectoryBrowser(
+            () => SearchField.HasQuery.Value,
+            SearchField.ResetSearch,
+            HandleDirectorySelected);
+        _assetItemBuilder = new ProjectAssetItemBuilder(null, null, null);
+        _assetSelectionHandler = new ProjectAssetSelectionHandler(null, TrackSearchSelection);
+        _assetOperationsHandler = new ProjectAssetOperationsHandler(null, null, null, null, null, null);
+        _actionsController = new ProjectWindowActionsController(
+            _directoryBrowser,
+            _assetSelectionHandler,
+            _assetOperationsHandler,
+            null,
+            null,
+            () => ActiveItems,
+            ApplyCommandResult,
+            ApplyBatchCommandResult);
+
         SetupContextMenus();
     }
 #pragma warning restore CS8618
@@ -96,26 +103,22 @@ public class ProjectWindowViewModel : BaseViewModel
         IProjectAssetFocusService projectAssetFocusService)
     {
         _resourceService = resourceService;
-        _storageProvider = storageProvider;
         _assetRegistry = assetRegistry;
-        _assetOperationsService = assetOperationsService;
-        _projectAssetDeleteCommand = projectAssetDeleteCommand;
-        _projectAssetDuplicateCommand = projectAssetDuplicateCommand;
-        _projectAssetMoveCommand = projectAssetMoveCommand;
-        _projectAssetRenameCommand = projectAssetRenameCommand;
-        _fileExplorerProvider = fileExplorerProvider;
-        _assetSearchService = assetSearchService;
-        _editorRefreshService = editorRefreshService;
-        _textEditorFileOpener = textEditorFileOpener;
-        _settingsWindowService = settingsWindowService;
         _behaviourCreationWindowService = behaviourCreationWindowService;
         _materialCreationWindowService = materialCreationWindowService;
         _shaderCreationWindowService = shaderCreationWindowService;
-        _selectionService = selectionService;
+        _editorRefreshService = editorRefreshService;
         _projectAssetFocusService = projectAssetFocusService;
-        
+        _fileExplorerProvider = fileExplorerProvider;
+
+        _directoryBrowser = new ProjectDirectoryBrowser(() => SearchField.HasQuery.Value, SearchField.ResetSearch, HandleDirectorySelected);
+        _assetItemBuilder = new ProjectAssetItemBuilder(assetRegistry, assetSearchService, fileExplorerProvider);
+        _assetSelectionHandler = new ProjectAssetSelectionHandler(selectionService, TrackSearchSelection);
+        _assetOperationsHandler = new ProjectAssetOperationsHandler(storageProvider, assetOperationsService, projectAssetDeleteCommand, projectAssetDuplicateCommand, projectAssetMoveCommand, projectAssetRenameCommand);
+        _actionsController = new ProjectWindowActionsController(_directoryBrowser, _assetSelectionHandler, _assetOperationsHandler, textEditorFileOpener, settingsWindowService, () => ActiveItems, ApplyCommandResult, ApplyBatchCommandResult);
+
         SetupContextMenus();
-        BuildDirectoryTree(resourceService);
+        _directoryBrowser.BuildTree(resourceService);
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
         _editorRefreshService.RefreshedEvent += HandleEditorRefreshedEvent;
         _projectAssetFocusService.FocusAssetRequested += HandleFocusAssetRequestedEvent;
@@ -137,7 +140,7 @@ public class ProjectWindowViewModel : BaseViewModel
             _projectAssetFocusService.FocusAssetPathRequested -= HandleFocusAssetPathRequestedEvent;
         }
 
-        ResetDirectoryTree();
+        ResetProjectView();
     }
 
     private void HandleEditorRefreshedEvent()
@@ -164,7 +167,6 @@ public class ProjectWindowViewModel : BaseViewModel
         Dispatcher.UIThread.InvokeAsync(() => FocusAssetByPath(assetPath));
     }
 
-
     private void SetupContextMenus()
     {
         var createMenu = new ContextMenuViewModel();
@@ -180,344 +182,79 @@ public class ProjectWindowViewModel : BaseViewModel
     private void OpenActiveFolderInExplorer()
     {
         if (_fileExplorerProvider == null) return;
-        
+
         var activePath = ActiveDirectoryPath.Value;
         if (string.IsNullOrWhiteSpace(activePath)) return;
-        
+
         _fileExplorerProvider.OpenDirectory(activePath);
     }
 
-    private void BuildDirectoryTree(IResourceService resourceService, string? preferredPath = null)
+    private void HandleDirectorySelected(string directoryPath)
     {
-        ResetDirectoryTree();
-
-        var rootPath = resourceService.GetProjectPath();
-        _projectRootPath = rootPath;
-        if (!Directory.Exists(rootPath)) return;
-
-        var rootNode = CreateDirectoryNode(rootPath, isRoot: true);
-        RootDirectories.Add(rootNode);
-
-        if (!string.IsNullOrEmpty(preferredPath) && _nodeByPath.TryGetValue(preferredPath, out var preferredNode))
-        {
-            SelectDirectory(preferredNode);
-        }
-        else
-        {
-            SelectDirectory(rootNode);
-        }
-    }
-
-    private ProjectDirectoryNodeViewModel CreateDirectoryNode(string fullPath, bool isRoot, ProjectDirectoryNodeViewModel? parent = null)
-    {
-        var name = isRoot ? "Project" : IOPath.GetFileName(fullPath);
-        var node = new ProjectDirectoryNodeViewModel(name, fullPath, parent);
-        if (isRoot)
-        {
-            node.Expanded.Value = true;
-        }
-
-        RegisterNode(node);
-
-        foreach (var directory in Directory.EnumerateDirectories(fullPath).OrderBy(IOPath.GetFileName))
-        {
-            var childNode = CreateDirectoryNode(directory, isRoot: false, parent: node);
-            node.ChildNodes.Add(childNode);
-        }
-
-        return node;
-    }
-
-    private void RegisterNode(ProjectDirectoryNodeViewModel node)
-    {
-        _allNodes.Add(node);
-        _nodeByPath[node.FullPath] = node;
-        node.Selected.ChangedEvent += _ => HandleNodeSelectedChangedEvent(node);
-    }
-
-    private void HandleNodeSelectedChangedEvent(ProjectDirectoryNodeViewModel node)
-    {
-        if (!node.Selected.Value) return;
-        SelectDirectory(node);
-    }
-
-    private void SelectDirectory(ProjectDirectoryNodeViewModel node)
-    {
-        if (SearchField.HasQuery.Value)
-        {
-            SearchField.ResetSearch();
-        }
-
-        _selectedDirectory = node;
-        ActiveDirectoryPath.Value = node.FullPath;
-        UpdatePathSegments(node.FullPath);
-        UpdateActiveItems(node.FullPath);
-
-        foreach (var other in _allNodes)
-        {
-            if (other == node) continue;
-            other.Deselect();
-        }
-    }
-
-    private void UpdatePathSegments(string fullPath)
-    {
-        PathSegments.Clear();
-        if (string.IsNullOrWhiteSpace(_projectRootPath)) return;
-
-        var segments = new List<(string name, string path)>();
-        segments.Add(("Project", _projectRootPath));
-
-        var relativePath = IOPath.GetRelativePath(_projectRootPath, fullPath);
-        if (relativePath != ".")
-        {
-            var current = _projectRootPath;
-            var split = relativePath.Split(IOPath.DirectorySeparatorChar, IOPath.AltDirectorySeparatorChar);
-            foreach (var segment in split)
-            {
-                if (string.IsNullOrWhiteSpace(segment)) continue;
-                current = IOPath.Combine(current, segment);
-                segments.Add((segment, current));
-            }
-        }
-
-        for (var i = 0; i < segments.Count; i++)
-        {
-            var separator = i == 0 ? "" : "/ ";
-            var item = new ProjectPathSegmentViewModel(segments[i].name, segments[i].path, separator, HandlePathSegmentNavigate);
-            PathSegments.Add(item);
-        }
-    }
-
-    private void HandlePathSegmentNavigate(ProjectPathSegmentViewModel segment)
-    {
-        OpenDirectory(segment.FullPath);
-    }
-
-    private void ExpandToNode(ProjectDirectoryNodeViewModel node)
-    {
-        var current = node.Parent;
-        while (current != null)
-        {
-            current.Expanded.Value = true;
-            current = current.Parent;
-        }
-    }
-
-    private void OpenDirectory(string fullPath)
-    {
-        if (!_nodeByPath.TryGetValue(fullPath, out var node)) return;
-        ExpandToNode(node);
-        SelectDirectory(node);
+        UpdateActiveItems(directoryPath);
     }
 
     private void UpdateActiveItems(string directoryPath)
     {
         _highlightedAsset = null;
         ActiveItems.ClearAndDispose();
-        _allAssets.Clear();
 
         if (!Directory.Exists(directoryPath)) return;
 
-        var query = SearchField.Query.Value;
-        if (!string.IsNullOrWhiteSpace(query))
+        var items = SearchField.HasQuery.Value
+            ? _assetItemBuilder.BuildItemsForSearch(SearchField.Query.Value, ActiveFolderContextMenu, CreateAssetItemActions())
+            : _assetItemBuilder.BuildItemsForDirectory(directoryPath, ActiveFolderContextMenu, CreateAssetItemActions());
+        foreach (var item in items)
         {
-            ApplySearchResults(query);
-            return;
-        }
-
-        foreach (var directory in Directory.EnumerateDirectories(directoryPath).OrderBy(IOPath.GetFileName))
-        {
-            var name = IOPath.GetFileName(directory);
-            var item = new ProjectAssetItemViewModel(
-                name,
-                directory,
-                ProjectAssetType.Directory,
-                "",
-                new ProjectAssetItemActions(DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset),
-                ActiveFolderContextMenu,
-                _fileExplorerProvider!,
-                _selectionService!);
-            RegisterAsset(item);
             ActiveItems.Add(item);
         }
 
-        foreach (var file in Directory.EnumerateFiles(directoryPath).OrderBy(IOPath.GetFileName))
-        {
-            if (AssetFileFilter.ShouldHide(file)) continue;
-
-            var name = IOPath.GetFileName(file);
-            var assetType = GetAssetType(file);
-            var assetId = _assetRegistry != null && _assetRegistry.TryGetByPath(file, out var assetInfo) && assetInfo != null
-                ? assetInfo.Meta.AssetId
-                : "";
-            var item = new ProjectAssetItemViewModel(
-                name,
-                file,
-                assetType,
-                assetId,
-                new ProjectAssetItemActions(DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset),
-                ActiveFolderContextMenu,
-                _fileExplorerProvider!,
-                _selectionService!);
-            RegisterAsset(item);
-            ActiveItems.Add(item);
-        }
+        _assetSelectionHandler.RestoreSelection(ActiveItems);
     }
 
-    private ProjectAssetType GetAssetType(string filePath)
+    private ProjectAssetItemActions CreateAssetItemActions()
     {
-        var extension = IOPath.GetExtension(filePath);
-        if (extension == FileExtensions.SCENE) return ProjectAssetType.Scene;
-        if (extension is FileExtensions.H or FileExtensions.CPP) return ProjectAssetType.Script;
-        
-        return ProjectAssetType.Asset;
-    }
-
-    private void RegisterAsset(ProjectAssetItemViewModel item)
-    {
-        _allAssets.Add(item);
-        item.Selected.ChangedEvent += _ => HandleAssetSelectedChangedEvent(item);
-    }
-
-    private void HandleAssetSelectedChangedEvent(ProjectAssetItemViewModel item)
-    {
-        if (!item.Selected.Value) return;
-        SelectAsset(item);
-    }
-
-    private void SelectAsset(ProjectAssetItemViewModel item)
-    {
-        TrackSearchSelection(item);
-
-        foreach (var other in _allAssets)
-        {
-            if (other == item) continue;
-            other.Deselect();
-        }
-    }
-
-    private void OpenAsset(ProjectAssetItemViewModel item)
-    {
-        if (item.IsDirectory)
-        {
-            OpenDirectory(item.FullPath);
-            return;
-        }
-
-        if (_textEditorFileOpener == null) return;
-
-        var result = _textEditorFileOpener.Open(item.FullPath);
-        if (result != TextEditorOpenResult.InvalidCustomEditorPath) return;
-        if (_settingsWindowService == null) return;
-
-        Dispatcher.UIThread.InvokeAsync(async () =>
-        {
-            var prompt = MessageBoxManager.GetMessageBoxStandard(
-                "Text Editor",
-                "Configured text editor path is invalid. Open Editor Settings?",
-                ButtonEnum.YesNo);
-            var dialogResult = await prompt.ShowAsync();
-
-            if (dialogResult == ButtonResult.Yes)
-            {
-                _settingsWindowService.OpenSettingsWindow();
-            }
-        });
-    }
-
-    private void RenameAsset(ProjectAssetItemViewModel item, string newName)
-    {
-        if (_projectAssetRenameCommand == null) return;
-
-        _ = _projectAssetRenameCommand.ExecuteAsync(CreateCommandTarget(item), newName).ContinueWith(t =>
-        {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                ApplyCommandResult(t.Result);
-            });
-        });
-    }
-
-    private void DeleteAsset(ProjectAssetItemViewModel item)
-    {
-        if (_projectAssetDeleteCommand == null) return;
-
-        _ = _projectAssetDeleteCommand.ExecuteAsync(CreateCommandTarget(item)).ContinueWith(t =>
-        {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                ApplyCommandResult(t.Result);
-            });
-        });
-    }
-
-    private void MoveAsset(ProjectAssetItemViewModel item)
-    {
-        if (_storageProvider == null) return;
-        if (string.IsNullOrWhiteSpace(_projectRootPath)) return;
-        if (_projectAssetMoveCommand == null) return;
-
-        Dispatcher.UIThread.InvokeAsync(async () =>
-        {
-            var selectedFolder = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-            {
-                Title = "Move to Directory",
-                AllowMultiple = false
-            });
-
-            if (selectedFolder.Count == 0) return;
-            var destFolderPath = selectedFolder[0].TryGetLocalPath();
-            if (string.IsNullOrWhiteSpace(destFolderPath)) return;
-
-            var fullDestFolderPath = IOPath.GetFullPath(destFolderPath);
-            var fullRootPath = IOPath.GetFullPath(_projectRootPath);
-            if (!fullDestFolderPath.StartsWith(fullRootPath, StringComparison.OrdinalIgnoreCase)) return;
-
-            var result = await _projectAssetMoveCommand.ExecuteAsync(CreateCommandTarget(item), fullDestFolderPath);
-            ApplyCommandResult(result);
-        });
-    }
-
-    private void DuplicateAsset(ProjectAssetItemViewModel item)
-    {
-        if (_projectAssetDuplicateCommand == null) return;
-
-        _ = _projectAssetDuplicateCommand.ExecuteAsync(CreateCommandTarget(item)).ContinueWith(t =>
-        {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                ApplyCommandResult(t.Result);
-            });
-        });
+        return _actionsController.CreateAssetItemActions(
+            HandleAssetSelectionRequested,
+            HandleAssetContextMenuSelectionRequested);
     }
 
     public async Task ImportExternalPathsAsync(IReadOnlyCollection<string> paths)
     {
-        var targetDirectory = ActiveDirectoryPath.Value;
-        
-        if (_assetOperationsService == null) return;
-        if (string.IsNullOrWhiteSpace(targetDirectory) || !Directory.Exists(targetDirectory)) return;
-        if (paths.Count == 0) return;
-
-        await _assetOperationsService.ImportExternalAssets(paths, targetDirectory);
+        await _assetOperationsHandler.ImportExternalPathsAsync(paths, ActiveDirectoryPath.Value);
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             RefreshView(affectsTree: true);
         });
     }
 
+    public IReadOnlyList<string> GetDraggedAssetPaths(ProjectAssetItemViewModel sourceItem)
+    {
+        return _assetSelectionHandler.ResolveDraggedAssetPaths(sourceItem, ActiveItems);
+    }
+
+    public async Task MoveAssetsToDirectoryAsync(IReadOnlyCollection<string> assetPaths, string destinationDirectory)
+    {
+        var targets = _assetSelectionHandler.ResolveCommandTargets(assetPaths);
+        if (targets.Count == 0) return;
+
+        var result = await _assetOperationsHandler.MoveAsync(targets, destinationDirectory, _directoryBrowser.ProjectRootPath);
+        if (result == null) return;
+
+        ApplyBatchCommandResult(result);
+    }
+
     public void ClearAssetSelection()
     {
-        _selectionService?.ResetSelection();
+        _assetSelectionHandler.ClearSelection(ActiveItems);
     }
 
     private void RefreshView(bool affectsTree)
     {
-        var activePath = _selectedDirectory?.FullPath ?? ActiveDirectoryPath.Value;
+        var activePath = _directoryBrowser.SelectedDirectoryPath ?? ActiveDirectoryPath.Value;
         if (affectsTree && _resourceService != null)
         {
-            BuildDirectoryTree(_resourceService, activePath);
+            _directoryBrowser.BuildTree(_resourceService, activePath);
             return;
         }
 
@@ -545,38 +282,14 @@ public class ProjectWindowViewModel : BaseViewModel
         }
 
         if (string.IsNullOrWhiteSpace(ActiveDirectoryPath.Value)) return;
-        
+
         UpdateActiveItems(ActiveDirectoryPath.Value);
-    }
-
-    private void ApplySearchResults(string query)
-    {
-        if (_assetSearchService == null) return;
-
-        var results = _assetSearchService.Search(query);
-        foreach (var result in results)
-        {
-            var assetType = result.IsDirectory ? ProjectAssetType.Directory : GetAssetType(result.FullPath);
-            var assetId = !result.IsDirectory && _assetRegistry != null && _assetRegistry.TryGetByPath(result.FullPath, out var assetInfo) && assetInfo != null
-                ? assetInfo.Meta.AssetId
-                : "";
-            var item = new ProjectAssetItemViewModel(
-                result.Name,
-                result.FullPath,
-                assetType,
-                assetId,
-                new ProjectAssetItemActions(DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset),
-                ActiveFolderContextMenu,
-                _fileExplorerProvider!,
-                _selectionService!);
-            RegisterAsset(item);
-            ActiveItems.Add(item);
-        }
     }
 
     private void TrackSearchSelection(ProjectAssetItemViewModel item)
     {
         if (!SearchField.HasQuery.Value) return;
+
         _pendingSearchSelectionPath = item.FullPath;
     }
 
@@ -587,15 +300,8 @@ public class ProjectWindowViewModel : BaseViewModel
         var targetDirectory = IOPath.GetDirectoryName(targetPath);
         if (string.IsNullOrWhiteSpace(targetDirectory)) return;
 
-        OpenDirectory(targetDirectory);
-        SelectAssetByPath(targetPath);
-    }
-
-    private void SelectAssetByPath(string path)
-    {
-        var match = ActiveItems.FirstOrDefault(item => string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase));
-        if (match == null) return;
-        match.Select();
+        _directoryBrowser.OpenDirectory(targetDirectory);
+        _assetSelectionHandler.SelectAssetByPath(targetPath, ActiveItems);
     }
 
     private void FocusAssetByPath(string assetPath)
@@ -605,7 +311,7 @@ public class ProjectWindowViewModel : BaseViewModel
         var directoryPath = IOPath.GetDirectoryName(assetPath);
         if (string.IsNullOrWhiteSpace(directoryPath)) return;
 
-        OpenDirectory(directoryPath);
+        _directoryBrowser.OpenDirectory(directoryPath);
         HighlightAssetByPath(assetPath);
     }
 
@@ -614,50 +320,54 @@ public class ProjectWindowViewModel : BaseViewModel
         _highlightedAsset?.ClearHighlight();
         _highlightedAsset = null;
 
-        var match = ActiveItems.FirstOrDefault(item => string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase));
-        if (match == null) return;
+        foreach (var item in ActiveItems)
+        {
+            if (!string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase)) continue;
 
-        match.PulseHighlight(TimeSpan.FromSeconds(1));
-        _highlightedAsset = match;
-        ScrollToAssetRequested?.Invoke(path);
+            item.PulseHighlight(TimeSpan.FromSeconds(1));
+            _highlightedAsset = item;
+            ScrollToAssetRequested?.Invoke(path);
+            return;
+        }
     }
 
-    private static ProjectAssetCommandTarget CreateCommandTarget(ProjectAssetItemViewModel item)
+    private void HandleAssetSelectionRequested(ProjectAssetItemViewModel item, Avalonia.Input.KeyModifiers modifiers)
     {
-        return new ProjectAssetCommandTarget(item.FullPath, item.IsDirectory);
+        _assetSelectionHandler.HandleSelectionRequested(item, modifiers, ActiveItems);
+    }
+
+    private void HandleAssetContextMenuSelectionRequested(ProjectAssetItemViewModel item)
+    {
+        _assetSelectionHandler.HandleContextMenuSelectionRequested(item, ActiveItems);
     }
 
     private void ApplyCommandResult(ProjectAssetCommandResult result)
     {
+        _assetSelectionHandler.SetSelectionState(
+            string.IsNullOrWhiteSpace(result.SelectedAssetPath) ? Array.Empty<string>() : new[] { result.SelectedAssetPath },
+            result.SelectedAssetPath,
+            result.SelectedAssetPath);
         RefreshView(result.AffectsTree);
-
-        if (!string.IsNullOrWhiteSpace(result.SelectedAssetPath))
-        {
-            SelectAssetByPath(result.SelectedAssetPath);
-        }
     }
 
-    private void ResetDirectoryTree()
+    private void ApplyBatchCommandResult(ProjectAssetBatchCommandResult result)
     {
-        RootDirectories.ClearAndDispose();
+        _assetSelectionHandler.SetSelectionState(result.SelectedAssetPaths, result.PrimarySelectedAssetPath, result.SelectionAnchorAssetPath);
+        RefreshView(result.AffectsTree);
+    }
+
+    private void ResetProjectView()
+    {
         ActiveItems.ClearAndDispose();
-        PathSegments.Clear();
-        _allNodes.Clear();
-        _nodeByPath.Clear();
-        _allAssets.Clear();
-        _selectedDirectory = null;
-        ActiveDirectoryPath.Value = "";
-        _projectRootPath = "";
+        _directoryBrowser.Reset();
+        _assetSelectionHandler.ResetState();
+        _highlightedAsset = null;
+        _pendingSearchSelectionPath = "";
     }
 
     private void CreateFolder()
     {
-        var baseDirectory = ActiveDirectoryPath.Value;
-        if (_assetOperationsService == null) return;
-        
-        if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory)) return;
-
-        _ = _assetOperationsService.CreateFolderAsync(baseDirectory, "New Folder").ContinueWith(_ =>
+        _ = _assetOperationsHandler.CreateFolderAsync(ActiveDirectoryPath.Value).ContinueWith(_ =>
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -704,5 +414,4 @@ public class ProjectWindowViewModel : BaseViewModel
             Dispatcher.UIThread.InvokeAsync(() => RefreshView(affectsTree: false));
         });
     }
-
 }

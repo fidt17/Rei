@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using ReiEditor.Utils;
 using ReiEditor.ViewModels.Windows.Editor.Project;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.Views.Windows.Editor.Project.Assets;
@@ -114,6 +115,13 @@ public partial class ProjectWindowView : UserControl
 
     private void ActiveItemsDropTarget_OnDragEnter(object? sender, DragEventArgs e)
     {
+        if (HasInternalAssetDrop(e))
+        {
+            e.DragEffects = DragDropEffects.Move;
+            e.Handled = true;
+            return;
+        }
+
         if (!HasFileDrop(e))
         {
             e.DragEffects = DragDropEffects.None;
@@ -128,6 +136,14 @@ public partial class ProjectWindowView : UserControl
     {
         if (DataContext is not ProjectWindowViewModel vm) return;
 
+        var internalPaths = GetInternalAssetPaths(e);
+        if (internalPaths.Count > 0)
+        {
+            await vm.MoveAssetsToDirectoryAsync(internalPaths, vm.ActiveDirectoryPath.Value);
+            e.Handled = true;
+            return;
+        }
+
         var paths = GetDroppedPaths(e);
         if (paths.Count == 0) return;
 
@@ -139,6 +155,22 @@ public partial class ProjectWindowView : UserControl
     {
         var files = e.Data.GetFiles();
         return files != null && files.Any();
+    }
+
+    private static bool HasInternalAssetDrop(DragEventArgs e)
+    {
+        return GetInternalAssetPaths(e).Count > 0;
+    }
+
+    private static List<string> GetInternalAssetPaths(DragEventArgs e)
+    {
+        if (!e.Data.Contains(DragDropDataKeys.AssetPaths)) return new List<string>();
+        if (e.Data.Get(DragDropDataKeys.AssetPaths) is not IEnumerable<string> assetPaths) return new List<string>();
+
+        return assetPaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(System.StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static List<string> GetDroppedPaths(DragEventArgs e)

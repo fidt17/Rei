@@ -134,7 +134,10 @@ public class MetaFilesService : IMetaFilesService
         if (!File.Exists(assetPath)) return;
         if (!AssetImportUtils.IsValidAssetExtensionForMetaFile(Path.GetExtension(assetPath))) return;
 
-        var existingMeta = await _resourceService.TryLoad<AssetMeta>(assetPath + FileExtensions.META);
+        var metaPath = assetPath + FileExtensions.META;
+        var existingMeta = File.Exists(metaPath)
+            ? await _resourceService.TryLoad<AssetMeta>(metaPath)
+            : null;
         var newAssetId = ReiAssetIdUtility.TryCreateFromAssetPath(assetPath, _resourceService, out var engineResourceAssetId)
             ? engineResourceAssetId
             : Guid.NewGuid().ToString();

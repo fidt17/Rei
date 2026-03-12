@@ -20,7 +20,7 @@ public class ProjectAssetMoveCommand : IProjectAssetMoveCommand
 
     public async Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset, string destinationFolder)
     {
-        _logger.Log($"Execute. Path: {asset.FullPath}. Destination: {destinationFolder}. IsDirectory: {asset.IsDirectory}");
+        _logger.Log($"Moving {asset.FullPath} to {destinationFolder}");
         
         await _assetOperationsService.MoveAsync(asset.FullPath, destinationFolder);
         

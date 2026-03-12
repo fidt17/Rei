@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Utils.Path;
 
 namespace ReiEditor.Models.EditorApp.Project.Commands.Assets;
 
@@ -19,10 +20,11 @@ public class ProjectAssetDuplicateCommand : IProjectAssetDuplicateCommand
 
     public async Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset)
     {
-        _logger.Log($"Execute. Path: {asset.FullPath}. IsDirectory: {asset.IsDirectory}");
-        
+        _logger.Log($"Duplicating {asset.FullPath}");
+
+        var duplicatedAssetPath = PathNamingUtils.GetDuplicatePath(asset.FullPath, asset.IsDirectory);
         await _assetOperationsService.DuplicateAsync(asset.FullPath, asset.IsDirectory);
-        
-        return new ProjectAssetCommandResult(asset.IsDirectory);
+
+        return new ProjectAssetCommandResult(asset.IsDirectory, duplicatedAssetPath);
     }
 }

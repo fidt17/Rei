@@ -20,7 +20,7 @@ public class ProjectAssetRenameCommand : IProjectAssetRenameCommand
 
     public async Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset, string newName)
     {
-        _logger.Log($"Execute. Path: {asset.FullPath}. NewName: {newName}");
+        _logger.Log($"Renaming {asset.FullPath} to {newName}");
         
         await _assetOperationsService.RenameAsync(asset.FullPath, newName);
 

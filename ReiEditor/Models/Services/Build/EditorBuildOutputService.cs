@@ -53,6 +53,14 @@ public class EditorBuildOutputService : IEditorBuildOutputService
             resourcesDirectory);
     }
 
+    public void SeedStagingClientOutputFromLive(EditorBuildOutput stagingOutput)
+    {
+        var liveOutput = GetLiveOutput();
+        if (!Directory.Exists(liveOutput.ClientOutputDirectoryPath)) return;
+
+        CopyDirectory(liveOutput.ClientOutputDirectoryPath, stagingOutput.ClientOutputDirectoryPath);
+    }
+
     public void PromoteStagingOutput(EditorBuildOutput stagingOutput)
     {
         var liveOutput = GetLiveOutput();

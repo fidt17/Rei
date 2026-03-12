@@ -72,13 +72,18 @@ public class StagedEditorBuildService : IStagedEditorBuildService
                 stagedOutput.ClientDllPath,
                 Path.Combine(liveOutput.ResourcesDirectoryPath, "Cache"));
 
+            if (!shouldBuildSolution && shouldBuildAssets)
+            {
+                _editorBuildOutputService.SeedStagingClientOutputFromLive(stagedOutput);
+            }
+
             _projectBuildStateService.MarkBuildStarted(configuration, liveContext);
 
             var didBuild = await _buildService.BuildProject(
                 configuration,
                 forceSolutionRebuild: true,
                 forceCleanSolutionBuild,
-                forceAssetRebuild: true,
+                forceAssetRebuild,
                 stagedContext,
                 shouldBuildSolution,
                 shouldBuildAssets,

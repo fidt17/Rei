@@ -178,15 +178,20 @@ public class ProjectBuildStateService : IProjectBuildStateService
     {
         if (!IsLiveOutputContext(buildContext)) return;
 
-        var state = new ProjectBuildState
+        var statePath = GetStateFilePath(buildContext, configuration);
+        var state = TryLoadStateSync(statePath) ?? new ProjectBuildState
         {
             Configuration = configuration,
-            Status = BuildStateStatus.IN_PROGRESS,
             EngineVersion = _engineSettingsProvider.GetEngineVersion(),
             ClientDllPath = ResolveClientDllPath(buildContext)
         };
 
-        SaveState(GetStateFilePath(buildContext, configuration), state);
+        state.Configuration = configuration;
+        state.Status = BuildStateStatus.IN_PROGRESS;
+        state.EngineVersion = _engineSettingsProvider.GetEngineVersion();
+        state.ClientDllPath = ResolveClientDllPath(buildContext);
+
+        SaveState(statePath, state);
     }
 
     public void MarkBuildFailed(BuildConfigurationEnum configuration, BuildExecutionContext buildContext)
