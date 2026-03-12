@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
+using ReiEditor.Utils;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
 
@@ -122,8 +126,17 @@ public partial class HierarchyNode : UserControl
             }
 
             dragStarted = true;
+            var draggedEntityIds = _vm.GetDraggedEntityIds();
+            if (draggedEntityIds.Count == 0)
+            {
+                pointerDown = false;
+                dragStarted = false;
+                return;
+            }
+
             var dragData = new DataObject();
-            dragData.Set("Node", _vm);
+            dragData.Set(DragDropDataKeys.EntityIds, draggedEntityIds.ToArray());
+            dragData.Set(DragDropDataKeys.EntityId, draggedEntityIds[0]);
 
             try
             {
@@ -150,6 +163,9 @@ public partial class HierarchyNode : UserControl
             vm!.RequestSelection(e.KeyModifiers);
             RootBorder.Focus();
         };
+
+        target.AddHandler(DragDrop.DragEnterEvent, RootBorder_OnDragEnter);
+        target.AddHandler(DragDrop.DropEvent, RootBorder_OnDrop);
     }
 
     private void RootBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -167,5 +183,52 @@ public partial class HierarchyNode : UserControl
     {
         var flyout = FlyoutBase.GetAttachedFlyout(RootBorder);
         flyout?.Hide();
+    }
+
+    private void RootBorder_OnDragEnter(object? sender, DragEventArgs e)
+    {
+        if (_vm == null)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        var draggedEntityIds = GetDraggedEntityIds(e);
+        var hierarchyWindowVm = GetHierarchyWindowViewModel();
+        if (draggedEntityIds.Count == 0 || hierarchyWindowVm == null)
+        {
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        e.DragEffects = hierarchyWindowVm.CanDropEntities(draggedEntityIds, _vm.Node.Content.Id)
+            ? DragDropEffects.Move
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void RootBorder_OnDrop(object? sender, DragEventArgs e)
+    {
+        if (_vm == null) return;
+
+        var draggedEntityIds = GetDraggedEntityIds(e);
+        var hierarchyWindowVm = GetHierarchyWindowViewModel();
+        if (draggedEntityIds.Count == 0 || hierarchyWindowVm == null) return;
+
+        hierarchyWindowVm.MoveEntitiesToNode(draggedEntityIds, _vm.Node.Content.Id);
+        e.Handled = true;
+    }
+
+    private HierarchyWindowViewModel? GetHierarchyWindowViewModel()
+    {
+        return this.FindAncestorOfType<HierarchyWindow>()?.DataContext as HierarchyWindowViewModel;
+    }
+
+    private static IReadOnlyList<int> GetDraggedEntityIds(DragEventArgs e)
+    {
+        if (!e.Data.Contains(DragDropDataKeys.EntityIds)) return Array.Empty<int>();
+        if (e.Data.Get(DragDropDataKeys.EntityIds) is not IEnumerable<int> entityIds) return Array.Empty<int>();
+
+        return entityIds.Distinct().ToArray();
     }
 }

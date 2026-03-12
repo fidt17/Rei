@@ -101,13 +101,13 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void HandleEntityBehaviourDeletedEvent(GameEntity e, BehaviourComponent component)
     {
-        foreach (var vm in Elements)
+        var target = Elements
+            .OfType<BehaviourComponentDrawerViewModel>()
+            .FirstOrDefault(x => x.BehaviourComponent == component);
+        if (target != null)
         {
-            if (vm is not BehaviourComponentDrawerViewModel bvm) continue;
-            if (bvm.BehaviourComponent != component) continue;
-            bvm.Dispose();
-            Elements.Remove(bvm);
-            break;
+            target.Dispose();
+            Elements.Remove(target);
         }
         
         UpdateBehaviourSelectionList();

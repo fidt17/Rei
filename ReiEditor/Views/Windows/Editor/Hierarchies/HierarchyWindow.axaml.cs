@@ -53,6 +53,21 @@ public partial class HierarchyWindow : UserControl
         }
     }
 
+    private void RootBorder_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_vm == null) return;
+        if (e.Source is TextBox) return;
+        if (e.Source is InputElement inputElement && inputElement.FindAncestorOfType<TextBox>() != null) return;
+
+        if (e.Key == Key.D && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            if (_vm.DuplicateSelectedEntity())
+            {
+                e.Handled = true;
+            }
+        }
+    }
+
     private void HandleDataContextChangedEvent(object? sender, EventArgs e)
     {
         UnsubscribeFromVm();

@@ -22,7 +22,6 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
     public ICommand ConfirmRenameCommand { get; }
     public ICommand DuplicateCommand { get; }
     public ICommand DeleteCommand { get; }
-    public MoveNodeCommand MoveNodeCommand { get; }
 
     GameEntity IEntitySelectable.Entity => Node.Content;
     
@@ -60,8 +59,6 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
         StartRenameCommand = new RelayCommand(StartRename);
         ConfirmRenameCommand = ReactiveCommand.Create<string>(ConfirmRename);
-        MoveNodeCommand = new MoveNodeCommand(Node, _entityManagementService);
-
         ContextMenu.AddOption(new ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Delete", Delete));
@@ -78,14 +75,14 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
     public IEnumerable<HierarchyNodeViewModel> CreateChildNodes(IFactory<HierarchyNodeViewModel> nodeFactory)
     {
-        foreach (var childNode in Node.ChildNodes)
+        foreach (var childNode in Node.ChildNodes.ToArray())
         {
             var n = nodeFactory.CreateInstance(childNode);
             ChildNodes.Add(n);
             yield return n;
         }
 
-        foreach (var childNode in ChildNodes)
+        foreach (var childNode in ChildNodes.ToArray())
         {
             foreach (var n in childNode.CreateChildNodes(nodeFactory))
             {
@@ -94,7 +91,7 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         }
     }
 
-    public IEnumerable<HierarchyNodeViewModel> GetAllChildNodesRecursive() => ChildNodes.SelectMany(node => node.GetAllChildNodesRecursive());
+    public IEnumerable<HierarchyNodeViewModel> GetAllChildNodesRecursive() => ChildNodes.ToArray().SelectMany(node => node.GetAllChildNodesRecursive());
 
     public void ConfigureSelectionActions(
         Action<HierarchyNodeViewModel, KeyModifiers> selectionRequestedAction,
@@ -109,6 +106,17 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
     public void Select() => Selected.Value = true;
     public void Deselect() => Selected.Value = false;
     public void SetSelected(bool selected) => Selected.Value = selected;
+    
+    public IReadOnlyList<int> GetDraggedEntityIds()
+    {
+        if (!Selected.Value) return new[] { Node.Content.Id };
+
+        return _selectionService.SelectedItems
+            .OfType<IEntitySelectable>()
+            .Select(x => x.Entity.Id)
+            .Distinct()
+            .ToArray();
+    }
 
     private void Delete()
     {

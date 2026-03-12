@@ -32,6 +32,7 @@ public class HierarchyWindowViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly CreateSceneEntityCommand _createSceneEntityCommand;
     private readonly ISelectedEntityActionService _selectedEntityActionService;
+    private readonly IEntityManagementService _entityManagementService;
     private readonly HierarchyNodeCollectionController _nodeCollectionController;
     private readonly HierarchySelectionHandler _selectionHandler;
     private readonly HierarchyFocusController _focusController;
@@ -47,12 +48,14 @@ public class HierarchyWindowViewModel : BaseViewModel
         ISelectionService selectionService,
         IFactory<HierarchyNodeViewModel> hierarchyElementFactory,
         IFactory<CreateSceneEntityCommand> createSceneEntityCommand,
-        ISelectedEntityActionService selectedEntityActionService)
+        ISelectedEntityActionService selectedEntityActionService,
+        IEntityManagementService entityManagementService)
     {
         _activeHierarchy = hierarchy;
         _selectionService = selectionService;
         _createSceneEntityCommand = createSceneEntityCommand.CreateInstance();
         _selectedEntityActionService = selectedEntityActionService;
+        _entityManagementService = entityManagementService;
 
         _nodeCollectionController = new HierarchyNodeCollectionController(hierarchyElementFactory, ConfigureNode);
         _selectionHandler = new HierarchySelectionHandler(
@@ -119,10 +122,72 @@ public class HierarchyWindowViewModel : BaseViewModel
         });
     }
 
+    public bool DuplicateSelectedEntity()
+    {
+        return _selectedEntityActionService.DuplicateSelectedEntity();
+    }
+
+    public bool CanDropEntities(IReadOnlyList<int> draggedEntityIds, int? targetParentEntityId)
+    {
+        var hierarchy = _activeHierarchy;
+        if (hierarchy == null) return false;
+
+        var draggedNodes = ResolveDraggedNodes(draggedEntityIds);
+        if (draggedNodes.Count == 0) return false;
+
+        var targetParentNode = targetParentEntityId.HasValue
+            ? _nodeCollectionController.FindByEntityId(targetParentEntityId.Value)?.Node
+            : null;
+        if (targetParentEntityId.HasValue && targetParentNode == null) return false;
+
+        return draggedNodes.All(node => CanMoveNode(node.Node, targetParentNode));
+    }
+
+    public void MoveEntities(IReadOnlyList<int> draggedEntityIds, int? targetParentEntityId, int insertionIndex)
+    {
+        var hierarchy = _activeHierarchy;
+        if (hierarchy == null) return;
+
+        var draggedNodes = ResolveDraggedNodes(draggedEntityIds);
+        if (draggedNodes.Count == 0) return;
+
+        var targetParentNode = targetParentEntityId.HasValue
+            ? _nodeCollectionController.FindByEntityId(targetParentEntityId.Value)?.Node
+            : null;
+        if (targetParentEntityId.HasValue && targetParentNode == null) return;
+
+        if (draggedNodes.Any(node => !CanMoveNode(node.Node, targetParentNode))) return;
+
+        var targetParentEntity = targetParentNode?.Content;
+        var targetIndex = Math.Max(0, insertionIndex);
+
+        foreach (var node in draggedNodes)
+        {
+            var currentParent = node.Node.Parent;
+            var currentIndex = hierarchy.GetNodeOrder(node.Node);
+            if (currentParent == targetParentNode && currentIndex < targetIndex)
+            {
+                targetIndex -= 1;
+            }
+
+            _entityManagementService.SetParent(node.Node.Content, targetParentEntity, targetIndex);
+            targetIndex += 1;
+        }
+    }
+
+    public void MoveEntitiesToNode(IReadOnlyList<int> draggedEntityIds, int targetParentEntityId)
+    {
+        var targetParentNode = _nodeCollectionController.FindByEntityId(targetParentEntityId)?.Node;
+        if (targetParentNode == null) return;
+
+        var insertionIndex = targetParentNode.ChildNodes.Count();
+        MoveEntities(draggedEntityIds, targetParentEntityId, insertionIndex);
+    }
+
     private IReadOnlyList<HierarchyNodeViewModel> GetVisibleNodes()
     {
         var visibleNodes = new List<HierarchyNodeViewModel>();
-        foreach (var node in Nodes)
+        foreach (var node in Nodes.ToArray())
         {
             AppendVisibleNode(node, visibleNodes);
         }
@@ -135,9 +200,60 @@ public class HierarchyWindowViewModel : BaseViewModel
         visibleNodes.Add(node);
         if (!node.Expanded.Value) return;
 
-        foreach (var childNode in node.ChildNodes)
+        foreach (var childNode in node.ChildNodes.ToArray())
         {
             AppendVisibleNode(childNode, visibleNodes);
         }
+    }
+
+    private List<HierarchyNodeViewModel> ResolveDraggedNodes(IReadOnlyList<int> draggedEntityIds)
+    {
+        var hierarchy = _activeHierarchy;
+        if (hierarchy == null) return new List<HierarchyNodeViewModel>();
+
+        var draggedSet = draggedEntityIds.ToHashSet();
+        var draggedNodes = draggedSet
+            .Select(id => _nodeCollectionController.FindByEntityId(id))
+            .Where(node => node != null)
+            .Cast<HierarchyNodeViewModel>()
+            .Where(node => !HasDraggedAncestor(node.Node, draggedSet))
+            .OrderBy(node => hierarchy.GetNodeOrder(node.Node))
+            .ToList();
+
+        return draggedNodes;
+    }
+
+    private bool HasDraggedAncestor(HierarchyNode<GameEntity> node, IReadOnlySet<int> draggedEntityIds)
+    {
+        var current = node.Parent;
+        while (current != null)
+        {
+            if (draggedEntityIds.Contains(current.Content.Id))
+            {
+                return true;
+            }
+
+            current = current.Parent;
+        }
+
+        return false;
+    }
+
+    private static bool CanMoveNode(HierarchyNode<GameEntity> node, HierarchyNode<GameEntity>? targetParentNode)
+    {
+        if (node == targetParentNode) return false;
+
+        var current = targetParentNode;
+        while (current != null)
+        {
+            if (current == node)
+            {
+                return false;
+            }
+
+            current = current.Parent;
+        }
+
+        return true;
     }
 }

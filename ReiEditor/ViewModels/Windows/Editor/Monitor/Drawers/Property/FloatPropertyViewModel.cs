@@ -11,6 +11,16 @@ public class FloatPropertyViewModel : BasePropertyViewModel<float>
 
     protected override float ParseValue(object? value)
     {
+        if (value is int i)
+        {
+            return i;
+        }
+
+        if (value is long l)
+        {
+            return l;
+        }
+
         if (value is float f)
         {
             return f;
@@ -19,6 +29,11 @@ public class FloatPropertyViewModel : BasePropertyViewModel<float>
         if (value is double d)
         {
             return (float) d;
+        }
+
+        if (value == null)
+        {
+            return 0f;
         }
         
         throw new Exception($"Not supported value type: {value}");

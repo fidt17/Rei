@@ -31,6 +31,8 @@
             <Border Grid.Row="1" 
                     Name="RootBorder"
                     PointerPressed="HierarchyContentBorder_OnPointerPressed"
+                    KeyDown="RootBorder_OnKeyDown"
+                    Focusable="True"
                     Classes="WindowContent">
                 <FlyoutBase.AttachedFlyout>
                     <Flyout Placement="Pointer" FlyoutPresenterClasses="Clear">

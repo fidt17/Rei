@@ -193,11 +193,12 @@ public class HierarchySelectionHandler
 
     private void ApplySelection(bool sendToEngine = true)
     {
-        var selectedNodes = _allNodesProvider()
+        var allNodes = _allNodesProvider().ToList();
+        var selectedNodes = allNodes
             .Where(node => _selectedEntityIds.Contains(node.Node.Content.Id))
             .Cast<ISelectable>()
             .ToList();
-        var primaryNode = _allNodesProvider().FirstOrDefault(node => node.Node.Content.Id == _primarySelectedEntityId);
+        var primaryNode = allNodes.FirstOrDefault(node => node.Node.Content.Id == _primarySelectedEntityId);
 
         if (selectedNodes.Count == 0 || primaryNode == null)
         {
@@ -210,7 +211,7 @@ public class HierarchySelectionHandler
 
     private void UpdateNodeSelectionState()
     {
-        foreach (var node in _allNodesProvider())
+        foreach (var node in _allNodesProvider().ToList())
         {
             node.SetSelected(_selectedEntityIds.Contains(node.Node.Content.Id));
         }

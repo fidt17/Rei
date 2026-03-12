@@ -6,6 +6,8 @@ namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 public abstract class BasePropertyViewModel<T> : BaseViewModel
 {
     public PropertyNameViewModel PropertyName { get; }
+
+    private bool _isSyncingFromProperty;
     
     #region Value
 
@@ -16,6 +18,7 @@ public abstract class BasePropertyViewModel<T> : BaseViewModel
         set
         {
             if (!SetField(ref _value, value)) return;
+            if (_isSyncingFromProperty) return;
             _property.Value = _value;
         }
     }
@@ -45,7 +48,18 @@ public abstract class BasePropertyViewModel<T> : BaseViewModel
         _property.ValueChangedEvent -= HandlePropertyValueChangedEvent;
     }
 
-    private void HandlePropertyValueChangedEvent(object? value) => Value = ParseValue(value);
+    private void HandlePropertyValueChangedEvent(object? value)
+    {
+        _isSyncingFromProperty = true;
+        try
+        {
+            Value = ParseValue(value);
+        }
+        finally
+        {
+            _isSyncingFromProperty = false;
+        }
+    }
 
     protected abstract T ParseValue(object? value);
 }

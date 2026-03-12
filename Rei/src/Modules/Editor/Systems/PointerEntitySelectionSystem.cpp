@@ -12,6 +12,17 @@
 
 namespace rei::editor
 {
+    namespace
+    {
+        bool IsAdditiveSelectionRequested()
+        {
+            return Input::IsKeyDown(GLFW_KEY_LEFT_CONTROL) ||
+                   Input::IsKeyDown(GLFW_KEY_RIGHT_CONTROL) ||
+                   Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT) ||
+                   Input::IsKeyDown(GLFW_KEY_RIGHT_SHIFT);
+        }
+    }
+
     PointerEntitySelectionSystem::PointerEntitySelectionSystem(const std::shared_ptr<ecs::World>& world): System(world)
     {
         _checkEntities = FILTER(physics::PointerCollisionListener, SelectableByPointerTag, ActiveTag);
@@ -26,30 +37,29 @@ namespace rei::editor
     void PointerEntitySelectionSystem::OnUpdate()
     {
         if (!Input::IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) return;
+        const auto additiveSelection = IsAdditiveSelectionRequested();
 
-        // if pointer is over any blocker entity -> return
+        // if the pointer is over any blocker entity -> return
         FOR(e, _blockSelectionEntities)
         {
-            if (GET(e, physics::PointerCollisionListener).IsInside)
-            {
-                return;
-            }
+            if (GET(e, physics::PointerCollisionListener).IsInside) return;
         }
 
         // todo: should sort entities by distance from camera to minimize cases when further object gets selected first
         FOR(e, _checkEntities)
         {
-            if (HAS(e, SelectedTag)) continue;
-
             const auto& listener = GET(e, physics::PointerCollisionListener);
 
             if (listener.IsInside)
             {
-                selection_utility::Select(_ecsWorld, e);
+                if (additiveSelection && HAS(e, SelectedTag)) return;
+
+                selection_utility::Select(_ecsWorld, e, !additiveSelection);
                 return;
             }
         }
 
+        if (additiveSelection) return;
         ResetAllEntitiesSelection();
     }
 }

@@ -1,4 +1,6 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -6,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
+using ReiEditor.Utils;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
 
@@ -58,10 +61,19 @@ public partial class HierarchyMoveTargetLine : UserControl
 
     private void HandleDragEnterEvent(object? sender, DragEventArgs e)
     {
-        var nodeToMove = e.Data.Get("Node") as HierarchyNodeViewModel;
-        if (nodeToMove == NodeData)
+        var draggedEntityIds = GetDraggedEntityIds(e);
+        if (draggedEntityIds.Count == 0)
         {
             IsOver = false;
+            e.DragEffects = DragDropEffects.None;
+            return;
+        }
+
+        var hierarchyWindowVm = GetHierarchyWindowViewModel();
+        if (hierarchyWindowVm == null)
+        {
+            IsOver = false;
+            e.DragEffects = DragDropEffects.None;
             return;
         }
 
@@ -69,10 +81,15 @@ public partial class HierarchyMoveTargetLine : UserControl
         if (IsTopLine && nodeIndex != 0)
         {
             IsOver = false;
+            e.DragEffects = DragDropEffects.None;
             return;
         }
-        
-        IsOver = true;
+
+        var targetParentEntityId = NodeData.Node.Parent?.Content.Id;
+        var targetIndex = nodeIndex + (IsTopLine ? 0 : 1);
+        var canDrop = hierarchyWindowVm.CanDropEntities(draggedEntityIds, targetParentEntityId);
+        IsOver = canDrop;
+        e.DragEffects = canDrop ? DragDropEffects.Move : DragDropEffects.None;
     }
 
     private void HandleDropEvent(object? sender, DragEventArgs e)
@@ -80,21 +97,15 @@ public partial class HierarchyMoveTargetLine : UserControl
         e.Handled = true;
         IsOver = false;
         
-        var nodeToMove = e.Data.Get("Node") as HierarchyNodeViewModel;
-        if (nodeToMove == null) return;
+        var draggedEntityIds = GetDraggedEntityIds(e);
+        var hierarchyWindowVm = GetHierarchyWindowViewModel();
+        if (draggedEntityIds.Count == 0 || hierarchyWindowVm == null) return;
 
         var thisNode = NodeData.Node;
         var thisNodeParent = thisNode.Parent;
         var targetIndex = GetNodeIndexInParent(NodeData);
         var moveIdx = targetIndex + (IsTopLine ? 0 : 1);
-        var sourceIndex = GetNodeIndexInParent(nodeToMove);
-
-        if (nodeToMove.Node.Parent == thisNodeParent && sourceIndex < moveIdx)
-        {
-            moveIdx -= 1;
-        }
-
-        nodeToMove.MoveNodeCommand.Execute(new MoveNodeCommand.MoveArgs(thisNodeParent, moveIdx));
+        hierarchyWindowVm.MoveEntities(draggedEntityIds, thisNodeParent?.Content.Id, moveIdx);
     }
 
     private void HandleDragLeaveEvent(object? sender, DragEventArgs e) => IsOver = false;
@@ -129,5 +140,13 @@ public partial class HierarchyMoveTargetLine : UserControl
     {
         var hierarchyWindow = this.GetVisualAncestors().OfType<HierarchyWindow>().FirstOrDefault();
         return hierarchyWindow?.DataContext as HierarchyWindowViewModel;
+    }
+
+    private static IReadOnlyList<int> GetDraggedEntityIds(DragEventArgs e)
+    {
+        if (!e.Data.Contains(DragDropDataKeys.EntityIds)) return Array.Empty<int>();
+        if (e.Data.Get(DragDropDataKeys.EntityIds) is not IEnumerable<int> entityIds) return Array.Empty<int>();
+
+        return entityIds.Distinct().ToArray();
     }
 }

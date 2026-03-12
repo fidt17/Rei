@@ -54,7 +54,7 @@ public class HierarchyNodeCollectionController
     public HashSet<int> CaptureExpandedEntityIds()
     {
         var expandedEntityIds = new HashSet<int>();
-        foreach (var node in _nodeMap.Values)
+        foreach (var node in _nodeMap.Values.ToArray())
         {
             if (!node.Expanded.Value) continue;
             expandedEntityIds.Add(node.Node.Content.Id);
@@ -65,7 +65,7 @@ public class HierarchyNodeCollectionController
 
     public void RestoreExpandedState(IReadOnlySet<int> expandedEntityIds)
     {
-        foreach (var node in _nodeMap.Values)
+        foreach (var node in _nodeMap.Values.ToArray())
         {
             node.Expanded.Value = expandedEntityIds.Contains(node.Node.Content.Id);
         }
@@ -73,7 +73,7 @@ public class HierarchyNodeCollectionController
 
     public IEnumerable<HierarchyNodeViewModel> GetAllNodes()
     {
-        return _nodeMap.Values;
+        return _nodeMap.Values.ToArray();
     }
 
     public HierarchyNodeViewModel? FindByEntityId(int entityId)

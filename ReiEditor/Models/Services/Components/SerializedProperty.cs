@@ -19,41 +19,7 @@ public class SerializedProperty
     public object? Value
     {
         get => _value;
-        set
-        {
-            try
-            {
-                if (_value == value || (_value != null && _value.Equals(value))) return;
-                
-                if (Type.IsValidValue(value))
-                {
-                    if (value is Dictionary<string, object?> valueDict)
-                    {
-                        var nestedProperties = Value as Dictionary<string, SerializedProperty>;
-                        foreach (var (k, v) in valueDict)
-                        {
-                            if (nestedProperties!.TryGetValue(k, out var property))
-                            {
-                                property.Value = v;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        _value = value;
-                        ValueChangedEvent?.Invoke(_value);
-                    }
-                }
-                else
-                {
-                    throw new Exception($"Cannot assign value of type {value?.GetType()} to property {Type}");
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
+        set => SetValueInternal(value, triggerChangedEvent: true);
     }
 
     [JsonProperty("Value")]
@@ -81,11 +47,21 @@ public class SerializedProperty
     }
 
     public void SetValueWithoutTriggeringChangedEvent(object value)
+        => SetValueInternal(value, triggerChangedEvent: false);
+
+    public void TriggerChangedEvent()
+    {
+        ValueChangedEvent?.Invoke(_value);
+    }
+
+    private void SetValueInternal(object? value, bool triggerChangedEvent)
     {
         try
         {
             if (_value == value || (_value != null && _value.Equals(value))) return;
-                
+
+            if (value == null && Type != SerializedTypeEnum.Custom) return;
+
             if (Type.IsValidValue(value))
             {
                 if (value is Dictionary<string, object?> valueDict)
@@ -102,6 +78,10 @@ public class SerializedProperty
                 else
                 {
                     _value = value;
+                    if (triggerChangedEvent)
+                    {
+                        ValueChangedEvent?.Invoke(_value);
+                    }
                 }
             }
             else
@@ -113,10 +93,5 @@ public class SerializedProperty
         {
             Console.WriteLine(e);
         }
-    }
-
-    public void TriggerChangedEvent()
-    {
-        ValueChangedEvent?.Invoke(_value);
     }
 }
