@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
+using Avalonia.Input;
 using ReactiveUI;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
@@ -16,7 +18,6 @@ namespace ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 {
-    public ICommand SelectCommand { get; }
     public RelayCommand StartRenameCommand { get; } = new();
     public ICommand ConfirmRenameCommand { get; }
     public ICommand DuplicateCommand { get; }
@@ -38,6 +39,8 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
     
     private readonly IEntityManagementService _entityManagementService;
     private readonly ISelectionService _selectionService;
+    private Action<HierarchyNodeViewModel, KeyModifiers>? _selectionRequestedAction;
+    private Action<HierarchyNodeViewModel>? _contextMenuSelectionRequestedAction;
 
 #pragma warning disable CS8618
     public HierarchyNodeViewModel() { }
@@ -52,7 +55,6 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
         Name.Value = node.Content.Name;
 
-        SelectCommand = ReactiveCommand.Create(Select);
         DuplicateCommand = ReactiveCommand.Create(Duplicate);
         DeleteCommand = ReactiveCommand.Create(Delete);
 
@@ -65,14 +67,11 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         ContextMenu.AddOption(new ContextMenuOption("Delete", Delete));
         
         _selectionService.RegisterSelectable(this);
-        _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
-        HandleActiveSelectionChangedEvent(_selectionService.ActiveSelection.Value);
     }
 
     public override void Dispose()
     {
         _selectionService.UnregisterSelectable(this);
-        _selectionService.ActiveSelection.Unsubscribe(HandleActiveSelectionChangedEvent);
         
         Node.Content.NameChangedEvent -= HandleNameChangedEvent;
     }
@@ -97,32 +96,24 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
     public IEnumerable<HierarchyNodeViewModel> GetAllChildNodesRecursive() => ChildNodes.SelectMany(node => node.GetAllChildNodesRecursive());
 
-    public void Select()
+    public void ConfigureSelectionActions(
+        Action<HierarchyNodeViewModel, KeyModifiers> selectionRequestedAction,
+        Action<HierarchyNodeViewModel> contextMenuSelectionRequestedAction)
     {
-        _selectionService.Select(Node.Content);
+        _selectionRequestedAction = selectionRequestedAction;
+        _contextMenuSelectionRequestedAction = contextMenuSelectionRequestedAction;
     }
 
-    public void Deselect()
-    {
-        _selectionService.Deselect(Node.Content);
-    }
-
-    private void HandleActiveSelectionChangedEvent(ISelectable? value)
-    {
-        if (value is IEntitySelectable selectable)
-        {
-            Selected.Value = selectable.Entity.Id == Node.Content.Id;
-            return;
-        }
-
-        Selected.Value = false;
-    }
+    public void RequestSelection(KeyModifiers modifiers) => _selectionRequestedAction?.Invoke(this, modifiers);
+    public void RequestContextMenuSelection() => _contextMenuSelectionRequestedAction?.Invoke(this);
+    public void Select() => Selected.Value = true;
+    public void Deselect() => Selected.Value = false;
+    public void SetSelected(bool selected) => Selected.Value = selected;
 
     private void Delete()
     {
         if (Selected.Value)
         {
-            Deselect();
             _selectionService.ResetSelection();
         }
         

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Engine.Api.DTO;
@@ -182,14 +184,29 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void SelectEntityDelegate(int sceneEntityId);
-    public void SelectEntity(int sceneEntityId)
+    private delegate void SelectEntityDelegate(int sceneEntityId, bool resetCurrentSelection);
+    public void SelectEntity(int sceneEntityId, bool resetCurrentSelection = true)
     {
         if (!_engineApi.IsEngineRunning) return;
         
         try
         {
-            _engineApi.Invoke(typeof(SelectEntityDelegate), "SelectEntity", sceneEntityId);
+            _engineApi.Invoke(typeof(SelectEntityDelegate), "SelectEntity", sceneEntityId, resetCurrentSelection);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
+    }
+
+    private delegate void SetEntitySelectionDelegate(string json);
+    public void SetEntitySelection(SetEntitySelectionRequest request)
+    {
+        if (!_engineApi.IsEngineRunning) return;
+
+        try
+        {
+            _engineApi.Invoke(typeof(SetEntitySelectionDelegate), "SetEntitySelection", JsonConvert.SerializeObject(request));
         }
         catch (Exception)
         {

@@ -186,6 +186,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             var currentSceneEntities = scene.Entities.ToList();
             //_logger.LogWarning($"Scene entities: {JsonConvert.SerializeObject(entities)}");
             var needsHierarchyRefresh = false;
+            var selectedEntityIds = new HashSet<int>();
 
             var entityStates = new Dictionary<int, GetEntityDataResponse?>();
             var parentByEntityId = new Dictionary<int, int>();
@@ -228,7 +229,10 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
                     needsHierarchyRefresh |= UpdateEntityStateFromEngineState(gameEntity, entityStates[entityId]);
                 }
 
-                UpdateEntitySelection(e, gameEntity);
+                if (e.IsSelected)
+                {
+                    selectedEntityIds.Add(gameEntity.Id);
+                }
             }
             
             // Delete invalid entities
@@ -242,6 +246,8 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             {
                 scene.RebuildHierarchy();
             }
+
+            UpdateEntitySelection(scene.Entities.ToList(), selectedEntityIds);
         }
         catch (Exception e)
         {
@@ -264,15 +270,36 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         }
     }
 
-    private void UpdateEntitySelection(GetSceneEntitiesResponse.SceneEntitiesResponseEntity e, GameEntity gameEntity)
+    private void UpdateEntitySelection(IReadOnlyCollection<GameEntity> entities, IReadOnlySet<int> selectedEntityIds)
     {
-        if (e.IsSelected && !_selectionService.IsEntitySelected(gameEntity))
+        var selectedItems = entities
+            .Where(entity => selectedEntityIds.Contains(entity.Id))
+            .Select(entity => _selectionService.GetEntitySelectable(entity))
+            .Where(selectable => selectable != null)
+            .Cast<ISelectable>()
+            .ToList();
+
+        if (selectedItems.Count == 0)
         {
-            _selectionService.Select(gameEntity, sendToEngine: false);
+            if (_selectionService.SelectedItems.OfType<IEntitySelectable>().Any())
+            {
+                _selectionService.ResetSelection(sendToEngine: false);
+            }
+
+            return;
         }
-        else if (!e.IsSelected && _selectionService.IsEntitySelected(gameEntity))
+
+        var currentPrimarySelection = _selectionService.ActiveSelection.Value as IEntitySelectable;
+        var primarySelection = currentPrimarySelection != null &&
+                               selectedEntityIds.Contains(currentPrimarySelection.Entity.Id)
+            ? currentPrimarySelection
+            : selectedItems.OfType<IEntitySelectable>().FirstOrDefault();
+        if (primarySelection == null)
         {
             _selectionService.ResetSelection(sendToEngine: false);
+            return;
         }
+
+        _selectionService.SetSelection(selectedItems, primarySelection, sendToEngine: false);
     }
 }

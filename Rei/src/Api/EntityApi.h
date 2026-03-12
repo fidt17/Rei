@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <string>
+
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/Editor/EntitySelectionUtility.h"
@@ -171,23 +173,53 @@ REI_EXTERN_API inline void DeleteBehaviour(const i32 sceneEntityId, const i32 be
     });
 }
 
-REI_EXTERN_API inline void SelectEntity(const i32 sceneEntityId)
+REI_EXTERN_API inline void SelectEntity(const i32 sceneEntityId, const bool resetCurrentSelection = true)
 {
-    rei::GetEngine().ExecuteOnMainThread([=]
+    auto task = rei::GetEngine().ExecuteOnMainThread([=]
     {
         ECS_WORLD(rei::GetInternalWorld());
 
         const auto& e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
         if (IS_DEAD(e)) return;
 
-        rei::editor::selection_utility::Select(rei::GetInternalWorld(), e);
+        rei::editor::selection_utility::Select(rei::GetInternalWorld(), e, resetCurrentSelection);
     });
+
+    task->WaitForCompletion();
+}
+
+REI_EXTERN_API inline void SetEntitySelection(const char* json)
+{
+    const std::string jsonStr = json != nullptr ? json : "";
+    auto task = rei::GetEngine().ExecuteOnMainThread([jsonStr]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+
+        rei::editor::selection_utility::Reset(rei::GetInternalWorld());
+        if (jsonStr.empty()) return;
+
+        nlohmann::json data = nlohmann::json::parse(jsonStr);
+        if (!data.contains("EntityIds")) return;
+
+        for (const auto& entityIdValue : data.at("EntityIds"))
+        {
+            const auto sceneEntityId = entityIdValue.get<i32>();
+            const auto& entity = rei::GetEntityManager().GetBySceneId(sceneEntityId);
+            if (IS_DEAD(entity)) continue;
+
+            rei::editor::selection_utility::Select(rei::GetInternalWorld(), entity, false);
+        }
+    });
+
+    task->WaitForCompletion();
 }
 
 REI_EXTERN_API inline void ResetEntitySelection()
 {
-    rei::GetEngine().ExecuteOnMainThread([=]
+    auto task = rei::GetEngine().ExecuteOnMainThread([=]
     {
         rei::editor::selection_utility::Reset(rei::GetInternalWorld());
     });
+
+    task->WaitForCompletion();
 }

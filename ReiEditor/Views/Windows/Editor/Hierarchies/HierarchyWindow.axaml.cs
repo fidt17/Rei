@@ -38,6 +38,11 @@ public partial class HierarchyWindow : UserControl
             return;
         }
 
+        if (e.Source is Control sourceControl && sourceControl.FindAncestorOfType<HierarchyNode>() != null)
+        {
+            return;
+        }
+
         if (DataContext is not HierarchyWindowViewModel vm) return;
         var command = vm.ResetSelectionCommand;
         if (command == null) return;

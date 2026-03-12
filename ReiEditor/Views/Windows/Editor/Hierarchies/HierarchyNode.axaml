@@ -25,7 +25,6 @@
             <Border
                 x:Name="RootBorder"
                 KeyDown="RootBorder_OnKeyDown"
-                PointerPressed="RootBorder_OnPointerPressed"
                 Padding="4"
                 DragDrop.AllowDrop="True"
                 Classes.IsSelected="{Binding Selected.Value}"

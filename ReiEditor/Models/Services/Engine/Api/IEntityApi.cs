@@ -1,4 +1,5 @@
-﻿using ReiEditor.Models.Services.Engine.Api.DTO;
+﻿using System.Collections.Generic;
+using ReiEditor.Models.Services.Engine.Api.DTO;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -19,6 +20,7 @@ public interface IEntityApi
     void AddBehaviour(int sceneEntityId, int behaviourId);
     void DeleteBehaviour(int sceneEntityId, int behaviourId);
 
-    void SelectEntity(int sceneEntityId);
+    void SelectEntity(int sceneEntityId, bool resetCurrentSelection = true);
+    void SetEntitySelection(SetEntitySelectionRequest request);
     void ResetEntitySelection();
 }

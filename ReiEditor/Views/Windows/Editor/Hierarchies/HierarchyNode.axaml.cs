@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Views.Windows.Editor.Hierarchies;
@@ -13,13 +12,14 @@ namespace ReiEditor.Views.Windows.Editor.Hierarchies;
 public partial class HierarchyNode : UserControl
 {
     private HierarchyNodeViewModel? _vm;
-    
+
     public HierarchyNode()
     {
         InitializeComponent();
-        
+
+        RootBorder.AddHandler(InputElement.PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         DataContextChanged += HandleDataContextChangedEvent;
-        
+
         ConfigureDragAndDrop();
     }
 
@@ -53,12 +53,11 @@ public partial class HierarchyNode : UserControl
         NameTextBox.SelectAll();
     }
 
-    // ReSharper disable once UnusedParameter.Local
     private void RootBorder_OnKeyDown(object? obj, KeyEventArgs e)
     {
         if (_vm == null) return;
         if (!_vm.Selected.Value) return;
-        
+
         if (e.Key == Key.Delete)
         {
             _vm.DeleteCommand.Execute(null);
@@ -73,17 +72,17 @@ public partial class HierarchyNode : UserControl
         }
     }
 
-    // ReSharper disable once UnusedParameter.Local
     private void NameTextBox_OnKeyDown(object? obj, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
+            NameTextBox.IsVisible = false;
             RootBorder.Focus();
         }
         else if (e.Key == Key.Enter)
         {
-            var vm = DataContext as HierarchyNodeViewModel;
-            vm?.ConfirmRenameCommand.Execute(NameTextBox.Text);
+            _vm?.ConfirmRenameCommand.Execute(NameTextBox.Text);
+            NameTextBox.IsVisible = false;
             RootBorder.Focus();
         }
     }
@@ -91,71 +90,77 @@ public partial class HierarchyNode : UserControl
     private void ConfigureDragAndDrop()
     {
         var target = RootBorder;
-        bool pointerDown;
-        
-        void DoDrag(object? sender, PointerPressedEventArgs e)
-        {
-            Dispatcher.UIThread.InvokeAsync(async () =>
-            {
-                pointerDown = true;
-                if (_vm == null) return;
+        var pointerDown = false;
+        var dragStarted = false;
+        Point pressedPosition = default;
+        const double DRAG_THRESHOLD = 4;
 
-                if (!_vm.Selected.Value)
-                {
-                    await Task.Delay(100);
-                    _vm.SelectCommand.Execute(null);
-                }
-            
-                await Task.Delay(100);
-                if (!pointerDown) return;
-                
-                var dragData = new DataObject();
-                dragData.Set("Node", _vm);
-
-                try
-                {
-                    await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
-                }
-                catch (COMException)
-                {
-                    // ignore
-                }
-            });
-        }
-
-        void Drop(object? sender, DragEventArgs e)
+        target.PointerPressed += (_, e) =>
         {
             if (_vm == null) return;
-            
-            var nodeToMove = e.Data.Get("Node") as HierarchyNodeViewModel;
-            if (nodeToMove == null) return;
-            nodeToMove.MoveNodeCommand.Execute(new MoveNodeCommand.MoveArgs(_vm.Node, _vm.ChildNodes.Count));
-            e.Handled = true;
-        }
+            if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
 
-        target.PointerPressed += DoDrag;
-        target.PointerReleased += (_, _) =>
-        {
-            pointerDown = false;
+            pointerDown = true;
+            dragStarted = false;
+            pressedPosition = e.GetPosition(target);
         };
-        AddHandler(DragDrop.DropEvent, Drop);
+
+        target.PointerMoved += async (_, e) =>
+        {
+            if (_vm == null) return;
+            if (!pointerDown || dragStarted) return;
+            if (!e.GetCurrentPoint(target).Properties.IsLeftButtonPressed) return;
+
+            var currentPosition = e.GetPosition(target);
+            var delta = currentPosition - pressedPosition;
+            var movedEnough = Math.Abs(delta.X) >= DRAG_THRESHOLD || Math.Abs(delta.Y) >= DRAG_THRESHOLD;
+            if (!movedEnough) return;
+
+            if (!_vm.Selected.Value)
+            {
+                _vm.RequestSelection(KeyModifiers.None);
+            }
+
+            dragStarted = true;
+            var dragData = new DataObject();
+            dragData.Set("Node", _vm);
+
+            try
+            {
+                await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move);
+            }
+            catch (COMException)
+            {
+            }
+            finally
+            {
+                pointerDown = false;
+            }
+        };
+
+        target.PointerReleased += (_, e) =>
+        {
+            var vm = _vm;
+            var shouldSelect = pointerDown && !dragStarted && vm != null && e.InitialPressMouseButton == MouseButton.Left;
+            pointerDown = false;
+            dragStarted = false;
+
+            if (!shouldSelect) return;
+
+            vm!.RequestSelection(e.KeyModifiers);
+            RootBorder.Focus();
+        };
     }
 
     private void RootBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control control) return;
+        if (_vm == null) return;
+        if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
 
-        if (e.GetCurrentPoint(control).Properties.IsRightButtonPressed)
-        {
-            FlyoutBase.ShowAttachedFlyout(control);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
-        {
-            _vm?.SelectCommand.Execute(null);
-        }
+        _vm.RequestContextMenuSelection();
+        RootBorder.Focus();
+        FlyoutBase.ShowAttachedFlyout(RootBorder);
+        e.Handled = true;
     }
 
     private void HandleAnyContextMenuCommandExecuted()
