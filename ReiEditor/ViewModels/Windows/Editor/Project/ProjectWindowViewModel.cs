@@ -9,6 +9,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
@@ -49,6 +50,10 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IStorageProvider? _storageProvider;
     private readonly IAssetRegistry? _assetRegistry;
     private readonly IAssetOperationsService? _assetOperationsService;
+    private readonly IProjectAssetDeleteCommand? _projectAssetDeleteCommand;
+    private readonly IProjectAssetDuplicateCommand? _projectAssetDuplicateCommand;
+    private readonly IProjectAssetMoveCommand? _projectAssetMoveCommand;
+    private readonly IProjectAssetRenameCommand? _projectAssetRenameCommand;
     private readonly IFileExplorerProvider? _fileExplorerProvider;
     private readonly IAssetSearchService? _assetSearchService;
     private readonly IEditorRefreshService? _editorRefreshService;
@@ -75,6 +80,10 @@ public class ProjectWindowViewModel : BaseViewModel
         IStorageProvider storageProvider,
         IAssetRegistry assetRegistry,
         IAssetOperationsService assetOperationsService,
+        IProjectAssetDeleteCommand projectAssetDeleteCommand,
+        IProjectAssetDuplicateCommand projectAssetDuplicateCommand,
+        IProjectAssetMoveCommand projectAssetMoveCommand,
+        IProjectAssetRenameCommand projectAssetRenameCommand,
         IFileExplorerProvider fileExplorerProvider,
         IAssetSearchService assetSearchService,
         IEditorRefreshService editorRefreshService,
@@ -90,6 +99,10 @@ public class ProjectWindowViewModel : BaseViewModel
         _storageProvider = storageProvider;
         _assetRegistry = assetRegistry;
         _assetOperationsService = assetOperationsService;
+        _projectAssetDeleteCommand = projectAssetDeleteCommand;
+        _projectAssetDuplicateCommand = projectAssetDuplicateCommand;
+        _projectAssetMoveCommand = projectAssetMoveCommand;
+        _projectAssetRenameCommand = projectAssetRenameCommand;
         _fileExplorerProvider = fileExplorerProvider;
         _assetSearchService = assetSearchService;
         _editorRefreshService = editorRefreshService;
@@ -415,27 +428,26 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void RenameAsset(ProjectAssetItemViewModel item, string newName)
     {
-        if (_assetOperationsService == null) return;
+        if (_projectAssetRenameCommand == null) return;
 
-        _ = _assetOperationsService.RenameAsync(item.FullPath, newName).ContinueWith(_ =>
+        _ = _projectAssetRenameCommand.ExecuteAsync(CreateCommandTarget(item), newName).ContinueWith(t =>
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                RefreshView(affectsTree: item.IsDirectory);
-                SelectAssetByPath(IOPath.Combine(IOPath.GetDirectoryName(item.FullPath) ?? "", newName.Trim()));
+                ApplyCommandResult(t.Result);
             });
         });
     }
 
     private void DeleteAsset(ProjectAssetItemViewModel item)
     {
-        if (_assetOperationsService == null) return;
+        if (_projectAssetDeleteCommand == null) return;
 
-        _ = _assetOperationsService.DeleteAsync(item.FullPath, item.IsDirectory).ContinueWith(_ =>
+        _ = _projectAssetDeleteCommand.ExecuteAsync(CreateCommandTarget(item)).ContinueWith(t =>
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                RefreshView(affectsTree: item.IsDirectory);
+                ApplyCommandResult(t.Result);
             });
         });
     }
@@ -444,7 +456,7 @@ public class ProjectWindowViewModel : BaseViewModel
     {
         if (_storageProvider == null) return;
         if (string.IsNullOrWhiteSpace(_projectRootPath)) return;
-        if (_assetOperationsService == null) return;
+        if (_projectAssetMoveCommand == null) return;
 
         Dispatcher.UIThread.InvokeAsync(async () =>
         {
@@ -462,21 +474,20 @@ public class ProjectWindowViewModel : BaseViewModel
             var fullRootPath = IOPath.GetFullPath(_projectRootPath);
             if (!fullDestFolderPath.StartsWith(fullRootPath, StringComparison.OrdinalIgnoreCase)) return;
 
-            await _assetOperationsService.MoveAsync(item.FullPath, fullDestFolderPath);
-            RefreshView(affectsTree: item.IsDirectory);
-            SelectAssetByPath(IOPath.Combine(fullDestFolderPath, IOPath.GetFileName(item.FullPath)));
+            var result = await _projectAssetMoveCommand.ExecuteAsync(CreateCommandTarget(item), fullDestFolderPath);
+            ApplyCommandResult(result);
         });
     }
 
     private void DuplicateAsset(ProjectAssetItemViewModel item)
     {
-        if (_assetOperationsService == null) return;
+        if (_projectAssetDuplicateCommand == null) return;
 
-        _ = _assetOperationsService.DuplicateAsync(item.FullPath, item.IsDirectory).ContinueWith(_ =>
+        _ = _projectAssetDuplicateCommand.ExecuteAsync(CreateCommandTarget(item)).ContinueWith(t =>
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                RefreshView(affectsTree: item.IsDirectory);
+                ApplyCommandResult(t.Result);
             });
         });
     }
@@ -495,7 +506,6 @@ public class ProjectWindowViewModel : BaseViewModel
             RefreshView(affectsTree: true);
         });
     }
-
 
     public void ClearAssetSelection()
     {
@@ -610,6 +620,21 @@ public class ProjectWindowViewModel : BaseViewModel
         match.PulseHighlight(TimeSpan.FromSeconds(1));
         _highlightedAsset = match;
         ScrollToAssetRequested?.Invoke(path);
+    }
+
+    private static ProjectAssetCommandTarget CreateCommandTarget(ProjectAssetItemViewModel item)
+    {
+        return new ProjectAssetCommandTarget(item.FullPath, item.IsDirectory);
+    }
+
+    private void ApplyCommandResult(ProjectAssetCommandResult result)
+    {
+        RefreshView(result.AffectsTree);
+
+        if (!string.IsNullOrWhiteSpace(result.SelectedAssetPath))
+        {
+            SelectAssetByPath(result.SelectedAssetPath);
+        }
     }
 
     private void ResetDirectoryTree()
