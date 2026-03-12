@@ -15,7 +15,7 @@ public interface IEntityApi
     void Rename(int sceneEntityId, string newName);
     void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order);
     void SetData(SetEntityDataRequest request);
-    void InstantiateEntity(InstantiateEntityRequest request);
+    InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request);
 
     void AddBehaviour(int sceneEntityId, int behaviourId);
     void DeleteBehaviour(int sceneEntityId, int behaviourId);

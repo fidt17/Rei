@@ -127,6 +127,16 @@ public class HierarchyWindowViewModel : BaseViewModel
         return _selectedEntityActionService.DuplicateSelectedEntity();
     }
 
+    public bool DeleteSelectedEntity()
+    {
+        return _selectedEntityActionService.DeleteSelectedEntity();
+    }
+
+    public bool RequestRenameSelectedEntity()
+    {
+        return _selectedEntityActionService.RequestRenameSelectedEntity();
+    }
+
     public bool CanDropEntities(IReadOnlyList<int> draggedEntityIds, int? targetParentEntityId)
     {
         var hierarchy = _activeHierarchy;

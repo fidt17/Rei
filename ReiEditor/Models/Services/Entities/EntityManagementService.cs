@@ -165,7 +165,7 @@ public class EntityManagementService : IEntityManagementService
         }
     }
 
-    public void InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true)
+    public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true)
     {
         try
         {
@@ -180,17 +180,21 @@ public class EntityManagementService : IEntityManagementService
                 ? baseName
                 : NamingUtils.GetUniqueName(baseName, scene.Entities.Select(x => x.Name));
 
-            _entityApi.InstantiateEntity(new InstantiateEntityRequest
+            var response = _entityApi.InstantiateEntity(new InstantiateEntityRequest
             {
                 SourceEntityId = sourceEntity.Id,
                 RequestedName = uniqueName,
                 IncludeChildren = includeChildren
             });
+
+            return response?.EntityId;
         }
         catch (Exception exception)
         {
             _logger.LogException(exception);
         }
+
+        return null;
     }
 
     public void DestroyEntity(GameEntity e)

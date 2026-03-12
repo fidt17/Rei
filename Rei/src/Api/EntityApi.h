@@ -105,11 +105,11 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
     });
 }
 
-REI_EXTERN_API inline void InstantiateEntity(const char* json)
+REI_EXTERN_API inline void InstantiateEntity(const char* json, char* outputBuffer, const i32 bufferSize)
 {
     const std::string jsonStr = json;
 
-    rei::GetEngine().ExecuteOnMainThread([=]
+    auto task = rei::GetEngine().ExecuteOnMainThread([=]
     {
         ECS_WORLD(rei::GetInternalWorld());
 
@@ -122,8 +122,13 @@ REI_EXTERN_API inline void InstantiateEntity(const char* json)
         if (IS_DEAD(sourceEntity)) return;
 
         const auto clone = rei::GetEntityManager().Instantiate(sourceEntity, requestedName, includeChildren);
-        rei::editor::selection_utility::Select(rei::GetInternalWorld(), clone);
+
+        nlohmann::json response;
+        response["EntityId"] = GET(clone, EntityInfo).Id;
+        strncpy_s(outputBuffer, bufferSize, response.dump().c_str(), _TRUNCATE);
     });
+
+    task->WaitForCompletion();
 }
 
 REI_EXTERN_API inline void SetEntityData(const char* json)

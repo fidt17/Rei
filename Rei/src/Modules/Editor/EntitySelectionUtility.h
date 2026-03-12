@@ -11,6 +11,8 @@ namespace rei::editor::selection_utility
         const auto& selectedEntities = FILTER(rei::editor::SelectedTag);
         FOR(e, selectedEntities)
         {
+            if (IS_DEAD(e)) continue;
+
             DEL(e, rei::editor::SelectedTag);
             DEL(e, rei::render::RenderOutlineTag);
         }

@@ -65,6 +65,26 @@ public partial class HierarchyWindow : UserControl
             {
                 e.Handled = true;
             }
+
+            return;
+        }
+
+        if (e.Key == Key.Delete)
+        {
+            if (_vm.DeleteSelectedEntity())
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (e.Key == Key.F2)
+        {
+            if (_vm.RequestRenameSelectedEntity())
+            {
+                e.Handled = true;
+            }
         }
     }
 

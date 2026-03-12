@@ -65,14 +65,17 @@ public partial class HierarchyNode : UserControl
         if (e.Key == Key.Delete)
         {
             _vm.DeleteCommand.Execute(null);
+            e.Handled = true;
         }
         else if (e.Key == Key.F2)
         {
             _vm.StartRenameCommand.Execute(null);
+            e.Handled = true;
         }
         else if (e.Key == Key.D && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             _vm.DuplicateCommand.Execute(null);
+            e.Handled = true;
         }
     }
 

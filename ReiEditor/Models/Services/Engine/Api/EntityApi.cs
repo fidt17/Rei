@@ -138,19 +138,22 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void InstantiateEntityDelegate(string json);
-    public void InstantiateEntity(InstantiateEntityRequest request)
+    private delegate void InstantiateEntityDelegate(string json, StringBuilder outputBuffer, int bufferSize);
+    public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request)
     {
-        if (!_engineApi.IsEngineRunning) return;
+        if (!_engineApi.IsEngineRunning) return null;
 
         try
         {
-            // ReSharper disable once RedundantArgumentDefaultValue
-            _engineApi.Invoke(typeof(InstantiateEntityDelegate), "InstantiateEntity", JsonConvert.SerializeObject(request));
+            var buffer = _responseBufferPool.Get();
+            _engineApi.Invoke(typeof(InstantiateEntityDelegate), "InstantiateEntity", JsonConvert.SerializeObject(request), buffer, buffer.Capacity);
+            var response = JsonConvert.DeserializeObject<InstantiateEntityResponse>(buffer.ToString());
+            _responseBufferPool.Put(buffer);
+            return response;
         }
         catch (Exception)
         {
-            // ignore
+            return null;
         }
     }
 

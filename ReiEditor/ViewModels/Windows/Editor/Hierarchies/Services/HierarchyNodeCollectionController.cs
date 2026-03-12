@@ -118,8 +118,7 @@ public class HierarchyNodeCollectionController
     {
         if (!_nodeMap.TryGetValue(node, out var targetNode)) return;
 
-        targetNode.Dispose();
-        _nodeMap.Remove(node);
+        DisposeNodeSubtree(targetNode);
 
         if (node.Parent == null)
         {
@@ -153,13 +152,26 @@ public class HierarchyNodeCollectionController
 
         if (node.Parent == null)
         {
-            Nodes.Insert(newOrder, nodeVm);
+            var insertIndex = Math.Clamp(newOrder, 0, Nodes.Count);
+            Nodes.Insert(insertIndex, nodeVm);
             return;
         }
 
         if (_nodeMap.TryGetValue(node.Parent, out var newParentNode))
         {
-            newParentNode.ChildNodes.Insert(newOrder, nodeVm);
+            var insertIndex = Math.Clamp(newOrder, 0, newParentNode.ChildNodes.Count);
+            newParentNode.ChildNodes.Insert(insertIndex, nodeVm);
         }
+    }
+
+    private void DisposeNodeSubtree(HierarchyNodeViewModel node)
+    {
+        foreach (var child in node.ChildNodes.ToArray())
+        {
+            DisposeNodeSubtree(child);
+        }
+
+        _nodeMap.Remove(node.Node);
+        node.Dispose();
     }
 }

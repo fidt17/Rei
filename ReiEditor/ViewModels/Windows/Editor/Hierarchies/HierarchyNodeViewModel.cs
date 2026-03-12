@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Input;
 using Avalonia.Input;
 using ReactiveUI;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
@@ -36,7 +37,8 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
     public HierarchyNode<GameEntity> Node { get; }
     
-    private readonly IEntityManagementService _entityManagementService;
+    private readonly IEntityRenameCommand _entityRenameCommand;
+    private readonly ISelectedEntityActionService _selectedEntityActionService;
     private readonly ISelectionService _selectionService;
     private Action<HierarchyNodeViewModel, KeyModifiers>? _selectionRequestedAction;
     private Action<HierarchyNodeViewModel>? _contextMenuSelectionRequestedAction;
@@ -45,11 +47,16 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
     public HierarchyNodeViewModel() { }
 #pragma warning restore CS8618
 
-    public HierarchyNodeViewModel(HierarchyNode<GameEntity> node, IEntityManagementService entityManagementService, ISelectionService selectionService)
+    public HierarchyNodeViewModel(
+        HierarchyNode<GameEntity> node,
+        IEntityRenameCommand entityRenameCommand,
+        ISelectedEntityActionService selectedEntityActionService,
+        ISelectionService selectionService)
     {
         Node = node;
         Node.Content.NameChangedEvent += HandleNameChangedEvent;
-        _entityManagementService = entityManagementService;
+        _entityRenameCommand = entityRenameCommand;
+        _selectedEntityActionService = selectedEntityActionService;
         _selectionService = selectionService;
 
         Name.Value = node.Content.Name;
@@ -118,22 +125,11 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
             .ToArray();
     }
 
-    private void Delete()
-    {
-        if (Selected.Value)
-        {
-            _selectionService.ResetSelection();
-        }
-        
-        _entityManagementService.DestroyEntity(Node.Content);
-    }
+    private void Delete() => _selectedEntityActionService.DeleteSelectedEntity();
 
-    private void Duplicate()
-    {
-        _entityManagementService.InstantiateEntity(Node.Content);
-    }
+    private void Duplicate() => _selectedEntityActionService.DuplicateSelectedEntity();
 
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;
     private void StartRename() => RenameValue.Value = Name.Value;
-    private void ConfirmRename(string name) => _entityManagementService.RenameEntity(Node.Content, name);
+    private void ConfirmRename(string name) => _entityRenameCommand.Execute(new EntityRenameCommandTarget(Node.Content, name));
 }

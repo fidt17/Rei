@@ -55,6 +55,8 @@ public class Hierarchy<T> where T : notnull
         {
             node.Parent.RemoveChild(node);
         }
+
+        RemoveNodeFromMap(node);
         
         NodeRemovedEvent?.Invoke(node);
     }
@@ -121,4 +123,14 @@ public class Hierarchy<T> where T : notnull
     }
     
     public void SortRootNodes(Func<HierarchyNode<T>, HierarchyNode<T>, int> comparison) => _rootNodes.Sort((a,b) => comparison(a, b));
+
+    private void RemoveNodeFromMap(HierarchyNode<T> node)
+    {
+        foreach (var child in node.ChildNodes.ToArray())
+        {
+            RemoveNodeFromMap(child);
+        }
+
+        _nodeMap.Remove(node.Content);
+    }
 }

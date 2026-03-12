@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Scenes;
@@ -20,6 +21,10 @@ public class SceneModule : Module
         b.RegisterSingleton<SelectedEntityActionService>().As<ISelectedEntityActionService>();
         b.RegisterSingleton<SelectedEntityInputService>();
         b.RegisterSingleton<EntityStateSynchronizer>().As<IEntityStateSynchronizer>();
+        b.RegisterType<EntityRenameCommand>().As<IEntityRenameCommand>();
+        b.RegisterType<SelectedEntityDeleteCommand>().As<ISelectedEntityDeleteCommand>();
+        b.RegisterType<SelectedEntityDuplicateCommand>().As<ISelectedEntityDuplicateCommand>();
+        b.RegisterType<SelectedEntityRenameCommand>().As<ISelectedEntityRenameCommand>();
 
         b.RegisterType<CreateSceneEntityCommand>();
 

@@ -168,6 +168,15 @@ public class SelectionService : ISelectionService
     public void UnregisterSelectable(ISelectable selectable)
     {
         _selectables.RemoveAll(x => x == selectable);
+
+        if (!_selectedItems.Remove(selectable)) return;
+
+        var primarySelection = ReferenceEquals(_activeSelection.Value, selectable)
+            ? _selectedItems.FirstOrDefault()
+            : _activeSelection.Value;
+
+        SyncEntitySelection(_selectedItems.ToArray(), sendToEngine: false);
+        PublishSelectionChanged(primarySelection);
     }
 
     private bool SelectionEquals(IReadOnlyCollection<ISelectable> selection, ISelectable primarySelection)
