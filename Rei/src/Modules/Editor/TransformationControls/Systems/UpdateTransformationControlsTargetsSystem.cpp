@@ -1,7 +1,8 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "UpdateTransformationControlsTargetsSystem.h"
 
 #include "Modules/Editor/TransformationControls/TransformationControl.h"
+#include "rei_behaviours/transformation/Transform.h"
 
 namespace rei::editor
 {
@@ -17,15 +18,33 @@ namespace rei::editor
         if (IS_DEAD(controlEntity)) return;
 
         auto& transformationControl = GET(controlEntity, TransformationControl);
+        transformationControl.TargetEntities.clear();
+        transformationControl.PrimaryTargetEntity = ecs::NULL_ENTITY;
+        transformationControl.PivotWorldPosition = {};
 
-        const auto selectedEntity = FIND(Transform, SelectedTag)
-        if (IS_ALIVE(selectedEntity))
+        math::Vector3 pivotAccumulator = {};
+        u32 selectedTargetsCount = 0;
+
+        FOR(selectedEntity, _selectedEntities)
         {
-            transformationControl.TargetEntity = selectedEntity;
+            if (IS_DEAD(selectedEntity) || !HAS(selectedEntity, Transform)) continue;
+
+            transformationControl.TargetEntities.push_back(selectedEntity);
+            if (IS_DEAD(transformationControl.PrimaryTargetEntity))
+            {
+                transformationControl.PrimaryTargetEntity = selectedEntity;
+            }
+
+            pivotAccumulator += GET(selectedEntity, Transform).GetWorldPosition();
+            selectedTargetsCount++;
         }
-        else
+
+        if (selectedTargetsCount == 0)
         {
-            transformationControl.TargetEntity = ecs::NULL_ENTITY;
+            transformationControl.DragStartTargetStates.clear();
+            return;
         }
+
+        transformationControl.PivotWorldPosition = pivotAccumulator / static_cast<f32>(selectedTargetsCount);
     }
 }

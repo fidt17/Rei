@@ -1,25 +1,18 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "UpdateTransformationControlsTransformsSystem.h"
 
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
-#include "assimp/port/AndroidJNI/AndroidJNIIOSystem.h"
 #include "Modules/Physics/PointerCollisionListener.h"
 #include "rei_behaviours/render/camera/Camera.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 namespace rei::editor
 {
-    UpdateTransformationControlsTransformsSystem::UpdateTransformationControlsTransformsSystem(
-        const std::shared_ptr<ecs::World>& ecsWorld): System(ecsWorld)
+    UpdateTransformationControlsTransformsSystem::UpdateTransformationControlsTransformsSystem(const std::shared_ptr<ecs::World>& ecsWorld) : System(ecsWorld)
     {
         _controlFilter = FILTER(TransformationControl);
     }
 
-    void UpdateTransformationControlsTransformsSystem::UpdateMovementArrow(const TransformationControl& control,
-                                                                           const TransformationControlMovementArrow& arrow, const math::Vector3& targetPosition,
-                                                                           const glm::quat& targetRotation, f32 controlScale) const
+    void UpdateTransformationControlsTransformsSystem::UpdateMovementArrow(const TransformationControl& control, const TransformationControlMovementArrow& arrow, const math::Vector3& targetPosition, const glm::quat& targetRotation, f32 controlScale) const
     {
         const auto isPointerInside = GET(arrow.Entity, physics::PointerCollisionListener).IsInside;
         controlScale *= isPointerInside ? 1.01f : 1;
@@ -27,7 +20,7 @@ namespace rei::editor
         auto& t = GET(arrow.Entity, Transform);
         t.SetWorldPosition(targetPosition);
 
-        if (control.UseWorldSpace)
+        if (control.IsUsingWorldSpace())
         {
             t.SetWorldRotation(LookAt(arrow.Direction, math::Vector3::Up()));
         }
@@ -39,37 +32,38 @@ namespace rei::editor
         t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
     }
 
-    void UpdateTransformationControlsTransformsSystem::UpdateScaleArrow(const TransformationControl& control, const TransformationControlScaleArrow& arrow,
-                                                                        const math::Vector3& targetPosition, const glm::quat& targetRotation,
-                                                                        f32 controlScale) const
+    void UpdateTransformationControlsTransformsSystem::UpdateScaleArrow(const TransformationControl& control, const TransformationControlScaleArrow& arrow, const math::Vector3& targetPosition, const glm::quat& targetRotation, f32 controlScale) const
     {
         const auto isPointerInside = GET(arrow.Entity, physics::PointerCollisionListener).IsInside;
         controlScale *= isPointerInside ? 1.01f : 1;
 
         auto& t = GET(arrow.Entity, Transform);
         t.SetWorldPosition(targetPosition);
-        t.SetWorldRotation(LookAt(arrow.Direction.Rotate(targetRotation), math::Vector3::Up()));
+
+        if (control.IsUsingWorldSpace())
+        {
+            t.SetWorldRotation(LookAt(arrow.Direction, math::Vector3::Up()));
+        }
+        else
+        {
+            t.SetWorldRotation(LookAt(arrow.Direction.Rotate(targetRotation), math::Vector3::Up()));
+        }
+
         t.SetWorldScale({controlScale, controlScale, controlScale * (1 + arrow.CurrentScaleMlt)});
     }
 
-    void UpdateTransformationControlsTransformsSystem::UpdateScaleRoot(const TransformationControl& control, const TransformationControlScaleArrow& root,
-                                                                       const math::Vector3& targetPosition, const glm::quat& targetRotation,
-                                                                       f32 controlScale) const
+    void UpdateTransformationControlsTransformsSystem::UpdateScaleRoot(const TransformationControl& control, const TransformationControlScaleArrow& root, const math::Vector3& targetPosition, const glm::quat& targetRotation, f32 controlScale) const
     {
         const auto isPointerInside = GET(control.RootScale.Entity, physics::PointerCollisionListener).IsInside;
         controlScale *= (isPointerInside ? 1.01f : 1) * 0.3f;
 
         auto& t = GET(root.Entity, Transform);
         t.SetWorldPosition(targetPosition);
-
-        t.SetWorldRotation(targetRotation);
-
+        t.SetWorldRotation(control.IsUsingWorldSpace() ? glm::quat(1, 0, 0, 0) : targetRotation);
         t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
     }
 
-    void UpdateTransformationControlsTransformsSystem::UpdateRotationRing(const TransformationControl& control, const TransformationControlRotationRing& ring,
-                                                                          const math::Vector3& targetPosition, const glm::quat& targetRotation,
-                                                                          f32 controlScale) const
+    void UpdateTransformationControlsTransformsSystem::UpdateRotationRing(const TransformationControl& control, const TransformationControlRotationRing& ring, const math::Vector3& targetPosition, const glm::quat& targetRotation, f32 controlScale) const
     {
         const auto isPointerInside = GET(ring.Entity, physics::PointerCollisionListener).IsInside;
         controlScale *= isPointerInside ? 1.01f : 1;
@@ -78,7 +72,7 @@ namespace rei::editor
         t.SetWorldPosition(targetPosition);
 
         auto axisDirection = ring.Direction;
-        if (!control.UseWorldSpace)
+        if (!control.IsUsingWorldSpace())
         {
             axisDirection = axisDirection.Rotate(targetRotation);
         }
@@ -94,15 +88,15 @@ namespace rei::editor
 
         const auto controlEntity = _controlFilter->First();
         if (IS_DEAD(controlEntity)) return;
+
         const auto& control = GET(controlEntity, TransformationControl);
+        if (!control.HasTargets()) return;
 
-        if (IS_DEAD(control.TargetEntity)) return;
+        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
+        const auto targetPosition = control.PivotWorldPosition;
+        const auto targetRotation = primaryTargetTransform.GetWorldRotation();
 
-        auto& targetTransform = GET(control.TargetEntity, Transform);
-        const auto targetPosition = targetTransform.GetWorldPosition();
-        const auto targetRotation = targetTransform.GetWorldRotation();
-
-        const f32 controlScale = mainCamera.Get().CalculateConstantScale(targetPosition, 0.5);
+        const f32 controlScale = mainCamera.Get().CalculateConstantScale(targetPosition, 0.5f);
 
         UpdateMovementArrow(control, control.RightMovementArrow, targetPosition, targetRotation, controlScale);
         UpdateMovementArrow(control, control.UpMovementArrow, targetPosition, targetRotation, controlScale);

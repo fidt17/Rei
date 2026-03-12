@@ -62,7 +62,7 @@ namespace rei::editor
 
         auto& transformationControl = GET(controlEntity, TransformationControl);
 
-        if (IS_DEAD(transformationControl.TargetEntity))
+        if (!transformationControl.HasTargets())
         {
             DisableMovementControls(transformationControl);
             DisableScaleControls(transformationControl);

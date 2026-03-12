@@ -1,9 +1,10 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "HandleTransformationControlsDragSystem.h"
+
+#include <cmath>
 
 #include "glm/gtc/quaternion.hpp"
 #include "Modules/Input/Input.h"
-#include <cmath>
 #include "Modules/Physics/PointerCollisionListener.h"
 #include "rei_behaviours/render/camera/Camera.h"
 #include "rei_behaviours/transformation/Transform.h"
@@ -17,7 +18,7 @@ namespace rei::editor
         constexpr f32 SCALE_SNAP_STEP = 0.1f;
     }
 
-    HandleTransformationControlsDragSystem::HandleTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld): System(ecsWorld)
+    HandleTransformationControlsDragSystem::HandleTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld) : System(ecsWorld)
     {
         _controlFilter = FILTER(TransformationControl);
     }
@@ -42,6 +43,34 @@ namespace rei::editor
         if (direction.z != 0) snappedDelta.z = SnapValue(scaleDelta.z, step);
 
         return snappedDelta;
+    }
+
+    void HandleTransformationControlsDragSystem::CaptureDragStartTargetStates(TransformationControl& control) const
+    {
+        control.DragStartTargetStates.clear();
+
+        for (const auto entity : control.TargetEntities)
+        {
+            if (IS_DEAD(entity) || !HAS(entity, Transform)) continue;
+
+            const auto& transform = GET(entity, Transform);
+            TransformationControlTargetState targetState = {};
+            targetState.Entity = entity;
+            targetState.LocalPosition = transform.GetLocalPosition();
+            targetState.LocalScale = transform.GetLocalScale();
+            targetState.LocalRotation = transform.GetLocalRotation();
+            control.DragStartTargetStates.push_back(targetState);
+        }
+    }
+
+    const TransformationControlTargetState* HandleTransformationControlsDragSystem::FindDragStartTargetState(const TransformationControl& control, const ecs::Entity entity) const
+    {
+        for (const auto& state : control.DragStartTargetStates)
+        {
+            if (state.Entity == entity) return &state;
+        }
+
+        return nullptr;
     }
 
     void HandleTransformationControlsDragSystem::OnUpdate()
@@ -99,11 +128,13 @@ namespace rei::editor
         control.RightRotationRing.DragAxis = {};
         control.UpRotationRing.DragAxis = {};
         control.ForwardRotationRing.DragAxis = {};
+
+        control.DragStartTargetStates.clear();
     }
 
     void HandleTransformationControlsDragSystem::HandleMovementDrag(TransformationControl& control) const
     {
-        if (IS_DEAD(control.TargetEntity)) return;
+        if (!control.HasTargets()) return;
 
         const auto mainCamera = render::Camera::GetMainCamera();
         if (mainCamera.IsNull()) return;
@@ -124,23 +155,23 @@ namespace rei::editor
             if (!arrow.DragActive && pointerListener.IsInside)
             {
                 arrow.DragActive = true;
-                arrow.PartDragStartPosition = arrowPos;
-
+                arrow.PartDragStartPosition = control.PivotWorldPosition;
                 arrow.DragPlane = math::Plane(arrowRight, pointerListener.CollisionPoint);
+
+                CaptureDragStartTargetStates(control);
 
                 const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
                 math::Vector3 planeIntersectionPoint;
                 PlaneRayIntersection(arrow.DragPlane, screenPointRay, planeIntersectionPoint);
 
                 const math::Vector3 projectionOnArrowDirection = math::Vector3::Projection(planeIntersectionPoint - arrowPos, arrowForward);
-
                 const auto arrowScale = arrowTransform.GetLocalScale().x;
                 arrow.DragOffset = projectionOnArrowDirection / arrowScale;
             }
 
             if (arrow.DragActive)
             {
-                auto& targetTransform = GET(control.TargetEntity, Transform);
+                auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
                 const auto offsetScaled = arrow.DragOffset * arrowTransform.GetWorldScale();
 
                 const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
@@ -154,14 +185,29 @@ namespace rei::editor
                 const f32 appliedDeltaOnAxis = IsSnappingEnabled()
                     ? SnapValue(deltaOnAxis, MOVE_SNAP_STEP)
                     : deltaOnAxis;
+                const auto movementDelta = axis * appliedDeltaOnAxis;
 
-                targetTransform.SetWorldPosition(arrow.PartDragStartPosition + axis * appliedDeltaOnAxis);
+                if (control.TargetEntities.size() == 1)
+                {
+                    primaryTargetTransform.SetWorldPosition(arrow.PartDragStartPosition + movementDelta);
+                }
+                else
+                {
+                    for (const auto entity : control.TargetEntities)
+                    {
+                        if (IS_DEAD(entity) || !HAS(entity, Transform)) continue;
+
+                        const auto* dragStartState = FindDragStartTargetState(control, entity);
+                        if (dragStartState == nullptr) continue;
+
+                        GET(entity, Transform).GetLocalPosition() = dragStartState->LocalPosition + movementDelta;
+                    }
+                }
             }
 
             return arrow.DragActive;
         };
 
-        // allow movement only along 1 arrow at a time
         if (control.RightMovementArrow.DragActive && tryMove(control.RightMovementArrow)) return;
         if (control.UpMovementArrow.DragActive && tryMove(control.UpMovementArrow)) return;
         if (control.ForwardMovementArrow.DragActive && tryMove(control.ForwardMovementArrow)) return;
@@ -173,12 +219,13 @@ namespace rei::editor
 
     void HandleTransformationControlsDragSystem::HandleScaleDrag(TransformationControl& control) const
     {
-        if (IS_DEAD(control.TargetEntity)) return;
+        if (!control.HasTargets()) return;
 
         const auto mainCamera = render::Camera::GetMainCamera();
         if (mainCamera.IsNull()) return;
 
-        i32 screenWidth = 1, screenHeight = 1;
+        i32 screenWidth = 1;
+        i32 screenHeight = 1;
         mainCamera.Get().GetOutputSize(screenWidth, screenHeight);
 
         math::Vector3 pointerPos;
@@ -186,9 +233,8 @@ namespace rei::editor
 
         const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
 
-        auto& targetTransform = GET(control.TargetEntity, Transform);
+        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
 
-        // for regular scale arrows
         auto tryScale = [&](TransformationControlScaleArrow& arrow) -> bool
         {
             auto& arrowTransform = GET(arrow.Entity, Transform);
@@ -203,14 +249,16 @@ namespace rei::editor
             if (!arrow.DragActive && pointerListener.IsInside)
             {
                 arrow.DragActive = true;
-                arrow.TargetDragStartScale = targetTransform.GetWorldScale();
+                arrow.TargetDragStartScale = primaryTargetTransform.GetWorldScale();
                 arrow.ArrowDragStartScale = arrowScale;
                 arrow.DragPlane = math::Plane(arrowRight, pointerListener.CollisionPoint);
+
+                CaptureDragStartTargetStates(control);
 
                 math::Vector3 planeIntersectionPoint;
                 PlaneRayIntersection(arrow.DragPlane, screenPointRay, planeIntersectionPoint);
 
-                arrow.DragOffset = math::Vector3::Projection(planeIntersectionPoint - arrowPos, arrowForward) /  arrow.ArrowDragStartScale;
+                arrow.DragOffset = math::Vector3::Projection(planeIntersectionPoint - arrowPos, arrowForward) / arrow.ArrowDragStartScale;
                 arrow.CurrentScaleMlt = 0;
             }
 
@@ -221,7 +269,7 @@ namespace rei::editor
                 const auto projectionOnArrowDirection = math::Vector3::Projection(planeIntersectionPoint - arrowPos, arrowForward);
 
                 const f32 scaleSign = static_cast<f32>(math::Sign(math::Vector3::Dot(arrowForward, projectionOnArrowDirection)));
-                const f32 scaleMlt = scaleSign * (projectionOnArrowDirection.Length() / arrow.ArrowDragStartScale) / (arrow.DragOffset.Length());
+                const f32 scaleMlt = scaleSign * (projectionOnArrowDirection.Length() / arrow.ArrowDragStartScale) / arrow.DragOffset.Length();
 
                 math::Vector3 scaleDelta = {};
                 scaleDelta.x = std::abs(arrow.TargetDragStartScale.x) * (arrow.Direction.x != 0 ? (arrow.Direction.x * (scaleMlt - 1)) : 0);
@@ -231,7 +279,23 @@ namespace rei::editor
                 const auto appliedScaleDelta = IsSnappingEnabled()
                     ? SnapScaleDelta(scaleDelta, arrow.Direction, SCALE_SNAP_STEP)
                     : scaleDelta;
-                targetTransform.SetWorldScale(arrow.TargetDragStartScale + appliedScaleDelta);
+
+                if (control.TargetEntities.size() == 1)
+                {
+                    primaryTargetTransform.SetWorldScale(arrow.TargetDragStartScale + appliedScaleDelta);
+                }
+                else
+                {
+                    for (const auto entity : control.TargetEntities)
+                    {
+                        if (IS_DEAD(entity) || !HAS(entity, Transform)) continue;
+
+                        const auto* dragStartState = FindDragStartTargetState(control, entity);
+                        if (dragStartState == nullptr) continue;
+
+                        GET(entity, Transform).GetLocalScale() = dragStartState->LocalScale + appliedScaleDelta;
+                    }
+                }
 
                 arrow.CurrentScaleMlt = scaleMlt - 1;
             }
@@ -239,7 +303,6 @@ namespace rei::editor
             return arrow.DragActive;
         };
 
-        // for root scale element (in all directions)
         auto tryScaleRoot = [&](TransformationControlScaleArrow& arrow) -> bool
         {
             auto& arrowTransform = GET(arrow.Entity, Transform);
@@ -251,12 +314,14 @@ namespace rei::editor
             if (!arrow.DragActive && pointerListener.IsInside)
             {
                 arrow.DragActive = true;
-                arrow.TargetDragStartScale = targetTransform.GetWorldScale();
+                arrow.TargetDragStartScale = primaryTargetTransform.GetWorldScale();
                 arrow.ArrowDragStartScale = arrowScale;
                 const auto cameraForward = math::Vector3(mainCamera.Get().GetTransform().GetWorldRotation() * glm::vec3(0, 0, 1));
                 arrow.DragPlane = math::Plane(cameraForward, arrowPos);
                 arrow.InitialScaleMlt = 0;
                 arrow.CurrentScaleMlt = 0;
+
+                CaptureDragStartTargetStates(control);
             }
 
             if (arrow.DragActive)
@@ -274,7 +339,7 @@ namespace rei::editor
                 const auto scaleDir = pointerPos - newProjection;
                 const f32 scaleSign = static_cast<f32>(math::Sign(math::Vector3::Dot(screenOtherDiagonalVector, scaleDir)));
 
-                f32 scaleMlt = (scaleDir.Length() / screenDiagonalLength * scaleSign * 10) * (arrow.ArrowDragStartScale);
+                f32 scaleMlt = (scaleDir.Length() / screenDiagonalLength * scaleSign * 10) * arrow.ArrowDragStartScale;
 
                 if (arrow.InitialScaleMlt == 0)
                 {
@@ -286,7 +351,24 @@ namespace rei::editor
                     const f32 appliedScaleDelta = IsSnappingEnabled()
                         ? SnapValue(scaleMlt, SCALE_SNAP_STEP)
                         : scaleMlt;
-                    targetTransform.SetWorldScale(arrow.TargetDragStartScale + math::Vector3(appliedScaleDelta, appliedScaleDelta, appliedScaleDelta));
+                    const auto scaleDelta = math::Vector3(appliedScaleDelta, appliedScaleDelta, appliedScaleDelta);
+
+                    if (control.TargetEntities.size() == 1)
+                    {
+                        primaryTargetTransform.SetWorldScale(arrow.TargetDragStartScale + scaleDelta);
+                    }
+                    else
+                    {
+                        for (const auto entity : control.TargetEntities)
+                        {
+                            if (IS_DEAD(entity) || !HAS(entity, Transform)) continue;
+
+                            const auto* dragStartState = FindDragStartTargetState(control, entity);
+                            if (dragStartState == nullptr) continue;
+
+                            GET(entity, Transform).GetLocalScale() = dragStartState->LocalScale + scaleDelta;
+                        }
+                    }
                 }
 
                 arrow.CurrentScaleMlt = scaleMlt;
@@ -295,7 +377,6 @@ namespace rei::editor
             return arrow.DragActive;
         };
 
-        // allow scale only along 1 direction at a time
         if (control.RootScale.DragActive && tryScaleRoot(control.RootScale)) return;
         if (control.RightScaleArrow.DragActive && tryScale(control.RightScaleArrow)) return;
         if (control.UpScaleArrow.DragActive && tryScale(control.UpScaleArrow)) return;
@@ -309,7 +390,7 @@ namespace rei::editor
 
     void HandleTransformationControlsDragSystem::HandleRotationDrag(TransformationControl& control) const
     {
-        if (IS_DEAD(control.TargetEntity)) return;
+        if (!control.HasTargets()) return;
 
         const auto mainCamera = render::Camera::GetMainCamera();
         if (mainCamera.IsNull()) return;
@@ -319,8 +400,8 @@ namespace rei::editor
 
         const math::Ray screenPointRay = mainCamera.Get().GetScreenPointToRay(pointerPos.x, pointerPos.y);
 
-        auto& targetTransform = GET(control.TargetEntity, Transform);
-        const auto targetPosition = targetTransform.GetWorldPosition();
+        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
+        const auto targetPosition = control.PivotWorldPosition;
 
         auto tryRotate = [&](TransformationControlRotationRing& ring) -> bool
         {
@@ -333,6 +414,8 @@ namespace rei::editor
                 ring.DragPlane = math::Plane(ring.DragAxis, targetPosition);
                 ring.DragStartDirection = {};
 
+                CaptureDragStartTargetStates(control);
+
                 math::Vector3 planeIntersectionPoint;
                 if (PlaneRayIntersection(ring.DragPlane, screenPointRay, planeIntersectionPoint))
                 {
@@ -340,7 +423,7 @@ namespace rei::editor
                     if (startDir.Length() > 0.0001f)
                     {
                         ring.DragActive = true;
-                        ring.TargetDragStartRotation = targetTransform.GetWorldRotation();
+                        ring.TargetDragStartRotation = primaryTargetTransform.GetWorldRotation();
                         ring.DragStartDirection = math::Vector3::Normalize(startDir);
                     }
                 }
@@ -368,13 +451,28 @@ namespace rei::editor
                     : angleDeg;
 
                 const auto delta = glm::angleAxis(glm::radians(appliedAngleDeg), glm::vec3(ring.DragAxis));
-                targetTransform.SetWorldRotation(glm::normalize(delta * ring.TargetDragStartRotation));
+
+                if (control.TargetEntities.size() == 1)
+                {
+                    primaryTargetTransform.SetWorldRotation(glm::normalize(delta * ring.TargetDragStartRotation));
+                }
+                else
+                {
+                    for (const auto entity : control.TargetEntities)
+                    {
+                        if (IS_DEAD(entity) || !HAS(entity, Transform)) continue;
+
+                        const auto* dragStartState = FindDragStartTargetState(control, entity);
+                        if (dragStartState == nullptr) continue;
+
+                        GET(entity, Transform).SetRotation(glm::normalize(delta * dragStartState->LocalRotation));
+                    }
+                }
             }
 
             return ring.DragActive;
         };
 
-        // allow rotation only around 1 ring at a time
         if (control.RightRotationRing.DragActive && tryRotate(control.RightRotationRing)) return;
         if (control.UpRotationRing.DragActive && tryRotate(control.UpRotationRing)) return;
         if (control.ForwardRotationRing.DragActive && tryRotate(control.ForwardRotationRing)) return;

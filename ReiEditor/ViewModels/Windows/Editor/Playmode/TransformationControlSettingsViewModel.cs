@@ -1,11 +1,26 @@
-﻿using ReiEditor.Models.Services.Engine.Api;
+using System.Collections.Generic;
+using System.Linq;
+using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.Entities;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
 
 public class TransformationControlSettingsViewModel : BaseViewModel
 {
+    #region CanUseLocalSpace
+
+    private bool _canUseLocalSpace = true;
+    public bool CanUseLocalSpace
+    {
+        get => _canUseLocalSpace;
+        private set => SetField(ref _canUseLocalSpace, value);
+    }
+
+    #endregion
+
     #region IsLocalSpace
 
     private bool _isLocalSpace;
@@ -16,7 +31,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region IsWorldSpace
 
     private bool _isWorldSpace = true;
@@ -44,7 +59,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region ScaleMode
 
     private bool _scaleMode;
@@ -61,7 +76,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region RotationMode
 
     private bool _rotationMode;
@@ -78,7 +93,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region EngineRunning
 
     private bool _engineRunning = true;
@@ -89,53 +104,82 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     private readonly IEngineApi _engineApi;
     private readonly IEngineRunner _engineRunner;
+    private readonly ISelectionService _selectionService;
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CS8618
     public TransformationControlSettingsViewModel() { }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning restore CS8618
 
-    public TransformationControlSettingsViewModel(IEngineApi engineApi, IEngineRunner engineRunner)
+    public TransformationControlSettingsViewModel(IEngineApi engineApi, IEngineRunner engineRunner, ISelectionService selectionService)
     {
         _engineApi = engineApi;
         _engineRunner = engineRunner;
-        
+        _selectionService = selectionService;
+
         _engineRunner.IsActive.Subscribe(HandleEngineIsActiveValueChangedEvent);
+        _selectionService.SelectionChanged.Subscribe(HandleSelectionChangedEvent);
+        UpdateSelectionModeState(_selectionService.SelectedItems);
     }
 
     private void HandleEngineIsActiveValueChangedEvent(bool isActive)
     {
         EngineRunning = isActive;
-        
+
         if (isActive)
         {
             _engineApi.ChangeTransformationMode(worldSpace: IsWorldSpace);
         }
     }
 
+    private void HandleSelectionChangedEvent(IReadOnlyCollection<ISelectable> selectedItems)
+    {
+        UpdateSelectionModeState(selectedItems);
+    }
+
+    private void UpdateSelectionModeState(IReadOnlyCollection<ISelectable> selectedItems)
+    {
+        var selectedEntityCount = selectedItems
+            .OfType<IEntitySelectable>()
+            .Select(selectable => selectable.Entity.Id)
+            .Distinct()
+            .Count();
+
+        CanUseLocalSpace = selectedEntityCount <= 1;
+        if (CanUseLocalSpace || !IsLocalSpace) return;
+
+        ApplySpaceMode(worldSpace: true);
+    }
+
+    private void ApplySpaceMode(bool worldSpace)
+    {
+        IsWorldSpace = worldSpace;
+        IsLocalSpace = !worldSpace;
+        _engineApi.ChangeTransformationMode(worldSpace);
+    }
+
     public override void Dispose()
     {
         base.Dispose();
-        
+
         _engineRunner.IsActive.Unsubscribe(HandleEngineIsActiveValueChangedEvent);
+        _selectionService.SelectionChanged.Unsubscribe(HandleSelectionChangedEvent);
     }
 
     public void SetWorldSpace()
     {
-        IsWorldSpace = true;
-        IsLocalSpace = false;
-        _engineApi.ChangeTransformationMode(worldSpace: true);
+        ApplySpaceMode(worldSpace: true);
     }
 
     public void SetLocalSpace()
     {
-        IsWorldSpace = false;
-        IsLocalSpace = true;
-        _engineApi.ChangeTransformationMode(worldSpace: false);
+        if (!CanUseLocalSpace) return;
+
+        ApplySpaceMode(worldSpace: false);
     }
-    
+
     public void SetMovementMode()
     {
         MovementMode = true;
