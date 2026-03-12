@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using ReiEditor.Models.Services.FileSystem;
 
@@ -11,8 +10,7 @@ public static class AssetBuildPathUtility
         if (string.IsNullOrWhiteSpace(path)) return false;
 
         var normalizedPath = Path.GetFullPath(path).Replace('/', '\\');
-        if (normalizedPath.Contains("\\Project\\Scripts\\crash_reports\\", StringComparison.OrdinalIgnoreCase)) return false;
-        if (normalizedPath.Contains("\\Project\\Scripts\\bin\\", StringComparison.OrdinalIgnoreCase)) return false;
+        if (IsInHiddenDirectory(normalizedPath)) return false;
 
         var extension = Path.GetExtension(normalizedPath);
         return extension switch
@@ -25,5 +23,18 @@ public static class AssetBuildPathUtility
             FileExtensions.VS_SOLUTION => false,
             _ => true
         };
+    }
+
+    private static bool IsInHiddenDirectory(string path)
+    {
+        var currentDirectory = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+        while (!string.IsNullOrWhiteSpace(currentDirectory))
+        {
+            if (AssetFileFilter.ShouldHideDirectory(currentDirectory)) return true;
+
+            currentDirectory = Path.GetDirectoryName(currentDirectory);
+        }
+
+        return false;
     }
 }

@@ -33,6 +33,8 @@ public class ProjectAssetItemBuilder
 
         foreach (var directory in Directory.EnumerateDirectories(directoryPath).OrderBy(IOPath.GetFileName))
         {
+            if (AssetFileFilter.ShouldHideDirectory(directory)) continue;
+
             items.Add(CreateItem(IOPath.GetFileName(directory), directory, ProjectAssetType.Directory, "", actions, activeFolderContextMenu));
         }
 

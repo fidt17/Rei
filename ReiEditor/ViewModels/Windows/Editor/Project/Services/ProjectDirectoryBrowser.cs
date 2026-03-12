@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using IOPath = System.IO.Path;
 using ReiEditor.Models.Resources.Client;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Utils;
 using ReiEditor.ViewModels.Windows.Editor.Project.Directories;
@@ -95,6 +96,8 @@ public class ProjectDirectoryBrowser
 
         foreach (var directory in Directory.EnumerateDirectories(fullPath).OrderBy(IOPath.GetFileName))
         {
+            if (AssetFileFilter.ShouldHideDirectory(directory)) continue;
+
             var childNode = CreateDirectoryNode(directory, isRoot: false, parent: node);
             node.ChildNodes.Add(childNode);
         }
