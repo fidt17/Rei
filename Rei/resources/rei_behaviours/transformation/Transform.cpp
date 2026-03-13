@@ -17,6 +17,7 @@ namespace rei
         _scale = math::Vector3(1, 1, 1);
         _parent = 0;
         _order = 0;
+        _quaternion = glm::quat(1, 0, 0, 0);
         _parentEntity = ecs::NULL_ENTITY;
     }
 

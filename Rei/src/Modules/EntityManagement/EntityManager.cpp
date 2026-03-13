@@ -239,21 +239,25 @@ namespace rei
                 REI_THROW("Cannot instantiate from NULL entity, source={}, nameOverride={}", std::string(src), nameOverride)
             }
 
-            const auto& srcInfo = GET(src, EntityInfo);
-            const auto& srcTransform = GET(src, Transform);
+            const auto srcName = GET(src, EntityInfo).Name;
+            const auto srcLocalPosition = GET(src, Transform).GetLocalPosition();
+            const auto srcLocalScale = GET(src, Transform).GetLocalScale();
+            const auto srcLocalRotation = GET(src, Transform).GetLocalRotation();
+            const auto srcBehaviourIds = GET(src, BehaviourCollection).Behaviours;
             const i32 transformBehaviourId = _behaviourRegistry.GetId<Transform>();
+            auto srcChildren = includeChildren ? GET(src, Transform).GetChildren() : std::vector<ecs::Entity>();
 
             const auto clone = NEW_ENTITY();
-            GET(clone, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = nameOverride.empty() ? srcInfo.Name : nameOverride};
+            GET(clone, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = nameOverride.empty() ? srcName : nameOverride};
 
             auto& transform = AddBehaviour<Transform>(clone);
             transform.Reset();
-            transform.GetLocalPosition() = srcTransform.GetLocalPosition();
-            transform.GetLocalScale() = srcTransform.GetLocalScale();
-            transform.SetRotation(srcTransform.GetLocalRotation());
+            transform.GetLocalPosition() = srcLocalPosition;
+            transform.GetLocalScale() = srcLocalScale;
+            transform.SetRotation(srcLocalRotation);
             transform_utility::InsertWithOrder(transform, parent, order);
 
-            for (const auto behaviourId : GET(src, BehaviourCollection).Behaviours)
+            for (const auto behaviourId : srcBehaviourIds)
             {
                 if (behaviourId == transformBehaviourId) continue;
 
@@ -277,15 +281,14 @@ namespace rei
 
             if (includeChildren)
             {
-                auto children = srcTransform.GetChildren();
-                std::ranges::sort(children, [&](const ecs::Entity& a, const ecs::Entity& b)
+                std::ranges::sort(srcChildren, [&](const ecs::Entity& a, const ecs::Entity& b)
                 {
                     const auto& aTransform = GET(a, Transform);
                     const auto& bTransform = GET(b, Transform);
                     return aTransform.GetChildOrder() < bTransform.GetChildOrder();
                 });
 
-                for (const auto child : children)
+                for (const auto child : srcChildren)
                 {
                     const auto& childTransform = GET(child, Transform);
                     self(self, child, "", clone, childTransform.GetChildOrder());
