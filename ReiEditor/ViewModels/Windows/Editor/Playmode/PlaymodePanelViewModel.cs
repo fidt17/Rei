@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -24,7 +24,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region PlayModeActive
 
     private bool _playModeActive;
@@ -35,7 +35,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-	
+
     #region EditorModeActive
 
     private bool _editorModeActive;
@@ -46,7 +46,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region EngineActive
 
     private bool _engineActive;
@@ -57,7 +57,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region RenderModeSelection
 
     private RenderModeSelectionViewModel _renderModeSelection = new();
@@ -68,7 +68,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region EditorGridOptions
 
     private EditorGridOptionsViewModel _editorGridOptions = new();
@@ -79,7 +79,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     #region TransformationSpaceSettings
 
     private TransformationControlSettingsViewModel _transformationControlSettings = new();
@@ -90,7 +90,7 @@ public class PlaymodePanelViewModel : BaseViewModel
     }
 
     #endregion
-    
+
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineWindowController _engineWindow;
     private readonly IEngineApi _engineApi;
@@ -103,24 +103,24 @@ public class PlaymodePanelViewModel : BaseViewModel
 #pragma warning restore CS8618
 
     public PlaymodePanelViewModel(
-        IFactory<StartPlaymodeCommand> startPlaymodeCommand, 
+        IFactory<StartPlaymodeCommand> startPlaymodeCommand,
         IFactory<StopPlaymodeCommand> stopPlaymodeCommand,
         IEngineWindowController engineWindow,
         IFactory<RenderModeSelectionViewModel> renderModeSelection,
         IFactory<EditorGridOptionsViewModel> editorGridOptions,
         IFactory<TransformationControlSettingsViewModel> transformationSpaceSettings,
-        IEngineApi engineApi, 
+        IEngineApi engineApi,
         IEngineRunner engineRunner)
     {
         _windowProvider = null;
         _engineWindow = engineWindow;
         _engineApi = engineApi;
         _engineRunner = engineRunner;
-        
+
         RenderModeSelection = renderModeSelection.CreateInstance();
         EditorGridOptions = editorGridOptions.CreateInstance();
         TransformationControlSettings = transformationSpaceSettings.CreateInstance();
-        
+
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
         StopPlaymodeCommand = stopPlaymodeCommand.CreateInstance();
 
@@ -133,15 +133,15 @@ public class PlaymodePanelViewModel : BaseViewModel
     public override void Dispose()
     {
         base.Dispose();
-        
+
         _engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
         _engineRunner.IsEditorActive.Unsubscribe(HandleIsEditorActiveValueChangedEvent);
         _engineWindow.WindowPointer.Unsubscribe(HandleWindowPointerChangedEvent);
-        
+
         RenderModeSelection.Dispose();
         EditorGridOptions.Dispose();
         TransformationControlSettings.Dispose();
-		
+
         StartPlaymodeCommand.Dispose();
         StopPlaymodeCommand.Dispose();
     }

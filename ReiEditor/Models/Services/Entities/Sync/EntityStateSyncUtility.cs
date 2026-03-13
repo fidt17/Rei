@@ -16,10 +16,10 @@ public static class EntityStateSyncUtility
             if (!behaviourState.TryGetValue("REI_TYPE", out var reiTypeValue)) continue;
 
             var reiType = reiTypeValue as string;
-            if (string.IsNullOrWhiteSpace(reiType) || reiType != EngineBehavioursUtility.TRANSFORM) continue;
+            if (string.IsNullOrWhiteSpace(reiType) || reiType != EngineBehavioursConstants.TRANSFORM) continue;
 
-            parent = TryReadInt(behaviourState, EngineBehavioursUtility.TRANSFORM_PARENT);
-            order = TryReadInt(behaviourState, EngineBehavioursUtility.TRANSFORM_ORDER);
+            parent = TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_PARENT);
+            order = TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_ORDER);
             return true;
         }
 

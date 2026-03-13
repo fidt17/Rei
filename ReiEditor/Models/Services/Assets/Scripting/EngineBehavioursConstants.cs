@@ -1,6 +1,6 @@
 ﻿namespace ReiEditor.Models.Services.Assets.Scripting;
 
-public static class EngineBehavioursUtility
+public static class EngineBehavioursConstants
 {
     public const string TRANSFORM = "Transform";
     public const string TRANSFORM_POSITION = "_position";
@@ -16,7 +16,11 @@ public static class EngineBehavioursUtility
     public const string POINT_LIGHT = "PointLight";
 
     public const string MESH_RENDERER = "MeshRenderer";
+    public const string MESH_RENDERER_MODEL = "_model";
     public const string MESH_RENDERER_MATERIAL = "_material";
+
+    public const string SPRITE_RENDERER = "SpriteRenderer";
+    public const string SPRITE_RENDERER_SPRITE = "_sprite";
     
     public const string ASSET_REF_ID = "Id";
 

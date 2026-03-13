@@ -176,13 +176,29 @@ public partial class ProjectAssetItemView : UserControl
             var dragData = new DataObject();
             dragData.Set(DragDropDataKeys.AssetPaths, dragPaths.ToArray());
             dragData.Set(DragDropDataKeys.AssetPath, dragPaths[0]);
+            dragData.Set(DataFormats.Text, string.Join(Environment.NewLine, dragPaths));
+
+            var projectWindowViewModel = GetProjectWindowViewModel();
+            var sceneAssetDragStarted = projectWindowViewModel?.CanStartSceneAssetDrag(dragPaths) == true;
+            if (sceneAssetDragStarted)
+            {
+                projectWindowViewModel!.StartSceneAssetDrag(dragPaths);
+            }
 
             try
             {
-                await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move | DragDropEffects.Copy);
+                var result = await DragDrop.DoDragDrop(e, dragData, DragDropEffects.Move | DragDropEffects.Copy);
+                if (sceneAssetDragStarted)
+                {
+                    projectWindowViewModel!.HandleSceneAssetDesktopDragCompleted(result);
+                }
             }
             catch (COMException)
             {
+                if (sceneAssetDragStarted)
+                {
+                    projectWindowViewModel!.HandleSceneAssetDesktopDragCompleted(DragDropEffects.None);
+                }
             }
             finally
             {
@@ -244,12 +260,6 @@ public partial class ProjectAssetItemView : UserControl
 
     private static IReadOnlyList<string> GetDraggedAssetPaths(DragEventArgs e)
     {
-        if (!e.Data.Contains(DragDropDataKeys.AssetPaths)) return Array.Empty<string>();
-        if (e.Data.Get(DragDropDataKeys.AssetPaths) is not IEnumerable<string> assetPaths) return Array.Empty<string>();
-
-        return assetPaths
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return AssetDragDropUtility.GetAssetPaths(e.Data);
     }
 }

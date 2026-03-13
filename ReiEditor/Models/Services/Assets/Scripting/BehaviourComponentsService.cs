@@ -252,9 +252,9 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private void SetupCustomBehaviourValues(BehaviourComponent component)
     {
-        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursUtility.TRANSFORM))
+        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursConstants.TRANSFORM))
         {
-            if (component.GetProperty(EngineBehavioursUtility.TRANSFORM_SCALE).Value is not Dictionary<string, SerializedProperty> scaleValue)
+            if (component.GetProperty(EngineBehavioursConstants.TRANSFORM_SCALE).Value is not Dictionary<string, SerializedProperty> scaleValue)
             {
                 _logger.LogError("Could not find scale property on transform component");
                 return;
@@ -266,12 +266,12 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             return;
         }
 
-        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursUtility.MESH_RENDERER))
+        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursConstants.MESH_RENDERER))
         {
             TrySetAssetRefId(
                 component,
-                EngineBehavioursUtility.MESH_RENDERER_MATERIAL,
-                EngineBehavioursUtility.DEFAULT_ENGINE_SIMPLE_LIT_MATERIAL_ASSET_ID);
+                EngineBehavioursConstants.MESH_RENDERER_MATERIAL,
+                EngineBehavioursConstants.DEFAULT_ENGINE_SIMPLE_LIT_MATERIAL_ASSET_ID);
         }
     }
 
@@ -280,7 +280,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         if (!component.HasProperty(propertyName)) return;
         var property = component.GetProperty(propertyName);
         if (property.Value is not Dictionary<string, SerializedProperty> nestedProperties) return;
-        if (!nestedProperties.TryGetValue(EngineBehavioursUtility.ASSET_REF_ID, out var idProperty)) return;
+        if (!nestedProperties.TryGetValue(EngineBehavioursConstants.ASSET_REF_ID, out var idProperty)) return;
 
         idProperty.Value = assetId;
     }

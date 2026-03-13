@@ -1,6 +1,8 @@
-﻿namespace ReiEditor.Models.Services.Scenes.Templates;
+﻿using System.Threading.Tasks;
+
+namespace ReiEditor.Models.Services.Scenes.Templates;
 
 public interface ISceneTemplate
 {
-    void SetupScene();
+    Task SetupScene();
 }

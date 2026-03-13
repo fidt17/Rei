@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using IOPath = System.IO.Path;
 using System.Threading.Tasks;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
@@ -17,6 +18,7 @@ using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.FileSystem;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls;
@@ -48,6 +50,7 @@ public class ProjectWindowViewModel : BaseViewModel
     private readonly IEditorRefreshService? _editorRefreshService;
     private readonly IProjectAssetFocusService? _projectAssetFocusService;
     private readonly IFileExplorerProvider? _fileExplorerProvider;
+    private readonly ISceneAssetDragSessionService? _sceneAssetDragSessionService;
 
     private readonly ProjectDirectoryBrowser _directoryBrowser;
     private readonly ProjectAssetItemBuilder _assetItemBuilder;
@@ -100,7 +103,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IMaterialCreationWindowService materialCreationWindowService,
         IShaderCreationWindowService shaderCreationWindowService,
         ISelectionService selectionService,
-        IProjectAssetFocusService projectAssetFocusService)
+        IProjectAssetFocusService projectAssetFocusService,
+        ISceneAssetDragSessionService sceneAssetDragSessionService)
     {
         _resourceService = resourceService;
         _assetRegistry = assetRegistry;
@@ -110,6 +114,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _editorRefreshService = editorRefreshService;
         _projectAssetFocusService = projectAssetFocusService;
         _fileExplorerProvider = fileExplorerProvider;
+        _sceneAssetDragSessionService = sceneAssetDragSessionService;
 
         _directoryBrowser = new ProjectDirectoryBrowser(() => SearchField.HasQuery.Value, SearchField.ResetSearch, HandleDirectorySelected);
         _assetItemBuilder = new ProjectAssetItemBuilder(assetRegistry, assetSearchService, fileExplorerProvider);
@@ -231,6 +236,21 @@ public class ProjectWindowViewModel : BaseViewModel
     public IReadOnlyList<string> GetDraggedAssetPaths(ProjectAssetItemViewModel sourceItem)
     {
         return _assetSelectionHandler.ResolveDraggedAssetPaths(sourceItem, ActiveItems);
+    }
+
+    public bool CanStartSceneAssetDrag(IReadOnlyList<string> assetPaths)
+    {
+        return _sceneAssetDragSessionService != null && _sceneAssetDragSessionService.CanStart(assetPaths);
+    }
+
+    public void StartSceneAssetDrag(IReadOnlyList<string> assetPaths)
+    {
+        _sceneAssetDragSessionService?.Start(assetPaths);
+    }
+
+    public void HandleSceneAssetDesktopDragCompleted(DragDropEffects result)
+    {
+        _sceneAssetDragSessionService?.HandleDesktopDragCompleted(result);
     }
 
     public async Task MoveAssetsToDirectoryAsync(IReadOnlyCollection<string> assetPaths, string destinationDirectory)

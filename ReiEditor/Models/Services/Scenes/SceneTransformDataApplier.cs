@@ -8,7 +8,7 @@ internal static class SceneTransformDataApplier
 {
     public static void Apply(Scene scene, IBehaviourRegistry behaviourRegistry)
     {
-        var transformBehaviourId = behaviourRegistry.GetIdByName(EngineBehavioursUtility.TRANSFORM);
+        var transformBehaviourId = behaviourRegistry.GetIdByName(EngineBehavioursConstants.TRANSFORM);
         if (transformBehaviourId == null) return;
 
         foreach (var entity in scene.Entities)
@@ -16,12 +16,12 @@ internal static class SceneTransformDataApplier
             var behaviour = entity.GetBehaviour(transformBehaviourId.Value);
             if (behaviour == null) continue;
 
-            if (TryGetIntProperty(behaviour, EngineBehavioursUtility.TRANSFORM_PARENT, out var parent))
+            if (TryGetIntProperty(behaviour, EngineBehavioursConstants.TRANSFORM_PARENT, out var parent))
             {
                 entity.Transform.SetParent(parent);
             }
 
-            if (TryGetIntProperty(behaviour, EngineBehavioursUtility.TRANSFORM_ORDER, out var order))
+            if (TryGetIntProperty(behaviour, EngineBehavioursConstants.TRANSFORM_ORDER, out var order))
             {
                 entity.Transform.SetOrder(order);
             }

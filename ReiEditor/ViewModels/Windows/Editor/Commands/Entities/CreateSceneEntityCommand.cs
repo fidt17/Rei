@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Scenes;
@@ -29,12 +30,10 @@ public class CreateSceneEntityCommand : ICommand, IDisposable
 
 	public bool CanExecute(object? parameter) => _sceneManagement.CurrentScene.Value != null;
 
-	public void Execute(object? parameter) => CreateEntity();
+	public async void Execute(object? parameter) => await CreateEntity();
 
-	public GameEntity? CreateEntity(string? entityName = null)
+	public Task<GameEntity?> CreateEntity(string? entityName = null)
 	{
-		var e = _entityManagementService.CreateEntity(entityName ?? "New Entity");
-
-		return e;
+		return _entityManagementService.CreateEntity(entityName ?? "New Entity");
 	}
 }

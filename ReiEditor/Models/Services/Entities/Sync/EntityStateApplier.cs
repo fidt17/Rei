@@ -84,10 +84,10 @@ public class EntityStateApplier
                     }
                 }
 
-                if (reiType == EngineBehavioursUtility.TRANSFORM)
+                if (reiType == EngineBehavioursConstants.TRANSFORM)
                 {
-                    transformParent = EntityStateSyncUtility.TryReadInt(behaviourState, EngineBehavioursUtility.TRANSFORM_PARENT);
-                    transformOrder = EntityStateSyncUtility.TryReadInt(behaviourState, EngineBehavioursUtility.TRANSFORM_ORDER);
+                    transformParent = EntityStateSyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_PARENT);
+                    transformOrder = EntityStateSyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_ORDER);
                 }
             }
             catch (Exception exception)

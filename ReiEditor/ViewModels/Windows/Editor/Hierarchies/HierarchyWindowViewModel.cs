@@ -103,9 +103,9 @@ public class HierarchyWindowViewModel : BaseViewModel
             _selectionHandler.HandleNodeContextMenuSelectionRequested);
     }
 
-    private void ExecuteCreateNewEntityContextMenu()
+    private async void ExecuteCreateNewEntityContextMenu()
     {
-        var entity = _createSceneEntityCommand.CreateEntity();
+        var entity = await _createSceneEntityCommand.CreateEntity();
         if (entity == null) return;
 
         var node = _nodeCollectionController.GetAllNodes().FirstOrDefault(x => x.Node.Content == entity);
@@ -113,7 +113,7 @@ public class HierarchyWindowViewModel : BaseViewModel
 
         _selectionHandler.ReplaceSelection(node);
 
-        Dispatcher.UIThread.InvokeAsync(async () =>
+        await Dispatcher.UIThread.InvokeAsync(async () =>
         {
             const int DELAY = 300;
             await Task.Delay(DELAY);

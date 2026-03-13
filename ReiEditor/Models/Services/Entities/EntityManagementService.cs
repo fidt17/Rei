@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
@@ -41,37 +42,36 @@ public class EntityManagementService : IEntityManagementService
 
     }
 
-    public GameEntity? CreateEntity(string name)
+    public async Task<GameEntity?> CreateEntity(string name)
     {
         try
         {
             if (_engineRunner.IsActive.Value)
             {
                 _entityApi.CreateNewEntity(name);
+                return await WaitForCreatedEntity(name);
             }
-            else
-            {
-                if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
+
+            if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
             
-                var s = _sceneManagement.CurrentScene.Value;
-                s.NormalizeTransformOrders();
-                var maxRootOrder = s.Entities
-                    .Where(x => !x.Transform.HasParent())
-                    .Select(x => x.Transform.Order)
-                    .DefaultIfEmpty(-1)
-                    .Max();
-                
-                var e = new GameEntity(s.AllocateEntityId(), name);
-                var transformBehaviourId = _behaviourRegistry.GetIdByName("Transform")!.Value;
-                AddBehaviour(e, transformBehaviourId);
-                
-                e.Transform.SetParent(0);
-                e.Transform.SetOrder(maxRootOrder + 1);
-                e.GetBehaviour(transformBehaviourId)!.GetProperty("_order").Value = e.Transform.Order;
+            var s = _sceneManagement.CurrentScene.Value;
+            s.NormalizeTransformOrders();
+            var maxRootOrder = s.Entities
+                .Where(x => !x.Transform.HasParent())
+                .Select(x => x.Transform.Order)
+                .DefaultIfEmpty(-1)
+                .Max();
             
-                s.AddEntity(e);
-                return e;
-            }
+            var e = new GameEntity(s.AllocateEntityId(), name);
+            var transformBehaviourId = _behaviourRegistry.GetIdByName("Transform")!.Value;
+            AddBehaviour(e, transformBehaviourId);
+            
+            e.Transform.SetParent(0);
+            e.Transform.SetOrder(maxRootOrder + 1);
+            e.GetBehaviour(transformBehaviourId)!.GetProperty("_order").Value = e.Transform.Order;
+            
+            s.AddEntity(e);
+            return e;
         }
         catch (Exception exception)
         {
@@ -217,5 +217,27 @@ public class EntityManagementService : IEntityManagementService
         {
             _logger.LogException(exception);
         }
+    }
+
+    private async Task<GameEntity?> WaitForCreatedEntity(string name)
+    {
+        var scene = _sceneManagement.CurrentScene.Value;
+        if (scene == null) return null;
+
+        var existingIds = scene.Entities.Select(x => x.Id).ToHashSet();
+        for (var i = 0; i < 120; i++)
+        {
+            var entity = scene.Entities.FirstOrDefault(x =>
+                !existingIds.Contains(x.Id) &&
+                string.Equals(x.Name, name, StringComparison.Ordinal));
+            if (entity != null)
+            {
+                return entity;
+            }
+
+            await Task.Delay(16);
+        }
+
+        return scene.Entities.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.Ordinal));
     }
 }

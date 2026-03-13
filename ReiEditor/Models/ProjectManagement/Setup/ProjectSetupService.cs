@@ -121,7 +121,7 @@ public class ProjectSetupService : IProjectSetupService
         else
         {
             await _sceneManagementService.LoadScene(scene);
-            _defaultSceneTemplate.SetupScene();
+            await _defaultSceneTemplate.SetupScene();
             _sceneManagementService.SetBuildSceneId(scene, 0);
         }
 

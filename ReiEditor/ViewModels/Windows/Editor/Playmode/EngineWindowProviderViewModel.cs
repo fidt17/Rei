@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using ReiEditor.Models.Services.Engine.Api;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
@@ -14,7 +14,7 @@ public class EngineWindowProviderViewModel
     {
         _windowPointer = windowPointer;
         WindowHandlePointer = engineApi.GetWindowHandle(windowPointer);
-        
+
         _engineApi = engineApi;
     }
 
@@ -25,7 +25,7 @@ public class EngineWindowProviderViewModel
 
         try
         {
-            _engineApi.ResizeWindow(_windowPointer, (int) width, (int) height);
+            _engineApi.ResizeWindow(_windowPointer, (int)width, (int)height);
         }
         catch
         {
