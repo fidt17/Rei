@@ -6,7 +6,7 @@ rei::render::BaseRenderScenario::BaseRenderScenario(GLFWwindow* target)
 {
 }
 
-void rei::render::BaseRenderScenario::SetCamera(const ecs::RefComponent<Camera>& camera)
+void rei::render::BaseRenderScenario::SetCamera(const ecs::ComponentRef<Camera>& camera)
 {
     _camera = camera;
 }

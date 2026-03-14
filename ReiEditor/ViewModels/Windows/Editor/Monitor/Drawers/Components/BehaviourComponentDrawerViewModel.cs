@@ -8,6 +8,7 @@ using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.FileSystem;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls;
@@ -33,6 +34,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
     private readonly IProjectAssetFocusService _projectAssetFocusService;
+    private readonly ISceneManagementService _sceneManagementService;
+    private readonly ISelectionService _selectionService;
     private readonly ITextEditorFileOpener _textEditorFileOpener;
 
 #pragma warning disable CS8618
@@ -49,6 +52,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
         IProjectAssetFocusService projectAssetFocusService,
+        ISceneManagementService sceneManagementService,
+        ISelectionService selectionService,
         ITextEditorFileOpener textEditorFileOpener)
     {
         _entity = entity;
@@ -60,6 +65,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
         _projectAssetFocusService = projectAssetFocusService;
+        _sceneManagementService = sceneManagementService;
+        _selectionService = selectionService;
         _textEditorFileOpener = textEditorFileOpener;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
@@ -114,7 +121,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
                 throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
             
             var property = BehaviourComponent.GetProperty(propertyName);
-            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService));
+            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
         }
     }
 }

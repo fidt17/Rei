@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include "Ecs/RefComponent.h"
+#include "Ecs/ComponentRef.h"
 #include "RenderScenario/BaseRenderScenario.h"
 
 namespace rei::render
@@ -11,8 +11,8 @@ namespace rei::render
     public:
         Renderer() = default;
 
-        void SetCamera(const ecs::RefComponent<Camera>& camera);
-        ecs::RefComponent<Camera> GetCamera() const;
+        void SetCamera(const ecs::ComponentRef<Camera>& camera);
+        ecs::ComponentRef<Camera> GetCamera() const;
 
         void SetTarget(GLFWwindow* target);
 
@@ -22,7 +22,7 @@ namespace rei::render
 
     private:
         GLFWwindow* _target = nullptr;
-        ecs::RefComponent<Camera> _camera;
+        ecs::ComponentRef<Camera> _camera;
         std::unique_ptr<BaseRenderScenario> _renderScenario = nullptr;
 
         void PrepareAssets() const;

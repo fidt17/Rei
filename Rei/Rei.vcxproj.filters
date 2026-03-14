@@ -655,7 +655,7 @@
     <ClInclude Include="src\Common\Math\Vector3.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />
-    <ClInclude Include="src\Ecs\RefComponent.h" />
+    <ClInclude Include="src\Ecs\ComponentRef.h" />
     <ClInclude Include="src\Ecs\Systems\CallbackSystem.h" />
     <ClInclude Include="src\Ecs\Systems\DeleteHere.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />

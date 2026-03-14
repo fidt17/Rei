@@ -41,7 +41,7 @@ namespace rei::render
         void RenderSpriteRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const;
 
     public:
-        void SetCamera(const ecs::RefComponent<Camera>& camera) override
+        void SetCamera(const ecs::ComponentRef<Camera>& camera) override
         {
             BaseRenderScenario::SetCamera(camera);
             _cameraModule->SetCamera(camera);

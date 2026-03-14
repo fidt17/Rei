@@ -197,6 +197,23 @@ namespace rei
         }
     }
 
+    void EntityManager::ResolveDependencies() const
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        const auto& entityInfoFilter = FILTER(EntityInfo);
+
+        FOR(e, entityInfoFilter)
+        {
+            if (IS_DEAD(e) || !HAS(e, BehaviourCollection)) continue;
+
+            for (const auto behaviourId : GET(e, BehaviourCollection).Behaviours)
+            {
+                _behaviourRegistry.ResolveBehaviourDependencies(e, behaviourId);
+            }
+        }
+    }
+
     ecs::Entity EntityManager::Instantiate(const ecs::Entity source, const std::string& requestedName, const bool includeChildren) const
     {
         ECS_WORLD(GetInternalWorld())

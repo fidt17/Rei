@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Ecs/RefComponent.h"
+#include "Ecs/ComponentRef.h"
 #include "Engine/Services.h"
 
 namespace rei
@@ -35,7 +35,7 @@ namespace rei
         REI_API Transform& GetTransform() const;
 
         template <typename  T>
-        REI_API ecs::RefComponent<T> GetComponent() const;
+        REI_API ecs::ComponentRef<T> GetComponent() const;
 
         Behaviour& operator=(const Behaviour& other) = default;
 
@@ -46,13 +46,13 @@ namespace rei
     private:
         i32 _id{};
         ecs::Entity _entity{-1, 0};
-        ecs::RefComponent<Transform> _transform;
+        ecs::ComponentRef<Transform> _transform;
 
         bool _enabled = true;
     };
 
     template <typename T>
-    ecs::RefComponent<T> Behaviour::GetComponent() const
+    ecs::ComponentRef<T> Behaviour::GetComponent() const
     {
         ECS_WORLD(GetInternalWorld());
         return GET_REF(_entity, T);

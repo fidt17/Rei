@@ -41,6 +41,10 @@
             <DataTemplate DataType="custom:AssetPropertyViewModel">
                 <custom1:AssetPropertyView Margin="1" />
             </DataTemplate>
+
+            <DataTemplate DataType="custom:ComponentRefPropertyViewModel">
+                <custom1:ComponentRefPropertyView Margin="1" />
+            </DataTemplate>
         </ItemsControl.DataTemplates>
     </ItemsControl>
 </UserControl>

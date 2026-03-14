@@ -29,6 +29,7 @@ namespace rei::scenes
         }
         GetInternalWorld()->RefreshAll();
         
+        _entityManager->ResolveDependencies();
         _entityManager->ResolveTransformParents();
     }
 

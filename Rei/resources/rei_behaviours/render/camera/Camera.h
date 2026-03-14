@@ -46,7 +46,7 @@ namespace rei::render
         REI_API math::Vector3 WorldToScreenPosition(const math::Vector3& pos) const;
         REI_API f32 CalculateConstantScale(const math::Vector3& targetPosition, f32 desiredSize) const;
 
-        REI_API static ecs::RefComponent<Camera> GetMainCamera();
+        REI_API static ecs::ComponentRef<Camera> GetMainCamera();
 
     private:
         REI_API math::Ray GetPerspectiveScreenPointToRay(f32 xPos, f32 yPos) const;

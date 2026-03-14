@@ -143,7 +143,7 @@ namespace rei::render
         return orthoHeight / desiredSize;
     }
 
-    ecs::RefComponent<Camera> Camera::GetMainCamera()
+    ecs::ComponentRef<Camera> Camera::GetMainCamera()
     {
         ECS_WORLD(GetInternalWorld());
         const auto mainCameraFilter = FILTER(Camera);

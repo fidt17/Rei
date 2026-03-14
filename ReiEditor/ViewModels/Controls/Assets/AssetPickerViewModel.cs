@@ -12,6 +12,8 @@ namespace ReiEditor.ViewModels.Controls.Assets;
 
 public sealed class AssetPickerViewModel : BaseViewModel
 {
+    public delegate (string Name, bool IsMissing) MissingEntryStateFactory(string selectedId);
+
     public sealed class Entry
     {
         public string Name { get; }
@@ -78,17 +80,26 @@ public sealed class AssetPickerViewModel : BaseViewModel
     private readonly Dictionary<string, Entry> _entryById = new();
     private readonly Dictionary<string, Entry> _entryByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly Action<string?, string?>? _onSelectedAssetChanged;
+    private readonly string _emptyAssetName;
+    private readonly string _missingAssetName;
+    private readonly MissingEntryStateFactory? _missingEntryStateFactory;
 
     public AssetPickerViewModel(
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IReadOnlyList<string> allowedExtensions,
-        Action<string?, string?>? onSelectedAssetChanged)
+        Action<string?, string?>? onSelectedAssetChanged,
+        string emptyAssetName = EmptyAssetName,
+        string missingAssetName = MissingAssetName,
+        MissingEntryStateFactory? missingEntryStateFactory = null)
     {
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _allowedExtensions = allowedExtensions;
         _onSelectedAssetChanged = onSelectedAssetChanged;
+        _emptyAssetName = emptyAssetName;
+        _missingAssetName = missingAssetName;
+        _missingEntryStateFactory = missingEntryStateFactory;
 
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
     }
@@ -96,12 +107,18 @@ public sealed class AssetPickerViewModel : BaseViewModel
     public AssetPickerViewModel(
         IAssetRegistry assetRegistry,
         IEnumerable<Entry> entries,
-        Action<string?, string?>? onSelectedAssetChanged)
+        Action<string?, string?>? onSelectedAssetChanged,
+        string emptyAssetName = EmptyAssetName,
+        string missingAssetName = MissingAssetName,
+        MissingEntryStateFactory? missingEntryStateFactory = null)
     {
         _assetRegistry = assetRegistry;
         _allowedExtensions = Array.Empty<string>();
         _onSelectedAssetChanged = onSelectedAssetChanged;
         _useEntriesMode = true;
+        _emptyAssetName = emptyAssetName;
+        _missingAssetName = missingAssetName;
+        _missingEntryStateFactory = missingEntryStateFactory;
 
         foreach (var entry in entries)
         {
@@ -255,7 +272,7 @@ public sealed class AssetPickerViewModel : BaseViewModel
     {
         if (string.IsNullOrWhiteSpace(assetId))
         {
-            AssetName = EmptyAssetName;
+            AssetName = _emptyAssetName;
             IsMissingAsset = false;
             return;
         }
@@ -264,8 +281,18 @@ public sealed class AssetPickerViewModel : BaseViewModel
         {
             if (!_entryById.TryGetValue(assetId, out var entry))
             {
-                AssetName = MissingAssetName;
-                IsMissingAsset = true;
+                if (_missingEntryStateFactory != null)
+                {
+                    var state = _missingEntryStateFactory(assetId);
+                    AssetName = state.Name;
+                    IsMissingAsset = state.IsMissing;
+                }
+                else
+                {
+                    AssetName = _missingAssetName;
+                    IsMissingAsset = true;
+                }
+
                 return;
             }
 
@@ -276,7 +303,7 @@ public sealed class AssetPickerViewModel : BaseViewModel
 
         if (!_assetRegistry.TryGetById(assetId, out var assetInfo) || assetInfo == null)
         {
-            AssetName = MissingAssetName;
+            AssetName = _missingAssetName;
             IsMissingAsset = true;
             return;
         }
@@ -284,7 +311,7 @@ public sealed class AssetPickerViewModel : BaseViewModel
         var extension = Path.GetExtension(assetInfo.FullPath);
         if (!IsSelectionSupported || !_allowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            AssetName = MissingAssetName;
+            AssetName = _missingAssetName;
             IsMissingAsset = true;
             return;
         }

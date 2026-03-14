@@ -139,6 +139,10 @@
       <DependentUpon>ColorPropertyView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Windows\Editor\Monitor\Drawers\Property\Custom\ComponentRefPropertyView.axaml.cs">
+      <DependentUpon>ComponentRefPropertyView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
 
 

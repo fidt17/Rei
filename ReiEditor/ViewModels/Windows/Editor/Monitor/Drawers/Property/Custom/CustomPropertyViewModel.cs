@@ -4,9 +4,11 @@ using System.Collections.ObjectModel;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Utils;
@@ -25,7 +27,10 @@ public class CustomPropertyViewModel : BaseViewModel
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
+    private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IProjectAssetFocusService _projectAssetFocusService;
+    private readonly ISceneManagementService _sceneManagementService;
+    private readonly ISelectionService _selectionService;
 
 #pragma warning disable CS8618
     public CustomPropertyViewModel() { }
@@ -37,7 +42,10 @@ public class CustomPropertyViewModel : BaseViewModel
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
-        IProjectAssetFocusService projectAssetFocusService)
+        IBehaviourRegistry behaviourRegistry,
+        IProjectAssetFocusService projectAssetFocusService,
+        ISceneManagementService sceneManagementService,
+        ISelectionService selectionService)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
         
@@ -46,7 +54,10 @@ public class CustomPropertyViewModel : BaseViewModel
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
+        _behaviourRegistry = behaviourRegistry;
         _projectAssetFocusService = projectAssetFocusService;
+        _sceneManagementService = sceneManagementService;
+        _selectionService = selectionService;
 
         PropertyName = new(property);
         _property.ValueChangedEvent += HandlePropertyValueChangedEvent;
@@ -77,7 +88,7 @@ public class CustomPropertyViewModel : BaseViewModel
             
             foreach (var subProperty in subProperties)
             {
-                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService));
+                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
             }
         }
         else

@@ -26,8 +26,8 @@ namespace rei::render
     private:
         std::shared_ptr<CameraModule> _cameraModule;
         
-        ecs::RefComponent<AmbientLight> _ambientLight = {};
-        std::vector<ecs::RefComponent<PointLight>> _pointLights = {};
+        ecs::ComponentRef<AmbientLight> _ambientLight = {};
+        std::vector<ecs::ComponentRef<PointLight>> _pointLights = {};
 
         CubeVertexData _cubeVertexData;
 

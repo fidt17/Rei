@@ -9,7 +9,7 @@ namespace rei
     Behaviour::Behaviour(const i32 id, const ecs::Entity e):
         _id(id),
         _entity(e),
-        _transform(rei::ecs::RefComponent<Transform>(GetInternalWorld()->GetRegistry(), e))
+        _transform(rei::ecs::ComponentRef<Transform>(GetInternalWorld()->GetRegistry(), e))
     {
     }
 

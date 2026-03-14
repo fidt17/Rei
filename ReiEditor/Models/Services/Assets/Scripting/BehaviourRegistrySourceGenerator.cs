@@ -51,6 +51,7 @@ public class BehaviourRegistrySourceGenerator
 
         str.AppendLine(GenerateSerializationImplementation(serializableObjectsAndBehaviours));
         str.AppendLine(GenerateDeserializationImplementation(serializableObjectsAndBehaviours));
+        str.AppendLine(GenerateResolveDependenciesImplementation(serializableObjectsAndBehaviours));
         
         return str.ToString();
     }
@@ -105,7 +106,7 @@ public class BehaviourRegistrySourceGenerator
                            $"return b.REI_GET();" + " }, " +
                            $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " +
                            $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
-                           $"b.REI_SET(json); b.AfterREI_SET(); }}, " +
+                           $"b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }}, " +
                            collectAssetDependenciesLambda +
                            ");");
         }
@@ -187,6 +188,73 @@ public class BehaviourRegistrySourceGenerator
             str.AppendLine();
         }
         
+        return str.ToString();
+    }
+
+    private string GenerateResolveDependenciesImplementation(IEnumerable<SerializableObjectInfo> objects)
+    {
+        var list = objects.ToList();
+        var str = new StringBuilder();
+
+        str.AppendLine("// --- RESOLVE DEPENDENCIES METHODS ---\n");
+
+        foreach (var obj in list)
+        {
+            var objNamespace = obj.Namespace;
+            var objectName = obj.ObjectName;
+
+            var nameAndNamespace = objectName;
+            if (!string.IsNullOrWhiteSpace(objNamespace)) nameAndNamespace = $"{objNamespace}::{objectName}";
+
+            var serializedProperties = obj.SerializedProperties.ToList();
+
+            if (obj.IsTemplate)
+            {
+                str.AppendLine("template <typename T>");
+                str.AppendLine($"void {nameAndNamespace}<T>::ResolveDependencies()");
+            }
+            else
+            {
+                str.AppendLine($"void {nameAndNamespace}::ResolveDependencies()");
+            }
+
+            str.AppendLine("{");
+
+            foreach (var p in serializedProperties)
+            {
+                if (IsComponentRefProperty(p.Value))
+                {
+                    str.AppendLine($"    {p.Key}.Resolve();");
+                    continue;
+                }
+
+                var propertyType = p.Value.SourceType;
+                var indexOfTemplateStart = propertyType.IndexOf('<');
+                if (indexOfTemplateStart != -1)
+                {
+                    propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
+                }
+
+                if (list.Exists(x =>
+                    {
+                        var objName = x.ObjectName;
+                        indexOfTemplateStart = objName.IndexOf('<');
+                        if (indexOfTemplateStart != -1)
+                        {
+                            objName = objName.Remove(indexOfTemplateStart, objName.Length - indexOfTemplateStart);
+                        }
+
+                        return objName == propertyType;
+                    }))
+                {
+                    str.AppendLine($"    {p.Key}.ResolveDependencies();");
+                }
+            }
+
+            str.AppendLine("}");
+            str.AppendLine();
+        }
+
         return str.ToString();
     }
     
@@ -289,6 +357,11 @@ public class BehaviourRegistrySourceGenerator
     private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData)
     {
         return IsAssetRefProperty(propertyData, out _);
+    }
+
+    private static bool IsComponentRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData)
+    {
+        return GetSourceTypeBaseName(propertyData.SourceType) == "ComponentRef";
     }
 
     private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData, out string templateType)

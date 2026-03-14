@@ -14,6 +14,7 @@ namespace rei
     public:
         using GetBehaviourDataMethod = std::function<nlohmann::json(ecs::Entity)>;
         using SetBehaviourDataMethod = std::function<void(ecs::Entity, const nlohmann::json&)>;
+        using ResolveBehaviourDependenciesMethod = std::function<void(ecs::Entity)>;
         using CollectAssetDependenciesMethod = std::function<void(const nlohmann::json&, std::vector<assets::AssetDependency>&)>;
 
         template <typename T>
@@ -73,6 +74,14 @@ namespace rei
                 id, setFromJsonFunc
             });
 
+            _resolveDependenciesMethods.insert({
+                id, [](const ecs::Entity e)
+                {
+                    ECS_WORLD(GetInternalWorld());
+                    GET(e, T).ResolveDependencies();
+                }
+            });
+
             if (collectAssetDependenciesMethod != nullptr)
             {
                 _collectAssetDependenciesMethods.insert({
@@ -123,6 +132,14 @@ namespace rei
             return _setFromJsonMethods.at(id)(e, data);
         }
 
+        void ResolveBehaviourDependencies(const ecs::Entity e, const i32 id) const
+        {
+            if (!_resolveDependenciesMethods.contains(id))
+                REI_THROW("Missing resolve dependencies method. Component ID: " + STRING(id))
+
+            _resolveDependenciesMethods.at(id)(e);
+        }
+
         void CollectAssetDependencies(const i32 id, const nlohmann::json& data, std::vector<assets::AssetDependency>& outDependencies) const
         {
             if (!_collectAssetDependenciesMethods.contains(id)) return;
@@ -142,6 +159,7 @@ namespace rei
         std::unordered_map<i32, std::function<Behaviour&(ecs::Entity)>> _getMethods{};
         std::unordered_map<i32, GetBehaviourDataMethod> _getJsonMethods{};
         std::unordered_map<i32, SetBehaviourDataMethod> _setFromJsonMethods{};
+        std::unordered_map<i32, ResolveBehaviourDependenciesMethod> _resolveDependenciesMethods{};
         std::unordered_map<i32, CollectAssetDependenciesMethod> _collectAssetDependenciesMethods{};
         std::map<std::type_index, i32> _behaviourIdMap;
     };
@@ -173,6 +191,7 @@ namespace rei
         REI_API ecs::Entity Instantiate(ecs::Entity source, const std::string& requestedName = "", bool includeChildren = true) const;
 
         REI_API void Destroy(ecs::Entity e) const;
+        REI_API void ResolveDependencies() const;
         REI_API void ResolveTransformParents() const;
 
         void InitBehaviour(ecs::Entity e, Behaviour& b) const;

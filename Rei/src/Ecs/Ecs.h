@@ -10,7 +10,7 @@
 #define NEW_ENTITY() _ecs->NewEntity()
 #define DESTROY_ENTITY(E) _ecs->DestroyEntity(E)
 #define GET(E, COMPONENT_TYPE) _ecs->Get<COMPONENT_TYPE>(E)
-#define GET_REF(E, COMPONENT_TYPE) rei::ecs::RefComponent<COMPONENT_TYPE>(_ecs, E)
+#define GET_REF(E, COMPONENT_TYPE) rei::ecs::ComponentRef<COMPONENT_TYPE>(_ecs, E)
 #define HAS(E, COMPONENT_TYPE) _ecs->Has<COMPONENT_TYPE>(E)
 #define DEL(E, COMPONENT_TYPE) _ecs->Del<COMPONENT_TYPE>(E)
 #define IS_ALIVE(E) _ecs->IsAlive(E)

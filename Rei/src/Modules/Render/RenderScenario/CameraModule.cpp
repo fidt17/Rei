@@ -33,12 +33,12 @@ rei::render::Color rei::render::CameraModule::GetBackgroundColor() const
     return _camera.Get().GetBackgroundColor();
 }
 
-void rei::render::CameraModule::SetCamera(const ecs::RefComponent<Camera>& camera)
+void rei::render::CameraModule::SetCamera(const ecs::ComponentRef<Camera>& camera)
 {
     _camera = camera;
 }
 
-rei::ecs::RefComponent<rei::render::Camera>& rei::render::CameraModule::GetCamera()
+rei::ecs::ComponentRef<rei::render::Camera>& rei::render::CameraModule::GetCamera()
 {
     return _camera;
 }

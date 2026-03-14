@@ -7,7 +7,7 @@
 namespace rei::render
 {
 
-    void Renderer::SetCamera(const ecs::RefComponent<Camera>& camera)
+    void Renderer::SetCamera(const ecs::ComponentRef<Camera>& camera)
     {
         _camera = camera;
         if (_renderScenario != nullptr)
@@ -24,7 +24,7 @@ namespace rei::render
         }
     }
 
-    ecs::RefComponent<Camera> Renderer::GetCamera() const
+    ecs::ComponentRef<Camera> Renderer::GetCamera() const
     {
         return _camera;
     }
@@ -43,7 +43,6 @@ namespace rei::render
 
         PrepareAssets();
         _renderScenario = std::make_unique<DefaultRenderScenario>(_target);
-        //_renderScenario = CREATE_RENDER_SCENARIO(_target);
         _renderScenario->Setup();
         
         if (!_camera.IsNull())

@@ -27,16 +27,16 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
     rei::assets::RegisterAutoAssignHandler<rei::render::Model>();
     rei::assets::RegisterAutoAssignHandler<rei::render::Material>();
 
-    f.RegisterComponent<::ColorLerp>(6, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<::Jump>(10, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::Jump>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::Jump>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<::MaterialColorLerp>(11, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::MaterialColorLerp>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::MaterialColorLerp>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<::RotateAroundAxis>(7, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::RotateAroundAxis>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::RotateAroundAxis>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e);b.REI_SET(json); b.AfterREI_SET(); }, [](const nlohmann::json& data, std::vector<rei::assets::AssetDependency>& outDependencies) { if (data.contains("_model")) { const auto& rawValue = data.at("_model"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Model>(assetId)); } } } if (data.contains("_material")) { const auto& rawValue = data.at("_material"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Material>(assetId)); } } } });
-    f.RegisterComponent<rei::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<rei::render::Camera>(8, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
-    f.RegisterComponent<rei::render::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e);b.REI_SET(json); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<::ColorLerp>(6, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::ColorLerp>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<::Jump>(10, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::Jump>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::Jump>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<::MaterialColorLerp>(11, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::MaterialColorLerp>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::MaterialColorLerp>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<::RotateAroundAxis>(7, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::RotateAroundAxis>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::RotateAroundAxis>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, [](const nlohmann::json& data, std::vector<rei::assets::AssetDependency>& outDependencies) { if (data.contains("_model")) { const auto& rawValue = data.at("_model"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Model>(assetId)); } } } if (data.contains("_material")) { const auto& rawValue = data.at("_material"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Material>(assetId)); } } } });
+    f.RegisterComponent<rei::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::render::Camera>(8, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::render::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
 }
 
 // --- REI_GET METHODS ---
@@ -289,6 +289,83 @@ void rei::render::PointLight::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("_strength")) _strength = data.at("_strength").at("Value");
     if (data.contains("_color")) _color.REI_SET(data.at("_color").at("Value"));
+}
+
+
+// --- RESOLVE DEPENDENCIES METHODS ---
+
+void rei::math::Vector3::ResolveDependencies()
+{
+}
+
+void rei::physics::ModelCollider::ResolveDependencies()
+{
+}
+
+void rei::physics::SphereCollider::ResolveDependencies()
+{
+}
+
+template <typename T>
+void rei::assets::AssetRef<T>::ResolveDependencies()
+{
+}
+
+void rei::render::Color::ResolveDependencies()
+{
+}
+
+void ColorLerp::ResolveDependencies()
+{
+    _from.ResolveDependencies();
+    _to.ResolveDependencies();
+}
+
+void Jump::ResolveDependencies()
+{
+}
+
+void MaterialColorLerp::ResolveDependencies()
+{
+    _from.ResolveDependencies();
+    _to.ResolveDependencies();
+}
+
+void RotateAroundAxis::ResolveDependencies()
+{
+    _rotationSpeed.ResolveDependencies();
+}
+
+void TestMovement::ResolveDependencies()
+{
+}
+
+void rei::render::MeshRenderer::ResolveDependencies()
+{
+    _model.ResolveDependencies();
+    _material.ResolveDependencies();
+}
+
+void rei::Transform::ResolveDependencies()
+{
+    _position.ResolveDependencies();
+    _rotation.ResolveDependencies();
+    _scale.ResolveDependencies();
+}
+
+void rei::render::Camera::ResolveDependencies()
+{
+    _backgroundColor.ResolveDependencies();
+}
+
+void rei::render::AmbientLight::ResolveDependencies()
+{
+    _color.ResolveDependencies();
+}
+
+void rei::render::PointLight::ResolveDependencies()
+{
+    _color.ResolveDependencies();
 }
 
 

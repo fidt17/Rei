@@ -13,6 +13,7 @@
     CLASS_NAME& operator=(const CLASS_NAME& other) = default;\
     nlohmann::json REI_GET() const;\
     void REI_SET(const nlohmann::json& data); \
+    void ResolveDependencies(); \
 
 #define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
     public:\
@@ -21,6 +22,7 @@
     BEHAVIOUR_NAME& operator=(const BEHAVIOUR_NAME& other) = default;\
     nlohmann::json REI_GET() const; \
     void REI_SET(const nlohmann::json& data); \
+    void ResolveDependencies(); \
     private:
 
 #define REI_EVENT(x) eventpp::CallbackList<void(x)>

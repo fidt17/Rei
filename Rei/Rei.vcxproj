@@ -586,7 +586,7 @@
     <ClInclude Include="src\Common\Time\ScopedTimer.h" />
     <ClInclude Include="src\Common\Time\Stopwatch.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
-    <ClInclude Include="src\Ecs\RefComponent.h" />
+    <ClInclude Include="src\Ecs\ComponentRef.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
     <ClInclude Include="src\Ecs\Ecs.h" />
     <ClInclude Include="src\Ecs\EcsRegistry.h" />

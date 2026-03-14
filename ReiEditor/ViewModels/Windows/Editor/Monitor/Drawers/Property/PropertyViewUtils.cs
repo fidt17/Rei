@@ -3,9 +3,11 @@ using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
@@ -19,7 +21,10 @@ public static class PropertyViewUtils
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
-        IProjectAssetFocusService projectAssetFocusService)
+        IBehaviourRegistry behaviourRegistry,
+        IProjectAssetFocusService projectAssetFocusService,
+        ISceneManagementService sceneManagementService,
+        ISelectionService selectionService)
     {
         return property.Type switch
         {
@@ -28,7 +33,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -53,7 +58,10 @@ public static class PropertyViewUtils
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
-        IProjectAssetFocusService projectAssetFocusService)
+        IBehaviourRegistry behaviourRegistry,
+        IProjectAssetFocusService projectAssetFocusService,
+        ISceneManagementService sceneManagementService,
+        ISelectionService selectionService)
     {
         if (property.SourceType == "Vector3")
         {
@@ -67,7 +75,11 @@ public static class PropertyViewUtils
         {
             return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService);
         }
+        else if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal))
+        {
+            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService);
+        }
 
-        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService);
     }
 }

@@ -11,7 +11,8 @@ namespace rei::assets
         public:\
         CLASS_NAME() = default;\
         nlohmann::json REI_GET() const;\
-        void REI_SET(const nlohmann::json& data);
+        void REI_SET(const nlohmann::json& data);\
+        void ResolveDependencies();
 #endif
 
     class IAssetRef
