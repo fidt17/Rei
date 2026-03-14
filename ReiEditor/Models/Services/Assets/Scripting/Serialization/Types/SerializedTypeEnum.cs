@@ -8,5 +8,6 @@ public enum SerializedTypeEnum
     Boolean = 3,
     Float = 4,
     Custom = 5,
-    Enum = 6
+    Enum = 6,
+    Collection = 7
 }

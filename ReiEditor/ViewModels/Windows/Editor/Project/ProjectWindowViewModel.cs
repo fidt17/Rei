@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -351,7 +351,7 @@ public class ProjectWindowViewModel : BaseViewModel
         }
     }
 
-    private void HandleAssetSelectionRequested(ProjectAssetItemViewModel item, Avalonia.Input.KeyModifiers modifiers)
+    private void HandleAssetSelectionRequested(ProjectAssetItemViewModel item, KeyModifiers modifiers)
     {
         _assetSelectionHandler.HandleSelectionRequested(item, modifiers, ActiveItems);
     }

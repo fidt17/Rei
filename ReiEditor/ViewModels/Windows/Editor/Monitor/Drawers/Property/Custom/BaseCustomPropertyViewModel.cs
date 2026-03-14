@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Threading;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
@@ -38,7 +39,7 @@ public abstract class BaseCustomPropertyViewModel : BaseViewModel
         _property = property;
     
         PropertyName = new(property);
-        _property.ValueChangedEvent += HandlePropertyValueChangedEvent;
+        _property.ValueChangedEvent += HandlePropertyValueChangedEventOnUiThread;
 
         Dispatcher.UIThread.Invoke(() =>
         {
@@ -50,13 +51,18 @@ public abstract class BaseCustomPropertyViewModel : BaseViewModel
     {
         base.Dispose();
             
-        _property.ValueChangedEvent -= HandlePropertyValueChangedEvent;
+        _property.ValueChangedEvent -= HandlePropertyValueChangedEventOnUiThread;
     }
 
     protected SerializedProperty? GetNestedProperty(string name)
     {
         var property = _nestedProperties?.FirstOrDefault(x => x.Name == name);
         return property;
+    }
+
+    private void HandlePropertyValueChangedEventOnUiThread(object? value)
+    {
+        Dispatcher.UIThread.Execute(() => HandlePropertyValueChangedEvent(value));
     }
 
     protected abstract void HandlePropertyValueChangedEvent(object? value);

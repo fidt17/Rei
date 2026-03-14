@@ -113,7 +113,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
     private static SerializedProperty GetPropertyRootForSync(SerializedProperty property)
     {
         var current = property;
-        while (current.ParentProperty is { Type: SerializedTypeEnum.Custom } parent)
+        while (current.ParentProperty is { } parent && (parent.Type == SerializedTypeEnum.Custom || parent.Type == SerializedTypeEnum.Collection))
         {
             current = parent;
         }
@@ -123,6 +123,23 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
 
     private static Dictionary<string, object?> SerializePropertyChange(SerializedProperty property)
     {
+        if (property.Type == SerializedTypeEnum.Collection)
+        {
+            var serializedItems = new List<object?>();
+            if (property.Value is List<SerializedProperty> collectionItems)
+            {
+                foreach (var item in collectionItems)
+                {
+                    serializedItems.Add(SerializePropertyValue(item));
+                }
+            }
+
+            return new Dictionary<string, object?>
+            {
+                { "Value", serializedItems }
+            };
+        }
+
         if (property.Type != SerializedTypeEnum.Custom)
         {
             return new Dictionary<string, object?>
@@ -144,6 +161,36 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         {
             { "Value", serializedChildren }
         };
+    }
+
+    private static object? SerializePropertyValue(SerializedProperty property)
+    {
+        if (property.Type == SerializedTypeEnum.Collection)
+        {
+            var serializedItems = new List<object?>();
+            if (property.Value is List<SerializedProperty> collectionItems)
+            {
+                foreach (var item in collectionItems)
+                {
+                    serializedItems.Add(SerializePropertyValue(item));
+                }
+            }
+
+            return serializedItems;
+        }
+
+        if (property.Type != SerializedTypeEnum.Custom) return property.Value;
+
+        var serializedChildren = new Dictionary<string, object?>();
+        if (property.Value is Dictionary<string, SerializedProperty> nestedProperties)
+        {
+            foreach (var nestedProperty in nestedProperties.Values)
+            {
+                serializedChildren[nestedProperty.Name] = SerializePropertyChange(nestedProperty);
+            }
+        }
+
+        return serializedChildren;
     }
     
     private void HandleEngineRunningValueChangedEvent(bool isRunning)

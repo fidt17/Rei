@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
@@ -10,6 +12,7 @@ using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Utils;
 
@@ -70,11 +73,17 @@ public class CustomPropertyViewModel : BaseViewModel
         base.Dispose();
         
         _property.ValueChangedEvent -= HandlePropertyValueChangedEvent;
+        Value.ClearAndDispose();
     }
     
     public void SwitchExpandState() => Expanded.Value = !Expanded.Value;
 
     private void HandlePropertyValueChangedEvent(object? value)
+    {
+        Dispatcher.UIThread.Execute(() => HandlePropertyValueChangedEventOnUiThread(value));
+    }
+
+    private void HandlePropertyValueChangedEventOnUiThread(object? value)
     {
         if (value is null)
         {
@@ -84,6 +93,8 @@ public class CustomPropertyViewModel : BaseViewModel
         
         if (value is Dictionary<string, SerializedProperty> subProperties)
         {
+            if (HasSameProperties(subProperties)) return;
+
             Value.ClearAndDispose();
             
             foreach (var subProperty in subProperties)
@@ -95,5 +106,48 @@ public class CustomPropertyViewModel : BaseViewModel
         {
             throw new Exception($"Not supported value type: {value.GetType()} {value}");
         }
+    }
+
+    private bool HasSameProperties(Dictionary<string, SerializedProperty> subProperties)
+    {
+        var currentProperties = Value.ToArray();
+
+        if (currentProperties.Length != subProperties.Count) return false;
+
+        var propertyNames = currentProperties
+            .Select(GetPropertyName)
+            .ToList();
+
+        if (propertyNames.Count != subProperties.Count || propertyNames.Any(propertyName => propertyName == null)) return false;
+
+        var index = 0;
+        foreach (var (_, property) in subProperties)
+        {
+            if (index >= propertyNames.Count || propertyNames[index] != property.Name)
+            {
+                return false;
+            }
+
+            index++;
+        }
+
+        return true;
+    }
+
+    private static string? GetPropertyName(BaseViewModel viewModel)
+    {
+        return viewModel switch
+        {
+            BasePropertyViewModel<string> propertyViewModel => propertyViewModel.PropertyName.Value,
+            BasePropertyViewModel<float> propertyViewModel => propertyViewModel.PropertyName.Value,
+            BasePropertyViewModel<int> propertyViewModel => propertyViewModel.PropertyName.Value,
+            BasePropertyViewModel<bool> propertyViewModel => propertyViewModel.PropertyName.Value,
+            BasePropertyViewModel<double> propertyViewModel => propertyViewModel.PropertyName.Value,
+            BaseCustomPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
+            CustomPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
+            CollectionPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
+            null => null,
+            _ => null
+        };
     }
 }

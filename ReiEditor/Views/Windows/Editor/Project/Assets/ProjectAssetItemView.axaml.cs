@@ -21,7 +21,7 @@ public partial class ProjectAssetItemView : UserControl
     public ProjectAssetItemView()
     {
         InitializeComponent();
-        RootBorder.AddHandler(InputElement.PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        RootBorder.AddHandler(PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         RootBorder.AddHandler(DragDrop.DragEnterEvent, RootBorder_OnDragEnter);
         RootBorder.AddHandler(DragDrop.DropEvent, RootBorder_OnDrop);
         DataContextChanged += HandleDataContextChangedEvent;

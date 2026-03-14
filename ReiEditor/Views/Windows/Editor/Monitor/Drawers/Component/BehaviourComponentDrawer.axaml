@@ -30,7 +30,7 @@
                                 Grid.Column="0"
                                 IsVisible="True"
                                 VerticalAlignment="Top"
-                                IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
+                                IsChecked="{Binding Expanded.Value}" />
 
                             <!-- Name Label -->
                             <TextBlock

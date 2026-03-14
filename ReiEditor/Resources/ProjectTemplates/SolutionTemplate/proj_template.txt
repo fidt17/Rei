@@ -103,7 +103,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,7 +135,7 @@ xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -166,7 +166,7 @@ xcopy /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -199,7 +199,7 @@ xcopy /y /d "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

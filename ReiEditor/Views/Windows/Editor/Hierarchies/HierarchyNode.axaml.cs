@@ -21,7 +21,7 @@ public partial class HierarchyNode : UserControl
     {
         InitializeComponent();
 
-        RootBorder.AddHandler(InputElement.PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        RootBorder.AddHandler(PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         DataContextChanged += HandleDataContextChangedEvent;
 
         ConfigureDragAndDrop();

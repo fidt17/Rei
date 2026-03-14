@@ -156,8 +156,8 @@ public class HierarchySelectionHandler
             _selectedEntityIds.Clear();
         }
 
-        var start = System.Math.Min(anchorIndex, targetIndex);
-        var end = System.Math.Max(anchorIndex, targetIndex);
+        var start = Math.Min(anchorIndex, targetIndex);
+        var end = Math.Max(anchorIndex, targetIndex);
         for (var i = start; i <= end; i++)
         {
             _selectedEntityIds.Add(visibleNodes[i].Node.Content.Id);

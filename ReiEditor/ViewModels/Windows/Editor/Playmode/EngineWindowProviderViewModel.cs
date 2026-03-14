@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using ReiEditor.Models.Services.Engine.Api;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
@@ -29,6 +29,7 @@ public class EngineWindowProviderViewModel
         }
         catch
         {
+            // ignored
         }
     }
 }

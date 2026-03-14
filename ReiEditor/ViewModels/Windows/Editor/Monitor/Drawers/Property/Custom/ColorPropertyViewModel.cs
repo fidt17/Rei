@@ -1,8 +1,10 @@
 using System.Globalization;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Render;
+using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
@@ -121,7 +123,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
                 SetField(ref _h, h, nameof(H));
                 SetField(ref _s, s, nameof(S));
                 SetField(ref _v, v, nameof(V));
-                SetField(ref _hex, ColorConversionUtility.ToHex(r, g, b, a), nameof(Hex));
+                SetField(ref _hex, ColorConversionUtility.ToHex(r, g, b, a));
                 SetField(ref _colorHex, ColorConversionUtility.ToHex(r, g, b, 1f), nameof(ColorHex));
                 SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(r, g, b, 1f)), nameof(PreviewBrush));
             });
@@ -192,7 +194,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
     private void HandleComponentValueChanged(object? _)
     {
         if (_suppressComponentValueChanged) return;
-        HandlePropertyValueChangedEvent(null);
+        Dispatcher.UIThread.Execute(() => HandlePropertyValueChangedEvent(null));
     }
 
     private void ApplyFromRgba()

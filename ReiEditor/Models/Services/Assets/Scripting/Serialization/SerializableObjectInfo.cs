@@ -11,14 +11,28 @@ public class SerializableObjectInfo
         public SerializedTypeEnum Type { get; }
         public string SourceType { get; }
         public string? TemplateTypeName { get; }
+        public SerializedTypeEnum ItemType { get; }
+        public string? ItemSourceType { get; }
+        public string? ItemTemplateTypeName { get; }
         public string? DefaultValue { get; }
         public bool HideInEditor { get; }
 
-        public SerializedPropertyData(SerializedTypeEnum type, string sourceType, string? templateTypeName, string? defaultValue, bool hideInEditor)
+        public SerializedPropertyData(
+            SerializedTypeEnum type,
+            string sourceType,
+            string? templateTypeName,
+            SerializedTypeEnum itemType,
+            string? itemSourceType,
+            string? itemTemplateTypeName,
+            string? defaultValue,
+            bool hideInEditor)
         {
             Type = type;
             SourceType = sourceType;
             TemplateTypeName = templateTypeName;
+            ItemType = itemType;
+            ItemSourceType = itemSourceType;
+            ItemTemplateTypeName = itemTemplateTypeName;
             DefaultValue = defaultValue;
             HideInEditor = hideInEditor;
         }

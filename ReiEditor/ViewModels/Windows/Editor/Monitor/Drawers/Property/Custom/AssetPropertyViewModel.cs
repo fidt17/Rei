@@ -1,10 +1,12 @@
 using System;
+using Avalonia.Threading;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Controls.Assets;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
@@ -75,7 +77,7 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
     private void HandleIdValueChangedEvent(object? value)
     {
         if (!_isInitialized) return;
-        AssetPicker?.SyncSelectedAsset(ConvertToString(value));
+        Dispatcher.UIThread.Execute(() => AssetPicker?.SyncSelectedAsset(ConvertToString(value)));
     }
 
     private string? GetAssetId()

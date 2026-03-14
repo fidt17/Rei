@@ -33,6 +33,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
+            SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService),
             SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()

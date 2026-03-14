@@ -1,18 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 namespace ReiEditor.Models.Services.Components;
 
+[JsonConverter(typeof(SerializedPropertyJsonConverter))]
 public class SerializedProperty
 {
     public event Action<object?>? ValueChangedEvent;
     
-    public string Name { get; }
+    public string Name { get; private set; }
     public SerializedTypeEnum Type { get; }
     public string SourceType { get; }
     [JsonIgnore] public string? TemplateTypeName { get; private set; }
+    [JsonIgnore] public SerializedTypeEnum ItemType { get; }
+    [JsonIgnore] public string? ItemSourceType { get; }
+    [JsonIgnore] public string? ItemTemplateTypeName { get; }
     [JsonIgnore] public SerializedProperty? ParentProperty { get; }
 
     [JsonIgnore]
@@ -25,19 +30,39 @@ public class SerializedProperty
     [JsonProperty("Value")]
     private object? _value;
 
-    public SerializedProperty(string name, SerializedTypeEnum type, object? value, string sourceType, SerializedProperty? parentProperty, string? templateTypeName = null)
+    [JsonIgnore]
+    private readonly List<SerializedProperty> _trackedChildren = new();
+
+    public SerializedProperty(
+        string name,
+        SerializedTypeEnum type,
+        object? value,
+        string sourceType,
+        SerializedProperty? parentProperty,
+        string? templateTypeName = null,
+        SerializedTypeEnum itemType = SerializedTypeEnum.Invalid,
+        string? itemSourceType = null,
+        string? itemTemplateTypeName = null)
     {
         Name = name;
         Type = type;
-        Value = value;
         SourceType = sourceType;
         ParentProperty = parentProperty;
         TemplateTypeName = templateTypeName;
+        ItemType = itemType;
+        ItemSourceType = itemSourceType;
+        ItemTemplateTypeName = itemTemplateTypeName;
+        Value = value;
     }
 
     public void SetTemplateTypeName(string? templateTypeName)
     {
         TemplateTypeName = templateTypeName;
+    }
+
+    public void SetName(string name)
+    {
+        Name = name;
     }
 
     public void FillPropertyHierarchy(List<SerializedProperty> hierarchy)
@@ -54,13 +79,19 @@ public class SerializedProperty
         ValueChangedEvent?.Invoke(_value);
     }
 
+    public void NotifyStructureChanged()
+    {
+        RefreshChildSubscriptions(_value, unsubscribeOnly: false);
+        TriggerChangedEvent();
+    }
+
     private void SetValueInternal(object? value, bool triggerChangedEvent)
     {
         try
         {
             if (_value == value || (_value != null && _value.Equals(value))) return;
 
-            if (value == null && Type != SerializedTypeEnum.Custom) return;
+            if (value == null && Type != SerializedTypeEnum.Custom && Type != SerializedTypeEnum.Collection) return;
 
             if (Type.IsValidValue(value))
             {
@@ -75,9 +106,19 @@ public class SerializedProperty
                         }
                     }
                 }
+                else if (value is List<object?> valueList && _value is List<SerializedProperty> nestedProperties)
+                {
+                    var count = Math.Min(valueList.Count, nestedProperties.Count);
+                    for (var index = 0; index < count; index++)
+                    {
+                        nestedProperties[index].Value = valueList[index];
+                    }
+                }
                 else
                 {
+                    RefreshChildSubscriptions(_value, unsubscribeOnly: true);
                     _value = value;
+                    RefreshChildSubscriptions(_value, unsubscribeOnly: false);
                     if (triggerChangedEvent)
                     {
                         ValueChangedEvent?.Invoke(_value);
@@ -93,5 +134,42 @@ public class SerializedProperty
         {
             Console.WriteLine(e);
         }
+    }
+
+    private void RefreshChildSubscriptions(object? value, bool unsubscribeOnly)
+    {
+        foreach (var child in _trackedChildren)
+        {
+            child.ValueChangedEvent -= HandleChildValueChangedEvent;
+        }
+        _trackedChildren.Clear();
+
+        if (unsubscribeOnly) return;
+
+        foreach (var child in GetChildren(value))
+        {
+            child.ValueChangedEvent += HandleChildValueChangedEvent;
+            _trackedChildren.Add(child);
+        }
+    }
+
+    private static IEnumerable<SerializedProperty> GetChildren(object? value)
+    {
+        if (value is Dictionary<string, SerializedProperty> valueDict)
+        {
+            return valueDict.Values;
+        }
+
+        if (value is List<SerializedProperty> valueList)
+        {
+            return valueList;
+        }
+
+        return Enumerable.Empty<SerializedProperty>();
+    }
+
+    private void HandleChildValueChangedEvent(object? _)
+    {
+        ValueChangedEvent?.Invoke(_value);
     }
 }

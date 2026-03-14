@@ -70,12 +70,10 @@ public class EntityStateApplier
                 {
                     try
                     {
-                        var map = value is JObject jObject ? jObject.ToDictionary() : value;
-
                         if (behaviour.HasProperty(propertyName))
                         {
                             var p = behaviour.GetProperty(propertyName);
-                            p.Value = map;
+                            _behaviourComponentsService.ApplySerializedValue(p, value);
                         }
                     }
                     catch (Exception exception)

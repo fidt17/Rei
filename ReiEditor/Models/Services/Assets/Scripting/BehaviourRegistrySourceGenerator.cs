@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 namespace ReiEditor.Models.Services.Assets.Scripting;
 
@@ -44,6 +45,7 @@ public class BehaviourRegistrySourceGenerator
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Assets/Core/AssetRefUtils.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<type_traits>"));
         str.AppendLine();
         str.AppendLine(GenerateIncludes(serializableObjectsAndBehaviours));
         
@@ -146,41 +148,9 @@ public class BehaviourRegistrySourceGenerator
             
             str.AppendLine("{");
             
-            for (var index = 0; index < serializedProperties.Count; index++)
+            foreach (var p in serializedProperties)
             {
-                var p = serializedProperties[index];
-                var isAssetRef = IsAssetRefProperty(p.Value);
-                
-                var propertyType = p.Value.SourceType;
-                var indexOfTemplateStart = propertyType.IndexOf('<');
-                if (indexOfTemplateStart != -1)
-                {
-                    propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
-                }
-
-                if (list.Exists(x =>
-                    {
-                        var objName = x.ObjectName;
-                        indexOfTemplateStart = objName.IndexOf('<');
-                        if (indexOfTemplateStart != -1)
-                        {
-                            objName = objName.Remove(indexOfTemplateStart, objName.Length - indexOfTemplateStart);
-                        }
-
-                        return objName == propertyType;
-                    }))
-                {
-                    str.AppendLine($"    if (data.contains(\"{p.Key}\")) {p.Key}.REI_SET(data.at(\"{p.Key}\").at(\"Value\"));");
-                }
-                else
-                {
-                    str.AppendLine($"    if (data.contains(\"{p.Key}\")) {p.Key} = data.at(\"{p.Key}\").at(\"Value\");");
-                }
-
-                if (isAssetRef)
-                {
-                    str.AppendLine($"    if (data.contains(\"{p.Key}\")) rei::assets::SyncAfterExternalChange({p.Key});");
-                }
+                AppendDeserializationCode(str, p.Key, p.Value, list);
             }
             
             str.AppendLine("}");
@@ -222,33 +192,7 @@ public class BehaviourRegistrySourceGenerator
 
             foreach (var p in serializedProperties)
             {
-                if (IsComponentRefProperty(p.Value))
-                {
-                    str.AppendLine($"    {p.Key}.Resolve();");
-                    continue;
-                }
-
-                var propertyType = p.Value.SourceType;
-                var indexOfTemplateStart = propertyType.IndexOf('<');
-                if (indexOfTemplateStart != -1)
-                {
-                    propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
-                }
-
-                if (list.Exists(x =>
-                    {
-                        var objName = x.ObjectName;
-                        indexOfTemplateStart = objName.IndexOf('<');
-                        if (indexOfTemplateStart != -1)
-                        {
-                            objName = objName.Remove(indexOfTemplateStart, objName.Length - indexOfTemplateStart);
-                        }
-
-                        return objName == propertyType;
-                    }))
-                {
-                    str.AppendLine($"    {p.Key}.ResolveDependencies();");
-                }
+                AppendResolveDependenciesCode(str, p.Key, p.Value, list);
             }
 
             str.AppendLine("}");
@@ -291,41 +235,9 @@ public class BehaviourRegistrySourceGenerator
 
             str.AppendLine("        {" + $"\"REI_TYPE\", \"{objectName}\"" + "},");
             
-            for (var index = 0; index < serializedProperties.Count; index++)
+            foreach (var p in serializedProperties)
             {
-                var p = serializedProperties[index];
-                
-                var propertyType = p.Value.SourceType;
-                var indexOfTemplateStart = propertyType.IndexOf('<');
-                if (indexOfTemplateStart != -1)
-                {
-                    propertyType = propertyType.Remove(indexOfTemplateStart, propertyType.Length - indexOfTemplateStart);
-                }
-
-                var isEnum = _serializableObjectsRegistry.GetEnum(propertyType) != null;
-
-                if (isEnum)
-                {
-                    str.AppendLine("        {" + $"\"{p.Key}\", (int) {p.Key}" + "},");
-                }
-                else if (list.Exists(x =>
-                    {
-                        var objName = x.ObjectName;
-                        indexOfTemplateStart = objName.IndexOf('<');
-                        if (indexOfTemplateStart != -1)
-                        {
-                            objName = objName.Remove(indexOfTemplateStart, objName.Length - indexOfTemplateStart);
-                        }
-
-                        return objName == propertyType;
-                    }))
-                {
-                    str.AppendLine("        {" + $"\"{p.Key}\", {p.Key}.REI_GET()" + "},");
-                }
-                else
-                {
-                    str.AppendLine("        {" + $"\"{p.Key}\", {p.Key}" + "},");
-                }
+                AppendSerializationCode(str, p.Key, p.Value, list);
             }
 
             str.AppendLine("    };");
@@ -345,7 +257,7 @@ public class BehaviourRegistrySourceGenerator
         {
             foreach (var property in obj.SerializedProperties.Values)
             {
-                if (!IsAssetRefProperty(property, out var templateType)) continue;
+                if (!TryGetAssetRefTemplateType(property, out var templateType)) continue;
                 var qualifiedType = GetQualifiedTemplateType(templateType, obj.Namespace);
                 result.Add(qualifiedType);
             }
@@ -353,15 +265,215 @@ public class BehaviourRegistrySourceGenerator
 
         return result;
     }
+
+    private void AppendSerializationCode(StringBuilder str, string propertyName, SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        if (propertyData.Type == SerializedTypeEnum.Collection)
+        {
+            str.AppendLine($"        {{\"{propertyName}\", {BuildCollectionSerializationExpression(propertyName, propertyData, objects)}}},");
+            return;
+        }
+
+        if (propertyData.Type == SerializedTypeEnum.Enum)
+        {
+            str.AppendLine($"        {{\"{propertyName}\", (int) {propertyName}}},");
+            return;
+        }
+
+        if (IsSerializableObjectProperty(propertyData, objects))
+        {
+            str.AppendLine($"        {{\"{propertyName}\", {propertyName}.REI_GET() }},");
+            return;
+        }
+
+        str.AppendLine($"        {{\"{propertyName}\", {propertyName}}},");
+    }
+
+    private void AppendDeserializationCode(StringBuilder str, string propertyName, SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        if (propertyData.Type == SerializedTypeEnum.Collection)
+        {
+            str.AppendLine($"    if (data.contains(\"{propertyName}\"))");
+            str.AppendLine("    {");
+            str.AppendLine($"        {propertyName}.clear();");
+            str.AppendLine($"        const auto& collectionData = data.at(\"{propertyName}\").at(\"Value\");");
+
+            if (RequiresReiSet(propertyData))
+            {
+                str.AppendLine("        for (const auto& itemData : collectionData)");
+                str.AppendLine("        {");
+                str.AppendLine($"            typename decltype({propertyName})::value_type itemValue;");
+                str.AppendLine("            itemValue.REI_SET(itemData);");
+                str.AppendLine($"            {propertyName}.emplace_back(std::move(itemValue));");
+                str.AppendLine("        }");
+            }
+            else if (propertyData.ItemType == SerializedTypeEnum.Enum)
+            {
+                str.AppendLine("        for (const auto& itemData : collectionData)");
+                str.AppendLine("        {");
+                str.AppendLine($"            {propertyName}.push_back(static_cast<typename decltype({propertyName})::value_type>(itemData.get<int>()));");
+                str.AppendLine("        }");
+            }
+            else
+            {
+                str.AppendLine($"        {propertyName} = collectionData.get<std::remove_reference_t<decltype({propertyName})>>();");
+            }
+
+            if (IsCollectionOfAssetRef(propertyData))
+            {
+                str.AppendLine($"        for (auto& itemValue : {propertyName})");
+                str.AppendLine("        {");
+                str.AppendLine("            rei::assets::SyncAfterExternalChange(itemValue);");
+                str.AppendLine("        }");
+            }
+
+            str.AppendLine("    }");
+            return;
+        }
+
+        if (IsSerializableObjectProperty(propertyData, objects))
+        {
+            str.AppendLine($"    if (data.contains(\"{propertyName}\")) {propertyName}.REI_SET(data.at(\"{propertyName}\").at(\"Value\"));");
+        }
+        else
+        {
+            str.AppendLine($"    if (data.contains(\"{propertyName}\")) {propertyName} = data.at(\"{propertyName}\").at(\"Value\");");
+        }
+
+        if (IsAssetRefProperty(propertyData))
+        {
+            str.AppendLine($"    if (data.contains(\"{propertyName}\")) rei::assets::SyncAfterExternalChange({propertyName});");
+        }
+    }
+
+    private void AppendResolveDependenciesCode(StringBuilder str, string propertyName, SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        if (propertyData.Type == SerializedTypeEnum.Collection)
+        {
+            if (IsCollectionOfComponentRef(propertyData))
+            {
+                str.AppendLine($"    for (auto& itemValue : {propertyName})");
+                str.AppendLine("    {");
+                str.AppendLine("        itemValue.Resolve();");
+                str.AppendLine("    }");
+            }
+            else if (RequiresResolveDependencies(propertyData, objects))
+            {
+                str.AppendLine($"    for (auto& itemValue : {propertyName})");
+                str.AppendLine("    {");
+                str.AppendLine("        itemValue.ResolveDependencies();");
+                str.AppendLine("    }");
+            }
+
+            return;
+        }
+
+        if (IsComponentRefProperty(propertyData))
+        {
+            str.AppendLine($"    {propertyName}.Resolve();");
+            return;
+        }
+
+        if (IsSerializableObjectProperty(propertyData, objects))
+        {
+            str.AppendLine($"    {propertyName}.ResolveDependencies();");
+        }
+    }
+
+    private string BuildCollectionSerializationExpression(string propertyName, SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        if (!RequiresReiGet(propertyData, objects))
+        {
+            return propertyName;
+        }
+
+        var collectionVarName = $"{propertyName}Json";
+        return $"([&]() {{ nlohmann::json {collectionVarName} = nlohmann::json::array(); for (const auto& itemValue : {propertyName}) {{ {collectionVarName}.push_back(itemValue.REI_GET()); }} return {collectionVarName}; }})()";
+    }
+
+    private static bool RequiresReiSet(SerializableObjectInfo.SerializedPropertyData propertyData)
+    {
+        return propertyData.ItemType == SerializedTypeEnum.Custom ||
+               IsCollectionOfAssetRef(propertyData) ||
+               IsCollectionOfComponentRef(propertyData);
+    }
+
+    private static bool RequiresReiGet(SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        return (propertyData.ItemType == SerializedTypeEnum.Custom &&
+                propertyData.ItemSourceType != null &&
+                IsSerializableObjectType(propertyData.ItemSourceType, objects)) ||
+               IsCollectionOfAssetRef(propertyData) ||
+               IsCollectionOfComponentRef(propertyData);
+    }
+
+    private static bool RequiresResolveDependencies(SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        return propertyData.ItemType == SerializedTypeEnum.Custom &&
+               propertyData.ItemSourceType != null &&
+               (IsSerializableObjectType(propertyData.ItemSourceType, objects) || GetSourceTypeBaseName(propertyData.ItemSourceType) == "AssetRef");
+    }
+
+    private static bool IsSerializableObjectProperty(SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        return propertyData.Type == SerializedTypeEnum.Custom && IsSerializableObjectType(propertyData.SourceType, objects);
+    }
+
+    private static bool IsSerializableObjectType(string sourceType, IReadOnlyCollection<SerializableObjectInfo> objects)
+    {
+        var propertyType = GetSourceTypeBaseName(sourceType);
+        return objects.Any(x => GetObjectTypeName(x.ObjectName) == propertyType);
+    }
+
+    private static string GetObjectTypeName(string objectName)
+    {
+        var indexOfTemplateStart = objectName.IndexOf('<');
+        if (indexOfTemplateStart != -1)
+        {
+            return objectName.Remove(indexOfTemplateStart, objectName.Length - indexOfTemplateStart);
+        }
+
+        return objectName;
+    }
     
     private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData)
     {
         return IsAssetRefProperty(propertyData, out _);
     }
 
+    private static bool TryGetAssetRefTemplateType(SerializableObjectInfo.SerializedPropertyData propertyData, out string templateType)
+    {
+        if (IsAssetRefProperty(propertyData, out templateType)) return true;
+
+        if (IsCollectionOfAssetRef(propertyData))
+        {
+            templateType = GetTemplateTypeNameWithNamespace(propertyData.ItemSourceType ?? string.Empty) ??
+                           propertyData.ItemTemplateTypeName ??
+                           string.Empty;
+            return !string.IsNullOrWhiteSpace(templateType);
+        }
+
+        templateType = string.Empty;
+        return false;
+    }
+
     private static bool IsComponentRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData)
     {
         return GetSourceTypeBaseName(propertyData.SourceType) == "ComponentRef";
+    }
+
+    private static bool IsCollectionOfAssetRef(SerializableObjectInfo.SerializedPropertyData propertyData)
+    {
+        return propertyData.Type == SerializedTypeEnum.Collection &&
+               propertyData.ItemSourceType != null &&
+               GetSourceTypeBaseName(propertyData.ItemSourceType) == "AssetRef";
+    }
+
+    private static bool IsCollectionOfComponentRef(SerializableObjectInfo.SerializedPropertyData propertyData)
+    {
+        return propertyData.Type == SerializedTypeEnum.Collection &&
+               propertyData.ItemSourceType != null &&
+               GetSourceTypeBaseName(propertyData.ItemSourceType) == "ComponentRef";
     }
 
     private static bool IsAssetRefProperty(SerializableObjectInfo.SerializedPropertyData propertyData, out string templateType)
@@ -381,22 +493,30 @@ public class BehaviourRegistrySourceGenerator
     {
         if (templateType.Contains("::") || string.IsNullOrWhiteSpace(objectNamespace))
         {
-            return templateType;
+            return ResolveKnownEngineTemplateType(templateType);
         }
 
-        return $"{objectNamespace}::{templateType}";
+        var namespacedType = $"{objectNamespace}::{templateType}";
+        return ResolveKnownEngineTemplateType(namespacedType);
+    }
+
+    private static string ResolveKnownEngineTemplateType(string templateType)
+    {
+        return templateType switch
+        {
+            "Texture" => "rei::render::Texture",
+            "Model" => "rei::render::Model",
+            "Material" => "rei::render::Material",
+            "Shader" => "rei::render::Shader",
+            "Scene" => "rei::scenes::Scene",
+            "BuildScenesConfig" => "rei::scenes::BuildScenesConfig",
+            _ => templateType
+        };
     }
 
     private static string? GetTemplateTypeName(string type)
     {
-        var startIndex = type.IndexOf('<');
-        if (startIndex == -1) return null;
-
-        var endIndex = type.LastIndexOf('>');
-        if (endIndex == -1 || endIndex <= startIndex) return null;
-
-        var templateType = type.Substring(startIndex + 1, endIndex - startIndex - 1);
-        return templateType.Split("::").Last().Trim();
+        return SerializedTypeNameParser.GetTemplateTypeName(type);
     }
 
     private static string? GetTemplateTypeNameWithNamespace(string type)
@@ -412,15 +532,13 @@ public class BehaviourRegistrySourceGenerator
 
     private static string GetSourceTypeBaseName(string sourceType)
     {
-        var templateStart = sourceType.IndexOf('<');
-        var baseType = templateStart == -1 ? sourceType : sourceType.Substring(0, templateStart);
-        return baseType.Split("::").Last().Trim();
+        return SerializedTypeNameParser.GetBaseTypeName(sourceType);
     }
 
     private static string GenerateAssetDependenciesCollector(BehaviourAssetInfo behaviour)
     {
         var assetRefProperties = behaviour.SerializedProperties
-            .Where(x => IsAssetRefProperty(x.Value, out _))
+            .Where(x => IsAssetRefProperty(x.Value, out _) || IsCollectionOfAssetRef(x.Value))
             .ToArray();
 
         if (assetRefProperties.Length == 0)
@@ -434,20 +552,37 @@ public class BehaviourRegistrySourceGenerator
         foreach (var property in assetRefProperties)
         {
             var propertyName = property.Key;
-            IsAssetRefProperty(property.Value, out var templateType);
+            var isCollection = IsCollectionOfAssetRef(property.Value);
+            TryGetAssetRefTemplateType(property.Value, out var templateType);
             var qualifiedType = GetQualifiedTemplateType(templateType, behaviour.Namespace);
 
             str.Append($"if (data.contains(\"{propertyName}\")) {{ ");
             str.Append($"const auto& rawValue = data.at(\"{propertyName}\"); ");
             str.Append("const auto& assetRefValue = rawValue.contains(\"Value\") ? rawValue.at(\"Value\") : rawValue; ");
-            str.Append("if (assetRefValue.contains(\"Id\")) { ");
-            str.Append("const auto& rawId = assetRefValue.at(\"Id\"); ");
-            str.Append("const auto& idValue = rawId.is_object() && rawId.contains(\"Value\") ? rawId.at(\"Value\") : rawId; ");
-            str.Append("const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : \"\"; ");
-            str.Append("if (!assetId.empty()) { ");
-            str.Append($"outDependencies.push_back(rei::assets::CreateTypedAssetDependency<{qualifiedType}>(assetId)); ");
-            str.Append("} ");
-            str.Append("} ");
+            if (isCollection)
+            {
+                str.Append("for (const auto& assetRefItem : assetRefValue) { ");
+                str.Append("if (assetRefItem.contains(\"Id\")) { ");
+                str.Append("const auto& rawId = assetRefItem.at(\"Id\"); ");
+                str.Append("const auto& idValue = rawId.is_object() && rawId.contains(\"Value\") ? rawId.at(\"Value\") : rawId; ");
+                str.Append("const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : \"\"; ");
+                str.Append("if (!assetId.empty()) { ");
+                str.Append($"outDependencies.push_back(rei::assets::CreateTypedAssetDependency<{qualifiedType}>(assetId)); ");
+                str.Append("} ");
+                str.Append("} ");
+                str.Append("} ");
+            }
+            else
+            {
+                str.Append("if (assetRefValue.contains(\"Id\")) { ");
+                str.Append("const auto& rawId = assetRefValue.at(\"Id\"); ");
+                str.Append("const auto& idValue = rawId.is_object() && rawId.contains(\"Value\") ? rawId.at(\"Value\") : rawId; ");
+                str.Append("const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : \"\"; ");
+                str.Append("if (!assetId.empty()) { ");
+                str.Append($"outDependencies.push_back(rei::assets::CreateTypedAssetDependency<{qualifiedType}>(assetId)); ");
+                str.Append("} ");
+                str.Append("} ");
+            }
             str.Append("} ");
         }
 

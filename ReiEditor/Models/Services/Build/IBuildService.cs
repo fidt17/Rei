@@ -18,6 +18,6 @@ public interface IBuildService
         BuildExecutionContext? buildContext = null,
         bool buildSolution = true,
         bool buildAssets = true,
-        global::System.Action<AssetBuildProgressInfo>? onAssetBuilding = null,
+        System.Action<AssetBuildProgressInfo>? onAssetBuilding = null,
         CancellationToken cancellationToken = default);
 }

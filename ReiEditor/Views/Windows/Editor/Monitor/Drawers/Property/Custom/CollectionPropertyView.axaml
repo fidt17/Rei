@@ -1,0 +1,92 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
+             xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
+             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.CollectionPropertyView"
+             x:DataType="custom:CollectionPropertyViewModel">
+
+    <Design.DataContext>
+        <custom:CollectionPropertyViewModel />
+    </Design.DataContext>
+
+    <Border Classes="MonitorComponent">
+        <Grid RowDefinitions="Auto, *">
+            <Border MinHeight="34"
+                    VerticalAlignment="Top"
+                    Background="{StaticResource Dark_4}"
+                    Cursor="Hand"
+                    Padding="0">
+                <Grid ColumnDefinitions="Auto, Auto, *, Auto">
+                    <buttons:HorizontalExpandToggle
+                        Grid.Column="0"
+                        IsVisible="True"
+                        VerticalAlignment="Center"
+                        IsChecked="{Binding Expanded.Value}" />
+
+                    <TextBlock
+                        Grid.Column="1"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Text="{Binding PropertyName.Value}"
+                        Classes="h4" />
+
+                    <TextBlock
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="{Binding Count, StringFormat='({0})'}" />
+
+                    <Button
+                        Classes="Clear"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="3"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Command="{Binding ToggleExpandedCommand}" />
+                </Grid>
+            </Border>
+
+            <Border
+                Grid.Row="1"
+                IsVisible="{Binding Expanded.Value}"
+                MinHeight="48">
+                <StackPanel
+                    Orientation="Vertical">
+                    <ItemsControl 
+                        Margin="5"
+                        ItemsSource="{Binding Value}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="custom:CollectionItemViewModel">
+                                    <Grid 
+                                        ColumnDefinitions="*, Auto" Margin="0,0,5,0">
+                                        <property1:PropertiesDisplayControl Grid.Column="0" Padding="-10" Value="{Binding Value}" />
+                                        <Button Grid.Column="1" 
+                                                Margin="5,0,0,0" 
+                                                Height="24"
+                                                Width="24"
+                                                FontSize="10"
+                                                VerticalAlignment="Center" Command="{Binding RemoveCommand}">
+                                            X
+                                        </Button>
+                                    </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button
+                        MinHeight="28"
+                        Margin="0,0,0,5"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding AddItemCommand}">
+                        Add Element
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

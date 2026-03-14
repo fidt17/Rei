@@ -1,9 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
-using ReiEditor.Models.Services.Entities;
 using ReiEditor.ViewModels.Common;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;

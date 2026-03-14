@@ -254,12 +254,8 @@ public class SourceFilesUtility
                 if (serializedType == SerializedTypeEnum.Invalid) continue;
 
                 var variableName = words[equalsIdx - 1];
-                var variableTypeWithoutNamespace = GetSourceTypeWithoutOuterNamespace(variableType);
-                var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
-
                 var defaultValue = words[equalsIdx + 1];
-                
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, defaultValue, hideInEditor));
+                result.Add(variableName, CreateSerializedPropertyData(variableType, defaultValue, hideInEditor));
             }
             else
             {
@@ -268,54 +264,55 @@ public class SourceFilesUtility
                 if (serializedType == SerializedTypeEnum.Invalid) continue;
 
                 var variableName = words[^1];
-                var variableTypeWithoutNamespace = GetSourceTypeWithoutOuterNamespace(variableType);
-                var templateTypeName = GetTemplateTypeName(variableTypeWithoutNamespace);
-                result.Add(variableName, new SerializableObjectInfo.SerializedPropertyData(serializedType, variableTypeWithoutNamespace, templateTypeName, null, hideInEditor));
+                result.Add(variableName, CreateSerializedPropertyData(variableType, null, hideInEditor));
             }
         }
 
         return result;
     }
 
-    private static string GetSourceTypeWithoutOuterNamespace(string type)
+    private SerializableObjectInfo.SerializedPropertyData CreateSerializedPropertyData(string variableType, string? defaultValue, bool hideInEditor)
     {
-        var trimmedType = type.Trim();
-        var templateStartIndex = trimmedType.IndexOf('<');
-        if (templateStartIndex == -1)
+        var sourceType = SerializedTypeNameParser.NormalizeSourceType(variableType);
+        var templateTypeName = GetTemplateTypeName(sourceType);
+        var serializedType = GetSerializedTypeForVariableType(variableType);
+
+        var itemType = SerializedTypeEnum.Invalid;
+        string? itemSourceType = null;
+        string? itemTemplateTypeName = null;
+
+        if (serializedType == SerializedTypeEnum.Collection && templateTypeName != null)
         {
-            return trimmedType.Split("::").Last();
+            itemSourceType = templateTypeName;
+            itemTemplateTypeName = GetTemplateTypeName(itemSourceType);
+            itemType = GetSerializedTypeForVariableType(itemSourceType);
         }
 
-        var outerType = trimmedType.Substring(0, templateStartIndex);
-        var suffix = trimmedType.Substring(templateStartIndex);
-        var outerTypeWithoutNamespace = outerType.Split("::").Last();
-        return outerTypeWithoutNamespace + suffix;
+        return new SerializableObjectInfo.SerializedPropertyData(
+            serializedType,
+            sourceType,
+            templateTypeName,
+            itemType,
+            itemSourceType,
+            itemTemplateTypeName,
+            defaultValue,
+            hideInEditor);
     }
 
     private SerializedTypeEnum GetSerializedTypeForVariableType(string type)
     {
-        var typeParts = type.Split("::");
-        var typeWithoutNamespace = typeParts.Last();
+        var normalizedType = SerializedTypeNameParser.NormalizeSourceType(type);
+        var typeWithoutNamespace = SerializedTypeNameParser.GetBaseTypeName(normalizedType);
         
-        if (type is "int" or "i32" or "u32")
-        {
-            return SerializedTypeEnum.Integer;
-        }
+        if (typeWithoutNamespace is "int" or "i32" or "u32") return SerializedTypeEnum.Integer;
         
-        if (type is "std::string" or "string")
-        {
-            return SerializedTypeEnum.String;
-        }
+        if (typeWithoutNamespace is "string") return SerializedTypeEnum.String;
         
-        if (type is "bool")
-        {
-            return SerializedTypeEnum.Boolean;
-        }
+        if (typeWithoutNamespace is "bool") return SerializedTypeEnum.Boolean;
         
-        if (type is "float" or "f32" or "double")
-        {
-            return SerializedTypeEnum.Float;
-        }
+        if (typeWithoutNamespace is "float" or "f32" or "double") return SerializedTypeEnum.Float;
+
+        if (typeWithoutNamespace is "vector") return SerializedTypeEnum.Collection;
 
         if (_processedFiles.SerializableEnums.Exists(x => x.EnumName == typeWithoutNamespace))
         {
@@ -327,14 +324,7 @@ public class SourceFilesUtility
 
     public static string? GetTemplateTypeName(string type)
     {
-        var startIndex = type.IndexOf('<');
-        if (startIndex == -1) return null;
-
-        var endIndex = type.LastIndexOf('>');
-        if (endIndex == -1 || endIndex <= startIndex) return null;
-
-        var templateType = type.Substring(startIndex + 1, endIndex - startIndex - 1);
-        return templateType.Split("::").Last().Trim();
+        return SerializedTypeNameParser.GetTemplateTypeName(type);
     }
 
     private static string RemoveComments(string original)
