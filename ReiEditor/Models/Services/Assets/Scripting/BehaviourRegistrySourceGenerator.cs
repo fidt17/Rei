@@ -491,13 +491,24 @@ public class BehaviourRegistrySourceGenerator
 
     private static string GetQualifiedTemplateType(string templateType, string objectNamespace)
     {
-        if (templateType.Contains("::") || string.IsNullOrWhiteSpace(objectNamespace))
+        if (string.IsNullOrWhiteSpace(templateType))
         {
-            return ResolveKnownEngineTemplateType(templateType);
+            return templateType;
         }
 
-        var namespacedType = $"{objectNamespace}::{templateType}";
-        return ResolveKnownEngineTemplateType(namespacedType);
+        var normalizedType = templateType.Trim();
+        if (normalizedType.StartsWith("::"))
+        {
+            normalizedType = normalizedType[2..];
+        }
+
+        var resolvedKnownType = ResolveKnownEngineTemplateType(normalizedType);
+        if (resolvedKnownType != normalizedType || normalizedType.Contains("::") || string.IsNullOrWhiteSpace(objectNamespace))
+        {
+            return resolvedKnownType;
+        }
+
+        return $"{objectNamespace}::{normalizedType}";
     }
 
     private static string ResolveKnownEngineTemplateType(string templateType)

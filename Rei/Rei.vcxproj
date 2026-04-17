@@ -570,6 +570,10 @@
     <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.h" />
+    <ClInclude Include="resources\rei_behaviours\ui\Canvas.h" />
+    <ClInclude Include="resources\rei_behaviours\ui\CanvasScaleMode.h" />
+    <ClInclude Include="resources\rei_behaviours\ui\Image.h" />
+    <ClInclude Include="resources\rei_behaviours\ui\RectTransform.h" />
     <ClInclude Include="src\Api\EditorEventsRelay.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
@@ -734,6 +738,9 @@
     <ClCompile Include="resources\rei_behaviours\render\SpriteRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.cpp" />
+    <ClCompile Include="resources\rei_behaviours\ui\Canvas.cpp" />
+    <ClCompile Include="resources\rei_behaviours\ui\Image.cpp" />
+    <ClCompile Include="resources\rei_behaviours\ui\RectTransform.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
     <ClCompile Include="src\Common\Diagnostics\DiagnosticsService.cpp" />
     <ClCompile Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.cpp" />

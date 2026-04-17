@@ -18,6 +18,9 @@
 #include "C:\Repos\Rei Projects\New Project\New Project\Project\Scripts\Scripts\TestMovement.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\MeshRenderer.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\transformation\Transform.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\ui\Canvas.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\ui\Image.h"
+#include "C:\Repos\Rei\Rei\resources\rei_behaviours\ui\RectTransform.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\camera\Camera.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\light\AmbientLight.h"
 #include "C:\Repos\Rei\Rei\resources\rei_behaviours\render\light\PointLight.h"
@@ -34,6 +37,9 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
     f.RegisterComponent<::TestMovement>(5, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<::TestMovement>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
     f.RegisterComponent<rei::render::MeshRenderer>(1, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::MeshRenderer>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, [](const nlohmann::json& data, std::vector<rei::assets::AssetDependency>& outDependencies) { if (data.contains("_model")) { const auto& rawValue = data.at("_model"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Model>(assetId)); } } } if (data.contains("_material")) { const auto& rawValue = data.at("_material"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Material>(assetId)); } } } });
     f.RegisterComponent<rei::Transform>(2, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::ui::Canvas>(12, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::Canvas>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::Canvas>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::ui::RectTransform>(13, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::RectTransform>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::RectTransform>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
+    f.RegisterComponent<rei::ui::Image>(14, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::Image>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::Image>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, [](const nlohmann::json& data, std::vector<rei::assets::AssetDependency>& outDependencies) { if (data.contains("_texture")) { const auto& rawValue = data.at("_texture"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id")) { const auto& rawId = assetRefValue.at("Id"); const auto& idValue = rawId.is_object() && rawId.contains("Value") ? rawId.at("Value") : rawId; const std::string assetId = idValue.is_string() ? idValue.get<std::string>() : ""; if (!assetId.empty()) { outDependencies.push_back(rei::assets::CreateTypedAssetDependency<rei::render::Texture>(assetId)); } } } });
     f.RegisterComponent<rei::render::Camera>(8, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::Camera>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
     f.RegisterComponent<rei::render::AmbientLight>(3, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::AmbientLight>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
     f.RegisterComponent<rei::render::PointLight>(4, [](const rei::ecs::Entity e) -> nlohmann::json { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e); b.BeforeREI_GET(); return b.REI_GET(); }, [](const rei::ecs::Entity e, const nlohmann::json& json) { auto& b = rei::GetInternalWorld()->GetRegistry()->Get<rei::render::PointLight>(e);b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }, nullptr);
@@ -155,6 +161,40 @@ nlohmann::json rei::Transform::REI_GET() const
     };
 }
 
+nlohmann::json rei::ui::Canvas::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Canvas"},
+        {"_referenceResolution", _referenceResolution.REI_GET()},
+        {"_scaleMode", (int) _scaleMode},
+        {"_matchWidthOrHeight", _matchWidthOrHeight},
+        {"_pixelsPerUnit", _pixelsPerUnit},
+    };
+}
+
+nlohmann::json rei::ui::RectTransform::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "RectTransform"},
+        {"_anchorMin", _anchorMin.REI_GET()},
+        {"_anchorMax", _anchorMax.REI_GET()},
+        {"_pivot", _pivot.REI_GET()},
+        {"_anchoredPosition", _anchoredPosition.REI_GET()},
+        {"_sizeDelta", _sizeDelta.REI_GET()},
+    };
+}
+
+nlohmann::json rei::ui::Image::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Image"},
+        {"_texture", _texture.REI_GET()},
+        {"_color", _color.REI_GET()},
+        {"_preserveAspect", _preserveAspect},
+        {"_raycastTarget", _raycastTarget},
+    };
+}
+
 nlohmann::json rei::render::Camera::REI_GET() const
 {
     return {
@@ -269,6 +309,32 @@ void rei::Transform::REI_SET(const nlohmann::json& data)
     if (data.contains("_order")) _order = data.at("_order").at("Value");
 }
 
+void rei::ui::Canvas::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_referenceResolution")) _referenceResolution.REI_SET(data.at("_referenceResolution").at("Value"));
+    if (data.contains("_scaleMode")) _scaleMode = data.at("_scaleMode").at("Value");
+    if (data.contains("_matchWidthOrHeight")) _matchWidthOrHeight = data.at("_matchWidthOrHeight").at("Value");
+    if (data.contains("_pixelsPerUnit")) _pixelsPerUnit = data.at("_pixelsPerUnit").at("Value");
+}
+
+void rei::ui::RectTransform::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_anchorMin")) _anchorMin.REI_SET(data.at("_anchorMin").at("Value"));
+    if (data.contains("_anchorMax")) _anchorMax.REI_SET(data.at("_anchorMax").at("Value"));
+    if (data.contains("_pivot")) _pivot.REI_SET(data.at("_pivot").at("Value"));
+    if (data.contains("_anchoredPosition")) _anchoredPosition.REI_SET(data.at("_anchoredPosition").at("Value"));
+    if (data.contains("_sizeDelta")) _sizeDelta.REI_SET(data.at("_sizeDelta").at("Value"));
+}
+
+void rei::ui::Image::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("_texture")) _texture.REI_SET(data.at("_texture").at("Value"));
+    if (data.contains("_texture")) rei::assets::SyncAfterExternalChange(_texture);
+    if (data.contains("_color")) _color.REI_SET(data.at("_color").at("Value"));
+    if (data.contains("_preserveAspect")) _preserveAspect = data.at("_preserveAspect").at("Value");
+    if (data.contains("_raycastTarget")) _raycastTarget = data.at("_raycastTarget").at("Value");
+}
+
 void rei::render::Camera::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("_fov")) _fov = data.at("_fov").at("Value");
@@ -351,6 +417,26 @@ void rei::Transform::ResolveDependencies()
     _position.ResolveDependencies();
     _rotation.ResolveDependencies();
     _scale.ResolveDependencies();
+}
+
+void rei::ui::Canvas::ResolveDependencies()
+{
+    _referenceResolution.ResolveDependencies();
+}
+
+void rei::ui::RectTransform::ResolveDependencies()
+{
+    _anchorMin.ResolveDependencies();
+    _anchorMax.ResolveDependencies();
+    _pivot.ResolveDependencies();
+    _anchoredPosition.ResolveDependencies();
+    _sizeDelta.ResolveDependencies();
+}
+
+void rei::ui::Image::ResolveDependencies()
+{
+    _texture.ResolveDependencies();
+    _color.ResolveDependencies();
 }
 
 void rei::render::Camera::ResolveDependencies()
