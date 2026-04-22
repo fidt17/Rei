@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using ReiEditor.Models.EditorApp.ViewportGrid;
 using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.Render;
 using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
@@ -19,6 +20,7 @@ public class PlaymodeModule : Module
         builder.RegisterSingleton<EngineWindowController>().As<IEngineWindowController>();
 
         builder.RegisterSingleton<ViewportGridService>().As<IViewportGridService>();
+        builder.RegisterSingleton<RenderSettingsService>().As<IRenderSettingsService>();
         
         ConfigureViews(builder);
     }
@@ -28,6 +30,7 @@ public class PlaymodeModule : Module
         builder.RegisterType<PlaymodePanelViewModel>();
         builder.RegisterType<RenderModeSelectionViewModel>();
         builder.RegisterType<EditorGridOptionsViewModel>();
+        builder.RegisterType<UIRenderOptionsViewModel>();
         builder.RegisterType<TransformationControlSettingsViewModel>();
         
         builder.RegisterType<StartPlaymodeCommand>();

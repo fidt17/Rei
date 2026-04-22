@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:playmode="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Playmode"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Playmode.UIRenderOptionsView"
+             x:DataType="playmode:UIRenderOptionsViewModel">
+
+    <Design.DataContext>
+        <playmode:UIRenderOptionsViewModel />
+    </Design.DataContext>
+
+    <ToggleButton
+        IsVisible="{Binding EngineActive}"
+        Width="36"
+        HorizontalAlignment="Stretch"
+        HorizontalContentAlignment="Center"
+        IsChecked="{Binding RenderUi}">
+        <TextBlock Text="UI" />
+    </ToggleButton>
+</UserControl>

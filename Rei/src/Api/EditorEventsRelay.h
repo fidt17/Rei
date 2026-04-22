@@ -8,6 +8,7 @@ namespace rei::api
     {
     public:
         REI_EVENT(const render::GridRenderSettings&) GridRenderSettingsReceivedEvent;
+        REI_EVENT(bool) UiRenderingEnabledReceivedEvent;
         REI_EVENT(const EditorInputEvent&) EditorInputReceivedEvent;
     };
 }

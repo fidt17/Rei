@@ -71,7 +71,7 @@ REI_EXTERN_API inline HWND GetWindowHandle(const rei::window::Window* window)
     return window->GetWindowHandle();
 }
 
-REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt)
+REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt, const bool isUiRenderingEnabled)
 {
     rei::GetEngine().ExecuteOnMainThread([=]
     {
@@ -83,19 +83,23 @@ REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt)
         {
             GET(e, rei::render::Camera).SetRenderMode(mode);
         }
+        rei::GetEditorEventsRelay().UiRenderingEnabledReceivedEvent(isUiRenderingEnabled);
     });
 }
 
-REI_EXTERN_API inline void ChangeTransformationMode(const bool worldSpace)
+REI_EXTERN_API inline void ChangeTransformationMode(const i32 modeInt, const bool worldSpace)
 {
     rei::GetEngine().ExecuteOnMainThread([=]
     {
+        const auto mode = static_cast<rei::editor::TransformationMode>(modeInt);
         ECS_WORLD(rei::GetInternalWorld());
         const auto& controlFilter = FILTER(rei::editor::TransformationControl);
 
         FOR(e, controlFilter)
         {
-            GET(e, rei::editor::TransformationControl).UseWorldSpace = worldSpace;
+            auto& control = GET(e, rei::editor::TransformationControl);
+            control.Mode = mode;
+            control.UseWorldSpace = worldSpace;
         }
     });
 }

@@ -23,7 +23,8 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
       _outline(std::make_shared<OutlineRenderModule>(_cameraModule)),
       _postProcessingModule(std::make_shared<PostProcessingModule>(_cameraModule)),
       _gridRenderModule(std::make_shared<GridRenderModule>(_cameraModule, _gizmos)),
-      _debugOverlayModule(std::make_shared<DebugOverlayModule>())
+      _debugOverlayModule(std::make_shared<DebugOverlayModule>()),
+      _uiRenderModule(std::make_shared<UIRenderModule>(_cameraModule))
 {
     Services::GetInstance()->SetGizmos(_gizmos);
 }
@@ -47,6 +48,7 @@ void rei::render::DefaultRenderScenario::Setup()
     _postProcessingModule->Setup();
     _gridRenderModule->Setup();
     _debugOverlayModule->Setup(_target);
+    _uiRenderModule->Setup();
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const i32 clearMask, const i32 stencilMask) const
@@ -110,6 +112,7 @@ void rei::render::DefaultRenderScenario::RenderInWireframeMode() const
 
     RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
     RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
+    _uiRenderModule->Render();
 }
 
 void rei::render::DefaultRenderScenario::RenderInNormalMode()
@@ -147,6 +150,7 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     // ------
 
     RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
+    _uiRenderModule->Render();
 }
 
 void rei::render::DefaultRenderScenario::RenderInDepthMode() const
@@ -163,6 +167,7 @@ void rei::render::DefaultRenderScenario::RenderInDepthMode() const
     RenderMeshRenderersWithOverrideMaterial(_depthMaterial);
     _outline->RenderOutlineFrame();
     // ------
+    _uiRenderModule->Render();
 }
 
 void rei::render::DefaultRenderScenario::Dispose()

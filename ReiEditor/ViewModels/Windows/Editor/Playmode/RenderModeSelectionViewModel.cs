@@ -34,7 +34,8 @@ public class RenderModeSelectionViewModel : BaseViewModel
             if (string.IsNullOrWhiteSpace(value) || !_modeNames.ContainsKey(value)) return;
             if (SetField(ref _selectedRenderMode, value))
             {
-                _engineApi.ChangeRenderMode(_modeNames[value]);
+                _renderSettingsService.RenderMode = _modeNames[value];
+                _engineApi.ChangeRenderMode(_renderSettingsService.RenderMode, _renderSettingsService.IsUiRenderingEnabled);
             }
         }
     }
@@ -45,15 +46,17 @@ public class RenderModeSelectionViewModel : BaseViewModel
     
     private readonly IEngineApi _engineApi;
     private readonly IEngineRunner _engineRunner;
+    private readonly IRenderSettingsService _renderSettingsService;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public RenderModeSelectionViewModel() { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    public RenderModeSelectionViewModel(IEngineApi engineApi, IEngineRunner engineRunner)
+    public RenderModeSelectionViewModel(IEngineApi engineApi, IEngineRunner engineRunner, IRenderSettingsService renderSettingsService)
     {
         _engineApi = engineApi;
         _engineRunner = engineRunner;
+        _renderSettingsService = renderSettingsService;
         
         ConfigureOptions();
         
@@ -93,6 +96,13 @@ public class RenderModeSelectionViewModel : BaseViewModel
 
     private void ResetSelection()
     {
-        SelectedRenderMode = _modeNames.First(x => x.Value == RenderMode.Shaded).Key;
+        var renderMode = _renderSettingsService.RenderMode;
+        if (!_modeNames.ContainsValue(renderMode))
+        {
+            renderMode = RenderMode.Shaded;
+            _renderSettingsService.RenderMode = renderMode;
+        }
+
+        SelectedRenderMode = _modeNames.First(x => x.Value == renderMode).Key;
     }
 }

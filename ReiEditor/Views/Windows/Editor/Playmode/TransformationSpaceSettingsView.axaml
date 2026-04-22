@@ -90,7 +90,7 @@
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
                 Command="{Binding SetMovementMode}"
-                IsChecked="{Binding MovementMode, Mode=OneWay}">
+                IsChecked="{Binding MovementMode, Mode=TwoWay}">
                 <TextBlock Text="M" />
             </ToggleButton>
             
@@ -98,7 +98,7 @@
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
                 Command="{Binding SetScaleMode}"
-                IsChecked="{Binding ScaleMode}">
+                IsChecked="{Binding ScaleMode, Mode=TwoWay}">
                 <TextBlock Text="S" />
             </ToggleButton>
             
@@ -106,7 +106,7 @@
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
                 Command="{Binding SetRotationMode}"
-                IsChecked="{Binding RotationMode}">
+                IsChecked="{Binding RotationMode, Mode=TwoWay}">
                 <TextBlock Text="R" />
             </ToggleButton>
 

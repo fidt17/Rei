@@ -6,6 +6,7 @@ using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Render;
+using ReiEditor.Models.Services.TransformationControls;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -86,11 +87,11 @@ public class EngineApi : IEngineApi
 
     public Task<IntPtr> CreateEngineWindow() => InvokeAsync<IntPtr>(typeof(ActionDelegate), "CreateEngineWindow");
 
-    private delegate void ChangeRenderModeDelegate(int mode);
-    public void ChangeRenderMode(RenderMode mode)
+    private delegate void ChangeRenderModeDelegate(int mode, bool isUiRenderingEnabled);
+    public void ChangeRenderMode(RenderMode mode, bool isUiRenderingEnabled)
     {
         if (!IsEngineRunning) return;
-        Invoke(typeof(ChangeRenderModeDelegate), "ChangeRenderMode", (int) mode);
+        Invoke(typeof(ChangeRenderModeDelegate), "ChangeRenderMode", (int) mode, isUiRenderingEnabled);
     }
     
     private delegate void SetEditorGridSettingsDelegate(IntPtr settings);
@@ -119,11 +120,11 @@ public class EngineApi : IEngineApi
         }
     }
     
-    private delegate void SetTransformationSpaceDelegate(bool worldSpace);
-    public void ChangeTransformationMode(bool worldSpace)
+    private delegate void SetTransformationModeDelegate(int mode, bool worldSpace);
+    public void ChangeTransformationMode(TransformationMode mode, bool worldSpace)
     {
         if (!IsEngineRunning) return;
-        Invoke(typeof(SetTransformationSpaceDelegate), "ChangeTransformationMode", worldSpace);
+        Invoke(typeof(SetTransformationModeDelegate), "ChangeTransformationMode", (int) mode, worldSpace);
     }
 
     public void MarkEngineStopped()

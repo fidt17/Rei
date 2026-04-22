@@ -80,6 +80,17 @@ public class PlaymodePanelViewModel : BaseViewModel
 
     #endregion
 
+    #region UIRenderOptions
+
+    private UIRenderOptionsViewModel _uiRenderOptions = new();
+    public UIRenderOptionsViewModel UIRenderOptions
+    {
+        get => _uiRenderOptions;
+        private set => SetField(ref _uiRenderOptions, value);
+    }
+
+    #endregion
+
     #region TransformationSpaceSettings
 
     private TransformationControlSettingsViewModel _transformationControlSettings = new();
@@ -108,6 +119,7 @@ public class PlaymodePanelViewModel : BaseViewModel
         IEngineWindowController engineWindow,
         IFactory<RenderModeSelectionViewModel> renderModeSelection,
         IFactory<EditorGridOptionsViewModel> editorGridOptions,
+        IFactory<UIRenderOptionsViewModel> uiRenderOptions,
         IFactory<TransformationControlSettingsViewModel> transformationSpaceSettings,
         IEngineApi engineApi,
         IEngineRunner engineRunner)
@@ -119,6 +131,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 
         RenderModeSelection = renderModeSelection.CreateInstance();
         EditorGridOptions = editorGridOptions.CreateInstance();
+        UIRenderOptions = uiRenderOptions.CreateInstance();
         TransformationControlSettings = transformationSpaceSettings.CreateInstance();
 
         StartPlaymodeCommand = startPlaymodeCommand.CreateInstance();
@@ -140,6 +153,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 
         RenderModeSelection.Dispose();
         EditorGridOptions.Dispose();
+        UIRenderOptions.Dispose();
         TransformationControlSettings.Dispose();
 
         StartPlaymodeCommand.Dispose();

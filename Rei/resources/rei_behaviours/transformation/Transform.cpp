@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Transform.h"
-#include "TransformHierarchyUtility.h"
+#include "Common/Transform/TransformHierarchyUtility.h"
 
 #include "glm/gtc/quaternion.hpp"
 #include "glm/ext/quaternion_trigonometric.hpp"

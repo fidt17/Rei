@@ -10,6 +10,7 @@
 #include "Modules/Render/Modules/DebugOverlayModule.h"
 #include "Modules/Render/Modules/OutlineRenderModule.h"
 #include "Modules/Render/Modules/PostProcessingModule.h"
+#include "Modules/Render/Modules/UIRenderModule.h"
 
 namespace rei::render
 {
@@ -56,6 +57,7 @@ namespace rei::render
         std::shared_ptr<PostProcessingModule> _postProcessingModule;
         std::shared_ptr<GridRenderModule> _gridRenderModule;
         std::shared_ptr<DebugOverlayModule> _debugOverlayModule;
+        std::shared_ptr<UIRenderModule> _uiRenderModule;
 
         FrameBuffer _mainFrameBuffer;
 

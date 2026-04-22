@@ -13,6 +13,12 @@ namespace rei::ui
         SERIALIZE CanvasScaleMode _scaleMode = ScaleWithScreenSize;
         SERIALIZE f32 _matchWidthOrHeight = 0.0f;
         SERIALIZE f32 _pixelsPerUnit = 100.0f;
+
+    public:
+        REI_API const math::Vector3& GetReferenceResolution() const;
+        REI_API CanvasScaleMode GetScaleMode() const;
+        REI_API f32 GetMatchWidthOrHeight() const;
+        REI_API f32 GetPixelsPerUnit() const;
     };
 }
 

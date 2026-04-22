@@ -569,11 +569,13 @@
     <ClInclude Include="resources\rei_behaviours\render\SpriteRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
-    <ClInclude Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.h" />
+    <ClInclude Include="src\Common\Math\Rect.h" />
+    <ClInclude Include="src\Common\Transform\TransformHierarchyUtility.h" />
     <ClInclude Include="resources\rei_behaviours\ui\Canvas.h" />
     <ClInclude Include="resources\rei_behaviours\ui\CanvasScaleMode.h" />
     <ClInclude Include="resources\rei_behaviours\ui\Image.h" />
     <ClInclude Include="resources\rei_behaviours\ui\RectTransform.h" />
+    <ClInclude Include="src\Common\Transform\RectTransformUtility.h" />
     <ClInclude Include="src\Api\EditorEventsRelay.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
@@ -678,6 +680,7 @@
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
+    <ClInclude Include="src\Modules\Render\Modules\UIRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\DebugOverlayModule.h" />
     <ClInclude Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
@@ -737,10 +740,12 @@
     <ClCompile Include="resources\rei_behaviours\render\MeshRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\SpriteRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
-    <ClCompile Include="resources\rei_behaviours\transformation\TransformHierarchyUtility.cpp" />
+    <ClCompile Include="src\Common\Math\Rect.cpp" />
+    <ClCompile Include="src\Common\Transform\TransformHierarchyUtility.cpp" />
     <ClCompile Include="resources\rei_behaviours\ui\Canvas.cpp" />
     <ClCompile Include="resources\rei_behaviours\ui\Image.cpp" />
     <ClCompile Include="resources\rei_behaviours\ui\RectTransform.cpp" />
+    <ClCompile Include="src\Common\Transform\RectTransformUtility.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
     <ClCompile Include="src\Common\Diagnostics\DiagnosticsService.cpp" />
     <ClCompile Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.cpp" />
@@ -819,6 +824,7 @@
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />
+    <ClCompile Include="src\Modules\Render\Modules\UIRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\DebugOverlayModule.cpp" />
     <ClCompile Include="src\Modules\Render\Renderer.cpp" />
     <ClCompile Include="src\Modules\Render\RenderScenario\BaseRenderScenario.cpp" />
@@ -860,6 +866,7 @@
   <ItemGroup>
     <Content Include="resources\materials\simple_lit.mat" />
     <Content Include="resources\materials\sprite.mat" />
+    <Content Include="resources\materials\image.mat" />
     <Content Include="resources\meshes\cube.obj" />
     <Content Include="resources\shaders\editor\editor_grid.rshader" />
     <Content Include="resources\shaders\includes\include_ambient_light.rshader_include" />
@@ -877,6 +884,7 @@
     <Content Include="resources\shaders\standard\color.rshader" />
     <Content Include="resources\shaders\standard\simple_lit.rshader" />
     <Content Include="resources\shaders\standard\sprite.rshader" />
+    <Content Include="resources\shaders\standard\image.rshader" />
     <Content Include="resources\shaders\standard\unlit.rshader" />
     <Content Include="resources\textures\circle.png" />
     <Content Include="resources\textures\test_texture.png" />

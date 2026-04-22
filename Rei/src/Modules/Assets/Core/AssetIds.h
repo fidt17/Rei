@@ -11,6 +11,7 @@
 #define REI_COLOR_MATERIAL_ID "REI_COLOR_MATERIAL"
 #define REI_EDITOR_GRID_MATERIAL_ID "REI_EDITOR_GRID_MATERIAL"
 #define REI_SPRITE_MATERIAL_ID "rei_sprite.mat"
+#define REI_IMAGE_MATERIAL_ID "rei_image.mat"
 
 // Texture IDs
 #define REI_WHITE_FALLBACK_TEXTURE_ID "REI_WHITE_FALLBACK_TEXTURE"
@@ -33,6 +34,7 @@
 #define REI_SHADER_SIMPLE_LIT_ASSET_ID "rei_simple_lit.rshader"
 #define REI_SHADER_COLOR_ASSET_ID "rei_color.rshader"
 #define REI_SHADER_SPRITE_ASSET_ID "rei_sprite.rshader"
+#define REI_SHADER_IMAGE_ASSET_ID "image.rshader"
 
 // Includes
 #define REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID "rei_include_ambient_light.rshader_include"

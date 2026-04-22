@@ -21,17 +21,6 @@ namespace rei::render
 
     void SpriteRenderer::Dispose()
     {
-        if (_model.IsLoaded())
-        {
-            GetAssetManager().Release(_model);
-            _model = {};
-        }
-
-        if (_materialInstance.IsLoaded())
-        {
-            GetAssetManager().Release(_materialInstance);
-            _materialInstance = {};
-        }
     }
 
     void SpriteRenderer::Render() const
@@ -85,7 +74,7 @@ namespace rei::render
 
     const Material& SpriteRenderer::GetRenderMaterial() const
     {
-        if (_materialInstance.IsLoaded() && _materialInstance->GetShaderAsset().IsLoaded()) return *_materialInstance.Get();
+        if (_materialInstance.IsLoaded()) return *_materialInstance.Get();
 
         static assets::AssetRef<Material> fallbackMaterial = GetAssetManager().GetById<Material>(REI_ERROR_MATERIAL_ID);
         return *fallbackMaterial.Get();

@@ -5,7 +5,7 @@
 
 
 #include "rei_behaviours/transformation/Transform.h"
-#include "rei_behaviours/transformation/TransformHierarchyUtility.h"
+#include "Common/Transform/TransformHierarchyUtility.h"
 #include "Engine/Engine.h"
 #include "Engine/Services.h"
 #include "Modules/Behaviour/Components/BehaviourCollection.h"

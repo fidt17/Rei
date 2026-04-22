@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Render;
+using ReiEditor.Models.Services.TransformationControls;
 
 namespace ReiEditor.Models.Services.Engine.Api;
 
@@ -30,9 +31,9 @@ public interface IEngineApi
     Task<IntPtr> CreateEngineWindow();
     IntPtr GetWindowHandle(IntPtr windowPtr);
     void ResizeWindow(IntPtr windowPtr, int width, int height);
-    void ChangeRenderMode(RenderMode mode);
+    void ChangeRenderMode(RenderMode mode, bool isUiRenderingEnabled);
     void SetEditorGridSettings(SetViewportGridSettingsRequest settings);
-    void ChangeTransformationMode(bool worldSpace);
+    void ChangeTransformationMode(TransformationMode mode, bool worldSpace);
 
     void MarkEngineStopped();
     

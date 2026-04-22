@@ -3,7 +3,9 @@ using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.TransformationControls;
 using ReiEditor.ViewModels.Common;
+using ReactiveUI;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
 
@@ -48,13 +50,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     public bool MovementMode
     {
         get => _movementMode;
-        private set
-        {
-            if (SetField(ref _movementMode, value))
-            {
-                SetMovementMode();
-            }
-        }
+        set => ApplyTransformationModeFromToggle(TransformationMode.Movement, value, nameof(MovementMode));
     }
 
     #endregion
@@ -65,13 +61,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     public bool ScaleMode
     {
         get => _scaleMode;
-        private set
-        {
-            if (SetField(ref _scaleMode, value))
-            {
-                SetScaleMode();
-            }
-        }
+        set => ApplyTransformationModeFromToggle(TransformationMode.Scale, value, nameof(ScaleMode));
     }
 
     #endregion
@@ -82,13 +72,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     public bool RotationMode
     {
         get => _rotationMode;
-        private set
-        {
-            if (SetField(ref _rotationMode, value))
-            {
-                SetRotationMode();
-            }
-        }
+        set => ApplyTransformationModeFromToggle(TransformationMode.Rotation, value, nameof(RotationMode));
     }
 
     #endregion
@@ -129,7 +113,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
 
         if (isActive)
         {
-            _engineApi.ChangeTransformationMode(worldSpace: IsWorldSpace);
+            ApplyTransformationMode(GetSelectedMode(), IsWorldSpace);
         }
     }
 
@@ -156,7 +140,7 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     {
         IsWorldSpace = worldSpace;
         IsLocalSpace = !worldSpace;
-        _engineApi.ChangeTransformationMode(worldSpace);
+        ApplyTransformationMode(GetSelectedMode(), worldSpace);
     }
 
     public override void Dispose()
@@ -181,22 +165,42 @@ public class TransformationControlSettingsViewModel : BaseViewModel
 
     public void SetMovementMode()
     {
-        MovementMode = true;
-        ScaleMode = false;
-        RotationMode = false;
+        ApplyTransformationMode(TransformationMode.Movement, IsWorldSpace);
     }
 
     public void SetScaleMode()
     {
-        MovementMode = false;
-        ScaleMode = true;
-        RotationMode = false;
+        ApplyTransformationMode(TransformationMode.Scale, IsWorldSpace);
     }
 
     public void SetRotationMode()
     {
-        MovementMode = false;
-        ScaleMode = false;
-        RotationMode = true;
+        ApplyTransformationMode(TransformationMode.Rotation, IsWorldSpace);
+    }
+
+    private TransformationMode GetSelectedMode()
+    {
+        if (ScaleMode) return TransformationMode.Scale;
+        if (RotationMode) return TransformationMode.Rotation;
+        return TransformationMode.Movement;
+    }
+
+    private void ApplyTransformationMode(TransformationMode mode, bool worldSpace)
+    {
+        SetField(ref _movementMode, mode == TransformationMode.Movement, nameof(MovementMode));
+        SetField(ref _scaleMode, mode == TransformationMode.Scale, nameof(ScaleMode));
+        SetField(ref _rotationMode, mode == TransformationMode.Rotation, nameof(RotationMode));
+        _engineApi.ChangeTransformationMode(mode, worldSpace);
+    }
+
+    private void ApplyTransformationModeFromToggle(TransformationMode mode, bool isChecked, string propertyName)
+    {
+        if (isChecked)
+        {
+            ApplyTransformationMode(mode, IsWorldSpace);
+            return;
+        }
+
+        this.RaisePropertyChanged(propertyName);
     }
 }

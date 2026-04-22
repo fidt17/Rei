@@ -82,7 +82,7 @@ namespace rei::render
 
     const Material& MeshRenderer::GetRenderMaterial() const
     {
-        if (_material.IsLoaded() && _material->GetShaderAsset().IsLoaded()) return *_material.Get();
+        if (_material.IsLoaded()) return *_material.Get();
 
         static assets::AssetRef<Material> fallbackMaterial = GetAssetManager().GetById<Material>(REI_ERROR_MATERIAL_ID);
         return *fallbackMaterial.Get();

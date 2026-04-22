@@ -39,6 +39,9 @@
                     <playmode1:EditorGridOptionsView
                         DataContext="{Binding EditorGridOptions}" />
 
+                    <playmode1:UIRenderOptionsView
+                        DataContext="{Binding UIRenderOptions}" />
+
                     <playmode1:RenderModeSelectionView
                         DataContext="{Binding RenderModeSelection}" />
 
