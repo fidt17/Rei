@@ -223,7 +223,9 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         {
             if (!_engineRunner.IsActive.Value) return;
             if (_assetImporter.IsImporting.Value) return;
-            
+
+            var selectionBeforeSync = CaptureSelectedEntityIds();
+
             var entities = _entityApi.GetSceneEntities();
             if (entities == null) return;
 
@@ -294,7 +296,10 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
                 scene.RebuildHierarchy();
             }
 
-            UpdateEntitySelection(scene.Entities.ToList(), selectedEntityIds);
+            if (selectionBeforeSync.SetEquals(CaptureSelectedEntityIds()))
+            {
+                UpdateEntitySelection(scene.Entities.ToList(), selectedEntityIds);
+            }
         }
         catch (Exception e)
         {
@@ -348,5 +353,13 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         }
 
         _selectionService.SetSelection(selectedItems, primarySelection, sendToEngine: false);
+    }
+
+    private HashSet<int> CaptureSelectedEntityIds()
+    {
+        return _selectionService.SelectedItems
+            .OfType<IEntitySelectable>()
+            .Select(selectable => selectable.Entity.Id)
+            .ToHashSet();
     }
 }
