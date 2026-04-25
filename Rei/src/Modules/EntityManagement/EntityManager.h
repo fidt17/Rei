@@ -20,7 +20,8 @@ namespace rei
         template <typename T>
         void RegisterComponent(i32 id, GetBehaviourDataMethod getJsonFunc,
                                SetBehaviourDataMethod setFromJsonFunc,
-                               CollectAssetDependenciesMethod collectAssetDependenciesMethod = nullptr)
+                               CollectAssetDependenciesMethod collectAssetDependenciesMethod = nullptr,
+                               std::vector<i32> requiredBehaviourIds = {})
         {
             _addMethods.insert({
                 id, [=](const ecs::Entity e, const nlohmann::json& data) -> T& {
@@ -89,6 +90,7 @@ namespace rei
                 });
             }
 
+            _requiredBehaviourIds[id] = std::move(requiredBehaviourIds);
             _behaviourIdMap[std::type_index(typeid(T))] = id;
         }
 
@@ -147,6 +149,14 @@ namespace rei
             _collectAssetDependenciesMethods.at(id)(data, outDependencies);
         }
 
+        const std::vector<i32>& GetRequiredBehaviourIds(const i32 id) const
+        {
+            static const std::vector<i32> empty;
+            if (!_requiredBehaviourIds.contains(id)) return empty;
+
+            return _requiredBehaviourIds.at(id);
+        }
+
         template <typename R>
         i32 GetId() const
         {
@@ -161,6 +171,7 @@ namespace rei
         std::unordered_map<i32, SetBehaviourDataMethod> _setFromJsonMethods{};
         std::unordered_map<i32, ResolveBehaviourDependenciesMethod> _resolveDependenciesMethods{};
         std::unordered_map<i32, CollectAssetDependenciesMethod> _collectAssetDependenciesMethods{};
+        std::unordered_map<i32, std::vector<i32>> _requiredBehaviourIds{};
         std::map<std::type_index, i32> _behaviourIdMap;
     };
 
@@ -205,6 +216,7 @@ namespace rei
         std::shared_ptr<ecs::Filter> _entityInfoFilter;
 
         i32 GenerateNewSceneEntityId() const;
+        bool HasBehaviour(ecs::Entity e, i32 behaviourId) const;
     };
 }
 

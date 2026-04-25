@@ -165,6 +165,16 @@
     </Style>
     <!-- END Text Block Styles -->
 
+    <!-- ToolTip Styles -->
+    <Style Selector="ToolTip">
+        <Setter Property="Background" Value="{StaticResource Dark_4}" />
+        <Setter Property="Foreground" Value="{StaticResource White}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Gray_1}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="6,4" />
+    </Style>
+    <!-- END ToolTip Styles -->
+
     <!-- Border Styles -->
     <Style Selector="Border.Window">
         <Setter Property="Background" Value="{StaticResource Dark_2}" />

@@ -8,6 +8,7 @@ namespace rei::ui
 {
     class Image : public Behaviour
     {
+        REQUIRE_COMPONENT(RectTransform)
         BEHAVIOUR_BODY(Image)
 
         SERIALIZE assets::AssetRef<render::Texture> _texture;

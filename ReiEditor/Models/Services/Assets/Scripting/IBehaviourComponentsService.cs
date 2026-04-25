@@ -24,6 +24,7 @@ public interface IBehaviourComponentsService
     
     bool AddComponent(GameEntity e, int behaviourId);
     bool DeleteComponent(GameEntity e, BehaviourComponent component);
+    bool TryGetRequiringComponent(GameEntity e, int requiredBehaviourId, out string requiringComponentName);
 
     void ApplySerializedValue(SerializedProperty property, object? value);
     void RefreshComponents(GameEntity e);

@@ -7,6 +7,7 @@
 
 #define SERIALIZE
 #define HIDE_IN_EDITOR
+#define REQUIRE_COMPONENT(COMPONENT_NAME)
 #define SERIALIZABLE_BODY(CLASS_NAME)\
     public:\
     CLASS_NAME() = default;\

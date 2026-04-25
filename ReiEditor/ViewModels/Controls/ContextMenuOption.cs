@@ -6,6 +6,8 @@ namespace ReiEditor.ViewModels.Controls;
 public class ContextMenuOption
 {
     private readonly Action? _callback;
+    private readonly Func<bool>? _canExecuteFunction;
+    private readonly Func<string?>? _toolTipFunction;
 
     public RelayCommand Command { get; }
     public string Text { get; }
@@ -13,13 +15,17 @@ public class ContextMenuOption
     public bool HasNestedMenu => NestedMenu != null;
     public bool ShouldCloseOnExecute { get; }
     public bool IsSeparator { get; }
+    public string? ToolTip => _toolTipFunction?.Invoke();
+    public bool IsEnabled => _canExecuteFunction?.Invoke() ?? true;
 
-    public ContextMenuOption(string text, Action? callback = null)
+    public ContextMenuOption(string text, Action? callback = null, Func<bool>? canExecuteFunction = null, Func<string?>? toolTipFunction = null)
     {
         Text = text;
         _callback = callback;
+        _canExecuteFunction = canExecuteFunction;
+        _toolTipFunction = toolTipFunction;
 
-        Command = new RelayCommand();
+        Command = new RelayCommand(canExecuteFunction: () => IsEnabled);
         if (callback != null)
         {
             Command.ExecutedEvent += callback;
@@ -52,6 +58,6 @@ public class ContextMenuOption
     {
         if (IsSeparator) return Separator();
         if (NestedMenu != null) return new ContextMenuOption(Text, NestedMenu.Clone());
-        return new ContextMenuOption(Text, _callback);
+        return new ContextMenuOption(Text, _callback, _canExecuteFunction, _toolTipFunction);
     }
 }

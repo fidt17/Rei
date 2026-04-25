@@ -137,8 +137,9 @@ public class BehaviourRegistry : IBehaviourRegistry
             
             var namespaceStr = SourceFilesUtility.GetObjectNamespaceFrom(behaviourFile.Content, behaviourFile.Path);
             var properties = _sourceFilesUtility.GetSerializedProperties(behaviourFile.Content);
+            var requiredComponentNames = _sourceFilesUtility.GetRequiredComponentNames(behaviourFile.Content);
             RegisterBehaviour(
-                new BehaviourAssetInfo(namespaceStr, name, behaviourMeta.BehaviourId, new ObjectFile<string>(behaviourFile.Content, behaviourFile.Path), properties, behaviourFile.Path),
+                new BehaviourAssetInfo(namespaceStr, name, behaviourMeta.BehaviourId, new ObjectFile<string>(behaviourFile.Content, behaviourFile.Path), properties, requiredComponentNames, behaviourFile.Path),
                 behaviours,
                 ref maxBehaviourId);
         }

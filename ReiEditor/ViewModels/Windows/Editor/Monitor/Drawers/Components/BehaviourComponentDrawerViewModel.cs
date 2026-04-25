@@ -28,6 +28,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
 
     private readonly GameEntity _entity;
     private readonly IBehaviourRegistry _behaviourRegistry;
+    private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IEntityManagementService _entityManagementService;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
     private readonly IAssetSearchService _assetSearchService;
@@ -45,8 +46,9 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     public BehaviourComponentDrawerViewModel(
         GameEntity entity,
         BehaviourComponent behaviourComponent,
-        IBehaviourRegistry behaviourRegistry, 
+        IBehaviourRegistry behaviourRegistry,
         IEntityManagementService entityManagementService,
+        IBehaviourComponentsService behaviourComponentsService,
         ISerializableObjectsRegistry serializableObjectsRegistry,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
@@ -59,6 +61,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _entity = entity;
         BehaviourComponent = behaviourComponent;
         _behaviourRegistry = behaviourRegistry;
+        _behaviourComponentsService = behaviourComponentsService;
         _entityManagementService = entityManagementService;
         _serializableObjectsRegistry = serializableObjectsRegistry;
         _assetSearchService = assetSearchService;
@@ -96,8 +99,20 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         var contextMenu = new ContextMenuViewModel();
         contextMenu.AddOption(new ContextMenuOption("Show in project", () => ShowInProject(behaviourInfo)));
         contextMenu.AddOption(new ContextMenuOption("Edit", () => EditBehaviourSource(behaviourInfo)));
-        contextMenu.AddOption(new ContextMenuOption("Delete Component", DeleteComponent));
+        contextMenu.AddOption(new ContextMenuOption(
+            "Delete Component",
+            DeleteComponent,
+            () => !_behaviourComponentsService.TryGetRequiringComponent(_entity, BehaviourComponent.Id, out _),
+            () => GetDeleteComponentToolTip(behaviourInfo)));
+
         return contextMenu;
+    }
+
+    private string? GetDeleteComponentToolTip(BehaviourAssetInfo behaviourInfo)
+    {
+        return _behaviourComponentsService.TryGetRequiringComponent(_entity, BehaviourComponent.Id, out var requiringComponentName)
+            ? $"{requiringComponentName} requires {behaviourInfo.ObjectName}"
+            : null;
     }
 
     private void ShowInProject(BehaviourAssetInfo behaviourInfo)

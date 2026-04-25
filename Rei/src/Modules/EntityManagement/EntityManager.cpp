@@ -78,8 +78,22 @@ namespace rei
                     serializedData = behaviourData.at(SERIALIZE_DATA);
                 }
 
-                AddBehaviour(e, behaviourId, serializedData, false);
-                behavioursToInit.push_back({.Entity = e, .BehaviourId = behaviourId});
+                if (HasBehaviour(e, behaviourId))
+                {
+                    _behaviourRegistry.SetBehaviourData(e, behaviourId, serializedData);
+                }
+                else
+                {
+                    AddBehaviour(e, behaviourId, serializedData, false);
+                }
+            }
+
+            if (HAS(e, BehaviourCollection))
+            {
+                for (const auto behaviourId : GET(e, BehaviourCollection).Behaviours)
+                {
+                    behavioursToInit.push_back({.Entity = e, .BehaviourId = behaviourId});
+                }
             }
         }
         catch (std::exception& e)
@@ -101,6 +115,13 @@ namespace rei
 
     Behaviour& EntityManager::AddBehaviour(const ecs::Entity e, const i32 behaviourId, const nlohmann::json& data, const bool init) const
     {
+        for (const auto requiredBehaviourId : _behaviourRegistry.GetRequiredBehaviourIds(behaviourId))
+        {
+            if (HasBehaviour(e, requiredBehaviourId)) continue;
+
+            AddBehaviour(e, requiredBehaviourId, nlohmann::json(), init);
+        }
+
         auto& b = _behaviourRegistry.AddBehaviour(e, behaviourId, data);
 
         if (init)
@@ -344,6 +365,14 @@ namespace rei
         }
 
         return maxId + 1;
+    }
+
+    bool EntityManager::HasBehaviour(const ecs::Entity e, const i32 behaviourId) const
+    {
+        if (!HAS(e, BehaviourCollection)) return false;
+
+        const auto& behaviours = GET(e, BehaviourCollection).Behaviours;
+        return std::ranges::find(behaviours, behaviourId) != behaviours.end();
     }
 
 }

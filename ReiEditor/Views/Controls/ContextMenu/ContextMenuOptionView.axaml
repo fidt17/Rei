@@ -23,7 +23,10 @@
                 IsVisible="{Binding IsSeparator}" />
 
         <Grid ColumnDefinitions="*,Auto"
-              IsVisible="{Binding !IsSeparator}">
+              Background="Transparent"
+              IsVisible="{Binding !IsSeparator}"
+              ToolTip.ShowDelay="0"
+              ToolTip.Tip="{Binding ToolTip}">
             <Button x:Name="OptionButton"
                     Grid.Column="0"
                     HorizontalAlignment="Stretch"
@@ -31,6 +34,7 @@
                     Margin="1"
                     Command="{Binding Command}"
                     Content="{Binding Text}"
+                    IsEnabled="{Binding IsEnabled}"
                     Click="OptionButton_OnClick">
                 <FlyoutBase.AttachedFlyout>
                     <Flyout Placement="RightEdgeAlignedTop"

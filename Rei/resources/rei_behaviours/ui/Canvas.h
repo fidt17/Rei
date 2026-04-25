@@ -7,6 +7,7 @@ namespace rei::ui
 {
     class Canvas : public Behaviour
     {
+        REQUIRE_COMPONENT(RectTransform)
         BEHAVIOUR_BODY(Canvas)
 
         SERIALIZE math::Vector3 _referenceResolution = math::Vector3(1920, 1080, 0);

@@ -66,6 +66,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         Elements.Add(entityInfoComponentDrawerFactory.CreateInstance(entity));
         foreach (var b in _entity.Behaviours)
         {
+            if (ShouldHideBehaviour(b)) continue;
             Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(_entity, b));
         }
 
@@ -94,8 +95,15 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void HandleEntityBehaviourAddedEvent(GameEntity e, BehaviourComponent component)
     {
+        if (IsRectTransform(component))
+        {
+            RemoveBehaviourDrawer(EngineBehavioursConstants.TRANSFORM);
+        }
+
+        if (ShouldHideBehaviour(component)) return;
+
         Elements.Add(_behaviourComponentDrawerFactory.CreateInstance(e, component));
-        
+
         UpdateBehaviourSelectionList();
     }
 
@@ -108,6 +116,11 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         {
             target.Dispose();
             Elements.Remove(target);
+        }
+
+        if (IsRectTransform(component))
+        {
+            AddTransformDrawerIfVisible();
         }
         
         UpdateBehaviourSelectionList();
@@ -152,5 +165,44 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
                 .ToList();
 
         BehaviourSelection.AddRange(filtered);
+    }
+
+    private bool ShouldHideBehaviour(BehaviourComponent component)
+    {
+        if (!_behaviourRegistry.TryGetById(component.Id, out var behaviourInfo)) return false;
+        if (behaviourInfo.ObjectName != EngineBehavioursConstants.TRANSFORM) return false;
+
+        var rectTransformId = _behaviourRegistry.GetIdByName(EngineBehavioursConstants.RECT_TRANSFORM);
+        return rectTransformId != null && _entity.HasComponent(rectTransformId.Value);
+    }
+
+    private bool IsRectTransform(BehaviourComponent component)
+    {
+        if (!_behaviourRegistry.TryGetById(component.Id, out var behaviourInfo)) return false;
+        return behaviourInfo.ObjectName == EngineBehavioursConstants.RECT_TRANSFORM;
+    }
+
+    private void RemoveBehaviourDrawer(string behaviourName)
+    {
+        var target = Elements
+            .OfType<BehaviourComponentDrawerViewModel>()
+            .FirstOrDefault(x =>
+                _behaviourRegistry.TryGetById(x.BehaviourComponent.Id, out var behaviourInfo) &&
+                behaviourInfo.ObjectName == behaviourName);
+        if (target == null) return;
+
+        target.Dispose();
+        Elements.Remove(target);
+    }
+
+    private void AddTransformDrawerIfVisible()
+    {
+        var transformId = _behaviourRegistry.GetIdByName(EngineBehavioursConstants.TRANSFORM);
+        if (transformId == null) return;
+
+        var transform = _entity.GetBehaviour(transformId.Value);
+        if (transform == null || ShouldHideBehaviour(transform)) return;
+
+        Elements.Insert(1, _behaviourComponentDrawerFactory.CreateInstance(_entity, transform));
     }
 }

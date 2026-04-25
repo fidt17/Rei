@@ -271,6 +271,24 @@ public class SourceFilesUtility
         return result;
     }
 
+    public List<string> GetRequiredComponentNames(string text)
+    {
+        text = RemoveComments(text);
+        var result = new List<string>();
+        var regex = new Regex($@"{SourceFileMacrosConstants.REQUIRE_COMPONENT}\((?<name>.*?)\)");
+
+        foreach (Match match in regex.Matches(text))
+        {
+            var name = match.Groups["name"].Value.Trim();
+            if (string.IsNullOrWhiteSpace(name) || name.Contains("COMPONENT_NAME")) continue;
+
+            var normalizedName = SerializedTypeNameParser.GetBaseTypeName(name);
+            if (!result.Contains(normalizedName)) result.Add(normalizedName);
+        }
+
+        return result;
+    }
+
     private SerializableObjectInfo.SerializedPropertyData CreateSerializedPropertyData(string variableType, string? defaultValue, bool hideInEditor)
     {
         var sourceType = SerializedTypeNameParser.NormalizeSourceType(variableType);

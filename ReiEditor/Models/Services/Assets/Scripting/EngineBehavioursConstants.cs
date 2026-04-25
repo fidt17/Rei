@@ -3,6 +3,7 @@
 public static class EngineBehavioursConstants
 {
     public const string TRANSFORM = "Transform";
+    public const string RECT_TRANSFORM = "RectTransform";
     public const string TRANSFORM_POSITION = "_position";
     public const string TRANSFORM_ROTATION = "_rotation";
     public const string TRANSFORM_SCALE = "_scale";

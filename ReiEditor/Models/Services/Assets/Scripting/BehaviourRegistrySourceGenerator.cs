@@ -100,6 +100,7 @@ public class BehaviourRegistrySourceGenerator
             var behaviourName = b.Value.ObjectName;
             var behaviourId = b.Value.BehaviourId;
             var collectAssetDependenciesLambda = GenerateAssetDependenciesCollector(b.Value);
+            var requiredBehaviourIds = GenerateRequiredBehaviourIds(b.Value, behaviours.Values);
 
             str.AppendLine($"    f.RegisterComponent<{behaviourNamespace}::{behaviourName}>({behaviourId}, " +
                            $"[](const rei::ecs::Entity e) -> nlohmann::json " + "{ " +
@@ -109,13 +110,30 @@ public class BehaviourRegistrySourceGenerator
                            $"[](const rei::ecs::Entity e, const nlohmann::json& json) " + "{ " +
                            $"auto& b = rei::GetInternalWorld()->GetRegistry()->Get<{behaviourNamespace}::{behaviourName}>(e);" +
                            $"b.REI_SET(json); b.ResolveDependencies(); b.AfterREI_SET(); }}, " +
-                           collectAssetDependenciesLambda +
+                           collectAssetDependenciesLambda + ", " +
+                           requiredBehaviourIds +
                            ");");
         }
         
         str.AppendLine("}");
 
         return str.ToString();
+    }
+
+    private static string GenerateRequiredBehaviourIds(BehaviourAssetInfo behaviour, IEnumerable<BehaviourAssetInfo> behaviours)
+    {
+        if (behaviour.RequiredComponentNames.Count == 0) return "{}";
+
+        var ids = new List<int>();
+        foreach (var requiredName in behaviour.RequiredComponentNames)
+        {
+            var requiredBehaviour = behaviours.FirstOrDefault(x => x.ObjectName == requiredName);
+            if (requiredBehaviour == null) continue;
+
+            ids.Add(requiredBehaviour.BehaviourId);
+        }
+
+        return ids.Count == 0 ? "{}" : $"{{{string.Join(", ", ids)}}}";
     }
 
     private string GenerateDeserializationImplementation(IEnumerable<SerializableObjectInfo> objects)

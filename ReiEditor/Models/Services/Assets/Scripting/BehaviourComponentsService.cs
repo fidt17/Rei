@@ -45,6 +45,19 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             return false;
         }
 
+        foreach (var requiredComponentName in componentInfo.RequiredComponentNames)
+        {
+            var requiredBehaviourId = _behaviourRegistry.GetIdByName(requiredComponentName);
+            if (requiredBehaviourId == null)
+            {
+                _logger.LogError($"Could not find required component {requiredComponentName} for {componentInfo.ObjectName}");
+                continue;
+            }
+
+            if (e.HasComponent(requiredBehaviourId.Value)) continue;
+            AddComponent(e, requiredBehaviourId.Value);
+        }
+
         var component = new BehaviourComponent(behaviourId);
         foreach (var sp in componentInfo.SerializedProperties)
         {
@@ -67,9 +80,33 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             _logger.LogError($"Cannot delete component {component.Id} from {e}. Entity does not have one.");
             return false;
         }
-        
+
+        if (TryGetRequiringComponent(e, component.Id, out var requiringComponentName))
+        {
+            _logger.LogError($"Cannot delete component {component.Id} from {e}. {requiringComponentName} requires it.");
+            return false;
+        }
+
         e.DeleteBehaviour(component);
         return true;
+    }
+
+    public bool TryGetRequiringComponent(GameEntity e, int requiredBehaviourId, out string requiringComponentName)
+    {
+        requiringComponentName = "";
+        if (!_behaviourRegistry.TryGetById(requiredBehaviourId, out var requiredBehaviourInfo)) return false;
+
+        foreach (var behaviour in e.Behaviours)
+        {
+            if (behaviour.Id == requiredBehaviourId) continue;
+            if (!_behaviourRegistry.TryGetById(behaviour.Id, out var behaviourInfo)) continue;
+            if (!behaviourInfo.RequiredComponentNames.Contains(requiredBehaviourInfo.ObjectName)) continue;
+
+            requiringComponentName = behaviourInfo.ObjectName;
+            return true;
+        }
+
+        return false;
     }
 
     public void RefreshComponents(GameEntity e)

@@ -7,4 +7,5 @@ public static class SourceFileMacrosConstants
     public const string SERIALIZABLE_ENUM = "SERIALIZABLE_ENUM";
     public const string SERIALIZE = "SERIALIZE";
     public const string HIDE_IN_EDITOR = "HIDE_IN_EDITOR";
+    public const string REQUIRE_COMPONENT = "REQUIRE_COMPONENT";
 }
