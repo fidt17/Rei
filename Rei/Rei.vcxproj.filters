@@ -36,6 +36,7 @@
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\TransformHierarchyOps.cpp" />
+    <ClCompile Include="src\Common\Math\Vector2.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
     <ClCompile Include="src\Common\Tasks\Task.cpp" />
     <ClCompile Include="src\Common\Tasks\TaskExecutor.cpp" />
@@ -652,6 +653,7 @@
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="resources\rei_behaviours\transformation\TransformHierarchyOps.h" />
     <ClInclude Include="src\Common\ExitCodes.h" />
+    <ClInclude Include="src\Common\Math\Vector2.h" />
     <ClInclude Include="src\Common\Math\Vector3.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />

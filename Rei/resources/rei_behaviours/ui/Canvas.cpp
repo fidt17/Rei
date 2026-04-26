@@ -4,7 +4,7 @@
 
 namespace rei::ui
 {
-    const math::Vector3& Canvas::GetReferenceResolution() const
+    const math::Vector2& Canvas::GetReferenceResolution() const
     {
         return _referenceResolution;
     }

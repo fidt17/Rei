@@ -64,7 +64,11 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService)
     {
-        if (property.SourceType == "Vector3")
+        if (property.SourceType == "Vector2")
+        {
+            return new Vector2PropertyViewModel(property);
+        }
+        else if (property.SourceType == "Vector3")
         {
             return new Vector3PropertyViewModel(property);
         }

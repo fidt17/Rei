@@ -2,17 +2,16 @@
 
 #include "Core.h"
 
-#include "glm/fwd.hpp"
-#include "glm/vec2.hpp"
+#include "Vector2.h"
 
 namespace rei::math
 {
     struct Rect
     {
-        glm::vec2 Min = {};
-        glm::vec2 Max = {};
+        Vector2 Min = {};
+        Vector2 Max = {};
 
-        REI_API glm::vec2 GetSize() const;
-        REI_API glm::vec2 GetCenter() const;
+        REI_API Vector2 GetSize() const;
+        REI_API Vector2 GetCenter() const;
     };
 }

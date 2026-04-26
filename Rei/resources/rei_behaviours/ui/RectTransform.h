@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common/Math/Vector3.h"
+#include "Common/Math/Vector2.h"
 
 namespace rei::ui
 {
@@ -8,18 +8,18 @@ namespace rei::ui
     {
         BEHAVIOUR_BODY(RectTransform)
 
-        SERIALIZE math::Vector3 _anchorMin = math::Vector3(0.5f, 0.5f, 0);
-        SERIALIZE math::Vector3 _anchorMax = math::Vector3(0.5f, 0.5f, 0);
-        SERIALIZE math::Vector3 _pivot = math::Vector3(0.5f, 0.5f, 0);
-        SERIALIZE math::Vector3 _anchoredPosition = math::Vector3(0, 0, 0);
-        SERIALIZE math::Vector3 _sizeDelta = math::Vector3(100, 100, 0);
+        SERIALIZE math::Vector2 _anchorMin = math::Vector2(0.5f, 0.5f);
+        SERIALIZE math::Vector2 _anchorMax = math::Vector2(0.5f, 0.5f);
+        SERIALIZE math::Vector2 _pivot = math::Vector2(0.5f, 0.5f);
+        SERIALIZE math::Vector2 _anchoredPosition = math::Vector2(0, 0);
+        SERIALIZE math::Vector2 _sizeDelta = math::Vector2(100, 100);
 
     public:
-        REI_API const math::Vector3& GetAnchorMin() const;
-        REI_API const math::Vector3& GetAnchorMax() const;
-        REI_API const math::Vector3& GetPivot() const;
-        REI_API const math::Vector3& GetAnchoredPosition() const;
-        REI_API const math::Vector3& GetSizeDelta() const;
+        REI_API const math::Vector2& GetAnchorMin() const;
+        REI_API const math::Vector2& GetAnchorMax() const;
+        REI_API const math::Vector2& GetPivot() const;
+        REI_API const math::Vector2& GetAnchoredPosition() const;
+        REI_API const math::Vector2& GetSizeDelta() const;
     };
 }
 

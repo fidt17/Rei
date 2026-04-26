@@ -7,4 +7,5 @@
 #include "../external/eventpp/callbacklist.h"
 
 #include "Common/Math/math.h"
+#include "Common/Math/Vector2.h"
 #include "Common/Math/Vector3.h"

@@ -2,6 +2,7 @@
 #include "Plane.h"
 #include "Rect.h"
 #include "Ray.h"
+#include "Vector2.h"
 #include "Vector3.h"
 #include "Modules/Render/Mesh/Face.h"
 #include "glm/fwd.hpp"

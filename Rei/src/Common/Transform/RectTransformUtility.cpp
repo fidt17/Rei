@@ -15,28 +15,22 @@ namespace rei::ui_utility
     {
         math::Rect CalculateChildRect(const math::Rect& parentRect, const rei::ui::RectTransform& rectTransform)
         {
-            const glm::vec2 parentSize = parentRect.GetSize();
-            const auto& anchorMinValue = rectTransform.GetAnchorMin();
-            const auto& anchorMaxValue = rectTransform.GetAnchorMax();
-            const auto& pivotValue = rectTransform.GetPivot();
-            const auto& anchoredPositionValue = rectTransform.GetAnchoredPosition();
-            const auto& sizeDeltaValue = rectTransform.GetSizeDelta();
+            const math::Vector2 parentSize = parentRect.GetSize();
+            const auto& anchorMin = rectTransform.GetAnchorMin();
+            const auto& anchorMax = rectTransform.GetAnchorMax();
+            const auto& pivot = rectTransform.GetPivot();
+            const auto& anchoredPosition = rectTransform.GetAnchoredPosition();
+            const auto& sizeDelta = rectTransform.GetSizeDelta();
 
-            const glm::vec2 anchorMin(anchorMinValue.x, anchorMinValue.y);
-            const glm::vec2 anchorMax(anchorMaxValue.x, anchorMaxValue.y);
-            const glm::vec2 pivot(pivotValue.x, pivotValue.y);
-            const glm::vec2 anchoredPosition(anchoredPositionValue.x, anchoredPositionValue.y);
-            const glm::vec2 sizeDelta(sizeDeltaValue.x, sizeDeltaValue.y);
-
-            const glm::vec2 anchorMinPosition = parentRect.Min + parentSize * anchorMin;
-            const glm::vec2 anchorMaxPosition = parentRect.Min + parentSize * anchorMax;
-            const glm::vec2 anchorCenter = (anchorMinPosition + anchorMaxPosition) * 0.5f;
-            const glm::vec2 size = (anchorMaxPosition - anchorMinPosition) + sizeDelta;
-            const glm::vec2 center = anchorCenter + anchoredPosition;
+            const math::Vector2 anchorMinPosition = parentRect.Min + parentSize * anchorMin;
+            const math::Vector2 anchorMaxPosition = parentRect.Min + parentSize * anchorMax;
+            const math::Vector2 anchorCenter = (anchorMinPosition + anchorMaxPosition) * 0.5f;
+            const math::Vector2 size = (anchorMaxPosition - anchorMinPosition) + sizeDelta;
+            const math::Vector2 center = anchorCenter + anchoredPosition;
 
             return {
                 center - pivot * size,
-                center + (glm::vec2(1.0f, 1.0f) - pivot) * size
+                center + (math::Vector2::One() - pivot) * size
             };
         }
     }
@@ -85,8 +79,8 @@ namespace rei::ui_utility
     {
         const f32 scaleFactor = CalculateCanvasScaleFactor(canvas, cameraModule);
         return {
-            glm::vec2(0.0f, 0.0f),
-            glm::vec2(
+            math::Vector2(0.0f, 0.0f),
+            math::Vector2(
                 static_cast<f32>(cameraModule.GetWidth()) / scaleFactor,
                 static_cast<f32>(cameraModule.GetHeight()) / scaleFactor)
         };
@@ -134,14 +128,14 @@ namespace rei::ui_utility
             return rect;
         }
 
-        const glm::vec2 rectSize = rect.GetSize();
+        const math::Vector2 rectSize = rect.GetSize();
         if (rectSize.x <= 0.0f || rectSize.y <= 0.0f)
         {
             return rect;
         }
 
         const f32 textureAspect = static_cast<f32>(texture->GetWidth()) / static_cast<f32>(texture->GetHeight());
-        glm::vec2 size = rectSize;
+        math::Vector2 size = rectSize;
         if (textureAspect > rectSize.x / rectSize.y)
         {
             size.y = rectSize.x / textureAspect;
@@ -151,7 +145,7 @@ namespace rei::ui_utility
             size.x = rectSize.y * textureAspect;
         }
 
-        const glm::vec2 center = rect.GetCenter();
+        const math::Vector2 center = rect.GetCenter();
         return {
             center - size * 0.5f,
             center + size * 0.5f
@@ -161,8 +155,10 @@ namespace rei::ui_utility
     glm::mat4 BuildModelMatrix(const math::Rect& rect)
     {
         auto model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(rect.GetCenter(), 0.0f));
-        model = glm::scale(model, glm::vec3(rect.GetSize(), 1.0f));
+        const auto center = rect.GetCenter();
+        const auto size = rect.GetSize();
+        model = glm::translate(model, glm::vec3(center.x, center.y, 0.0f));
+        model = glm::scale(model, glm::vec3(size.x, size.y, 1.0f));
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
         return model;
     }

@@ -6,6 +6,7 @@
 #include <Modules/Behaviour/Behaviour.h>
 #include <Modules/Assets/Core/AssetRefUtils.h>
 
+#include "C:\Repos\Rei\Rei\src\Common\Math\Vector2.h"
 #include "C:\Repos\Rei\Rei\src\Common\Math\Vector3.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Physics\ModelCollider.h"
 #include "C:\Repos\Rei\Rei\src\Modules\Physics\SphereCollider.h"
@@ -46,6 +47,15 @@ void ConfigureComponentsFactory(rei::BehaviourRegistry& f)
 }
 
 // --- REI_GET METHODS ---
+
+nlohmann::json rei::math::Vector2::REI_GET() const
+{
+    return {
+        {"REI_TYPE", "Vector2"},
+        {"x", x},
+        {"y", y},
+    };
+}
 
 nlohmann::json rei::math::Vector3::REI_GET() const
 {
@@ -229,6 +239,12 @@ nlohmann::json rei::render::PointLight::REI_GET() const
 
 // --- REI_SET METHODS ---
 
+void rei::math::Vector2::REI_SET(const nlohmann::json& data)
+{
+    if (data.contains("x")) x = data.at("x").at("Value");
+    if (data.contains("y")) y = data.at("y").at("Value");
+}
+
 void rei::math::Vector3::REI_SET(const nlohmann::json& data)
 {
     if (data.contains("x")) x = data.at("x").at("Value");
@@ -359,6 +375,10 @@ void rei::render::PointLight::REI_SET(const nlohmann::json& data)
 
 
 // --- RESOLVE DEPENDENCIES METHODS ---
+
+void rei::math::Vector2::ResolveDependencies()
+{
+}
 
 void rei::math::Vector3::ResolveDependencies()
 {

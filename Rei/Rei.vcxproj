@@ -586,6 +586,7 @@
     <ClInclude Include="src\Common\Math\math.h" />
     <ClInclude Include="src\Common\Math\Plane.h" />
     <ClInclude Include="src\Common\Math\Ray.h" />
+    <ClInclude Include="src\Common\Math\Vector2.h" />
     <ClInclude Include="src\Common\Math\Vector3.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />
@@ -752,6 +753,7 @@
     <ClCompile Include="src\Common\Math\math.cpp" />
     <ClCompile Include="src\Common\Math\Plane.cpp" />
     <ClCompile Include="src\Common\Math\Ray.cpp" />
+    <ClCompile Include="src\Common\Math\Vector2.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

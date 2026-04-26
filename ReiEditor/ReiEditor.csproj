@@ -127,6 +127,10 @@
       <DependentUpon>CustomPropertyView.axaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Windows\Editor\Monitor\Drawers\Property\Custom\Vector2PropertyView.axaml.cs">
+      <DependentUpon>Vector2PropertyView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Windows\Editor\Monitor\Drawers\Property\Custom\Vector3PropertyView.axaml.cs">
       <DependentUpon>Vector3PropertyView.axaml</DependentUpon>
       <SubType>Code</SubType>

@@ -62,7 +62,7 @@ namespace rei::render
             };
             pixelRect = ui_utility::ApplyAspectPreservation(pixelRect, image);
 
-            const glm::vec2 pixelSize = pixelRect.GetSize();
+            const math::Vector2 pixelSize = pixelRect.GetSize();
             if (pixelSize.x <= 0.0f || pixelSize.y <= 0.0f) continue;
 
             const auto& material = image.GetRenderMaterial();

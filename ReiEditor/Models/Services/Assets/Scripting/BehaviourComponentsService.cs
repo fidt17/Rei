@@ -278,13 +278,17 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         foreach (var requiredProperty in requiredProperties)
         {
             var targetProperty = parsedValue.FirstOrDefault(x => x.Value.Name == requiredProperty.Key).Value;
-            if (targetProperty == null || targetProperty.SourceType != requiredProperty.Value.SourceType)
+            if (targetProperty == null)
             {
-                if (targetProperty != null)
-                {
-                    parsedValue.Remove(targetProperty.Name);
-                }
                 parsedValue.Add(requiredProperty.Key, CreateSerializedProperty(requiredProperty.Key, requiredProperty.Value, property));
+            }
+            else if (targetProperty.SourceType != requiredProperty.Value.SourceType)
+            {
+                var migratedProperty = CreateSerializedProperty(requiredProperty.Key, requiredProperty.Value, property);
+                TryMigrateCompatibleCustomPropertyValue(targetProperty, migratedProperty);
+
+                parsedValue.Remove(targetProperty.Name);
+                parsedValue.Add(requiredProperty.Key, migratedProperty);
             }
             else
             {
@@ -293,6 +297,32 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         }
 
         property.Value = parsedValue;
+    }
+
+    private static void TryMigrateCompatibleCustomPropertyValue(SerializedProperty sourceProperty, SerializedProperty targetProperty)
+    {
+        if (!AreCompatibleVectorTypes(sourceProperty.SourceType, targetProperty.SourceType)) return;
+        if (sourceProperty.Value is not Dictionary<string, SerializedProperty> sourceProperties) return;
+        if (targetProperty.Value is not Dictionary<string, SerializedProperty> targetProperties) return;
+
+        foreach (var propertyName in new[] { "x", "y", "z" })
+        {
+            if (!sourceProperties.TryGetValue(propertyName, out var source)) continue;
+            if (!targetProperties.TryGetValue(propertyName, out var target)) continue;
+
+            target.Value = source.Value;
+        }
+    }
+
+    private static bool AreCompatibleVectorTypes(string sourceType, string targetType)
+    {
+        return IsVectorType(sourceType) && IsVectorType(targetType);
+    }
+
+    private static bool IsVectorType(string sourceType)
+    {
+        var baseTypeName = SerializedTypeNameParser.GetBaseTypeName(sourceType);
+        return baseTypeName is "Vector2" or "Vector3";
     }
 
     private void SubscribeToPropertyChange(GameEntity entity, BehaviourComponent component, SerializedProperty property)

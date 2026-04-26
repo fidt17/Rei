@@ -4,27 +4,27 @@
 
 namespace rei::ui
 {
-    const math::Vector3& RectTransform::GetAnchorMin() const
+    const math::Vector2& RectTransform::GetAnchorMin() const
     {
         return _anchorMin;
     }
 
-    const math::Vector3& RectTransform::GetAnchorMax() const
+    const math::Vector2& RectTransform::GetAnchorMax() const
     {
         return _anchorMax;
     }
 
-    const math::Vector3& RectTransform::GetPivot() const
+    const math::Vector2& RectTransform::GetPivot() const
     {
         return _pivot;
     }
 
-    const math::Vector3& RectTransform::GetAnchoredPosition() const
+    const math::Vector2& RectTransform::GetAnchoredPosition() const
     {
         return _anchoredPosition;
     }
 
-    const math::Vector3& RectTransform::GetSizeDelta() const
+    const math::Vector2& RectTransform::GetSizeDelta() const
     {
         return _sizeDelta;
     }
