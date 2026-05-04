@@ -16,6 +16,9 @@ namespace rei::editor
         DISABLE(transformationControl.RightMovementArrow.Entity)
         DISABLE(transformationControl.UpMovementArrow.Entity)
         DISABLE(transformationControl.ForwardMovementArrow.Entity)
+        DISABLE(transformationControl.RightUpMovementPlane.Entity)
+        DISABLE(transformationControl.RightForwardMovementPlane.Entity)
+        DISABLE(transformationControl.UpForwardMovementPlane.Entity)
     }
 
     void TransformationControlActivationSystem::DisableScaleControls(const TransformationControl& transformationControl) const
@@ -38,6 +41,9 @@ namespace rei::editor
         ENABLE(transformationControl.RightMovementArrow.Entity)
         ENABLE(transformationControl.UpMovementArrow.Entity)
         ENABLE(transformationControl.ForwardMovementArrow.Entity)
+        ENABLE(transformationControl.RightUpMovementPlane.Entity)
+        ENABLE(transformationControl.RightForwardMovementPlane.Entity)
+        ENABLE(transformationControl.UpForwardMovementPlane.Entity)
     }
 
     void TransformationControlActivationSystem::EnableScaleControls(const TransformationControl& transformationControl) const

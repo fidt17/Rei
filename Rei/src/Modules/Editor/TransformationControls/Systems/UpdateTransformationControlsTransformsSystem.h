@@ -15,6 +15,9 @@ namespace rei::editor
         void UpdateMovementArrow(const TransformationControl& control, const TransformationControlMovementArrow& arrow, const math::Vector3& targetPosition,
                                  const glm::quat& targetRotation, f32 controlScale) const;
 
+        void UpdateMovementPlane(const TransformationControl& control, const TransformationControlMovementPlane& plane, const math::Vector3& targetPosition,
+                                 const glm::quat& targetRotation, f32 controlScale) const;
+
         void UpdateScaleArrow(const ::rei::editor::TransformationControl& control, const ::rei::editor::TransformationControlScaleArrow& arrow, const ::rei::math::Vector3& targetPosition,
                               const glm::quat& targetRotation, f32 controlScale) const;
 

@@ -30,9 +30,17 @@ namespace rei::editor
 
     void UpdateTransformationControlsRenderersSystem::UpdateMovementControls(const TransformationControl& control, const bool isVisible, const bool showDepthControls) const
     {
+        const bool isRightUpPlaneDragging = control.RightUpMovementPlane.DragActive;
+        const bool isRightForwardPlaneDragging = control.RightForwardMovementPlane.DragActive;
+        const bool isUpForwardPlaneDragging = control.UpForwardMovementPlane.DragActive;
+        const bool isPlaneDragging = isRightUpPlaneDragging || isRightForwardPlaneDragging || isUpForwardPlaneDragging;
+
         UpdateControlPart(control.RightMovementArrow.Entity, isVisible, red, redBright);
         UpdateControlPart(control.UpMovementArrow.Entity, isVisible, green, greenBright);
         UpdateControlPart(control.ForwardMovementArrow.Entity, isVisible && showDepthControls, blue, blueBright);
+        UpdateControlPart(control.RightUpMovementPlane.Entity, isVisible && (!isPlaneDragging || isRightUpPlaneDragging), plane, planeBright);
+        UpdateControlPart(control.RightForwardMovementPlane.Entity, isVisible && showDepthControls && (!isPlaneDragging || isRightForwardPlaneDragging), plane, planeBright);
+        UpdateControlPart(control.UpForwardMovementPlane.Entity, isVisible && showDepthControls && (!isPlaneDragging || isUpForwardPlaneDragging), plane, planeBright);
     }
 
     void UpdateTransformationControlsRenderersSystem::UpdateScaleControls(const TransformationControl& control, const bool isVisible, const bool showDepthControls) const

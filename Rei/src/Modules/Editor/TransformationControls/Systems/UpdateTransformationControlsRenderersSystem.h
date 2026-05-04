@@ -32,6 +32,8 @@ namespace rei::editor
         render::Color greenBright = render::Color::FromHex("#2FCE89");
         render::Color blue = render::Color::FromHex("#264b96");
         render::Color blueBright = render::Color::FromHex("#2E5BB4");
+        render::Color plane = render::Color(1.0f, 1.0f, 1.0f, 0.25f);
+        render::Color planeBright = render::Color(1.0f, 1.0f, 1.0f, 0.4f);
         render::Color grey = render::Color(0.7f, 0.7f, 0.7f, 1.0f);
         render::Color greyBright = render::Color(0.8f, 0.8f, 0.8f);
     };

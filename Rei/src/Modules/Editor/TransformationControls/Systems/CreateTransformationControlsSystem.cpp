@@ -25,6 +25,11 @@ namespace rei::editor
         _scaleArrowModel = GetAssetManager().CreateAsset<render::Model>("Scale arrow", scaleArrowModelMeshes);
 
         _cubeModel = GetAssetManager().CreateAsset<render::Model>("Cube", render::CubeVertexObject({0, 0, 0}, {1, 1, 1}).GenerateMesh());
+        constexpr f32 MOVEMENT_PLANE_MARGIN = 0.22f;
+        constexpr f32 MOVEMENT_PLANE_SIZE = 0.62f;
+        constexpr f32 MOVEMENT_PLANE_THICKNESS = 0.06f;
+        const auto movementPlaneCenter = math::Vector3(MOVEMENT_PLANE_MARGIN + MOVEMENT_PLANE_SIZE * 0.5f, MOVEMENT_PLANE_MARGIN + MOVEMENT_PLANE_SIZE * 0.5f, 0);
+        _movementPlaneModel = GetAssetManager().CreateAsset<render::Model>("Movement Plane", render::CubeVertexObject(movementPlaneCenter, {MOVEMENT_PLANE_SIZE, MOVEMENT_PLANE_SIZE, MOVEMENT_PLANE_THICKNESS}).GenerateMesh());
 
         _rotationRingModel = GetAssetManager().CreateAsset<render::Model>("Rotation ring", render::RingVertexObject(4.2f, 0.2f, 64).GenerateMesh());
 
@@ -43,6 +48,9 @@ namespace rei::editor
         CreateMovementArrow(tc.ForwardMovementArrow, math::Vector3::Forward());
         CreateMovementArrow(tc.RightMovementArrow, math::Vector3::Right());
         CreateMovementArrow(tc.UpMovementArrow, math::Vector3::Up());
+        CreateMovementPlane(tc.RightUpMovementPlane, math::Vector3::Right(), math::Vector3::Up());
+        CreateMovementPlane(tc.RightForwardMovementPlane, math::Vector3::Right(), math::Vector3::Forward());
+        CreateMovementPlane(tc.UpForwardMovementPlane, math::Vector3::Up(), math::Vector3::Forward());
 
         CreateScaleArrow(tc.ForwardScaleArrow, math::Vector3::Forward());
         CreateScaleArrow(tc.RightScaleArrow, math::Vector3::Right());
@@ -73,6 +81,28 @@ namespace rei::editor
         GET(arrow.Entity, physics::PointerCollisionListener);
         DEL(arrow.Entity, SelectableByPointerTag);
         GET(arrow.Entity, SelectionByPointerBlockerTag);
+    }
+
+    void CreateTransformationControlsSystem::CreateMovementPlane(TransformationControlMovementPlane& plane, const math::Vector3& firstDirection, const math::Vector3& secondDirection) const
+    {
+        plane.FirstDirection = firstDirection;
+        plane.SecondDirection = secondDirection;
+
+        plane.Entity = NEW_ENTITY();
+        GET(plane.Entity, Transform).Reset();
+
+        auto& meshRenderer = ADD_BEHAVIOUR(plane.Entity, render::MeshRenderer);
+        meshRenderer.SetModel(_movementPlaneModel);
+
+        auto planeMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
+        planeMaterial->SetDepth(false);
+        planeMaterial->SetSortingOrder(SORTING_ORDER_POST_PROCESSING + 1);
+        planeMaterial->GetShader().SetColor("_Color", render::Color(1.0f, 1.0f, 1.0f, 0.25f));
+        meshRenderer.SetMaterial(planeMaterial);
+
+        GET(plane.Entity, physics::PointerCollisionListener);
+        DEL(plane.Entity, SelectableByPointerTag);
+        GET(plane.Entity, SelectionByPointerBlockerTag);
     }
 
     void CreateTransformationControlsSystem::CreateScaleRoot(TransformationControlScaleArrow& arrow, const math::Vector3& direction) const

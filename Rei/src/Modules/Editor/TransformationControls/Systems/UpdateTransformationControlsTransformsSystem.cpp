@@ -32,6 +32,26 @@ namespace rei::editor
         t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
     }
 
+    void UpdateTransformationControlsTransformsSystem::UpdateMovementPlane(const TransformationControl& control, const TransformationControlMovementPlane& plane, const math::Vector3& targetPosition, const glm::quat& targetRotation, f32 controlScale) const
+    {
+        const auto isPointerInside = GET(plane.Entity, physics::PointerCollisionListener).IsInside;
+        controlScale *= isPointerInside ? 1.06f : 1.0f;
+
+        auto firstDirection = plane.FirstDirection;
+        auto secondDirection = plane.SecondDirection;
+        if (!control.IsUsingWorldSpace())
+        {
+            firstDirection = firstDirection.Rotate(targetRotation);
+            secondDirection = secondDirection.Rotate(targetRotation);
+        }
+
+        const auto normal = math::Vector3::Normalize(math::Vector3::Cross(firstDirection, secondDirection));
+        auto& t = GET(plane.Entity, Transform);
+        t.SetWorldPosition(targetPosition);
+        t.SetWorldRotation(LookAt(normal, secondDirection));
+        t.SetWorldScale(math::Vector3(controlScale, controlScale, controlScale));
+    }
+
     void UpdateTransformationControlsTransformsSystem::UpdateScaleArrow(const TransformationControl& control, const TransformationControlScaleArrow& arrow, const math::Vector3& targetPosition, const glm::quat& targetRotation, f32 controlScale) const
     {
         const auto isPointerInside = GET(arrow.Entity, physics::PointerCollisionListener).IsInside;
@@ -103,6 +123,9 @@ namespace rei::editor
         UpdateMovementArrow(control, control.RightMovementArrow, targetPosition, targetRotation, controlScale);
         UpdateMovementArrow(control, control.UpMovementArrow, targetPosition, targetRotation, controlScale);
         UpdateMovementArrow(control, control.ForwardMovementArrow, targetPosition, targetRotation, controlScale);
+        UpdateMovementPlane(control, control.RightUpMovementPlane, targetPosition, targetRotation, controlScale);
+        UpdateMovementPlane(control, control.RightForwardMovementPlane, targetPosition, targetRotation, controlScale);
+        UpdateMovementPlane(control, control.UpForwardMovementPlane, targetPosition, targetRotation, controlScale);
 
         UpdateScaleArrow(control, control.RightScaleArrow, targetPosition, targetRotation, controlScale);
         UpdateScaleArrow(control, control.UpScaleArrow, targetPosition, targetRotation, controlScale);

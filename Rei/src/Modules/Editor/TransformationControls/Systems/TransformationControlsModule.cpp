@@ -2,7 +2,10 @@
 #include "TransformationControlsModule.h"
 
 #include "CreateTransformationControlsSystem.h"
-#include "HandleTransformationControlsDragSystem.h"
+#include "HandleTransformationControlsMovementDragSystem.h"
+#include "HandleTransformationControlsRotationDragSystem.h"
+#include "HandleTransformationControlsScaleDragSystem.h"
+#include "ResetTransformationControlsDragSystem.h"
 #include "TransformationControlActivationSystem.h"
 #include "UpdateTransformationControlsRenderersSystem.h"
 #include "UpdateTransformationControlsTargetsSystem.h"
@@ -15,7 +18,10 @@ namespace rei::editor
         world->AddSystem<CreateTransformationControlsSystem>();
         world->AddSystem<UpdateTransformationControlsTargetsSystem>();
         world->AddSystem<TransformationControlActivationSystem>();
-        world->AddSystem<HandleTransformationControlsDragSystem>();
+        world->AddSystem<ResetTransformationControlsDragSystem>();
+        world->AddSystem<HandleTransformationControlsMovementDragSystem>();
+        world->AddSystem<HandleTransformationControlsScaleDragSystem>();
+        world->AddSystem<HandleTransformationControlsRotationDragSystem>();
         world->AddSystem<UpdateTransformationControlsTransformsSystem>();
         world->AddSystem<UpdateTransformationControlsRenderersSystem>();
     }

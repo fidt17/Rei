@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "TransformationControlMovementArrow.h"
+#include "TransformationControlMovementPlane.h"
 #include "TransformationControlRotationRing.h"
 #include "TransformationControlScaleArrow.h"
 #include "TransformationMode.h"
@@ -21,6 +22,9 @@ namespace rei::editor
         TransformationControlMovementArrow RightMovementArrow = {};
         TransformationControlMovementArrow UpMovementArrow = {};
         TransformationControlMovementArrow ForwardMovementArrow = {};
+        TransformationControlMovementPlane RightUpMovementPlane = {};
+        TransformationControlMovementPlane RightForwardMovementPlane = {};
+        TransformationControlMovementPlane UpForwardMovementPlane = {};
 
         TransformationControlScaleArrow RightScaleArrow = {};
         TransformationControlScaleArrow UpScaleArrow = {};
