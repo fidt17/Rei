@@ -32,8 +32,8 @@ public class CreateSceneEntityCommand : ICommand, IDisposable
 
 	public async void Execute(object? parameter) => await CreateEntity();
 
-	public Task<GameEntity?> CreateEntity(string? entityName = null)
+	public Task<GameEntity?> CreateEntity(string? entityName = null, GameEntity? parent = null)
 	{
-		return _entityManagementService.CreateEntity(entityName ?? "New Entity");
+		return _entityManagementService.CreateEntity(entityName ?? "New Entity", parent);
 	}
 }

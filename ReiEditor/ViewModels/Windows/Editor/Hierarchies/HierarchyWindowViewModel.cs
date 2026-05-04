@@ -100,13 +100,26 @@ public class HierarchyWindowViewModel : BaseViewModel
     {
         node.ConfigureSelectionActions(
             _selectionHandler.HandleNodeSelectionRequested,
-            _selectionHandler.HandleNodeContextMenuSelectionRequested);
+            _selectionHandler.HandleNodeContextMenuSelectionRequested,
+            ExecuteCreateChildEntityContextMenu);
     }
 
     private async void ExecuteCreateNewEntityContextMenu()
     {
-        var entity = await _createSceneEntityCommand.CreateEntity();
+        await CreateEntityAndStartRename(null);
+    }
+
+    private async void ExecuteCreateChildEntityContextMenu(HierarchyNodeViewModel parentNode)
+    {
+        await CreateEntityAndStartRename(parentNode);
+    }
+
+    private async Task CreateEntityAndStartRename(HierarchyNodeViewModel? parentNode)
+    {
+        var entity = await _createSceneEntityCommand.CreateEntity(parent: parentNode?.Node.Content);
         if (entity == null) return;
+
+        parentNode?.Expanded.Set(true);
 
         var node = _nodeCollectionController.GetAllNodes().FirstOrDefault(x => x.Node.Content == entity);
         if (node == null) return;

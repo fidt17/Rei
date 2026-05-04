@@ -42,14 +42,19 @@ public class EntityManagementService : IEntityManagementService
 
     }
 
-    public async Task<GameEntity?> CreateEntity(string name)
+    public async Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null)
     {
         try
         {
             if (_engineRunner.IsActive.Value)
             {
                 _entityApi.CreateNewEntity(name);
-                return await WaitForCreatedEntity(name);
+                var entity = await WaitForCreatedEntity(name);
+                if (entity != null && parent != null)
+                {
+                    SetParent(entity, parent, GetChildInsertionIndex(parent));
+                }
+                return entity;
             }
 
             if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
@@ -68,9 +73,14 @@ public class EntityManagementService : IEntityManagementService
             
             e.Transform.SetParent(0);
             e.Transform.SetOrder(maxRootOrder + 1);
-            e.GetBehaviour(transformBehaviourId)!.GetProperty("_order").Value = e.Transform.Order;
+            SyncTransformBehaviourProperties(e);
             
             s.AddEntity(e);
+            if (parent != null)
+            {
+                s.MoveEntity(e, parent, int.MaxValue);
+                SyncTransformBehaviourProperties(e);
+            }
             return e;
         }
         catch (Exception exception)
@@ -239,5 +249,22 @@ public class EntityManagementService : IEntityManagementService
         }
 
         return scene.Entities.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.Ordinal));
+    }
+
+    private int GetChildInsertionIndex(GameEntity parent)
+    {
+        var scene = _sceneManagement.CurrentScene.Value;
+        var parentNode = scene?.Hierarchy.GetNode(parent);
+        return parentNode?.ChildNodes.Count() ?? 0;
+    }
+
+    private void SyncTransformBehaviourProperties(GameEntity entity)
+    {
+        var transformBehaviourId = _behaviourRegistry.GetIdByName(EngineBehavioursConstants.TRANSFORM);
+        var transform = entity.GetBehaviour(transformBehaviourId);
+        if (transform == null) return;
+
+        transform.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value = entity.Transform.Parent;
+        transform.GetProperty(EngineBehavioursConstants.TRANSFORM_ORDER).Value = entity.Transform.Order;
     }
 }

@@ -42,6 +42,7 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
     private readonly ISelectionService _selectionService;
     private Action<HierarchyNodeViewModel, KeyModifiers>? _selectionRequestedAction;
     private Action<HierarchyNodeViewModel>? _contextMenuSelectionRequestedAction;
+    private Action<HierarchyNodeViewModel>? _createChildEntityRequestedAction;
 
 #pragma warning disable CS8618
     public HierarchyNodeViewModel() { }
@@ -66,6 +67,7 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
         StartRenameCommand = new RelayCommand(StartRename);
         ConfirmRenameCommand = ReactiveCommand.Create<string>(ConfirmRename);
+        ContextMenu.AddOption(new ContextMenuOption("New Entity", () => _createChildEntityRequestedAction?.Invoke(this)));
         ContextMenu.AddOption(new ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Delete", Delete));
@@ -102,10 +104,12 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
     public void ConfigureSelectionActions(
         Action<HierarchyNodeViewModel, KeyModifiers> selectionRequestedAction,
-        Action<HierarchyNodeViewModel> contextMenuSelectionRequestedAction)
+        Action<HierarchyNodeViewModel> contextMenuSelectionRequestedAction,
+        Action<HierarchyNodeViewModel> createChildEntityRequestedAction)
     {
         _selectionRequestedAction = selectionRequestedAction;
         _contextMenuSelectionRequestedAction = contextMenuSelectionRequestedAction;
+        _createChildEntityRequestedAction = createChildEntityRequestedAction;
     }
 
     public void RequestSelection(KeyModifiers modifiers) => _selectionRequestedAction?.Invoke(this, modifiers);

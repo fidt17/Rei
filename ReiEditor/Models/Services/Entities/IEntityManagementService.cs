@@ -4,7 +4,7 @@ namespace ReiEditor.Models.Services.Entities;
 
 public interface IEntityManagementService
 {
-    Task<GameEntity?> CreateEntity(string name);
+    Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null);
 
     void RenameEntity(GameEntity e, string name);
     void SetParent(GameEntity e, GameEntity? parent, int idx);
