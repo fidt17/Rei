@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "UpdateTransformationControlsRenderersSystem.h"
 
+#include "Modules/Components/ActiveTag.h"
 #include "Modules/Editor/TransformationControls/TransformationControl.h"
 #include "Modules/Physics/PointerCollisionListener.h"
 #include "Modules/Render/Color/Color.h"
@@ -19,19 +20,59 @@ namespace rei::editor
         if (IS_DEAD(controlEntity)) return;
 
         const auto& control = GET(controlEntity, TransformationControl);
+        const bool hasTargets = control.HasTargets();
+        const bool showDepthControls = !control.HasRectTransformTargets;
 
-        UpdateRenderer(control.RightMovementArrow.Entity, red, redBright);
-        UpdateRenderer(control.UpMovementArrow.Entity, green, greenBright);
-        UpdateRenderer(control.ForwardMovementArrow.Entity, blue, blueBright);
+        UpdateMovementControls(control, hasTargets && control.Mode == Movement, showDepthControls);
+        UpdateScaleControls(control, hasTargets && control.Mode == Scale, showDepthControls);
+        UpdateRotationControls(control, hasTargets && control.Mode == Rotation, showDepthControls);
+    }
 
-        UpdateRenderer(control.RightScaleArrow.Entity, red, redBright);
-        UpdateRenderer(control.UpScaleArrow.Entity, green, greenBright);
-        UpdateRenderer(control.ForwardScaleArrow.Entity, blue, blueBright);
-        UpdateRenderer(control.RootScale.Entity, grey, greyBright);
+    void UpdateTransformationControlsRenderersSystem::UpdateMovementControls(const TransformationControl& control, const bool isVisible, const bool showDepthControls) const
+    {
+        UpdateControlPart(control.RightMovementArrow.Entity, isVisible, red, redBright);
+        UpdateControlPart(control.UpMovementArrow.Entity, isVisible, green, greenBright);
+        UpdateControlPart(control.ForwardMovementArrow.Entity, isVisible && showDepthControls, blue, blueBright);
+    }
 
-        UpdateRenderer(control.RightRotationRing.Entity, red, redBright);
-        UpdateRenderer(control.UpRotationRing.Entity, green, greenBright);
-        UpdateRenderer(control.ForwardRotationRing.Entity, blue, blueBright);
+    void UpdateTransformationControlsRenderersSystem::UpdateScaleControls(const TransformationControl& control, const bool isVisible, const bool showDepthControls) const
+    {
+        UpdateControlPart(control.RightScaleArrow.Entity, isVisible, red, redBright);
+        UpdateControlPart(control.UpScaleArrow.Entity, isVisible, green, greenBright);
+        UpdateControlPart(control.ForwardScaleArrow.Entity, isVisible && showDepthControls, blue, blueBright);
+        UpdateControlPart(control.RootScale.Entity, isVisible && showDepthControls, grey, greyBright);
+    }
+
+    void UpdateTransformationControlsRenderersSystem::UpdateRotationControls(const TransformationControl& control, const bool isVisible, const bool showDepthControls) const
+    {
+        UpdateControlPart(control.RightRotationRing.Entity, isVisible && showDepthControls, red, redBright);
+        UpdateControlPart(control.UpRotationRing.Entity, isVisible && showDepthControls, green, greenBright);
+        UpdateControlPart(control.ForwardRotationRing.Entity, isVisible, blue, blueBright);
+    }
+
+    void UpdateTransformationControlsRenderersSystem::UpdateControlPart(const ecs::Entity& e, const bool visible, const render::Color& defaultColor, const render::Color& highlightColor) const
+    {
+        SetControlPartVisible(e, visible);
+        if (visible) UpdateRenderer(e, defaultColor, highlightColor);
+    }
+
+    void UpdateTransformationControlsRenderersSystem::SetControlPartVisible(const ecs::Entity& e, const bool visible) const
+    {
+        if (IS_DEAD(e)) return;
+
+        if (visible)
+        {
+            GET(e, ActiveTag);
+            GET(e, render::MeshRenderer).Enable();
+            return;
+        }
+
+        DEL(e, ActiveTag);
+        GET(e, render::MeshRenderer).Disable();
+        auto& listener = GET(e, physics::PointerCollisionListener);
+        listener.DidEnter = false;
+        listener.IsInside = false;
+        listener.DidExit = false;
     }
 
     void UpdateTransformationControlsRenderersSystem::UpdateRenderer(const ecs::Entity& e, const render::Color& defaultColor,

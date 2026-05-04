@@ -11,6 +11,7 @@
 #include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
 #include "Modules/Editor/Systems/FlyCameraSystem.h"
 #include "Modules/Editor/Systems/PointerEntitySelectionSystem.h"
+#include "Modules/Editor/Systems/UIPointerCollisionSystem.h"
 #include "Modules/Editor/TransformationControls/Systems/TransformationControlsModule.h"
 #include "Modules/Physics/Systems/PointerCollisionSystem.h"
 #include "Modules/Render/Camera/AssignMainCameraSystem.h"
@@ -62,6 +63,7 @@ namespace rei::internal::engine
         if (GetEngine().IsEditor())
         {
             _world->AddSystem<editor::FlyCameraSystem>();
+            _world->AddSystem<editor::UIPointerCollisionSystem>();
             _world->AddSystem<editor::PointerEntitySelectionSystem>();
 
             _world->AddModule<editor::TransformationControlsModule>();

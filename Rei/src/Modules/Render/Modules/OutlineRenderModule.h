@@ -18,6 +18,9 @@ namespace rei::render
         
     private:
         void RenderOutlineObjects() const;
+        void RenderMeshOutlines() const;
+        void RenderSpriteOutlines() const;
+        void RenderUiImageOutlines() const;
 
     private:
         std::shared_ptr<CameraModule> _cameraModule;

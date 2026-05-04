@@ -636,6 +636,7 @@
     <ClInclude Include="src\Modules\Editor\Components\SelectionByPointerBlockerTag.h" />
     <ClInclude Include="src\Modules\Editor\Systems\FlyCameraSystem.h" />
     <ClInclude Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.h" />
+    <ClInclude Include="src\Modules\Editor\Systems\UIPointerCollisionSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\CreateTransformationControlsSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\HandleTransformationControlsDragSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\TransformationControlActivationSystem.h" />
@@ -794,6 +795,7 @@
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.cpp" />
+    <ClCompile Include="src\Modules\Editor\Systems\UIPointerCollisionSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\TransformationControls\Systems\CreateTransformationControlsSystem.cpp"/>
     <ClCompile Include="src\Modules\Editor\TransformationControls\Systems\HandleTransformationControlsDragSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\TransformationControls\Systems\TransformationControlActivationSystem.cpp"/>

@@ -10,6 +10,7 @@ namespace rei::editor
 
         bool DragActive;
         math::Vector3 TargetDragStartScale = {};
+        math::Vector3 PartDragStartPosition = {};
         f32 ArrowDragStartScale = {};
         math::Vector3 DragOffset = {};
         math::Plane DragPlane = {};

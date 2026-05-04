@@ -18,7 +18,9 @@ namespace rei::ui
         REI_API const math::Vector2& GetAnchorMin() const;
         REI_API const math::Vector2& GetAnchorMax() const;
         REI_API const math::Vector2& GetPivot() const;
+        REI_API math::Vector2& GetAnchoredPosition();
         REI_API const math::Vector2& GetAnchoredPosition() const;
+        REI_API math::Vector2& GetSizeDelta();
         REI_API const math::Vector2& GetSizeDelta() const;
     };
 }

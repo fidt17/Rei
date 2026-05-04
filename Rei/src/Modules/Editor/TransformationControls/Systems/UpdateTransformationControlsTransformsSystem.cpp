@@ -92,9 +92,11 @@ namespace rei::editor
         const auto& control = GET(controlEntity, TransformationControl);
         if (!control.HasTargets()) return;
 
-        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
         const auto targetPosition = control.PivotWorldPosition;
-        const auto targetRotation = primaryTargetTransform.GetWorldRotation();
+        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
+        const auto targetRotation = control.HasRectTransformTargets
+            ? mainCamera.Get().GetTransform().GetWorldRotation()
+            : primaryTargetTransform.GetWorldRotation();
 
         const f32 controlScale = mainCamera.Get().CalculateConstantScale(targetPosition, 0.5f);
 

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.TransformationControls;
@@ -18,6 +19,17 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     {
         get => _canUseLocalSpace;
         private set => SetField(ref _canUseLocalSpace, value);
+    }
+
+    #endregion
+
+    #region CanUseWorldSpace
+
+    private bool _canUseWorldSpace = true;
+    public bool CanUseWorldSpace
+    {
+        get => _canUseWorldSpace;
+        private set => SetField(ref _canUseWorldSpace, value);
     }
 
     #endregion
@@ -91,16 +103,19 @@ public class TransformationControlSettingsViewModel : BaseViewModel
     private readonly IEngineApi _engineApi;
     private readonly IEngineRunner _engineRunner;
     private readonly ISelectionService _selectionService;
+    private readonly IBehaviourRegistry _behaviourRegistry;
+    private bool _hasRectTransformSelection;
 
 #pragma warning disable CS8618
     public TransformationControlSettingsViewModel() { }
 #pragma warning restore CS8618
 
-    public TransformationControlSettingsViewModel(IEngineApi engineApi, IEngineRunner engineRunner, ISelectionService selectionService)
+    public TransformationControlSettingsViewModel(IEngineApi engineApi, IEngineRunner engineRunner, ISelectionService selectionService, IBehaviourRegistry behaviourRegistry)
     {
         _engineApi = engineApi;
         _engineRunner = engineRunner;
         _selectionService = selectionService;
+        _behaviourRegistry = behaviourRegistry;
 
         _engineRunner.IsActive.Subscribe(HandleEngineIsActiveValueChangedEvent);
         _selectionService.SelectionChanged.Subscribe(HandleSelectionChangedEvent);
@@ -124,13 +139,24 @@ public class TransformationControlSettingsViewModel : BaseViewModel
 
     private void UpdateSelectionModeState(IReadOnlyCollection<ISelectable> selectedItems)
     {
-        var selectedEntityCount = selectedItems
+        var selectedEntities = selectedItems
             .OfType<IEntitySelectable>()
-            .Select(selectable => selectable.Entity.Id)
-            .Distinct()
-            .Count();
+            .Select(selectable => selectable.Entity)
+            .GroupBy(entity => entity.Id)
+            .Select(group => group.First())
+            .ToList();
 
-        CanUseLocalSpace = selectedEntityCount <= 1;
+        var rectTransformId = _behaviourRegistry.GetIdByName(EngineBehavioursConstants.RECT_TRANSFORM);
+        _hasRectTransformSelection = rectTransformId != null && selectedEntities.Any(entity => entity.GetBehaviour(rectTransformId) != null);
+
+        CanUseWorldSpace = !_hasRectTransformSelection;
+        CanUseLocalSpace = selectedEntities.Count <= 1 || _hasRectTransformSelection;
+        if (_hasRectTransformSelection)
+        {
+            ApplySpaceMode(worldSpace: false);
+            return;
+        }
+
         if (CanUseLocalSpace || !IsLocalSpace) return;
 
         ApplySpaceMode(worldSpace: true);
@@ -153,6 +179,8 @@ public class TransformationControlSettingsViewModel : BaseViewModel
 
     public void SetWorldSpace()
     {
+        if (_hasRectTransformSelection) return;
+
         ApplySpaceMode(worldSpace: true);
     }
 

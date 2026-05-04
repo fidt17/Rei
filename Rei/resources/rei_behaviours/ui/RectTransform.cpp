@@ -19,9 +19,19 @@ namespace rei::ui
         return _pivot;
     }
 
+    math::Vector2& RectTransform::GetAnchoredPosition()
+    {
+        return _anchoredPosition;
+    }
+
     const math::Vector2& RectTransform::GetAnchoredPosition() const
     {
         return _anchoredPosition;
+    }
+
+    math::Vector2& RectTransform::GetSizeDelta()
+    {
+        return _sizeDelta;
     }
 
     const math::Vector2& RectTransform::GetSizeDelta() const

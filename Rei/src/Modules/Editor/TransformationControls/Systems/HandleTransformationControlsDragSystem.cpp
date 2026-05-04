@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "HandleTransformationControlsDragSystem.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "glm/gtc/quaternion.hpp"
@@ -8,6 +9,9 @@
 #include "Modules/Physics/PointerCollisionListener.h"
 #include "rei_behaviours/render/camera/Camera.h"
 #include "rei_behaviours/transformation/Transform.h"
+#include "rei_behaviours/ui/Canvas.h"
+#include "rei_behaviours/ui/RectTransform.h"
+#include "Common/Transform/RectTransformUtility.h"
 
 namespace rei::editor
 {
@@ -45,6 +49,16 @@ namespace rei::editor
         return snappedDelta;
     }
 
+    bool HandleTransformationControlsDragSystem::HasRectTransformTargets(const TransformationControl& control) const
+    {
+        for (const auto entity : control.TargetEntities)
+        {
+            if (!IS_DEAD(entity) && HAS(entity, ui::RectTransform)) return true;
+        }
+
+        return false;
+    }
+
     void HandleTransformationControlsDragSystem::CaptureDragStartTargetStates(TransformationControl& control) const
     {
         control.DragStartTargetStates.clear();
@@ -59,6 +73,10 @@ namespace rei::editor
             targetState.LocalPosition = transform.GetLocalPosition();
             targetState.LocalScale = transform.GetLocalScale();
             targetState.LocalRotation = transform.GetLocalRotation();
+            if (HAS(entity, ui::RectTransform))
+            {
+                targetState.AnchoredPosition = GET(entity, ui::RectTransform).GetAnchoredPosition();
+            }
             control.DragStartTargetStates.push_back(targetState);
         }
     }
@@ -132,8 +150,185 @@ namespace rei::editor
         control.DragStartTargetStates.clear();
     }
 
+    bool HandleTransformationControlsDragSystem::HandleUiMovementDrag(TransformationControl& control) const
+    {
+        if (!HasRectTransformTargets(control)) return false;
+
+        math::Vector3 pointerPos;
+        Input::GetMousePosition(pointerPos.x, pointerPos.y);
+
+        auto tryMove = [&](TransformationControlMovementArrow& arrow) -> bool
+        {
+            const auto& pointerListener = GET(arrow.Entity, physics::PointerCollisionListener);
+            if (!arrow.DragActive && pointerListener.IsInside)
+            {
+                arrow.DragActive = true;
+                arrow.PartDragStartPosition = pointerPos;
+                CaptureDragStartTargetStates(control);
+            }
+
+            if (arrow.DragActive)
+            {
+                const auto canvasEntity = ui_utility::FindCanvasEntity(control.PrimaryTargetEntity);
+                if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, ui::Canvas)) return true;
+
+                const auto mainCamera = render::Camera::GetMainCamera();
+                if (mainCamera.IsNull()) return true;
+
+                i32 width = 1;
+                i32 height = 1;
+                mainCamera.Get().GetOutputSize(width, height);
+
+                const f32 scaleFactor = ui_utility::CalculateCanvasScaleFactor(GET(canvasEntity, ui::Canvas), width, height);
+                if (scaleFactor <= 0.0f) return true;
+
+                math::Vector2 delta(
+                    (pointerPos.x - arrow.PartDragStartPosition.x) / scaleFactor,
+                    -(pointerPos.y - arrow.PartDragStartPosition.y) / scaleFactor);
+
+                if (arrow.Direction.x == 0.0f) delta.x = 0.0f;
+                if (arrow.Direction.y == 0.0f) delta.y = 0.0f;
+                if (IsSnappingEnabled())
+                {
+                    delta.x = SnapValue(delta.x, MOVE_SNAP_STEP);
+                    delta.y = SnapValue(delta.y, MOVE_SNAP_STEP);
+                }
+
+                for (const auto entity : control.TargetEntities)
+                {
+                    if (IS_DEAD(entity) || !HAS(entity, ui::RectTransform)) continue;
+
+                    const auto* dragStartState = FindDragStartTargetState(control, entity);
+                    if (dragStartState == nullptr) continue;
+
+                    GET(entity, ui::RectTransform).GetAnchoredPosition() = dragStartState->AnchoredPosition + delta;
+                }
+            }
+
+            return arrow.DragActive;
+        };
+
+        if (control.RightMovementArrow.DragActive && tryMove(control.RightMovementArrow)) return true;
+        if (control.UpMovementArrow.DragActive && tryMove(control.UpMovementArrow)) return true;
+
+        if (tryMove(control.RightMovementArrow)) return true;
+        if (tryMove(control.UpMovementArrow)) return true;
+        return false;
+    }
+
+    bool HandleTransformationControlsDragSystem::HandleUiScaleDrag(TransformationControl& control) const
+    {
+        if (!HasRectTransformTargets(control)) return false;
+
+        math::Vector3 pointerPos;
+        Input::GetMousePosition(pointerPos.x, pointerPos.y);
+
+        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
+        auto tryScale = [&](TransformationControlScaleArrow& arrow) -> bool
+        {
+            const auto& pointerListener = GET(arrow.Entity, physics::PointerCollisionListener);
+            if (!arrow.DragActive && pointerListener.IsInside)
+            {
+                arrow.DragActive = true;
+                arrow.TargetDragStartScale = primaryTargetTransform.GetWorldScale();
+                arrow.PartDragStartPosition = pointerPos;
+                CaptureDragStartTargetStates(control);
+            }
+
+            if (arrow.DragActive)
+            {
+                const auto rawDelta = pointerPos - arrow.PartDragStartPosition;
+                const f32 axisDelta = arrow.Direction.x != 0.0f ? rawDelta.x : -rawDelta.y;
+                f32 scaleDeltaValue = axisDelta * 0.01f;
+                if (IsSnappingEnabled()) scaleDeltaValue = SnapValue(scaleDeltaValue, SCALE_SNAP_STEP);
+
+                math::Vector3 scaleDelta = {};
+                if (arrow.Direction.x != 0.0f) scaleDelta.x = scaleDeltaValue;
+                if (arrow.Direction.y != 0.0f) scaleDelta.y = scaleDeltaValue;
+
+                for (const auto entity : control.TargetEntities)
+                {
+                    if (IS_DEAD(entity) || !HAS(entity, ui::RectTransform) || !HAS(entity, Transform)) continue;
+
+                    const auto* dragStartState = FindDragStartTargetState(control, entity);
+                    if (dragStartState == nullptr) continue;
+
+                    GET(entity, Transform).GetLocalScale() = dragStartState->LocalScale + scaleDelta;
+                }
+
+                arrow.CurrentScaleMlt = scaleDeltaValue;
+            }
+
+            return arrow.DragActive;
+        };
+
+        if (control.RightScaleArrow.DragActive && tryScale(control.RightScaleArrow)) return true;
+        if (control.UpScaleArrow.DragActive && tryScale(control.UpScaleArrow)) return true;
+
+        if (tryScale(control.RightScaleArrow)) return true;
+        if (tryScale(control.UpScaleArrow)) return true;
+        return false;
+    }
+
+    bool HandleTransformationControlsDragSystem::HandleUiRotationDrag(TransformationControl& control) const
+    {
+        if (!HasRectTransformTargets(control)) return false;
+
+        math::Vector3 pointerPos;
+        Input::GetMousePosition(pointerPos.x, pointerPos.y);
+
+        auto& primaryTargetTransform = GET(control.PrimaryTargetEntity, Transform);
+        auto tryRotate = [&](TransformationControlRotationRing& ring) -> bool
+        {
+            const auto& pointerListener = GET(ring.Entity, physics::PointerCollisionListener);
+            const math::Vector2 center = control.PivotScreenPosition;
+            const math::Vector2 pointer(pointerPos.x, pointerPos.y);
+
+            if (!ring.DragActive && pointerListener.IsInside)
+            {
+                ring.DragActive = true;
+                ring.TargetDragStartRotation = primaryTargetTransform.GetWorldRotation();
+                ring.DragStartDirection = math::Vector3(pointer.x - center.x, pointer.y - center.y, 0.0f);
+                CaptureDragStartTargetStates(control);
+            }
+
+            if (ring.DragActive)
+            {
+                auto start = ring.DragStartDirection;
+                auto current = math::Vector3(pointer.x - center.x, pointer.y - center.y, 0.0f);
+                if (start.Length() <= 0.0001f || current.Length() <= 0.0001f) return true;
+
+                start = math::Vector3::Normalize(start);
+                current = math::Vector3::Normalize(current);
+                f32 dotValue = std::clamp(math::Vector3::Dot(start, current), -1.0f, 1.0f);
+                const f32 signedArea = start.x * current.y - start.y * current.x;
+                const f32 angleDeg = static_cast<f32>(std::atan2(signedArea, dotValue) * (180.0f / PI));
+                const f32 appliedAngleDeg = IsSnappingEnabled()
+                    ? SnapValue(angleDeg, ROTATION_SNAP_STEP_DEGREES)
+                    : angleDeg;
+                const auto delta = glm::angleAxis(glm::radians(-appliedAngleDeg), glm::vec3(0, 0, 1));
+
+                for (const auto entity : control.TargetEntities)
+                {
+                    if (IS_DEAD(entity) || !HAS(entity, ui::RectTransform) || !HAS(entity, Transform)) continue;
+
+                    const auto* dragStartState = FindDragStartTargetState(control, entity);
+                    if (dragStartState == nullptr) continue;
+
+                    GET(entity, Transform).SetRotation(glm::normalize(delta * dragStartState->LocalRotation));
+                }
+            }
+
+            return ring.DragActive;
+        };
+
+        if (control.ForwardRotationRing.DragActive && tryRotate(control.ForwardRotationRing)) return true;
+        return tryRotate(control.ForwardRotationRing);
+    }
+
     void HandleTransformationControlsDragSystem::HandleMovementDrag(TransformationControl& control) const
     {
+        if (HandleUiMovementDrag(control)) return;
         if (!control.HasTargets()) return;
 
         const auto mainCamera = render::Camera::GetMainCamera();
@@ -219,6 +414,7 @@ namespace rei::editor
 
     void HandleTransformationControlsDragSystem::HandleScaleDrag(TransformationControl& control) const
     {
+        if (HandleUiScaleDrag(control)) return;
         if (!control.HasTargets()) return;
 
         const auto mainCamera = render::Camera::GetMainCamera();
@@ -390,6 +586,7 @@ namespace rei::editor
 
     void HandleTransformationControlsDragSystem::HandleRotationDrag(TransformationControl& control) const
     {
+        if (HandleUiRotationDrag(control)) return;
         if (!control.HasTargets()) return;
 
         const auto mainCamera = render::Camera::GetMainCamera();
@@ -444,8 +641,8 @@ namespace rei::editor
                 if (dotValue < -1.0f) dotValue = -1.0f;
 
                 const f32 signedArea = math::Vector3::Dot(ring.DragAxis, math::Vector3::Cross(ring.DragStartDirection, currentDir));
-                const f32 angleRad = std::atan2(signedArea, dotValue);
-                const f32 angleDeg = angleRad * (180.0f / PI);
+                const f32 angleRad = static_cast<f32>(std::atan2(signedArea, dotValue));
+                const f32 angleDeg = static_cast<f32>(angleRad * (180.0f / PI));
                 const f32 appliedAngleDeg = IsSnappingEnabled()
                     ? SnapValue(angleDeg, ROTATION_SNAP_STEP_DEGREES)
                     : angleDeg;

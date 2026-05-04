@@ -15,6 +15,8 @@ namespace rei::editor
         std::vector<ecs::Entity> TargetEntities = {};
         std::vector<TransformationControlTargetState> DragStartTargetStates = {};
         math::Vector3 PivotWorldPosition = {};
+        math::Vector2 PivotScreenPosition = {};
+        bool HasRectTransformTargets = false;
 
         TransformationControlMovementArrow RightMovementArrow = {};
         TransformationControlMovementArrow UpMovementArrow = {};
@@ -39,7 +41,7 @@ namespace rei::editor
 
         bool IsUsingWorldSpace() const
         {
-            return UseWorldSpace || TargetEntities.size() > 1;
+            return !HasRectTransformTargets && (UseWorldSpace || TargetEntities.size() > 1);
         }
     };
 }

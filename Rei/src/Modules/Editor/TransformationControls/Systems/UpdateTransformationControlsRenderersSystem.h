@@ -5,6 +5,7 @@
 
 namespace rei::editor
 {
+    struct TransformationControl;
     struct TransformationControlMovementArrow;
 
     class UpdateTransformationControlsRenderersSystem : public ecs::System
@@ -15,6 +16,11 @@ namespace rei::editor
         void OnUpdate() override;
 
     private:
+        void UpdateMovementControls(const TransformationControl& control, bool isVisible, bool showDepthControls) const;
+        void UpdateScaleControls(const TransformationControl& control, bool isVisible, bool showDepthControls) const;
+        void UpdateRotationControls(const TransformationControl& control, bool isVisible, bool showDepthControls) const;
+        void UpdateControlPart(const ecs::Entity& e, bool visible, const render::Color& defaultColor, const render::Color& highlightColor) const;
+        void SetControlPartVisible(const ecs::Entity& e, bool visible) const;
         void UpdateRenderer(const ecs::Entity& e, const render::Color& defaultColor, const render::Color& highlightColor) const;
         
     private:
@@ -26,7 +32,7 @@ namespace rei::editor
         render::Color greenBright = render::Color::FromHex("#2FCE89");
         render::Color blue = render::Color::FromHex("#264b96");
         render::Color blueBright = render::Color::FromHex("#2E5BB4");
-        render::Color grey = render::Color(0.7, 0.7, 0.7, 1);
-        render::Color greyBright = render::Color(0.8, 0.8, 0.8);
+        render::Color grey = render::Color(0.7f, 0.7f, 0.7f, 1.0f);
+        render::Color greyBright = render::Color(0.8f, 0.8f, 0.8f);
     };
 }

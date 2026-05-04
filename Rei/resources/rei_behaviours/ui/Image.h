@@ -32,6 +32,7 @@ namespace rei::ui
     private:
         void EnsureMaterialInstance();
         void SyncMaterialProperties();
+        void ConfigureEditorSelection() const;
     };
 }
 

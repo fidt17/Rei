@@ -111,8 +111,8 @@ void rei::render::DefaultRenderScenario::RenderInWireframeMode() const
     ClearBuffer();
 
     RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
-    RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
     _uiRenderModule->Render();
+    RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
 }
 
 void rei::render::DefaultRenderScenario::RenderInNormalMode()
@@ -149,8 +149,8 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     _outline->RenderOutlineFrame();
     // ------
 
-    RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
     _uiRenderModule->Render();
+    RenderMeshRenderers(SORTING_ORDER_POST_PROCESSING + 1, SORTING_ORDER_MAX_VALUE);
 }
 
 void rei::render::DefaultRenderScenario::RenderInDepthMode() const

@@ -37,7 +37,11 @@
             <DataTemplate DataType="custom:Vector3PropertyViewModel">
                 <custom1:Vector3PropertyView Margin="1" />
             </DataTemplate>
-            
+
+            <DataTemplate DataType="custom:Vector2PropertyViewModel">
+                <custom1:Vector2PropertyView Margin="1" />
+            </DataTemplate>
+
             <DataTemplate DataType="custom:ColorPropertyViewModel">
                 <custom1:ColorPropertyView Margin="1" />
             </DataTemplate>

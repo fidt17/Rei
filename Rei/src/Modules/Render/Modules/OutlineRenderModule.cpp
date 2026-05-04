@@ -1,10 +1,16 @@
 #include "pch.h"
 #include "OutlineRenderModule.h"
 
+#include "Common/Transform/RectTransformUtility.h"
+#include "glm/ext/matrix_clip_space.hpp"
+#include "Modules/Components/ActiveTag.h"
 #include "rei_behaviours/render/MeshRenderer.h"
 #include "rei_behaviours/render/RenderOutlineTag.h"
 #include "rei_behaviours/render/SpriteRenderer.h"
 #include "rei_behaviours/transformation/Transform.h"
+#include "rei_behaviours/ui/Canvas.h"
+#include "rei_behaviours/ui/Image.h"
+#include "rei_behaviours/ui/RectTransform.h"
 
 rei::render::OutlineRenderModule::OutlineRenderModule(const std::shared_ptr<CameraModule>& cameraModule): _cameraModule(cameraModule)
 {
@@ -39,9 +45,15 @@ void rei::render::OutlineRenderModule::RenderOutlineFrame() const
 
 void rei::render::OutlineRenderModule::RenderOutlineObjects() const
 {
+    RenderMeshOutlines();
+    RenderSpriteOutlines();
+    RenderUiImageOutlines();
+}
+
+void rei::render::OutlineRenderModule::RenderMeshOutlines() const
+{
     ECS_WORLD(rei::GetInternalWorld());
     const auto meshRenderers = FILTER(MeshRenderer, RenderOutlineTag);
-    const auto spriteRenderers = FILTER(SpriteRenderer, RenderOutlineTag);
 
     FOR(e, meshRenderers)
     {
@@ -51,6 +63,12 @@ void rei::render::OutlineRenderModule::RenderOutlineObjects() const
         shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
         meshRenderer.Render();
     }
+}
+
+void rei::render::OutlineRenderModule::RenderSpriteOutlines() const
+{
+    ECS_WORLD(rei::GetInternalWorld());
+    const auto spriteRenderers = FILTER(SpriteRenderer, RenderOutlineTag);
 
     FOR(e, spriteRenderers)
     {
@@ -62,3 +80,39 @@ void rei::render::OutlineRenderModule::RenderOutlineObjects() const
     }
 }
 
+void rei::render::OutlineRenderModule::RenderUiImageOutlines() const
+{
+    ECS_WORLD(rei::GetInternalWorld());
+    const auto uiImages = FILTER(ui::Image, ui::RectTransform, Transform, RenderOutlineTag, ActiveTag);
+
+    const glm::mat4 projection = glm::ortho(0.0f, static_cast<f32>(_cameraModule->GetWidth()), 0.0f, static_cast<f32>(_cameraModule->GetHeight()), -1.0f, 1.0f);
+    const glm::mat4 view = glm::mat4(1.0f);
+    FOR(e, uiImages)
+    {
+        const auto& image = GET(e, rei::ui::Image);
+        if (!image.IsEnabled()) continue;
+
+        const auto canvasEntity = ui_utility::FindCanvasEntity(e);
+        if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, rei::ui::Canvas)) continue;
+
+        const auto& canvas = GET(canvasEntity, rei::ui::Canvas);
+        const auto logicalRect = ui_utility::CalculateRect(e, canvasEntity, *_cameraModule);
+        const f32 scaleFactor = ui_utility::CalculateCanvasScaleFactor(canvas, *_cameraModule);
+        auto pixelRect = math::Rect {
+            logicalRect.Min * scaleFactor,
+            logicalRect.Max * scaleFactor
+        };
+        pixelRect = ui_utility::ApplyAspectPreservation(pixelRect, image);
+
+        const auto pixelSize = pixelRect.GetSize();
+        if (pixelSize.x <= 0.0f || pixelSize.y <= 0.0f) continue;
+
+        auto model = ui_utility::BuildModelMatrix(pixelRect, GET(e, rei::ui::RectTransform), GET(e, rei::Transform));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+
+        const Shader& shader = image.GetRenderMaterial().GetShader();
+        shader.SetViewMatrices(projection, view, model);
+        image.GetRenderMaterial().Use();
+        _quadVertexData.Render();
+    }
+}

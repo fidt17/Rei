@@ -54,6 +54,7 @@
 
                 <Button
                     Command="{Binding SetWorldSpace}"
+                    IsEnabled="{Binding CanUseWorldSpace}"
                     IsVisible="{Binding IsLocalSpace}">
                     <StackPanel
                         Spacing="5"

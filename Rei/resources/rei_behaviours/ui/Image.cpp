@@ -2,18 +2,24 @@
 
 #include "Image.h"
 
+#include "Engine/Engine.h"
+#include "Modules/Editor/Components/SelectableByPointerTag.h"
+#include "Modules/Physics/PointerCollisionListener.h"
+
 namespace rei::ui
 {
     void Image::AfterREI_SET()
     {
         EnsureMaterialInstance();
         SyncMaterialProperties();
+        ConfigureEditorSelection();
     }
 
     void Image::Init()
     {
         EnsureMaterialInstance();
         SyncMaterialProperties();
+        ConfigureEditorSelection();
     }
 
     void Image::Dispose()
@@ -68,5 +74,16 @@ namespace rei::ui
 
         _materialInstance->SetColor("_Color", _color);
         _materialInstance->SetTexture("_MainTex", _texture);
+    }
+
+    void Image::ConfigureEditorSelection() const
+    {
+        if (!GetEngine().IsEditor()) return;
+
+        ECS_WORLD(GetInternalWorld())
+
+        const auto entity = GetEntity();
+        GET(entity, physics::PointerCollisionListener);
+        GET(entity, editor::SelectableByPointerTag);
     }
 }

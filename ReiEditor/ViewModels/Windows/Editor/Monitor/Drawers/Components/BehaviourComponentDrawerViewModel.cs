@@ -38,6 +38,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
     private readonly ITextEditorFileOpener _textEditorFileOpener;
+    private readonly IRectTransformCustomPropertiesProvider _rectTransformCustomPropertiesProvider;
 
 #pragma warning disable CS8618
     public BehaviourComponentDrawerViewModel() { }
@@ -56,7 +57,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
-        ITextEditorFileOpener textEditorFileOpener)
+        ITextEditorFileOpener textEditorFileOpener,
+        IRectTransformCustomPropertiesProvider rectTransformCustomPropertiesProvider)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
@@ -71,6 +73,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _sceneManagementService = sceneManagementService;
         _selectionService = selectionService;
         _textEditorFileOpener = textEditorFileOpener;
+        _rectTransformCustomPropertiesProvider = rectTransformCustomPropertiesProvider;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
         {
@@ -137,6 +140,11 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
             
             var property = BehaviourComponent.GetProperty(propertyName);
             Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
+        }
+
+        foreach (var property in _rectTransformCustomPropertiesProvider.CreateProperties(_entity, BehaviourComponent))
+        {
+            Properties.Add(property);
         }
     }
 }

@@ -9,6 +9,7 @@
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Render/Mesh/VertexObjects/QuadVertexObject.h"
 #include "Modules/Render/Shaders/Shader.h"
+#include "rei_behaviours/transformation/Transform.h"
 #include "rei_behaviours/ui/Canvas.h"
 #include "rei_behaviours/ui/Image.h"
 #include "rei_behaviours/ui/RectTransform.h"
@@ -49,6 +50,7 @@ namespace rei::render
             auto& image = GET(e, rei::ui::Image);
             if (!image.IsEnabled()) continue;
             if (!HAS(e, rei::ui::RectTransform)) continue;
+            if (!HAS(e, rei::Transform)) continue;
 
             const auto canvasEntity = ui_utility::FindCanvasEntity(e);
             if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, rei::ui::Canvas)) continue;
@@ -65,9 +67,10 @@ namespace rei::render
             const math::Vector2 pixelSize = pixelRect.GetSize();
             if (pixelSize.x <= 0.0f || pixelSize.y <= 0.0f) continue;
 
+            const auto& rectTransform = GET(e, rei::ui::RectTransform);
             const auto& material = image.GetRenderMaterial();
             const Shader& shader = material.GetShader();
-            shader.SetViewMatrices(projection, view, ui_utility::BuildModelMatrix(pixelRect));
+            shader.SetViewMatrices(projection, view, ui_utility::BuildModelMatrix(pixelRect, rectTransform, GET(e, rei::Transform)));
             material.Use();
 
             for (const auto& mesh : _quadModel->GetMeshes())
