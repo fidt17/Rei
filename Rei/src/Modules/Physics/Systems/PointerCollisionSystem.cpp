@@ -30,8 +30,9 @@ namespace rei::physics
 
             listener.DidEnter = false;
             listener.DidExit = false;
+            if (!listener.Collider) continue;
 
-            if (listener.Collider && listener.Collider->Intersect(ray, transform.CalculateWorldModelMatrix(), listener.CollisionPoint))
+            if (listener.Collider->Intersect(ray, transform.CalculateWorldModelMatrix(), listener.CollisionPoint))
             {
                 if (!listener.IsInside)
                 {

@@ -571,6 +571,7 @@
     <ClInclude Include="resources\rei_behaviours\transformation\Transform.h" />
     <ClInclude Include="src\Common\Math\Rect.h" />
     <ClInclude Include="src\Common\Transform\TransformHierarchyUtility.h" />
+    <ClInclude Include="resources\rei_behaviours\ui\Button.h" />
     <ClInclude Include="resources\rei_behaviours\ui\Canvas.h" />
     <ClInclude Include="resources\rei_behaviours\ui\CanvasScaleMode.h" />
     <ClInclude Include="resources\rei_behaviours\ui\Image.h" />
@@ -749,6 +750,7 @@
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
     <ClCompile Include="src\Common\Math\Rect.cpp" />
     <ClCompile Include="src\Common\Transform\TransformHierarchyUtility.cpp" />
+    <ClCompile Include="resources\rei_behaviours\ui\Button.cpp" />
     <ClCompile Include="resources\rei_behaviours\ui\Canvas.cpp" />
     <ClCompile Include="resources\rei_behaviours\ui\Image.cpp" />
     <ClCompile Include="resources\rei_behaviours\ui\RectTransform.cpp" />

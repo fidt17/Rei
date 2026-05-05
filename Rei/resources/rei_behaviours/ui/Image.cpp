@@ -12,14 +12,14 @@ namespace rei::ui
     {
         EnsureMaterialInstance();
         SyncMaterialProperties();
-        ConfigureEditorSelection();
+        ConfigurePointerInteraction();
     }
 
     void Image::Init()
     {
         EnsureMaterialInstance();
         SyncMaterialProperties();
-        ConfigureEditorSelection();
+        ConfigurePointerInteraction();
     }
 
     void Image::Dispose()
@@ -34,6 +34,12 @@ namespace rei::ui
     render::Color Image::GetColor() const
     {
         return _color;
+    }
+
+    void Image::SetColor(const render::Color& color)
+    {
+        _color = color;
+        SyncMaterialProperties();
     }
 
     bool Image::PreserveAspect() const
@@ -76,10 +82,8 @@ namespace rei::ui
         _materialInstance->SetTexture("_MainTex", _texture);
     }
 
-    void Image::ConfigureEditorSelection() const
+    void Image::ConfigurePointerInteraction() const
     {
-        if (!GetEngine().IsEditor()) return;
-
         ECS_WORLD(GetInternalWorld())
 
         const auto entity = GetEntity();

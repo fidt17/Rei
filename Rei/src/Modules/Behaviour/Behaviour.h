@@ -40,8 +40,8 @@ namespace rei
         Behaviour& operator=(const Behaviour& other) = default;
 
         REI_API bool IsEnabled() const;
-        REI_API void Enable();
-        REI_API void Disable();
+        virtual REI_API void Enable();
+        virtual REI_API void Disable();
 
     private:
         i32 _id{};

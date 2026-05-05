@@ -49,9 +49,6 @@ namespace rei::internal::engine
         {
             _world->AddSystem<behaviour::StartBehavioursSystem>(entityManager);
             _world->AddSystem<ecs::DeleteHere<StartBehavioursEvent>>();
-
-            _world->AddSystem<behaviour::UpdateBehavioursSystem>(entityManager);
-            _world->AddSystem([&] { app->OnUpdate(); });
         }
 
         _world->AddSystem<render::DebugOverlayToggleSystem>();
@@ -59,11 +56,17 @@ namespace rei::internal::engine
         _world->AddSystem<render::AssignMainCameraSystem>(renderer);
 
         _world->AddSystem<physics::PointerCollisionSystem>();
+        _world->AddSystem<editor::UIPointerCollisionSystem>();
 
-        if (GetEngine().IsEditor())
+        if (GetEngine().IsPlaymode())
+        {
+            _world->AddSystem<behaviour::UpdateBehavioursSystem>(entityManager);
+            _world->AddSystem([&] { app->OnUpdate(); });
+        }
+
+        if (GetEngine().IsEditorMode())
         {
             _world->AddSystem<editor::FlyCameraSystem>();
-            _world->AddSystem<editor::UIPointerCollisionSystem>();
             _world->AddSystem<editor::PointerEntitySelectionSystem>();
 
             _world->AddModule<editor::TransformationControlsModule>();

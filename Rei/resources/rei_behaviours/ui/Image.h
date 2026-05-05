@@ -25,6 +25,7 @@ namespace rei::ui
 
         REI_API const assets::AssetRef<render::Texture>& GetTexture() const;
         REI_API render::Color GetColor() const;
+        REI_API void SetColor(const render::Color& color);
         REI_API bool PreserveAspect() const;
         REI_API bool IsRaycastTarget() const;
         REI_API const render::Material& GetRenderMaterial() const;
@@ -32,7 +33,7 @@ namespace rei::ui
     private:
         void EnsureMaterialInstance();
         void SyncMaterialProperties();
-        void ConfigureEditorSelection() const;
+        void ConfigurePointerInteraction() const;
     };
 }
 
