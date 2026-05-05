@@ -6,6 +6,7 @@
 
 #include "Serialization/BinaryWriter.h"
 
+#include "Builders/FontBuilder.h"
 #include "Builders/ModelBuilder.h"
 #include "Builders/TextureBuilder.h"
 #include "Common/Time/ScopedTimer.h"
@@ -52,6 +53,8 @@ namespace rei::resources
         ADD_TO_MAP(".jpg", TextureBuilder().BuildTextureAsset)
         ADD_TO_MAP(".obj", ModelBuilder().BuildModelAsset)
         ADD_TO_MAP(".fbx", ModelBuilder().BuildModelAsset)
+        ADD_TO_MAP(".ttf", FontBuilder().BuildFontAsset)
+        ADD_TO_MAP(".otf", FontBuilder().BuildFontAsset)
 
         const auto extension = filePath.extension().string();
         

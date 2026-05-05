@@ -700,8 +700,10 @@
     <ClInclude Include="src\Modules\Render\Shaders\ShaderGenerator.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
+    <ClInclude Include="src\Modules\Render\Text\Font.h" />
     <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
+    <ClInclude Include="src\Modules\Resources\Builders\FontBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Builders\ModelBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Builders\TextureBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Serialization\BinaryReader.h" />
@@ -849,8 +851,10 @@
     <ClCompile Include="src\Modules\Render\Shaders\ShaderGenerator.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
+    <ClCompile Include="src\Modules\Render\Text\Font.cpp" />
     <ClCompile Include="src\Modules\Render\Textures\Texture.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
+    <ClCompile Include="src\Modules\Resources\Builders\FontBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Builders\ModelBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Builders\TextureBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Serialization\BinaryReader.cpp" />
@@ -879,6 +883,7 @@
     <ClInclude Include="src\Ecs\FiltersRegistry.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="resources\fonts\Roboto-Regular.ttf" />
     <Content Include="resources\materials\simple_lit.mat" />
     <Content Include="resources\materials\sprite.mat" />
     <Content Include="resources\materials\image.mat" />
@@ -904,6 +909,9 @@
     <Content Include="resources\textures\circle.png" />
     <Content Include="resources\textures\test_texture.png" />
     <Content Include="resources\textures\ring.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="resources\fonts\" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
