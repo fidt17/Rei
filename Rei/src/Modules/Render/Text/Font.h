@@ -16,6 +16,7 @@ namespace rei::render
 
     struct FontGlyph
     {
+        u32 TextureId = 0;
         i32 Width = 0;
         i32 Height = 0;
         i32 BearingX = 0;
@@ -29,6 +30,11 @@ namespace rei::render
     public:
         REI_API Font() = default;
         REI_API explicit Font(resources::BinaryReader& reader);
+        Font(const Font& other) = delete;
+        Font& operator=(const Font& other) = delete;
+        REI_API Font(Font&& other) noexcept;
+        REI_API Font& operator=(Font&& other) noexcept;
+        REI_API ~Font();
 
         REI_API static Font LoadAscii(const std::filesystem::path& fontPath, i32 pixelHeight);
         REI_API void PostLoad();
@@ -45,5 +51,7 @@ namespace rei::render
         std::unordered_map<u8, FontGlyph> _glyphs{};
 
         void LoadAsciiFromMemory();
+        void UploadGlyphTextures();
+        void DeleteGlyphTextures();
     };
 }

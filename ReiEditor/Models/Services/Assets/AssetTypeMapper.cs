@@ -25,6 +25,13 @@ public sealed class AssetTypeMapper : IAssetTypeMapper
             return AssetType.Texture;
         }
 
+        if (string.Equals(templateTypeName, "Font", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(templateTypeName, "render::Font", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(templateTypeName, "rei::render::Font", StringComparison.OrdinalIgnoreCase))
+        {
+            return AssetType.Font;
+        }
+
         return AssetType.Unknown;
     }
 
@@ -35,6 +42,7 @@ public sealed class AssetTypeMapper : IAssetTypeMapper
             AssetType.Model => FileExtensions.ModelAssetExtensions,
             AssetType.Material => FileExtensions.MaterialAssetExtensions,
             AssetType.Texture => FileExtensions.TextureAssetExtensions,
+            AssetType.Font => FileExtensions.FontAssetExtensions,
             _ => Array.Empty<string>()
         };
     }

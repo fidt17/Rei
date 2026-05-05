@@ -24,12 +24,15 @@ public static class FileExtensions
     public const string FBX = ".fbx";
     public const string PNG = ".png";
     public const string JPG = ".jpg";
+    public const string TTF = ".ttf";
+    public const string OTF = ".otf";
     public const string RSHADER = ".rshader";
     public const string MATERIAL = ".mat";
 
     public static readonly IReadOnlyList<string> ModelAssetExtensions = new[] { OBJ, FBX };
     public static readonly IReadOnlyList<string> MaterialAssetExtensions = new[] { MATERIAL };
     public static readonly IReadOnlyList<string> TextureAssetExtensions = new[] { PNG, JPG };
+    public static readonly IReadOnlyList<string> FontAssetExtensions = new[] { TTF, OTF };
     public static readonly HashSet<string> TextEditorOpenExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         H,

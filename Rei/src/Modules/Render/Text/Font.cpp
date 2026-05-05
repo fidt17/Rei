@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "Modules/Resources/Serialization/BinaryReader.h"
+#include "glad/glad.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -78,6 +79,34 @@ rei::render::Font::Font(resources::BinaryReader& reader)
     delete[] data;
 }
 
+rei::render::Font::Font(Font&& other) noexcept
+    : _familyName(std::move(other._familyName)),
+      _pixelHeight(other._pixelHeight),
+      _fontData(std::move(other._fontData)),
+      _glyphs(std::move(other._glyphs))
+{
+    other._glyphs.clear();
+}
+
+rei::render::Font& rei::render::Font::operator=(Font&& other) noexcept
+{
+    if (this == &other) return *this;
+
+    DeleteGlyphTextures();
+    _familyName = std::move(other._familyName);
+    _pixelHeight = other._pixelHeight;
+    _fontData = std::move(other._fontData);
+    _glyphs = std::move(other._glyphs);
+    other._glyphs.clear();
+
+    return *this;
+}
+
+rei::render::Font::~Font()
+{
+    DeleteGlyphTextures();
+}
+
 rei::render::Font rei::render::Font::LoadAscii(const std::filesystem::path& fontPath, const i32 pixelHeight)
 {
     REI_THROW_IF(fontPath.empty(), "Font path is empty")
@@ -120,6 +149,7 @@ rei::render::Font rei::render::Font::LoadAscii(const std::filesystem::path& font
 void rei::render::Font::PostLoad()
 {
     LoadAsciiFromMemory();
+    UploadGlyphTextures();
 }
 
 const std::string& rei::render::Font::GetFamilyName() const
@@ -176,4 +206,49 @@ void rei::render::Font::LoadAsciiFromMemory()
 
     FT_Done_Face(face);
     FT_Done_FreeType(library);
+}
+
+void rei::render::Font::UploadGlyphTextures()
+{
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    for (auto& [_, glyph] : _glyphs)
+    {
+        if (glyph.TextureId != 0) continue;
+        if (glyph.Width <= 0 || glyph.Height <= 0 || glyph.Bitmap.empty()) continue;
+
+        glGenTextures(1, &glyph.TextureId);
+        glBindTexture(GL_TEXTURE_2D, glyph.TextureId);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RED,
+            glyph.Width,
+            glyph.Height,
+            0,
+            GL_RED,
+            GL_UNSIGNED_BYTE,
+            glyph.Bitmap.data());
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glyph.Bitmap.clear();
+        glyph.Bitmap.shrink_to_fit();
+    }
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+}
+
+void rei::render::Font::DeleteGlyphTextures()
+{
+    for (auto& [_, glyph] : _glyphs)
+    {
+        if (glyph.TextureId == 0) continue;
+
+        glDeleteTextures(1, &glyph.TextureId);
+        glyph.TextureId = 0;
+    }
 }

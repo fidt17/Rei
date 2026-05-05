@@ -537,6 +537,8 @@ public class BehaviourRegistrySourceGenerator
             "Model" => "rei::render::Model",
             "Material" => "rei::render::Material",
             "Shader" => "rei::render::Shader",
+            "Font" => "rei::render::Font",
+            "render::Font" => "rei::render::Font",
             "Scene" => "rei::scenes::Scene",
             "BuildScenesConfig" => "rei::scenes::BuildScenesConfig",
             _ => templateType
