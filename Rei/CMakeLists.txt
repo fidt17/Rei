@@ -23,12 +23,15 @@ set(REI_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 set(REI_GLFW_LIB "${REI_EXTERNAL_DIR}/glfw/lib-vc2022/glfw3.lib")
 set(REI_ASSIMP_LIB "${REI_EXTERNAL_DIR}/assimp/assimp-vc143-mt.lib")
 set(REI_ASSIMP_DLL "${REI_EXTERNAL_DIR}/assimp/assimp-vc143-mt.dll")
+set(REI_FREETYPE_INCLUDE_DIR "${REI_EXTERNAL_DIR}/freetype/include")
+set(REI_FREETYPE_LIB "${REI_EXTERNAL_DIR}/freetype/lib-vc2022/freetype.lib")
 
 target_include_directories(Rei
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${REI_EXTERNAL_DIR}"
         "${REI_EXTERNAL_DIR}/imgui"
+        "${REI_FREETYPE_INCLUDE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
 
@@ -50,6 +53,7 @@ target_link_libraries(Rei
         Psapi
         "${REI_GLFW_LIB}"
         "${REI_ASSIMP_LIB}"
+        "${REI_FREETYPE_LIB}"
 )
 
 add_custom_command(TARGET Rei POST_BUILD
