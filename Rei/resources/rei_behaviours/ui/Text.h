@@ -14,8 +14,11 @@ namespace rei::ui
         SERIALIZE assets::AssetRef<render::Font> _font = assets::AssetRef<render::Font>("rei_roboto-regular.ttf");
         SERIALIZE render::Color _color = render::Color::White();
         SERIALIZE f32 _size = 48.0f;
+        SERIALIZE bool _raycastTarget = true;
 
     public:
+        REI_API void AfterREI_SET() override;
+        REI_API void Init() override;
         REI_API void LoadAssets(assets::AssetManager& assetManager) override;
 
         REI_API const std::string& GetValue() const;
@@ -26,6 +29,10 @@ namespace rei::ui
         REI_API void SetColor(const render::Color& color);
         REI_API f32 GetSize() const;
         REI_API void SetSize(f32 size);
+        REI_API bool IsRaycastTarget() const;
+
+    private:
+        void ConfigurePointerInteraction() const;
     };
 }
 

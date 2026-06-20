@@ -2,8 +2,21 @@
 
 #include "Text.h"
 
+#include "Modules/Editor/Components/SelectableByPointerTag.h"
+#include "Modules/Physics/PointerCollisionListener.h"
+
 namespace rei::ui
 {
+    void Text::AfterREI_SET()
+    {
+        ConfigurePointerInteraction();
+    }
+
+    void Text::Init()
+    {
+        ConfigurePointerInteraction();
+    }
+
     void Text::LoadAssets(assets::AssetManager& assetManager)
     {
         assetManager.Load(_font);
@@ -47,5 +60,19 @@ namespace rei::ui
     void Text::SetSize(const f32 size)
     {
         _size = size;
+    }
+
+    bool Text::IsRaycastTarget() const
+    {
+        return _raycastTarget;
+    }
+
+    void Text::ConfigurePointerInteraction() const
+    {
+        ECS_WORLD(GetInternalWorld())
+
+        const auto entity = GetEntity();
+        GET(entity, physics::PointerCollisionListener);
+        GET(entity, editor::SelectableByPointerTag);
     }
 }

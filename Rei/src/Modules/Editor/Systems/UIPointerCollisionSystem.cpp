@@ -2,6 +2,7 @@
 #include "UIPointerCollisionSystem.h"
 
 #include "Common/Transform/RectTransformUtility.h"
+#include "Engine/Services.h"
 #include "Modules/Components/ActiveTag.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Physics/PointerCollisionListener.h"
@@ -11,6 +12,7 @@
 #include "rei_behaviours/ui/Canvas.h"
 #include "rei_behaviours/ui/Image.h"
 #include "rei_behaviours/ui/RectTransform.h"
+#include "rei_behaviours/ui/Text.h"
 
 namespace rei::editor
 {
@@ -32,26 +34,55 @@ namespace rei::editor
             return ecs::NULL_ENTITY;
         }
 
-        bool IsImageHit(const ecs::Entity entity, const math::Vector2& screenPoint, const i32 width, const i32 height)
+        bool IsRectHit(const ecs::Entity entity, const math::Vector2& screenPoint, const i32 width, const i32 height, math::Rect pixelRect)
         {
             ECS_WORLD(GetInternalWorld())
-
-            const auto& image = GET(entity, ui::Image);
-            if (!image.IsEnabled() || !image.IsRaycastTarget()) return false;
 
             const auto canvasEntity = ui_utility::FindCanvasEntity(entity);
             if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, ui::Canvas)) return false;
 
             const auto& canvas = GET(canvasEntity, ui::Canvas);
-            const auto logicalRect = ui_utility::CalculateRect(entity, canvasEntity, width, height);
             const f32 scaleFactor = ui_utility::CalculateCanvasScaleFactor(canvas, width, height);
-            auto pixelRect = math::Rect {
-                logicalRect.Min * scaleFactor,
-                logicalRect.Max * scaleFactor
-            };
-            pixelRect = ui_utility::ApplyAspectPreservation(pixelRect, image);
+            pixelRect.Min *= scaleFactor;
+            pixelRect.Max *= scaleFactor;
 
             return ui_utility::IsScreenPointInside(screenPoint, pixelRect, GET(entity, ui::RectTransform), GET(entity, Transform));
+        }
+
+        math::Rect CalculateLogicalRect(const ecs::Entity entity, const i32 width, const i32 height)
+        {
+            const auto canvasEntity = ui_utility::FindCanvasEntity(entity);
+            if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, ui::Canvas)) return {};
+
+            return ui_utility::CalculateRect(entity, canvasEntity, width, height);
+        }
+
+        bool IsImageHit(const ecs::Entity entity, const math::Vector2& screenPoint, const i32 width, const i32 height)
+        {
+            const auto& image = GET(entity, ui::Image);
+            if (!image.IsEnabled() || !image.IsRaycastTarget()) return false;
+
+            const auto logicalRect = CalculateLogicalRect(entity, width, height);
+            auto pixelRect = ui_utility::ApplyAspectPreservation(logicalRect, image);
+            return IsRectHit(entity, screenPoint, width, height, pixelRect);
+        }
+
+        bool IsTextHit(const ecs::Entity entity, const math::Vector2& screenPoint, const i32 width, const i32 height)
+        {
+            const auto& text = GET(entity, ui::Text);
+            if (!text.IsEnabled() || !text.IsRaycastTarget()) return false;
+
+            return IsRectHit(entity, screenPoint, width, height, CalculateLogicalRect(entity, width, height));
+        }
+
+        bool IsUiHit(const ecs::Entity entity, const math::Vector2& screenPoint, const i32 width, const i32 height)
+        {
+            ECS_WORLD(GetInternalWorld())
+
+            if (HAS(entity, ui::Image) && IsImageHit(entity, screenPoint, width, height)) return true;
+            if (HAS(entity, ui::Text) && IsTextHit(entity, screenPoint, width, height)) return true;
+
+            return false;
         }
 
         void SetPointerState(const ecs::Entity entity, const bool isInside, const math::Vector2& screenPoint)
@@ -77,7 +108,7 @@ namespace rei::editor
 
     UIPointerCollisionSystem::UIPointerCollisionSystem(const std::shared_ptr<ecs::World>& world) : System(world)
     {
-        _entities = FILTER(physics::PointerCollisionListener, Transform, ui::RectTransform, ui::Image, ActiveTag);
+        _entities = FILTER(physics::PointerCollisionListener, Transform, ui::RectTransform, ActiveTag);
     }
 
     void UIPointerCollisionSystem::OnUpdate()
@@ -95,12 +126,15 @@ namespace rei::editor
         const math::Vector2 screenPoint(xPos, static_cast<f32>(height) - yPos);
 
         std::unordered_set<ecs::Entity> hitEntities;
+        const bool bubbleToButton = GetEngine().IsPlaymode();
 
         FOR(e, _entities)
         {
-            if (!IsImageHit(e, screenPoint, width, height)) continue;
+            if (!IsUiHit(e, screenPoint, width, height)) continue;
 
             hitEntities.insert(e);
+            if (!bubbleToButton) continue;
+
             const auto buttonEntity = FindNearestButtonEntity(e);
             if (!IS_DEAD(buttonEntity))
             {
