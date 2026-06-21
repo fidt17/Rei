@@ -436,6 +436,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             }
             catch
             {
+                // ignore
             }
         };
 

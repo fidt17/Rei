@@ -86,7 +86,6 @@ public partial class HierarchyMoveTargetLine : UserControl
         }
 
         var targetParentEntityId = NodeData.Node.Parent?.Content.Id;
-        var targetIndex = nodeIndex + (IsTopLine ? 0 : 1);
         var canDrop = hierarchyWindowVm.CanDropEntities(draggedEntityIds, targetParentEntityId);
         IsOver = canDrop;
         e.DragEffects = canDrop ? DragDropEffects.Move : DragDropEffects.None;

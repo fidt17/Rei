@@ -81,7 +81,7 @@ public class EntitySyncService : IEntitySyncService, IDisposable
             {
                 while (_engineRunner.IsActive.Value && !token.IsCancellationRequested)
                 {
-                    await Task.Delay(33, token);
+                    await Task.Delay(16, token);
                     _sceneSyncService.SynchronizeWithEngine();
                 }
             }, token);

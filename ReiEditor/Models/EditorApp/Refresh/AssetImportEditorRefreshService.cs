@@ -13,7 +13,6 @@ public sealed class AssetImportEditorRefreshService : IDisposable
     private readonly IBuildStarter _buildStarter;
     private readonly IBuildService _buildService;
     private readonly IEditorModeStarter _editorModeStarter;
-    private readonly IEngineRunner _engineRunner;
     private readonly ILogger<AssetImportEditorRefreshService> _logger;
 
     private readonly object _refreshLock = new();
@@ -24,14 +23,12 @@ public sealed class AssetImportEditorRefreshService : IDisposable
         IBuildStarter buildStarter,
         IBuildService buildService,
         IEditorModeStarter editorModeStarter,
-        IEngineRunner engineRunner,
         ILogger<AssetImportEditorRefreshService> logger)
     {
         _assetImporter = assetImporter;
         _buildStarter = buildStarter;
         _buildService = buildService;
         _editorModeStarter = editorModeStarter;
-        _engineRunner = engineRunner;
         _logger = logger;
 
         _assetImporter.ImportedAssetsEvent += HandleImportedAssetsEvent;

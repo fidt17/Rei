@@ -4,7 +4,6 @@ using System.Linq;
 using System.Numerics;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
-using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.SerializedProperties;
 

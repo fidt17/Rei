@@ -280,11 +280,6 @@ public class ProjectBuildStateService : IProjectBuildStateService
         return Path.GetFullPath(_editorBuildOutputService.GetLiveOutput().ClientDllPath);
     }
 
-    private static bool AssetOutputsPresent(BuildExecutionContext buildContext)
-    {
-        return GetAssetOutputFiles(buildContext).All(File.Exists);
-    }
-
     private List<string> GetExpectedOutputFiles(BuildExecutionContext buildContext, bool buildSolution, bool buildAssets)
     {
         var outputFiles = new List<string>();

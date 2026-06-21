@@ -13,7 +13,7 @@ public class Shader : Asset
 
     public void SetName(string name)
     {
-        Name = name ?? "";
+        Name = name;
     }
 
     public void SetUniforms(IEnumerable<ShaderUniformInfo> uniforms)

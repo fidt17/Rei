@@ -146,7 +146,6 @@ public class CustomPropertyViewModel : BaseViewModel
             BaseCustomPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
             CustomPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
             CollectionPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
-            null => null,
             _ => null
         };
     }

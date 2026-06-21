@@ -116,7 +116,7 @@
                             Classes="Window"
                             Grid.Column="1">
                             <Grid
-                                Grid.RowDefinitions="Auto, *">
+                                RowDefinitions="Auto, *">
                                 <console:ConsoleEditorWindowHeaderView
                                     Grid.Row="0"
                                     HorizontalAlignment="Right"

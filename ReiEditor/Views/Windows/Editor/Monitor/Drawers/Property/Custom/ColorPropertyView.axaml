@@ -3,69 +3,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
-             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
-             xmlns:picker="clr-namespace:ReiEditor.Views.Controls.ColorPicker"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.ColorPropertyView"
              x:DataType="custom:ColorPropertyViewModel">
-
-    <UserControl.Resources>
-        <Flyout x:Key="ColorEditorFlyout"
-                FlyoutPresenterClasses="Default">
-            <StackPanel Spacing="8"
-                        Width="330">
-                <picker:ColorWheelPicker
-                    Width="220"
-                    Height="220"
-                    HorizontalAlignment="Center"
-                    Hue="{Binding H, Mode=TwoWay}"
-                    Saturation="{Binding S, Mode=TwoWay}"
-                    Brightness="{Binding V, Mode=TwoWay}" />
-
-                <Grid ColumnDefinitions="Auto,*">
-                    <TextBlock
-                        Text="Alpha"
-                        Margin="0,0,6,0"
-                        VerticalAlignment="Center"
-                        Foreground="{StaticResource Gray_4}" />
-                    <Slider
-                        Grid.Column="1"
-                        Minimum="0"
-                        Maximum="1"
-                        Value="{Binding A, Mode=TwoWay}" />
-                </Grid>
-
-                <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*">
-                    <TextBlock Text="R" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding R, Mode=TwoWay}" />
-                    <TextBlock Grid.Column="2" Margin="0,0,4,0" Text="G" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding G, Mode=TwoWay}" />
-                    <TextBlock Grid.Column="4" Margin="0,0,4,0" Text="B" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="5" Margin="0,0,6,0" Text="{Binding B, Mode=TwoWay}" />
-                    <TextBlock Grid.Column="6" Margin="0,0,4,0" Text="A" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="7" Text="{Binding A, Mode=TwoWay}" />
-                </Grid>
-
-                <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">
-                    <TextBlock Text="H" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding H, Mode=TwoWay}" />
-                    <TextBlock Grid.Column="2" Margin="0,0,4,0" Text="S" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding S, Mode=TwoWay}" />
-                    <TextBlock Grid.Column="4" Margin="0,0,4,0" Text="V" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="5" Text="{Binding V, Mode=TwoWay}" />
-                </Grid>
-
-                <Grid ColumnDefinitions="Auto,*">
-                    <TextBlock Text="Hex"
-                               Margin="0,0,4,0"
-                               VerticalAlignment="Center"
-                               Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1"
-                                          Text="{Binding Hex, Mode=TwoWay}" />
-                </Grid>
-            </StackPanel>
-        </Flyout>
-    </UserControl.Resources>
 
     <Design.DataContext>
         <custom:ColorPropertyViewModel />

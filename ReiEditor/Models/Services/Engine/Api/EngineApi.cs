@@ -50,10 +50,6 @@ public class EngineApi : IEngineApi
         {
             Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
         }
-        catch (Exception)
-        {
-            throw;
-        }
         finally
         {
             IsEngineRunning = false;

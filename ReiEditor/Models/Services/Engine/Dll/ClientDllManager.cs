@@ -46,7 +46,7 @@ public class ClientDllManager : IClientDllManager, IDisposable
         var resolvedDllPath = ResolveDllPath(dllPath);
 
         SetDllDirectory(Path.GetDirectoryName(resolvedDllPath)!);
-        _loadedDllPtr = LoadLibrary(Path.GetFileName(resolvedDllPath)!);
+        _loadedDllPtr = LoadLibrary(Path.GetFileName(resolvedDllPath));
         _engineApi.SetDllPtr(_loadedDllPtr);
         _dllLoaded.Value = true;
     }

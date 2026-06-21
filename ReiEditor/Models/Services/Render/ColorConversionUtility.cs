@@ -51,11 +51,11 @@ public static class ColorConversionUtility
             return;
         }
 
-        if (max == r)
+        if (Math.Abs(max - r) < 0.01)
         {
             h = 60f * (((g - b) / delta) % 6f);
         }
-        else if (max == g)
+        else if (Math.Abs(max - g) < 0.01)
         {
             h = 60f * (((b - r) / delta) + 2f);
         }
