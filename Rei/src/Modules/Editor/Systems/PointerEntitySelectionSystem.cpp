@@ -9,6 +9,7 @@
 #include "Modules/Editor/Components/SelectionByPointerBlockerTag.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Physics/PointerCollisionListener.h"
+#include "Modules/Render/UI/UIUtility.h"
 
 namespace rei::editor
 {
@@ -46,17 +47,33 @@ namespace rei::editor
         }
 
         // todo: should sort entities by distance from camera to minimize cases when further object gets selected first
+        ecs::Entity selectedCandidate = ecs::NULL_ENTITY;
         FOR(e, _checkEntities)
         {
             const auto& listener = GET(e, physics::PointerCollisionListener);
+            if (!listener.IsInside) continue;
 
-            if (listener.IsInside)
+            if (render::ui_render_utility::IsUiEntity(e))
             {
-                if (additiveSelection && HAS(e, SelectedTag)) return;
-
-                selection_utility::Select(_ecsWorld, e, !additiveSelection);
-                return;
+                if (render::ui_render_utility::IsHigherUiEntity(e, selectedCandidate))
+                {
+                    selectedCandidate = e;
+                }
+                continue;
             }
+
+            if (IS_DEAD(selectedCandidate))
+            {
+                selectedCandidate = e;
+            }
+        }
+
+        if (!IS_DEAD(selectedCandidate))
+        {
+            if (additiveSelection && HAS(selectedCandidate, SelectedTag)) return;
+
+            selection_utility::Select(_ecsWorld, selectedCandidate, !additiveSelection);
+            return;
         }
 
         if (additiveSelection) return;

@@ -62,9 +62,69 @@ namespace rei::ui
         _size = size;
     }
 
+    f32 Text::GetLineHeight() const
+    {
+        return _size * REI_TEXT_LINE_HEIGHT_MULTIPLIER;
+    }
+
     bool Text::IsRaycastTarget() const
     {
         return _raycastTarget;
+    }
+
+    math::Rect Text::CalculateRenderRect(const math::Rect& pixelRect) const
+    {
+        if (!_font.IsLoaded()) return {};
+
+        const f32 fontScale = _size / static_cast<f32>(_font->GetPixelHeight());
+        const f32 lineHeight = GetLineHeight();
+        const f32 startX = pixelRect.Min.x;
+        f32 x = startX;
+        f32 y = pixelRect.Max.y - _size;
+
+        math::Rect textRect {
+            math::Vector2::Max(),
+            math::Vector2::Min()
+        };
+
+        for (const char character : _value)
+        {
+            if (character == '\n')
+            {
+                textRect.Min.x = (std::min)(textRect.Min.x, startX);
+                textRect.Max.x = (std::max)(textRect.Max.x, x);
+                textRect.Min.y = (std::min)(textRect.Min.y, y);
+                textRect.Max.y = (std::max)(textRect.Max.y, y + _size);
+                x = startX;
+                y -= lineHeight;
+                continue;
+            }
+
+            const auto glyphKey = static_cast<u8>(character);
+            if (!_font->HasGlyph(glyphKey)) continue;
+
+            const auto& glyph = _font->GetGlyph(glyphKey);
+            const f32 glyphX = x + static_cast<f32>(glyph.BearingX) * fontScale;
+            const f32 glyphY = y - static_cast<f32>(glyph.Height - glyph.BearingY) * fontScale;
+            const f32 glyphWidth = static_cast<f32>(glyph.Width) * fontScale;
+            const f32 glyphHeight = static_cast<f32>(glyph.Height) * fontScale;
+
+            if (glyph.TextureId != 0 && glyphWidth > 0.0f && glyphHeight > 0.0f)
+            {
+                textRect.Min.x = (std::min)(textRect.Min.x, glyphX);
+                textRect.Min.y = (std::min)(textRect.Min.y, glyphY);
+                textRect.Max.x = (std::max)(textRect.Max.x, glyphX + glyphWidth);
+                textRect.Max.y = (std::max)(textRect.Max.y, glyphY + glyphHeight);
+            }
+
+            x += glyph.GetAdvancePixels() * fontScale;
+        }
+
+        textRect.Min.x = (std::min)(textRect.Min.x, startX);
+        textRect.Max.x = (std::max)(textRect.Max.x, x);
+        textRect.Min.y = (std::min)(textRect.Min.y, y);
+        textRect.Max.y = (std::max)(textRect.Max.y, y + _size);
+        return textRect;
     }
 
     void Text::ConfigurePointerInteraction() const

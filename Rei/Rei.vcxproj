@@ -638,7 +638,7 @@
     <ClInclude Include="src\Modules\Editor\Components\SelectionByPointerBlockerTag.h" />
     <ClInclude Include="src\Modules\Editor\Systems\FlyCameraSystem.h" />
     <ClInclude Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.h" />
-    <ClInclude Include="src\Modules\Editor\Systems\UIPointerCollisionSystem.h" />
+    <ClInclude Include="src\Modules\Input\Pointer\UIPointerCollisionSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\CreateTransformationControlsSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\HandleTransformationControlsMovementDragSystem.h" />
     <ClInclude Include="src\Modules\Editor\TransformationControls\Systems\HandleTransformationControlsRotationDragSystem.h" />
@@ -663,7 +663,7 @@
     <ClInclude Include="src\Modules\Physics\ModelCollider.h" />
     <ClInclude Include="src\Modules\Physics\PointerCollisionListener.h" />
     <ClInclude Include="src\Modules\Physics\SphereCollider.h" />
-    <ClInclude Include="src\Modules\Physics\Systems\PointerCollisionSystem.h" />
+    <ClInclude Include="src\Modules\Input\Pointer\PointerCollisionSystem.h" />
     <ClInclude Include="src\Modules\Render\Camera\AssignMainCameraSystem.h" />
     <ClInclude Include="src\Modules\Render\Camera\MainCameraTag.h" />
     <ClInclude Include="src\Modules\Render\Color\Color.h" />
@@ -701,7 +701,8 @@
     <ClInclude Include="src\Modules\Render\Shaders\ShaderGenerator.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
-    <ClInclude Include="src\Modules\Render\Text\Font.h" />
+    <ClInclude Include="src\Modules\Render\UI\Text\Font.h" />
+    <ClInclude Include="src\Modules\Render\UI\UIUtility.h" />
     <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
     <ClInclude Include="src\Modules\Resources\Builders\FontBuilder.h" />
@@ -806,7 +807,7 @@
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.cpp" />
-    <ClCompile Include="src\Modules\Editor\Systems\UIPointerCollisionSystem.cpp" />
+    <ClCompile Include="src\Modules\Input\Pointer\UIPointerCollisionSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\TransformationControls\Systems\CreateTransformationControlsSystem.cpp"/>
     <ClCompile Include="src\Modules\Editor\TransformationControls\Systems\HandleTransformationControlsMovementDragSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\TransformationControls\Systems\HandleTransformationControlsRotationDragSystem.cpp" />
@@ -822,7 +823,7 @@
     <ClCompile Include="src\Modules\Input\Input.cpp" />
     <ClCompile Include="src\Modules\Physics\ModelCollider.cpp" />
     <ClCompile Include="src\Modules\Physics\SphereCollider.cpp" />
-    <ClCompile Include="src\Modules\Physics\Systems\PointerCollisionSystem.cpp" />
+    <ClCompile Include="src\Modules\Input\Pointer\PointerCollisionSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Camera\AssignMainCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Color\Color.cpp" />
@@ -853,7 +854,8 @@
     <ClCompile Include="src\Modules\Render\Shaders\ShaderGenerator.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
-    <ClCompile Include="src\Modules\Render\Text\Font.cpp" />
+    <ClCompile Include="src\Modules\Render\UI\Text\Font.cpp" />
+    <ClCompile Include="src\Modules\Render\UI\UIUtility.cpp" />
     <ClCompile Include="src\Modules\Render\Textures\Texture.cpp" />
     <ClCompile Include="src\Modules\Resources\AssetBuilder.cpp" />
     <ClCompile Include="src\Modules\Resources\Builders\FontBuilder.cpp" />

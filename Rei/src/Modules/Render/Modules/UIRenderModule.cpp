@@ -13,7 +13,8 @@
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Render/Mesh/VertexObjects/QuadVertexObject.h"
 #include "Modules/Render/Shaders/Shader.h"
-#include "Modules/Render/Text/Font.h"
+#include "Modules/Render/UI/Text/Font.h"
+#include "Modules/Render/UI/UIUtility.h"
 #include "rei_behaviours/transformation/Transform.h"
 #include "rei_behaviours/ui/Canvas.h"
 #include "rei_behaviours/ui/Image.h"
@@ -22,26 +23,6 @@
 
 namespace rei::render
 {
-    namespace
-    {
-        std::vector<i32> BuildHierarchySortKey(const ecs::Entity entity)
-        {
-            ECS_WORLD(rei::GetInternalWorld())
-
-            std::vector<i32> key;
-            auto current = entity;
-            while (!IS_DEAD(current) && HAS(current, rei::Transform))
-            {
-                const auto& transform = GET(current, rei::Transform);
-                key.push_back(transform.GetChildOrder());
-                current = transform.GetParent();
-            }
-
-            std::reverse(key.begin(), key.end());
-            return key;
-        }
-    }
-
     UIRenderModule::UIRenderModule(const std::shared_ptr<CameraModule>& cameraModule)
         : _cameraModule(cameraModule)
     {
@@ -88,7 +69,7 @@ namespace rei::render
 
         std::ranges::sort(canvases, [](const ecs::Entity a, const ecs::Entity b)
         {
-            return BuildHierarchySortKey(a) < BuildHierarchySortKey(b);
+            return ui_render_utility::BuildHierarchySortKey(a) < ui_render_utility::BuildHierarchySortKey(b);
         });
 
         std::vector<UiRenderItem> renderItems;
@@ -223,7 +204,7 @@ namespace rei::render
         glBindVertexArray(_textVao);
 
         const f32 fontScale = text.GetSize() / static_cast<f32>(font->GetPixelHeight());
-        const f32 lineHeight = text.GetSize() * 1.2f;
+        const f32 lineHeight = text.GetLineHeight();
         const f32 startX = pixelRect.Min.x;
         f32 x = startX;
         f32 y = pixelRect.Max.y - text.GetSize();
@@ -250,7 +231,7 @@ namespace rei::render
                 DrawGlyphQuad(glyphX, glyphY, glyphWidth, glyphHeight, glyph.TextureId);
             }
 
-            x += static_cast<f32>(glyph.Advance >> 6) * fontScale;
+            x += glyph.GetAdvancePixels() * fontScale;
         }
 
         glBindVertexArray(0);

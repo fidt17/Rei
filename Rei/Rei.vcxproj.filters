@@ -46,6 +46,8 @@
     <ClCompile Include="src\Modules\Render\Shaders\ShaderGenerator.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\Shader.cpp" />
     <ClCompile Include="src\Modules\Render\Shaders\ShaderUtility.cpp" />
+    <ClCompile Include="src\Modules\Render\UI\UIUtility.cpp" />
+    <ClCompile Include="src\Modules\Render\UI\Text\Font.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\AssignMainCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Render\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Window\MainWindowHandler.cpp" />
@@ -665,6 +667,8 @@
     <ClInclude Include="src\Modules\Render\Shaders\ShaderGenerator.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
+    <ClInclude Include="src\Modules\Render\UI\UIUtility.h" />
+    <ClInclude Include="src\Modules\Render\UI\Text\Font.h" />
     <ClInclude Include="src\Modules\Render\Systems\AssignMainCameraSystem.h" />
     <ClInclude Include="src\Modules\Render\Systems\FlyCameraSystem.h" />
     <ClInclude Include="src\Modules\Window\MainWindowHandler.h" />

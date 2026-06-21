@@ -1,10 +1,13 @@
 #pragma once
 
 #include "Modules/Render/Color/Color.h"
-#include "Modules/Render/Text/Font.h"
+#include "Modules/Render/UI/Text/Font.h"
+#include "Common/Math/Rect.h"
 
 namespace rei::ui
 {
+    constexpr f32 REI_TEXT_LINE_HEIGHT_MULTIPLIER = 1.2f;
+
     class Text : public Behaviour
     {
         REQUIRE_COMPONENT(RectTransform)
@@ -29,7 +32,9 @@ namespace rei::ui
         REI_API void SetColor(const render::Color& color);
         REI_API f32 GetSize() const;
         REI_API void SetSize(f32 size);
+        REI_API f32 GetLineHeight() const;
         REI_API bool IsRaycastTarget() const;
+        REI_API math::Rect CalculateRenderRect(const math::Rect& pixelRect) const;
 
     private:
         void ConfigurePointerInteraction() const;

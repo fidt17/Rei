@@ -11,9 +11,9 @@
 #include "Modules/Behaviour/Systems/UpdateBehavioursSystem.h"
 #include "Modules/Editor/Systems/FlyCameraSystem.h"
 #include "Modules/Editor/Systems/PointerEntitySelectionSystem.h"
-#include "Modules/Editor/Systems/UIPointerCollisionSystem.h"
 #include "Modules/Editor/TransformationControls/Systems/TransformationControlsModule.h"
-#include "Modules/Physics/Systems/PointerCollisionSystem.h"
+#include "Modules/Input/Pointer/PointerCollisionSystem.h"
+#include "Modules/Input/Pointer/UIPointerCollisionSystem.h"
 #include "Modules/Render/Camera/AssignMainCameraSystem.h"
 #include "Modules/Render/Systems/DebugOverlayToggleSystem.h"
 #include "Modules/Window/WindowManager.h"
@@ -55,8 +55,8 @@ namespace rei::internal::engine
 
         _world->AddSystem<render::AssignMainCameraSystem>(renderer);
 
-        _world->AddSystem<physics::PointerCollisionSystem>();
-        _world->AddSystem<editor::UIPointerCollisionSystem>();
+        _world->AddSystem<input::PointerCollisionSystem>();
+        _world->AddSystem<input::UIPointerCollisionSystem>();
 
         if (GetEngine().IsPlaymode())
         {
