@@ -64,7 +64,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         _sourceFilesUtility = sourceFilesUtility;
         _utility = behaviourFileUtility;
         _metaFilesService = metaFilesService;
-        _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService);
+        _behaviourRegistrySourceGenerator = new BehaviourRegistrySourceGenerator(resourceService, serializableObjectsRegistry);
     }
 
     public bool TryGetById(int id, [NotNullWhen(returnValue: true)] out BehaviourAssetInfo? behaviour)

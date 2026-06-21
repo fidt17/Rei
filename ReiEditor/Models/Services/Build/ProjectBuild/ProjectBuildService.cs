@@ -442,7 +442,7 @@ public class ProjectBuildService : IProjectBuildService
             var current = entries[i];
             var nextOffset = i + 1 < entries.Count ? entries[i + 1].Offset : assetsBinSize;
             var size = Math.Max(0, nextOffset - current.Offset);
-            result.Add(new BuildAssetEntry(current.Name, current.ProjectRelativePath, current.Extension, size));
+            result.Add(new BuildAssetEntry(current.Name, current.AssetPath, current.ProjectRelativePath, current.Extension, size));
         }
 
         return result;
@@ -477,6 +477,7 @@ public class ProjectBuildService : IProjectBuildService
 
     private readonly record struct BuildAssetEntry(
         string Name,
+        string AssetPath,
         string ProjectRelativePath,
         string Extension,
         long Size);

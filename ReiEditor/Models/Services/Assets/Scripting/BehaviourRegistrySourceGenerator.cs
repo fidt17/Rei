@@ -13,10 +13,12 @@ public class BehaviourRegistrySourceGenerator
     private const string INCLUDE_FORMAT = "#include {0}";
         
     private readonly IResourceService _resourceService;
+    private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
 
-    public BehaviourRegistrySourceGenerator(IResourceService resourceService)
+    public BehaviourRegistrySourceGenerator(IResourceService resourceService, ISerializableObjectsRegistry serializableObjectsRegistry)
     {
         _resourceService = resourceService;
+        _serializableObjectsRegistry = serializableObjectsRegistry;
     }
 
     public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects)
@@ -122,11 +124,10 @@ public class BehaviourRegistrySourceGenerator
     {
         if (behaviour.RequiredComponentNames.Count == 0) return "{}";
 
-        var behavioursList = behaviours.ToList();
         var ids = new List<int>();
         foreach (var requiredName in behaviour.RequiredComponentNames)
         {
-            var requiredBehaviour = behavioursList.FirstOrDefault(x => x.ObjectName == requiredName);
+            var requiredBehaviour = behaviours.FirstOrDefault(x => x.ObjectName == requiredName);
             if (requiredBehaviour == null) continue;
 
             ids.Add(requiredBehaviour.BehaviourId);

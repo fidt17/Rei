@@ -78,7 +78,7 @@ public class SolutionGenerator : ISolutionGenerator
         
         var includesList = includes
             .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(NormalizeIncludePath)
+            .Select(x => NormalizeIncludePath(x!))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 

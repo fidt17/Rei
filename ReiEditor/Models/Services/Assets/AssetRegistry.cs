@@ -49,7 +49,7 @@ public class AssetRegistry : IAssetRegistry
             if (!_idToAssetInfoMap.TryGetValue(assetId, out resolvedAssetInfo)) return false;
         }
 
-        var extension = Path.GetExtension(resolvedAssetInfo.FullPath);
+        var extension = Path.GetExtension(resolvedAssetInfo!.FullPath);
         if (!extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) return false;
 
         assetInfo = resolvedAssetInfo;
@@ -103,7 +103,7 @@ public class AssetRegistry : IAssetRegistry
                 if (!_idToAssetInfoMap.TryGetValue(assetId, out assetInfo)) continue;
             }
 
-            yield return assetInfo;
+            yield return assetInfo!;
         }
     }
 

@@ -13,7 +13,7 @@ namespace ReiEditor.Views.Controls.ColorPicker;
 public class ColorWheelPicker : Control
 {
     public static readonly StyledProperty<double> HueProperty =
-        AvaloniaProperty.Register<ColorWheelPicker, double>(nameof(Hue), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+        AvaloniaProperty.Register<ColorWheelPicker, double>(nameof(Hue), 0d, defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
     public static readonly StyledProperty<double> SaturationProperty =
         AvaloniaProperty.Register<ColorWheelPicker, double>(nameof(Saturation), 1d, defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
@@ -170,7 +170,7 @@ public class ColorWheelPicker : Control
             context.DrawImage(_svBitmap, new Rect(0, 0, targetWidth, targetHeight), layout.SvRect);
         }
 
-        context.DrawRectangle(null, new Pen(Brushes.Gray), layout.SvRect);
+        context.DrawRectangle(null, new Pen(Brushes.Gray, 1), layout.SvRect);
     }
 
     private void DrawHandles(DrawingContext context, LayoutInfo layout)
@@ -196,7 +196,7 @@ public class ColorWheelPicker : Control
     private static void DrawHandle(DrawingContext context, Point point, double radius)
     {
         context.DrawEllipse(Brushes.Transparent, new Pen(Brushes.Black, 2), point, radius, radius);
-        context.DrawEllipse(Brushes.Transparent, new Pen(Brushes.White), point, radius + 1.5, radius + 1.5);
+        context.DrawEllipse(Brushes.Transparent, new Pen(Brushes.White, 1), point, radius + 1.5, radius + 1.5);
     }
 
     private bool IsPointOnHueRing(Point point, LayoutInfo layout)
