@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -236,6 +237,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
             //_logger.LogWarning($"Scene entities: {JsonConvert.SerializeObject(entities)}");
             var needsHierarchyRefresh = false;
             var selectedEntityIds = new HashSet<int>();
+            var didUpdateSelection = TryUpdateEntitySelectionBeforeStateSync(currentSceneEntities, entities, selectionBeforeSync);
 
             var entityStates = new Dictionary<int, GetEntityDataResponse?>();
             var parentByEntityId = new Dictionary<int, int>();
@@ -296,7 +298,7 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
                 scene.RebuildHierarchy();
             }
 
-            if (selectionBeforeSync.SetEquals(CaptureSelectedEntityIds()))
+            if (!didUpdateSelection && selectionBeforeSync.SetEquals(CaptureSelectedEntityIds()))
             {
                 UpdateEntitySelection(scene.Entities.ToList(), selectedEntityIds);
             }
@@ -320,6 +322,31 @@ public class EntityStateSynchronizer : IEntityStateSynchronizer, IDisposable
         {
             _ignorePropertyChanges = false;
         }
+    }
+
+    private bool TryUpdateEntitySelectionBeforeStateSync(
+        IReadOnlyCollection<GameEntity> currentSceneEntities,
+        GetSceneEntitiesResponse entities,
+        IReadOnlySet<int> selectionBeforeSync)
+    {
+        var selectedEntityIds = entities.Entities
+            .Where(entity => entity.IsSelected)
+            .Select(entity => entity.Id)
+            .ToHashSet();
+        var currentSceneEntityIds = currentSceneEntities
+            .Select(entity => entity.Id)
+            .ToHashSet();
+
+        if (selectedEntityIds.Any(entityId => !currentSceneEntityIds.Contains(entityId))) return false;
+
+        Dispatcher.UIThread.Invoke(() =>
+        {
+            if (!selectionBeforeSync.SetEquals(CaptureSelectedEntityIds())) return;
+
+            UpdateEntitySelection(currentSceneEntities, selectedEntityIds);
+        });
+
+        return true;
     }
 
     private void UpdateEntitySelection(IReadOnlyCollection<GameEntity> entities, IReadOnlySet<int> selectedEntityIds)
