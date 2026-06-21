@@ -68,8 +68,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.ClampHue(value);
-            if (_isSyncing) return;
-            SetField(ref _h, clamped);
+            if (!SetField(ref _h, clamped) || _isSyncing) return;
             ApplyFromHsv();
         }
     }
@@ -81,8 +80,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (_isSyncing) return;
-            SetField(ref _s, clamped);
+            if (!SetField(ref _s, clamped) || _isSyncing) return;
             ApplyFromHsv();
         }
     }
@@ -94,8 +92,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (_isSyncing) return;
-            SetField(ref _v, clamped);
+            if (!SetField(ref _v, clamped) || _isSyncing) return;
             ApplyFromHsv();
         }
     }
@@ -168,6 +165,8 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
+        if (_suppressComponentValueChanged) return;
+
         var r = ConvertToFloat(GetNestedProperty("r")?.Value, 0f);
         var g = ConvertToFloat(GetNestedProperty("g")?.Value, 0f);
         var b = ConvertToFloat(GetNestedProperty("b")?.Value, 0f);
@@ -181,6 +180,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
             SetField(ref _a, ColorConversionUtility.Clamp01(a), nameof(A));
 
             ColorConversionUtility.RgbToHsv(_r, _g, _b, out var h, out var s, out var v);
+            if (s <= 0.0001f) h = _h;
             SetField(ref _h, h, nameof(H));
             SetField(ref _s, s, nameof(S));
             SetField(ref _v, v, nameof(V));

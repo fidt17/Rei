@@ -16,6 +16,11 @@ public partial class ColorPropertyView : UserControl
         if (!Resources.TryGetResource("ColorEditorFlyout", null, out var resource)) return;
         if (resource is not Flyout flyout) return;
 
+        if (flyout.Content is Control content)
+        {
+            content.DataContext = DataContext;
+        }
+
         flyout.ShowAt(control);
     }
 }
