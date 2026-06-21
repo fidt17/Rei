@@ -5,12 +5,12 @@ namespace ReiEditor.Models.Services.Scenes;
 public class SceneStateSynchronizer : ISceneStateSynchronizer
 {
     private readonly ISceneManagementService _sceneManagementService;
-    private readonly IEntityStateSynchronizer _entityStateSynchronizer;
+    private readonly IEntitySyncService _entitySyncService;
 
-    public SceneStateSynchronizer(ISceneManagementService sceneManagementService, IEntityStateSynchronizer entityStateSynchronizer)
+    public SceneStateSynchronizer(ISceneManagementService sceneManagementService, IEntitySyncService entitySyncService)
     {
         _sceneManagementService = sceneManagementService;
-        _entityStateSynchronizer = entityStateSynchronizer;
+        _entitySyncService = entitySyncService;
     }
 
     public void SynchronizeStateWithEngine()
@@ -20,7 +20,7 @@ public class SceneStateSynchronizer : ISceneStateSynchronizer
 			
         foreach (var e in scene.Entities)
         {
-            _entityStateSynchronizer.UpdateEntityState(e);
+            _entitySyncService.UpdateEntityState(e);
         }
     }
 }

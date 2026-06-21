@@ -2,22 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Logging.Loggers;
-using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Entities.Sync;
 
-public class EntityStateApplier
+public class EntityStateApplier : IEntityStateApplier
 {
-    private readonly ILogger<EntityStateSynchronizer> _logger;
+    public bool IsApplyingEngineState { get; private set; }
+    
+    private readonly ILogger<EntitySyncService> _logger;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
 
     public EntityStateApplier(
-        ILogger<EntityStateSynchronizer> logger,
+        ILogger<EntitySyncService> logger,
         IBehaviourRegistry behaviourRegistry,
         IBehaviourComponentsService behaviourComponentsService)
     {
@@ -28,92 +28,100 @@ public class EntityStateApplier
 
     public bool Apply(GameEntity entity, GetEntityDataResponse state)
     {
-        entity.SetName(state.Name);
-        var behaviourIds = new List<int>();
-        int? transformParent = null;
-        int? transformOrder = null;
-        var needsHierarchyRefresh = false;
-        var hasBehaviourResolutionErrors = false;
-
-        foreach (var behaviourState in state.Behaviours)
+        IsApplyingEngineState = true;
+        try
         {
-            try
+            entity.SetName(state.Name);
+            var behaviourIds = new List<int>();
+            int? transformParent = null;
+            int? transformOrder = null;
+            var needsHierarchyRefresh = false;
+            var hasBehaviourResolutionErrors = false;
+
+            foreach (var behaviourState in state.Behaviours)
             {
-                if (!behaviourState.TryGetValue("REI_TYPE", out var reiTypeValue)) continue;
-
-                var reiType = reiTypeValue as string;
-                if (string.IsNullOrWhiteSpace(reiType)) continue;
-
-                var behaviourId = _behaviourRegistry.GetIdByName(reiType);
-                if (behaviourId == null)
+                try
                 {
-                    hasBehaviourResolutionErrors = true;
-                    _logger.LogError($"Could not find behaviour by REI_TYPE: {reiType}");
-                    continue;
-                }
-                behaviourIds.Add(behaviourId.Value);
+                    if (!behaviourState.TryGetValue("REI_TYPE", out var reiTypeValue)) continue;
 
-                // try to add new behaviour
-                var behaviour = entity.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
-                if (behaviour == null)
-                {
-                    _behaviourComponentsService.AddComponent(entity, behaviourId.Value);
-                    behaviour = entity.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
+                    var reiType = reiTypeValue as string;
+                    if (string.IsNullOrWhiteSpace(reiType)) continue;
+
+                    var behaviourId = _behaviourRegistry.GetIdByName(reiType);
+                    if (behaviourId == null)
+                    {
+                        hasBehaviourResolutionErrors = true;
+                        _logger.LogError($"Could not find behaviour by REI_TYPE: {reiType}");
+                        continue;
+                    }
+                    behaviourIds.Add(behaviourId.Value);
+
+                    // try to add new behaviour
+                    var behaviour = entity.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
                     if (behaviour == null)
                     {
-                        throw new Exception($"Entity is missing a behaviour with id={behaviourId}");
-                    }
-                }
-
-                // update behaviour properties
-                foreach (var (propertyName, value) in behaviourState)
-                {
-                    try
-                    {
-                        if (behaviour.HasProperty(propertyName))
+                        _behaviourComponentsService.AddComponent(entity, behaviourId.Value);
+                        behaviour = entity.Behaviours.FirstOrDefault(x => x.Id == behaviourId);
+                        if (behaviour == null)
                         {
-                            var p = behaviour.GetProperty(propertyName);
-                            _behaviourComponentsService.ApplySerializedValue(p, value);
+                            throw new Exception($"Entity is missing a behaviour with id={behaviourId}");
                         }
                     }
-                    catch (Exception exception)
+
+                    // update behaviour properties
+                    foreach (var (propertyName, value) in behaviourState)
                     {
-                        _logger.LogError($"Exception while parsing property({propertyName}) in behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
+                        try
+                        {
+                            if (behaviour.HasProperty(propertyName))
+                            {
+                                var p = behaviour.GetProperty(propertyName);
+                                _behaviourComponentsService.ApplySerializedValue(p, value);
+                            }
+                        }
+                        catch (Exception exception)
+                        {
+                            _logger.LogError($"Exception while parsing property({propertyName}) in behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
+                        }
+                    }
+
+                    if (reiType == EngineBehavioursConstants.TRANSFORM)
+                    {
+                        transformParent = EntitySyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_PARENT);
+                        transformOrder = EntitySyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_ORDER);
                     }
                 }
-
-                if (reiType == EngineBehavioursConstants.TRANSFORM)
+                catch (Exception exception)
                 {
-                    transformParent = EntityStateSyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_PARENT);
-                    transformOrder = EntityStateSyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_ORDER);
+                    _logger.LogError($"Exception while parsing behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
                 }
             }
-            catch (Exception exception)
-            {
-                _logger.LogError($"Exception while parsing behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
-            }
-        }
 
-        if (!hasBehaviourResolutionErrors)
+            if (!hasBehaviourResolutionErrors)
+            {
+                // delete behaviours that no longer exist on this entity
+                foreach (var behaviour in entity.Behaviours.ToList())
+                {
+                    if (behaviourIds.Contains(behaviour.Id)) continue;
+                    _behaviourComponentsService.DeleteComponent(entity, behaviour);
+                }
+            }
+
+            if (transformParent.HasValue && transformOrder.HasValue)
+            {
+                if (entity.Transform.Parent != transformParent.Value || entity.Transform.Order != transformOrder.Value)
+                {
+                    entity.Transform.SetParent(transformParent.Value);
+                    entity.Transform.SetOrder(transformOrder.Value);
+                    needsHierarchyRefresh = true;
+                }
+            }
+
+            return needsHierarchyRefresh;
+        }
+        finally
         {
-            // delete behaviours that no longer exist on this entity
-            foreach (var behaviour in entity.Behaviours.ToList())
-            {
-                if (behaviourIds.Contains(behaviour.Id)) continue;
-                _behaviourComponentsService.DeleteComponent(entity, behaviour);
-            }
+            IsApplyingEngineState = false;
         }
-
-        if (transformParent.HasValue && transformOrder.HasValue)
-        {
-            if (entity.Transform.Parent != transformParent.Value || entity.Transform.Order != transformOrder.Value)
-            {
-                entity.Transform.SetParent(transformParent.Value);
-                entity.Transform.SetOrder(transformOrder.Value);
-                needsHierarchyRefresh = true;
-            }
-        }
-
-        return needsHierarchyRefresh;
     }
 }

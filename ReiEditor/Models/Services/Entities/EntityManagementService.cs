@@ -21,7 +21,7 @@ public class EntityManagementService : IEntityManagementService
     private readonly IEngineRunner _engineRunner;
     private readonly IEntityApi _entityApi;
     private readonly IBehaviourRegistry _behaviourRegistry;
-    private readonly IEntityStateSynchronizer _entityStateSynchronizer;
+    private readonly IEntitySyncService _entitySyncService;
 
     public EntityManagementService(
         ILogger<EntityManagementService> logger,
@@ -30,7 +30,7 @@ public class EntityManagementService : IEntityManagementService
         IEntityApi entityApi, 
         IBehaviourRegistry behaviourRegistry, 
         IEngineRunner engineRunner, 
-        IEntityStateSynchronizer entityStateSynchronizer)
+        IEntitySyncService entitySyncService)
     {
         _logger = logger;
         _sceneManagement = sceneManagement;
@@ -38,7 +38,7 @@ public class EntityManagementService : IEntityManagementService
         _entityApi = entityApi;
         _behaviourRegistry = behaviourRegistry;
         _engineRunner = engineRunner;
-        _entityStateSynchronizer = entityStateSynchronizer;
+        _entitySyncService = entitySyncService;
 
     }
 
@@ -105,7 +105,7 @@ public class EntityManagementService : IEntityManagementService
             if (_engineRunner.IsActive.Value)
             {
                 _entityApi.Rename(e.Id, name);
-                _entityStateSynchronizer.UpdateEntityState(e);
+                _entitySyncService.UpdateEntityState(e);
             }
             else
             {

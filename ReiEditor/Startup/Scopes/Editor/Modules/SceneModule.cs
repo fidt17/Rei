@@ -26,7 +26,11 @@ public class SceneModule : Module
         b.RegisterSingleton<EntityDataWriterService>().As<IEntityDataWriterService>();
         b.RegisterSingleton<SelectedEntityActionService>().As<ISelectedEntityActionService>();
         b.RegisterSingleton<SelectedEntityInputService>();
-        b.RegisterSingleton<EntityStateSynchronizer>().As<IEntityStateSynchronizer>();
+        b.RegisterSingleton<EntityStateApplier>().As<IEntityStateApplier>();
+        b.RegisterSingleton<BehaviourSyncService>();
+        b.RegisterSingleton<EngineSelectionSyncService>();
+        b.RegisterSingleton<SceneSyncService>().As<ISceneSyncService>();
+        b.RegisterSingleton<EntitySyncService>().As<IEntitySyncService>();
         b.RegisterType<EntityRenameCommand>().As<IEntityRenameCommand>();
         b.RegisterType<SelectedEntityDeleteCommand>().As<ISelectedEntityDeleteCommand>();
         b.RegisterType<SelectedEntityDuplicateCommand>().As<ISelectedEntityDuplicateCommand>();

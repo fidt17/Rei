@@ -39,7 +39,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
     private readonly IProjectAssetFocusService _projectAssetFocusService;
 
-    private readonly IEntityStateSynchronizer _entityStateSynchronizer;
+    private readonly IEntitySyncService _entitySyncService;
 
     private CancellationTokenSource? _entityUpdateStateCTS;
 
@@ -58,7 +58,7 @@ public class MonitorWindowViewModel : BaseViewModel
         IAssetTypeMapper assetTypeMapper,
         IAssetRuntimeSyncService assetRuntimeSyncService,
         IProjectAssetFocusService projectAssetFocusService,
-        IEntityStateSynchronizer entityStateSynchronizer)
+        IEntitySyncService entitySyncService)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
@@ -70,7 +70,7 @@ public class MonitorWindowViewModel : BaseViewModel
         _assetTypeMapper = assetTypeMapper;
         _assetRuntimeSyncService = assetRuntimeSyncService;
         _projectAssetFocusService = projectAssetFocusService;
-        _entityStateSynchronizer = entityStateSynchronizer;
+        _entitySyncService = entitySyncService;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
         _editorRefreshService.RefreshedEvent += HandleRefreshedEvent;
@@ -129,7 +129,7 @@ public class MonitorWindowViewModel : BaseViewModel
         _entityUpdateStateCTS?.Cancel();
         _entityUpdateStateCTS = new CancellationTokenSource();
 
-        _entityStateSynchronizer.UpdateEntityState(e);
+        _entitySyncService.UpdateEntityState(e);
 
         var token = _entityUpdateStateCTS.Token;
         Task.Run(async () =>
@@ -140,7 +140,7 @@ public class MonitorWindowViewModel : BaseViewModel
 
                 Dispatcher.UIThread.Invoke(() =>
                 {
-                    _entityStateSynchronizer.UpdateEntityState(e);
+                    _entitySyncService.UpdateEntityState(e);
                 });
             }
             // ReSharper disable once FunctionNeverReturns
