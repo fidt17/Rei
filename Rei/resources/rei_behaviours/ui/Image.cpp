@@ -42,6 +42,12 @@ namespace rei::ui
         SyncMaterialProperties();
     }
 
+    void Image::SetColorMultiplier(const render::Color& colorMultiplier)
+    {
+        _colorMultiplier = colorMultiplier;
+        SyncMaterialProperties();
+    }
+
     bool Image::PreserveAspect() const
     {
         return _preserveAspect;
@@ -78,7 +84,7 @@ namespace rei::ui
     {
         if (!_materialInstance.IsLoaded()) return;
 
-        _materialInstance->SetColor("_Color", _color);
+        _materialInstance->SetColor("_Color", _color * _colorMultiplier);
         _materialInstance->SetTexture("_MainTex", _texture);
     }
 

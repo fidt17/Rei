@@ -130,10 +130,9 @@ namespace rei::ui
 
     void Button::ApplyVisualState()
     {
-        if (!_changeImageColor) return;
         if (_targetImage.IsNull()) return;
 
-        _targetImage.Get().SetColor(GetCurrentVisualColor());
+        _targetImage.Get().SetColorMultiplier(_changeImageColor ? GetCurrentVisualColor() : render::Color::White());
     }
 
     render::Color Button::GetCurrentVisualColor() const

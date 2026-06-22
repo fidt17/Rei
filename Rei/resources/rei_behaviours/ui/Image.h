@@ -17,6 +17,7 @@ namespace rei::ui
         SERIALIZE bool _raycastTarget = true;
 
         assets::AssetRef<render::Material> _materialInstance;
+        render::Color _colorMultiplier = render::Color::White();
 
     public:
         REI_API void AfterREI_SET() override;
@@ -26,6 +27,7 @@ namespace rei::ui
         REI_API const assets::AssetRef<render::Texture>& GetTexture() const;
         REI_API render::Color GetColor() const;
         REI_API void SetColor(const render::Color& color);
+        REI_API void SetColorMultiplier(const render::Color& colorMultiplier);
         REI_API bool PreserveAspect() const;
         REI_API bool IsRaycastTarget() const;
         REI_API const render::Material& GetRenderMaterial() const;

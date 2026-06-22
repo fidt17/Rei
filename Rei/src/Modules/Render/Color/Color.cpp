@@ -6,6 +6,15 @@ rei::render::Color::operator std::string() const
     return "[" + STRING(r) + ", " + STRING(g) + ", " + STRING(b) + ", " + STRING(a) + "]";
 }
 
+rei::render::Color rei::render::Color::operator*(const Color& col) const
+{
+    return Color(
+        r * col.r,
+        g * col.g,
+        b * col.b,
+        a * col.a);
+}
+
 rei::render::Color rei::render::Color::Clear()
 {
     return Color(0,0,0,0);

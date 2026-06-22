@@ -19,6 +19,8 @@ namespace rei::render
         }
 
         operator std::string() const;
+        
+        Color operator*(const Color& col) const;
 
         static Color Clear();
         static Color White();
