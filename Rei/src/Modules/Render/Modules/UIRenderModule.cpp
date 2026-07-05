@@ -203,11 +203,12 @@ namespace rei::render
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(_textVao);
 
-        const f32 fontScale = text.GetSize() / static_cast<f32>(font->GetPixelHeight());
-        const f32 lineHeight = text.GetLineHeight();
+        const f32 renderSize = text.GetRenderSize(pixelRect);
+        const f32 fontScale = renderSize / static_cast<f32>(font->GetPixelHeight());
+        const f32 lineHeight = text.GetLineHeight(renderSize);
         const f32 startX = pixelRect.Min.x;
         f32 x = startX;
-        f32 y = pixelRect.Max.y - text.GetSize();
+        f32 y = pixelRect.Max.y - renderSize;
 
         for (const char character : text.GetValue())
         {

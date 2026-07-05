@@ -1,0 +1,242 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             xmlns:rectTransform="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform"
+             mc:Ignorable="d"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransformPropertyView"
+             x:DataType="rectTransform:RectTransformPropertyViewModel">
+
+    <Design.DataContext>
+        <rectTransform:RectTransformPropertyViewModel />
+    </Design.DataContext>
+
+    <Border x:Name="Root"
+            Padding="1"
+            Focusable="True">
+        <StackPanel Spacing="6">
+            <Grid ColumnDefinitions="188,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource White}"
+                            Text="{Binding AnchorModeName}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding AnchorPresetName}" />
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding Presets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="4" Columns="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.DataTemplates>
+                            <DataTemplate x:DataType="rectTransform:RectTransformAnchorPresetViewModel">
+                                <ToggleButton
+                                    Width="42"
+                                    Height="24"
+                                    MinHeight="0"
+                                    Padding="0"
+                                    Margin="1"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    ToolTip.Tip="{Binding DisplayName}"
+                                    IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                    PointerPressed="CommitFocusedTextBox_OnPointerPressed"
+                                    Command="{Binding ApplyCommand}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Text="{Binding ButtonText}" />
+                                </ToggleButton>
+                            </DataTemplate>
+                        </ItemsControl.DataTemplates>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" 
+                            Margin="5,15,0,0"
+                            Spacing="4">
+                    <Grid ColumnDefinitions="Auto,64,Auto,64">
+                        <TextBlock
+                            Grid.Column="0"
+                            Width="48"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding HorizontalPrimaryLabel}" />
+                        <textBoxes:ReiTextBox
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            MaxWidth="64"
+                            Text="{Binding HorizontalPrimaryValue, Mode=TwoWay}" />
+                        <TextBlock
+                            Grid.Column="2"
+                            Width="48"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding HorizontalSecondaryLabel}" />
+                        <textBoxes:ReiTextBox
+                            Grid.Column="3"
+                            VerticalAlignment="Center"
+                            MaxWidth="64"
+                            Text="{Binding HorizontalSecondaryValue, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,64,Auto,64">
+                        <TextBlock
+                            Grid.Column="0"
+                            Width="48"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding VerticalPrimaryLabel}" />
+                        <textBoxes:ReiTextBox
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            MaxWidth="64"
+                            Text="{Binding VerticalPrimaryValue, Mode=TwoWay}" />
+                        <TextBlock
+                            Grid.Column="2"
+                            Width="48"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding VerticalSecondaryLabel}" />
+                        <textBoxes:ReiTextBox
+                            Grid.Column="3"
+                            VerticalAlignment="Center"
+                            MaxWidth="64"
+                            Text="{Binding VerticalSecondaryValue, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,64,Auto,64">
+                        <TextBlock
+                            Grid.Column="0"
+                            Width="48"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="Pivot X" />
+                        <textBoxes:ReiTextBox
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            MaxWidth="64"
+                            Text="{Binding PivotX, Mode=TwoWay}" />
+                        <TextBlock
+                            Grid.Column="2"
+                            Width="48"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="Pivot Y" />
+                        <textBoxes:ReiTextBox
+                            Grid.Column="3"
+                            VerticalAlignment="Center"
+                            MaxWidth="64"
+                            Text="{Binding PivotY, Mode=TwoWay}" />
+                    </Grid>
+
+                    <StackPanel Orientation="Vertical" Spacing="6">
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding StretchXLabel}" />
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{StaticResource Gray_4}"
+                            Text="{Binding StretchYLabel}" />
+                        <Button
+                            MinHeight="0"
+                            Padding="6,2"
+                            PointerPressed="CommitFocusedTextBox_OnPointerPressed"
+                            Command="{Binding ToggleRawAnchorsCommand}">
+                            <TextBlock FontSize="12" Text="Raw" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel IsVisible="{Binding IsRawAnchorsVisible}" Spacing="4">
+                <Grid ColumnDefinitions="110,Auto,64,Auto,64">
+                    <TextBlock
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="Anchor Min" />
+                    <TextBlock
+                        Grid.Column="1"
+                        Margin="0,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="X" />
+                    <textBoxes:ReiTextBox
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        MaxWidth="64"
+                        Text="{Binding AnchorMinX, Mode=TwoWay}" />
+                    <TextBlock
+                        Grid.Column="3"
+                        Margin="8,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="Y" />
+                    <textBoxes:ReiTextBox
+                        Grid.Column="4"
+                        VerticalAlignment="Center"
+                        MaxWidth="64"
+                        Text="{Binding AnchorMinY, Mode=TwoWay}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="110,Auto,64,Auto,64">
+                    <TextBlock
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="Anchor Max" />
+                    <TextBlock
+                        Grid.Column="1"
+                        Margin="0,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="X" />
+                    <textBoxes:ReiTextBox
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        MaxWidth="64"
+                        Text="{Binding AnchorMaxX, Mode=TwoWay}" />
+                    <TextBlock
+                        Grid.Column="3"
+                        Margin="8,0,5,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{StaticResource Gray_4}"
+                        Text="Y" />
+                    <textBoxes:ReiTextBox
+                        Grid.Column="4"
+                        VerticalAlignment="Center"
+                        MaxWidth="64"
+                        Text="{Binding AnchorMaxY, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

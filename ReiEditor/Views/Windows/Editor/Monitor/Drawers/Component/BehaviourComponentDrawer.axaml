@@ -54,7 +54,9 @@
                     <Button
                         Grid.Column="1"
                         Padding="3"
-                        Margin="0,0,7,0"
+                        Width="20"
+                        Height="30"
+                        Margin="0,0,5,0"
                         Classes="Clear">
                         <Button.Styles>
                             <Style Selector="Button Ellipse">
@@ -70,10 +72,12 @@
                             </Flyout>
                         </Button.Flyout>
 
-                        <StackPanel Spacing="2">
-                            <Ellipse Width="3" Height="3" />
-                            <Ellipse Width="3" Height="3" />
-                            <Ellipse Width="3" Height="3" />
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <Ellipse Width="4" Height="4" />
+                            <Ellipse Width="4" Height="4" />
+                            <Ellipse Width="4" Height="4" />
                         </StackPanel>
                     </Button>
                 </Grid>

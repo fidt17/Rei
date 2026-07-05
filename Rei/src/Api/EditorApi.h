@@ -104,6 +104,27 @@ REI_EXTERN_API inline void ChangeTransformationMode(const i32 modeInt, const boo
     });
 }
 
+REI_EXTERN_API inline i32 GetTransformationMode()
+{
+    if (!rei::GetEngine().IsRunning()) return -1;
+
+    i32 mode = -1;
+    rei::GetEngine().ExecuteOnMainThread([&]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto& controlFilter = FILTER(rei::editor::TransformationControl);
+
+        FOR(e, controlFilter)
+        {
+            const auto& control = GET(e, rei::editor::TransformationControl);
+            mode = static_cast<i32>(control.Mode);
+            return;
+        }
+    })->WaitForCompletion();
+
+    return mode;
+}
+
 REI_EXTERN_API inline void ResizeWindow(const rei::window::Window* window, const i32 width, const i32 height)
 {
     if (window == nullptr) return;

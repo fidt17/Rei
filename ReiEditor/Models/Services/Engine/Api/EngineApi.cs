@@ -127,6 +127,13 @@ public class EngineApi : IEngineApi
         Invoke(typeof(SetTransformationModeDelegate), "ChangeTransformationMode", (int) mode, worldSpace);
     }
 
+    private delegate int GetTransformationModeDelegate();
+    public int GetTransformationMode()
+    {
+        if (!IsEngineRunning) return -1;
+        return Invoke<int>(typeof(GetTransformationModeDelegate), "GetTransformationMode");
+    }
+
     public void MarkEngineStopped()
     {
         IsEngineRunning = false;
@@ -146,13 +153,13 @@ public class EngineApi : IEngineApi
 	
     [DllImport("Kernel32.dll")]
     private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-	
+
     public void Invoke(Type delegateType, [CallerMemberName] string methodName = "", params object?[]? args)
     {
         try
         {
             if (_dllPtr == null) throw new Exception("Missing dll pointer");
-            
+
             if (_logInvokingMethods)
             {
                 _logger.Log($"Invoke [{methodName}]");
@@ -172,7 +179,7 @@ public class EngineApi : IEngineApi
         try
         {
             if (_dllPtr == null) throw new Exception("Missing dll pointer");
-            
+
             if (_logInvokingMethods)
             {
                 _logger.Log($"Invoke [{methodName}]");

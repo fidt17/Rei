@@ -17,6 +17,7 @@ namespace rei::ui
         SERIALIZE assets::AssetRef<render::Font> _font = assets::AssetRef<render::Font>("rei_roboto-regular.ttf");
         SERIALIZE render::Color _color = render::Color::White();
         SERIALIZE f32 _size = 48.0f;
+        SERIALIZE bool _autoSize = false;
         SERIALIZE bool _raycastTarget = true;
 
     public:
@@ -32,11 +33,16 @@ namespace rei::ui
         REI_API void SetColor(const render::Color& color);
         REI_API f32 GetSize() const;
         REI_API void SetSize(f32 size);
+        REI_API bool IsAutoSize() const;
+        REI_API void SetAutoSize(bool value);
+        REI_API f32 GetRenderSize(const math::Rect& pixelRect) const;
         REI_API f32 GetLineHeight() const;
+        REI_API f32 GetLineHeight(f32 size) const;
         REI_API bool IsRaycastTarget() const;
         REI_API math::Rect CalculateRenderRect(const math::Rect& pixelRect) const;
 
     private:
+        math::Rect CalculateRenderRect(const math::Rect& pixelRect, f32 size) const;
         void ConfigurePointerInteraction() const;
     };
 }

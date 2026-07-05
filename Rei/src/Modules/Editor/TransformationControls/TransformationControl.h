@@ -3,6 +3,7 @@
 
 #include "TransformationControlMovementArrow.h"
 #include "TransformationControlMovementPlane.h"
+#include "TransformationControlRectHandle.h"
 #include "TransformationControlRotationRing.h"
 #include "TransformationControlScaleArrow.h"
 #include "TransformationMode.h"
@@ -18,6 +19,9 @@ namespace rei::editor
         math::Vector3 PivotWorldPosition = {};
         math::Vector2 PivotScreenPosition = {};
         bool HasRectTransformTargets = false;
+        bool RectTransformBodyDragPending = false;
+        bool RectTransformBodyDragActive = false;
+        math::Vector3 RectTransformBodyDragStartPosition = {};
 
         TransformationControlMovementArrow RightMovementArrow = {};
         TransformationControlMovementArrow UpMovementArrow = {};
@@ -34,6 +38,15 @@ namespace rei::editor
         TransformationControlRotationRing RightRotationRing = {};
         TransformationControlRotationRing UpRotationRing = {};
         TransformationControlRotationRing ForwardRotationRing = {};
+
+        TransformationControlRectHandle TopLeftRectHandle = {};
+        TransformationControlRectHandle TopRectHandle = {};
+        TransformationControlRectHandle TopRightRectHandle = {};
+        TransformationControlRectHandle LeftRectHandle = {};
+        TransformationControlRectHandle RightRectHandle = {};
+        TransformationControlRectHandle BottomLeftRectHandle = {};
+        TransformationControlRectHandle BottomRectHandle = {};
+        TransformationControlRectHandle BottomRightRectHandle = {};
 
         TransformationMode Mode = Movement;
         bool UseWorldSpace = false;

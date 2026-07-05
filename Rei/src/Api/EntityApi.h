@@ -7,13 +7,23 @@
 #include "Modules/EntityManagement/EntityManager.h"
 #include "rei_behaviours/transformation/Transform.h"
 
-REI_EXTERN_API inline void CreateNewEntity(const char* name)
+REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer, const i32 bufferSize)
 {
     std::string nameStr = name;
-    rei::GetEngine().ExecuteOnMainThread([=]
+    std::string response;
+    auto task = rei::GetEngine().ExecuteOnMainThread([&response, nameStr]
     {
-        rei::GetEntityManager().CreateNewEntity(nameStr);
+        ECS_WORLD(rei::GetInternalWorld());
+
+        const auto e = rei::GetEntityManager().CreateNewEntity(nameStr);
+
+        nlohmann::json data;
+        data["EntityId"] = GET(e, EntityInfo).Id;
+        response = data.dump();
     });
+
+    task->WaitForCompletion();
+    strncpy_s(outputBuffer, bufferSize, response.c_str(), _TRUNCATE);
 }
 
 REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId)

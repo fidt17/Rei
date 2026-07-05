@@ -34,9 +34,10 @@ public interface IEngineApi
     void ChangeRenderMode(RenderMode mode, bool isUiRenderingEnabled);
     void SetEditorGridSettings(SetViewportGridSettingsRequest settings);
     void ChangeTransformationMode(TransformationMode mode, bool worldSpace);
+    int GetTransformationMode();
 
     void MarkEngineStopped();
-    
+
     void SetDllPtr(IntPtr ptr);
     void Invoke(Type delegateType, string methodName = "", params object?[]? args);
     T Invoke<T>(Type delegateType, string methodName, params object?[]? args);

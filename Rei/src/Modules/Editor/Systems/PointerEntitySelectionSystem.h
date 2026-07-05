@@ -15,5 +15,8 @@ namespace rei::editor
         std::shared_ptr<ecs::Filter> _blockSelectionEntities;
         
         void ResetAllEntitiesSelection() const;
+        ecs::Entity FindSelectionCandidate() const;
+        void CommitSelection(ecs::Entity selectedCandidate, bool additiveSelection) const;
+        bool IsSelectionBlocked() const;
     };
 }

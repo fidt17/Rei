@@ -34,7 +34,17 @@ public partial class ReiTextBox : UserControl
 
     public void LoseFocus() => ApplyValue();
 
-    public void Apply() => this.GetWindow().Focus();
+    public void Apply()
+    {
+        var window = this.TryGetWindow();
+        if (window == null)
+        {
+            ApplyValue();
+            return;
+        }
+
+        window.Focus();
+    }
 
     private void ApplyValue()
     {

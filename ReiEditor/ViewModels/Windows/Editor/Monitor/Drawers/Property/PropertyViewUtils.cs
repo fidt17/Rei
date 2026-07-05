@@ -10,6 +10,8 @@ using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Collection;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Vector;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 

@@ -9,7 +9,7 @@ public interface IEntityApi
     
     GetEntityDataResponse? GetEntityData(int sceneEntityId);
 
-    void CreateNewEntity(string name);
+    InstantiateEntityResponse? CreateNewEntity(string name);
     void DestroyEntity(int sceneEntityId);
     
     void Rename(int sceneEntityId, string newName);

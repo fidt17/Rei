@@ -25,13 +25,13 @@ namespace rei::ui_utility
 
             const math::Vector2 anchorMinPosition = parentRect.Min + parentSize * anchorMin;
             const math::Vector2 anchorMaxPosition = parentRect.Min + parentSize * anchorMax;
-            const math::Vector2 anchorCenter = (anchorMinPosition + anchorMaxPosition) * 0.5f;
+            const math::Vector2 anchorReference = anchorMinPosition + (anchorMaxPosition - anchorMinPosition) * pivot;
             const math::Vector2 size = (anchorMaxPosition - anchorMinPosition) + sizeDelta;
-            const math::Vector2 center = anchorCenter + anchoredPosition;
+            const math::Vector2 pivotPosition = anchorReference + anchoredPosition;
 
             return {
-                center - pivot * size,
-                center + (math::Vector2::One() - pivot) * size
+                pivotPosition - pivot * size,
+                pivotPosition + (math::Vector2::One() - pivot) * size
             };
         }
     }
@@ -175,7 +175,6 @@ namespace rei::ui_utility
         const auto size = rect.GetSize();
         model = glm::translate(model, glm::vec3(center.x, center.y, 0.0f));
         model = glm::scale(model, glm::vec3(size.x, size.y, 1.0f));
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
         return model;
     }
 
@@ -194,7 +193,6 @@ namespace rei::ui_utility
         model = glm::translate(model, glm::vec3(center.x, center.y, 0.0f));
         model *= glm::mat4_cast(transform.GetWorldRotation());
         model = glm::scale(model, glm::vec3(size.x * scale.x, size.y * scale.y, scale.z));
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
         return model;
     }
 
@@ -211,7 +209,6 @@ namespace rei::ui_utility
         model = glm::scale(model, glm::vec3(scale.x, scale.y, scale.z));
         model = glm::translate(model, glm::vec3(centerOffset.x, centerOffset.y, 0.0f));
         model = glm::scale(model, glm::vec3(size.x, size.y, 1.0f));
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
         return model;
     }
 

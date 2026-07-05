@@ -170,7 +170,7 @@ public class PlaymodePanelViewModel : BaseViewModel
             }
             else
             {
-                WindowProvider = new EngineWindowProviderViewModel(ptr.Value, _engineApi);
+                WindowProvider = new EngineWindowProviderViewModel(ptr.Value, _engineApi, _engineWindow);
             }
         });
     }

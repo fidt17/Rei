@@ -2,6 +2,7 @@
 using ReiEditor.Models.EditorApp.ViewportGrid;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Render;
+using ReiEditor.Models.Services.TransformationControls;
 using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor.Playmode;
@@ -21,6 +22,7 @@ public class PlaymodeModule : Module
 
         builder.RegisterSingleton<ViewportGridService>().As<IViewportGridService>();
         builder.RegisterSingleton<RenderSettingsService>().As<IRenderSettingsService>();
+        builder.RegisterSingleton<TransformationControlsService>().As<ITransformationControlsService>();
         
         ConfigureViews(builder);
     }

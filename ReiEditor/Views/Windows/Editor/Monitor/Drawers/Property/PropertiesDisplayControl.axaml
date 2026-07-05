@@ -6,6 +6,9 @@
              xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
              xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
              xmlns:custom1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:collection="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Collection"
+             xmlns:vector="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Vector"
+             xmlns:rectTransform="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.PropertiesDisplayControl"
              x:DataType="property1:PropertiesDisplayControl">
@@ -30,16 +33,20 @@
                 <custom1:CustomPropertyView Margin="1" />
             </DataTemplate>
 
-            <DataTemplate DataType="custom:CollectionPropertyViewModel">
+            <DataTemplate DataType="collection:CollectionPropertyViewModel">
                 <custom1:CollectionPropertyView Margin="1" />
             </DataTemplate>
 
-            <DataTemplate DataType="custom:Vector3PropertyViewModel">
+            <DataTemplate DataType="vector:Vector3PropertyViewModel">
                 <custom1:Vector3PropertyView Margin="1" />
             </DataTemplate>
 
-            <DataTemplate DataType="custom:Vector2PropertyViewModel">
+            <DataTemplate DataType="vector:Vector2PropertyViewModel">
                 <custom1:Vector2PropertyView Margin="1" />
+            </DataTemplate>
+
+            <DataTemplate DataType="rectTransform:RectTransformPropertyViewModel">
+                <custom1:RectTransformPropertyView Margin="1" />
             </DataTemplate>
 
             <DataTemplate DataType="custom:ColorPropertyViewModel">

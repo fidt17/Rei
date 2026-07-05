@@ -6,9 +6,14 @@ using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.RectTransform;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 
@@ -22,6 +27,9 @@ public class RectTransformCustomPropertiesProvider : IRectTransformCustomPropert
     private readonly IProjectAssetFocusService _projectAssetFocusService;
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
+    private readonly IEngineRunner _engineRunner;
+    private readonly IEntityApi _entityApi;
+    private readonly IRectTransformLayoutService _rectTransformLayoutService;
 
     public RectTransformCustomPropertiesProvider(
         IBehaviourRegistry behaviourRegistry,
@@ -31,7 +39,10 @@ public class RectTransformCustomPropertiesProvider : IRectTransformCustomPropert
         IAssetTypeMapper assetTypeMapper,
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
-        ISelectionService selectionService)
+        ISelectionService selectionService,
+        IEngineRunner engineRunner,
+        IEntityApi entityApi,
+        IRectTransformLayoutService rectTransformLayoutService)
     {
         _behaviourRegistry = behaviourRegistry;
         _serializableObjectsRegistry = serializableObjectsRegistry;
@@ -41,12 +52,21 @@ public class RectTransformCustomPropertiesProvider : IRectTransformCustomPropert
         _projectAssetFocusService = projectAssetFocusService;
         _sceneManagementService = sceneManagementService;
         _selectionService = selectionService;
+        _engineRunner = engineRunner;
+        _entityApi = entityApi;
+        _rectTransformLayoutService = rectTransformLayoutService;
     }
 
     public IEnumerable<BaseViewModel> CreateProperties(GameEntity entity, BehaviourComponent component)
     {
-        if (!_behaviourRegistry.TryGetById(component.Id, out var behaviourInfo)) yield break;
-        if (behaviourInfo.ObjectName != EngineBehavioursConstants.RECT_TRANSFORM) yield break;
+        if (!IsRectTransform(component)) yield break;
+
+        yield return new RectTransformPropertyViewModel(
+            entity,
+            component,
+            _engineRunner,
+            _entityApi,
+            _rectTransformLayoutService);
 
         var transformId = _behaviourRegistry.GetIdByName(EngineBehavioursConstants.TRANSFORM);
         var transform = entity.GetBehaviour(transformId);
@@ -58,6 +78,11 @@ public class RectTransformCustomPropertiesProvider : IRectTransformCustomPropert
 
             yield return CreatePropertyViewModel(transform.GetProperty(propertyName));
         }
+    }
+
+    public bool OwnsSerializedProperty(BehaviourComponent component, string propertyName)
+    {
+        return IsRectTransform(component) && RectTransformPropertyViewModel.OwnsProperty(propertyName);
     }
 
     private BaseViewModel CreatePropertyViewModel(SerializedProperty property)
@@ -72,5 +97,11 @@ public class RectTransformCustomPropertiesProvider : IRectTransformCustomPropert
             _projectAssetFocusService,
             _sceneManagementService,
             _selectionService);
+    }
+
+    private bool IsRectTransform(BehaviourComponent component)
+    {
+        if (!_behaviourRegistry.TryGetById(component.Id, out var behaviourInfo)) return false;
+        return behaviourInfo.ObjectName == EngineBehavioursConstants.RECT_TRANSFORM;
     }
 }

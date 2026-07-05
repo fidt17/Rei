@@ -8,4 +8,5 @@ namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 public interface IRectTransformCustomPropertiesProvider
 {
     IEnumerable<BaseViewModel> CreateProperties(GameEntity entity, BehaviourComponent component);
+    bool OwnsSerializedProperty(BehaviourComponent component, string propertyName);
 }

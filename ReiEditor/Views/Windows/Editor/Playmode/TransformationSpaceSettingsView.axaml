@@ -111,6 +111,16 @@
                 <TextBlock Text="R" />
             </ToggleButton>
 
+            <ToggleButton
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Command="{Binding SetRectTransformMode}"
+                IsChecked="{Binding RectTransformMode, Mode=TwoWay}"
+                IsEnabled="{Binding CanUseRectTransformMode}"
+                IsVisible="{Binding CanUseRectTransformMode}">
+                <TextBlock Text="T" />
+            </ToggleButton>
+
         </StackPanel>
     </Grid>
 

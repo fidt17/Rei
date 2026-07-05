@@ -1,5 +1,6 @@
 ﻿using System;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Windows.Playmode;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Playmode;
 
@@ -9,13 +10,15 @@ public class EngineWindowProviderViewModel
 
     private readonly IntPtr _windowPointer;
     private readonly IEngineApi _engineApi;
+    private readonly IEngineWindowController _engineWindowController;
 
-    public EngineWindowProviderViewModel(IntPtr windowPointer, IEngineApi engineApi)
+    public EngineWindowProviderViewModel(IntPtr windowPointer, IEngineApi engineApi, IEngineWindowController engineWindowController)
     {
         _windowPointer = windowPointer;
         WindowHandlePointer = engineApi.GetWindowHandle(windowPointer);
 
         _engineApi = engineApi;
+        _engineWindowController = engineWindowController;
     }
 
     public void ResizeWindow(double width, double height)
@@ -25,7 +28,10 @@ public class EngineWindowProviderViewModel
 
         try
         {
-            _engineApi.ResizeWindow(_windowPointer, (int)width, (int)height);
+            var intWidth = (int)width;
+            var intHeight = (int)height;
+            _engineWindowController.SetViewportSize(intWidth, intHeight);
+            _engineApi.ResizeWindow(_windowPointer, intWidth, intHeight);
         }
         catch
         {

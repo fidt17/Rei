@@ -131,20 +131,21 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private void SetupProperties()
     {
         Properties.ClearAndDispose();
-        
-        foreach (var (propertyName, propertyType) in _behaviourRegistry.Behaviours[BehaviourComponent.Id].SerializedProperties)
-        {
-            if (propertyType.HideInEditor) continue;
-            if (!BehaviourComponent.HasProperty(propertyName))
-                throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
-            
-            var property = BehaviourComponent.GetProperty(propertyName);
-            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
-        }
 
         foreach (var property in _rectTransformCustomPropertiesProvider.CreateProperties(_entity, BehaviourComponent))
         {
             Properties.Add(property);
+        }
+
+        foreach (var (propertyName, propertyType) in _behaviourRegistry.Behaviours[BehaviourComponent.Id].SerializedProperties)
+        {
+            if (propertyType.HideInEditor) continue;
+            if (_rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, propertyName)) continue;
+            if (!BehaviourComponent.HasProperty(propertyName))
+                throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
+
+            var property = BehaviourComponent.GetProperty(propertyName);
+            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
         }
     }
 }

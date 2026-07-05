@@ -10,4 +10,9 @@ public static class ControlExtensions
     {
         return control.GetVisualRoot() as Window ?? throw new Exception($"Could not find root window on {control}");
     }
+
+    public static Window? TryGetWindow(this UserControl control)
+    {
+        return control.GetVisualRoot() as Window;
+    }
 }

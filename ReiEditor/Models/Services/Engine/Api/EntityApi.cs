@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Engine.Api.DTO;
@@ -22,14 +20,14 @@ public class EntityApi : IEntityApi
     public GetSceneEntitiesResponse? GetSceneEntities()
     {
         if (!_engineApi.IsEngineRunning) return null;
-        
+
         try
         {
             var buffer = _responseBufferPool.Get();
-            
+
             _engineApi.Invoke(typeof(GetSceneEntitiesDelegate), "GetSceneEntitiesList", buffer, buffer.Capacity);
             var response = JsonConvert.DeserializeObject<GetSceneEntitiesResponse>(buffer.ToString());
-            
+
             _responseBufferPool.Put(buffer);
 
             return response;
@@ -44,16 +42,16 @@ public class EntityApi : IEntityApi
     public GetEntityDataResponse? GetEntityData(int sceneEntityId)
     {
         if (!_engineApi.IsEngineRunning) return null;
-        
+
         try
         {
             var buffer = _responseBufferPool.Get();
-            
+
             _engineApi.Invoke(typeof(GetEntityDataDelegate), "GetEntityData", sceneEntityId, buffer, buffer.Capacity);
             var response = JsonConvert.DeserializeObject<GetEntityDataResponse>(buffer.ToString());
-            
+
             _responseBufferPool.Put(buffer);
-            
+
             return response;
         }
         catch (Exception)
@@ -62,26 +60,23 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void CreateNewEntityDelegate(string name);
-    public void CreateNewEntity(string name)
+    private delegate void CreateNewEntityDelegate(string name, StringBuilder outputBuffer, int bufferSize);
+    public InstantiateEntityResponse? CreateNewEntity(string name)
     {
-        if (!_engineApi.IsEngineRunning) return;
-        
-        try
-        {
-            _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name);
-        }
-        catch (Exception)
-        {
-            // ignore
-        }
+        if (!_engineApi.IsEngineRunning) return null;
+
+        var buffer = _responseBufferPool.Get();
+        _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name, buffer, buffer.Capacity);
+        var response = JsonConvert.DeserializeObject<InstantiateEntityResponse>(buffer.ToString());
+        _responseBufferPool.Put(buffer);
+        return response;
     }
 
     private delegate void DestroyEntityDelegate(int sceneEntityId);
     public void DestroyEntity(int sceneEntityId)
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             _engineApi.Invoke(typeof(DestroyEntityDelegate), "DestroyEntity", sceneEntityId);
@@ -91,12 +86,12 @@ public class EntityApi : IEntityApi
             // ignore
         }
     }
-    
+
     private delegate void RenameEntityDelegate(int sceneEntityId, string newName);
     public void Rename(int sceneEntityId, string newName)
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             _engineApi.Invoke(typeof(RenameEntityDelegate), "RenameEntity", sceneEntityId, newName);
@@ -121,12 +116,12 @@ public class EntityApi : IEntityApi
             // ignore
         }
     }
-    
+
     private delegate void SetEntityDataDelegate(string json);
     public void SetData(SetEntityDataRequest request)
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             // ReSharper disable once RedundantArgumentDefaultValue
@@ -161,7 +156,7 @@ public class EntityApi : IEntityApi
     public void AddBehaviour(int sceneEntityId, int behaviourId)
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             _engineApi.Invoke(typeof(AddBehaviourDelegate), "AddBehaviour", sceneEntityId, behaviourId);
@@ -171,12 +166,12 @@ public class EntityApi : IEntityApi
             // ignore
         }
     }
-    
+
     private delegate void DeleteBehaviourDelegate(int sceneEntityId, int behaviourId);
     public void DeleteBehaviour(int sceneEntityId, int behaviourId)
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             _engineApi.Invoke(typeof(DeleteBehaviourDelegate), "DeleteBehaviour", sceneEntityId, behaviourId);
@@ -191,7 +186,7 @@ public class EntityApi : IEntityApi
     public void SelectEntity(int sceneEntityId, bool resetCurrentSelection = true)
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             _engineApi.Invoke(typeof(SelectEntityDelegate), "SelectEntity", sceneEntityId, resetCurrentSelection);
@@ -221,7 +216,7 @@ public class EntityApi : IEntityApi
     public void ResetEntitySelection()
     {
         if (!_engineApi.IsEngineRunning) return;
-        
+
         try
         {
             _engineApi.Invoke(typeof(ResetEntitySelectionDelegate), "ResetEntitySelection");

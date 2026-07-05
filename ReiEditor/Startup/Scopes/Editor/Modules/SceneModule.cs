@@ -2,6 +2,7 @@
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
+using ReiEditor.Models.Services.RectTransform;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Scenes.Templates;
 using ReiEditor.Utils.Extensions;
@@ -21,6 +22,7 @@ public class SceneModule : Module
         b.RegisterSingleton<SceneAssetDropService>().As<ISceneAssetDropService>();
         b.RegisterSingleton<SceneAssetDragSessionService>().As<ISceneAssetDragSessionService>();
         b.RegisterSingleton<SceneStateSynchronizer>().As<ISceneStateSynchronizer>();
+        b.RegisterSingleton<RectTransformLayoutService>().As<IRectTransformLayoutService>();
         
         b.RegisterSingleton<EntityManagementService>().As<IEntityManagementService>();
         b.RegisterSingleton<EntityDataWriterService>().As<IEntityDataWriterService>();

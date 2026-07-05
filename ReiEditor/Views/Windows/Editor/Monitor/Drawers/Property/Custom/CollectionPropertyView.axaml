@@ -5,12 +5,13 @@
              xmlns:property1="clr-namespace:ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property"
              xmlns:buttons="clr-namespace:ReiEditor.Views.Controls.Buttons"
              xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
+             xmlns:collection="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Collection"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.CollectionPropertyView"
-             x:DataType="custom:CollectionPropertyViewModel">
+             x:DataType="collection:CollectionPropertyViewModel">
 
     <Design.DataContext>
-        <custom:CollectionPropertyViewModel />
+        <collection:CollectionPropertyViewModel />
     </Design.DataContext>
 
     <Border Classes="MonitorComponent">
@@ -60,7 +61,7 @@
                         Margin="5"
                         ItemsSource="{Binding Value}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="custom:CollectionItemViewModel">
+                            <DataTemplate DataType="collection:CollectionItemViewModel">
                                     <Grid 
                                         ColumnDefinitions="*, Auto" Margin="0,0,5,0">
                                         <property1:PropertiesDisplayControl Grid.Column="0" Padding="-10" Value="{Binding Value}" />

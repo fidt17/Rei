@@ -4,12 +4,13 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:custom="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom"
              xmlns:textBoxes="clr-namespace:ReiEditor.Views.Controls.TextBoxes"
+             xmlns:vector="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Vector"
              mc:Ignorable="d"
              x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom.Vector3PropertyView"
-             x:DataType="custom:Vector3PropertyViewModel">
+             x:DataType="vector:Vector3PropertyViewModel">
 
     <Design.DataContext>
-        <custom:Vector3PropertyViewModel />
+        <vector:Vector3PropertyViewModel />
     </Design.DataContext>
 
     <Border

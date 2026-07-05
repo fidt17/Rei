@@ -62,9 +62,40 @@ namespace rei::ui
         _size = size;
     }
 
+    bool Text::IsAutoSize() const
+    {
+        return _autoSize;
+    }
+
+    void Text::SetAutoSize(const bool value)
+    {
+        _autoSize = value;
+    }
+
+    f32 Text::GetRenderSize(const math::Rect& pixelRect) const
+    {
+        if (!_autoSize) return _size;
+
+        const auto targetSize = pixelRect.GetSize();
+        if (targetSize.x <= 0.0f || targetSize.y <= 0.0f) return _size;
+
+        const auto textSize = CalculateRenderRect(pixelRect, _size).GetSize();
+        if (textSize.x <= 0.0f || textSize.y <= 0.0f) return _size;
+
+        const f32 scale = (std::min)(targetSize.x / textSize.x, targetSize.y / textSize.y);
+        if (scale >= 1.0f) return _size;
+
+        return (std::max)(1.0f, _size * scale);
+    }
+
     f32 Text::GetLineHeight() const
     {
-        return _size * REI_TEXT_LINE_HEIGHT_MULTIPLIER;
+        return GetLineHeight(_size);
+    }
+
+    f32 Text::GetLineHeight(const f32 size) const
+    {
+        return size * REI_TEXT_LINE_HEIGHT_MULTIPLIER;
     }
 
     bool Text::IsRaycastTarget() const
@@ -74,13 +105,18 @@ namespace rei::ui
 
     math::Rect Text::CalculateRenderRect(const math::Rect& pixelRect) const
     {
+        return CalculateRenderRect(pixelRect, GetRenderSize(pixelRect));
+    }
+
+    math::Rect Text::CalculateRenderRect(const math::Rect& pixelRect, const f32 size) const
+    {
         if (!_font.IsLoaded()) return {};
 
-        const f32 fontScale = _size / static_cast<f32>(_font->GetPixelHeight());
-        const f32 lineHeight = GetLineHeight();
+        const f32 fontScale = size / static_cast<f32>(_font->GetPixelHeight());
+        const f32 lineHeight = GetLineHeight(size);
         const f32 startX = pixelRect.Min.x;
         f32 x = startX;
-        f32 y = pixelRect.Max.y - _size;
+        f32 y = pixelRect.Max.y - size;
 
         math::Rect textRect {
             math::Vector2::Max(),
@@ -94,7 +130,7 @@ namespace rei::ui
                 textRect.Min.x = (std::min)(textRect.Min.x, startX);
                 textRect.Max.x = (std::max)(textRect.Max.x, x);
                 textRect.Min.y = (std::min)(textRect.Min.y, y);
-                textRect.Max.y = (std::max)(textRect.Max.y, y + _size);
+                textRect.Max.y = (std::max)(textRect.Max.y, y + size);
                 x = startX;
                 y -= lineHeight;
                 continue;
@@ -123,7 +159,7 @@ namespace rei::ui
         textRect.Min.x = (std::min)(textRect.Min.x, startX);
         textRect.Max.x = (std::max)(textRect.Max.x, x);
         textRect.Min.y = (std::min)(textRect.Min.y, y);
-        textRect.Max.y = (std::max)(textRect.Max.y, y + _size);
+        textRect.Max.y = (std::max)(textRect.Max.y, y + size);
         return textRect;
     }
 

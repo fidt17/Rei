@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.EditorApp.Hotkeys;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
@@ -43,6 +44,8 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterBuildCallback(scope => scope.Resolve<WindowActivatedAssetRefreshService>());
         b.RegisterSingleton<PlaymodeAssetDiskRestoreService>();
         b.RegisterBuildCallback(scope => scope.Resolve<PlaymodeAssetDiskRestoreService>());
+        b.RegisterSingleton<EditorTransformationHotkeyService>();
+        b.RegisterBuildCallback(scope => scope.Resolve<EditorTransformationHotkeyService>());
 		
         b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<SelectionService>().As<ISelectionService>();

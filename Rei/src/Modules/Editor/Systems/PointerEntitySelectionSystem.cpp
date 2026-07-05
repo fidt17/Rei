@@ -2,6 +2,7 @@
 
 #include "PointerEntitySelectionSystem.h"
 
+#include "Modules/Editor/EditorPointerInteractionState.h"
 #include "Modules/Editor/EntitySelectionUtility.h"
 #include "Modules/Components/ActiveTag.h"
 #include "Modules/Editor/Components/SelectableByPointerTag.h"
@@ -37,16 +38,30 @@ namespace rei::editor
 
     void PointerEntitySelectionSystem::OnUpdate()
     {
-        if (!Input::IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) return;
-        const auto additiveSelection = IsAdditiveSelectionRequested();
-
-        // if the pointer is over any blocker entity -> return
-        FOR(e, _blockSelectionEntities)
+        if (Input::IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT))
         {
-            if (GET(e, physics::PointerCollisionListener).IsInside) return;
+            if (IsSelectionBlocked())
+            {
+                EditorPointerInteractionState::Reset();
+                return;
+            }
+
+            EditorPointerInteractionState::BeginSelectionCandidate(FindSelectionCandidate(), IsAdditiveSelectionRequested());
+            return;
         }
 
-        // todo: should sort entities by distance from camera to minimize cases when further object gets selected first
+        if (!Input::IsMouseButtonReleased(GLFW_MOUSE_BUTTON_LEFT)) return;
+
+        if (EditorPointerInteractionState::HasSelectionCandidate() && !EditorPointerInteractionState::IsConsumed())
+        {
+            CommitSelection(EditorPointerInteractionState::GetSelectionCandidate(), EditorPointerInteractionState::IsAdditiveSelection());
+        }
+
+        EditorPointerInteractionState::Reset();
+    }
+
+    ecs::Entity PointerEntitySelectionSystem::FindSelectionCandidate() const
+    {
         ecs::Entity selectedCandidate = ecs::NULL_ENTITY;
         FOR(e, _checkEntities)
         {
@@ -68,6 +83,11 @@ namespace rei::editor
             }
         }
 
+        return selectedCandidate;
+    }
+
+    void PointerEntitySelectionSystem::CommitSelection(const ecs::Entity selectedCandidate, const bool additiveSelection) const
+    {
         if (!IS_DEAD(selectedCandidate))
         {
             if (additiveSelection && HAS(selectedCandidate, SelectedTag)) return;
@@ -78,5 +98,15 @@ namespace rei::editor
 
         if (additiveSelection) return;
         ResetAllEntitiesSelection();
+    }
+
+    bool PointerEntitySelectionSystem::IsSelectionBlocked() const
+    {
+        FOR(e, _blockSelectionEntities)
+        {
+            if (GET(e, physics::PointerCollisionListener).IsInside) return true;
+        }
+
+        return false;
     }
 }
