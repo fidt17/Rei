@@ -44,8 +44,11 @@ public class ProjectsListElementViewModel : BaseViewModel
 
 		OpenProjectCommand = new RelayCommand(() => activeProjectService.OpenProject(Project));
 
-		// TODO: remove
-		OpenProjectCommand.Execute(null);
+		// todo: remove
+		if (project.ProjectName == "Symbols")
+		{
+			OpenProjectCommand.Execute(null);
+		}
 	}
 
 	private void RevealInFileExplorer() => _fileExplorerProvider.OpenDirectory(Project.GetDirectoryPath());

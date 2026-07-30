@@ -24,6 +24,8 @@ public static class PathNamingUtils
 
     public static string GetUniqueAssetName(string parentDirectory, string baseName, string extension)
     {
+        if (!Directory.Exists(parentDirectory)) return baseName;
+
         var files = Directory
             .EnumerateFiles(parentDirectory, $"*{extension}")
             .Select(System.IO.Path.GetFileNameWithoutExtension);
