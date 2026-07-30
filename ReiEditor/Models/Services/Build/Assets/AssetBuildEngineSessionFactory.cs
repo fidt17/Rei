@@ -31,13 +31,15 @@ public class AssetBuildEngineSessionFactory : IAssetBuildEngineSessionFactory
 
     public AssetBuildEngineSession CreateSharedSession()
     {
+        Action? disposeAction = null;
         if (!_dllManager.DllLoaded.Value)
         {
             _dllManager.LoadDll();
+            disposeAction = () => _dllManager.UnloadDll();
         }
 
         _engineLogger.SubscribeToClient();
-        return new AssetBuildEngineSession(_engineApi, () => _dllManager.UnloadDll());
+        return new AssetBuildEngineSession(_engineApi, disposeAction);
     }
 
     public AssetBuildEngineSession CreateIsolatedSession(string clientDllPath)
