@@ -17,6 +17,7 @@ The core engine is written in **C++** with **OpenGL**, and the editor is written
 - [Highlights](#highlights)
 - [Engine Architecture (Overview)](#engine-architecture-overview)
 - [Editor (Overview)](#editor-overview)
+- [MCP Bridge](#mcp-bridge)
 - [Rendering (Overview)](#rendering-overview)
 - [Assets And Pipeline (Overview)](#assets-and-pipeline-overview)
 - [Scripting And Codegen (Overview)](#scripting-and-codegen-overview)
@@ -41,7 +42,7 @@ Rei Engine is a custom C++ game engine with an OpenGL renderer and a C# Avalonia
 - **C++20** engine core
 - **OpenGL 3.3+** rendering, **GLFW** window/input, **GLAD** loader
 - **GLM** math, **Assimp** for model import, **stb_image** for textures
-- **C# .NET 6** editor with **Avalonia UI** and **Autofac** DI
+- **C# .NET 10** editor with **Avalonia UI** and **Autofac** DI
 
 ## Highlights
 - Custom sparse-set ECS with fast bitmask filtering and cached query sets for efficient runtime iteration.
@@ -132,6 +133,14 @@ Live property edits push into the runtime and reflect back into the editor.
 - [EntityStateSynchronizer](ReiEditor/Models/Services/Entities/EntityStateSynchronizer.cs)
 
 </details>
+
+## MCP Bridge
+
+ReiEditor hosts a loopback-only Streamable HTTP MCP server for typed, thread-safe editor automation. Protocol hosting is isolated in `ReiEditor.Mcp`; ReiEditor exposes current project scope through a narrow gateway and marshals operations onto Avalonia UI thread.
+
+Current tools cover editor status, entity hierarchy/details, rename, and explicit project save. Architecture, security rules, client setup, and extension workflow are documented in [MCP bridge documentation](docs/mcp-bridge.md).
+
+Default endpoint: `http://127.0.0.1:18777/mcp`.
 
 ## Rendering
 Renderer and pipeline stages: lighting, outlines, post-processing, gizmos, and debug modes.
@@ -289,30 +298,39 @@ Sandbox app and example gameplay scripts.
 ## Build And Run
 ### Requirements
 - Windows
-- Visual Studio 2022 (MSVC v143)
-- CMake 3.22+
+- Visual Studio 2026 with Desktop development with C++ (MSVC v145)
+- .NET SDK 10.0
+- CMake 4.2+ (only for CMake presets)
 
-### CMake (Recommended)
+### CMake Presets
 Use the root `CMakePresets.json`:
 
 ```bash
-cmake --preset vs2022-debug
-cmake --build --preset vs2022-debug-rei
-cmake --build --preset vs2022-debug-sandbox
+cmake --preset vs2026-debug
+cmake --build --preset vs2026-debug-rei
+cmake --build --preset vs2026-debug-sandbox
 ```
 
 Build output:
-- Engine DLL: `out/build/vs2022-debug/Rei/Debug/Rei.dll`
-- Sandbox app: `out/build/vs2022-debug/ReiSandbox/Debug/ReiSandbox.exe`
+- Engine DLL: `out/build/vs2026-debug/Rei/Debug/Rei.dll`
+- Sandbox app: `out/build/vs2026-debug/ReiSandbox/Debug/ReiSandbox.exe`
 
-### MSBuild (Legacy / Existing)
+### MSBuild (Repository Workflow)
+Build native projects sequentially. ReiEditor build is independent.
+
 ```powershell
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe" `
-  Rei.sln "/t:Rei;ReiSandbox" /p:Configuration=Debug /p:Platform=x64 /m:1
+$msbuild = "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe"
+
+& $msbuild Rei.sln /t:Rei /p:Configuration=Debug /p:Platform=x64 /m:1
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+& $msbuild Rei.sln /t:ReiSandbox /p:Configuration=Debug /p:Platform=x64 /m:1
+& $msbuild ReiEditor\ReiEditor.csproj /t:Build /p:Configuration=Debug
 ```
 
 ### Notes
-- Third-party binaries are currently resolved from the repository (`Rei/external/...`).
+- Editor-generated C++ projects target Visual Studio 2026 and `v145`; Editor accepts MSBuild 18+.
+- Third-party binaries are currently resolved from the repository (`Rei/external/...`). Existing `vc143`/`vc2022` filenames identify prebuilt dependencies and remain intentional.
 - `ReiSandbox/Internal/BehaviourRegistry.cpp` is generated and may contain machine-specific include paths, depending on generation context.
 
 ## License

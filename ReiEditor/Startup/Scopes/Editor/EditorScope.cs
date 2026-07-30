@@ -7,6 +7,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.EditorApp.AssetCreation.Shader;
+using ReiEditor.Models.Services.Mcp.Editor;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
@@ -59,6 +60,9 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterModule<SettingsModule>();
         b.RegisterModule<BuildModule>();
         b.RegisterModule<StatusBarModule>();
+
+        b.RegisterSingleton<McpEditorSessionRegistration>();
+        b.RegisterBuildCallback(scope => scope.Resolve<McpEditorSessionRegistration>());
 		
         ConfigureViewModules(b);
     }

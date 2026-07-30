@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Engine.Settings;
@@ -10,6 +11,8 @@ namespace ReiEditor.Models.ProjectManagement.EditorSetup;
 
 public class EditorSettingsService : IEditorSettingsService
 {
+    private const int MINIMUM_MSBUILD_MAJOR_VERSION = 18;
+
     public event Action<bool>? EditorConfigurationChangedEvent;
     public event Action? ConfigurationSetEvent;
 
@@ -86,7 +89,7 @@ public class EditorSettingsService : IEditorSettingsService
             return true;
         }
 		
-        _logger.LogWarning("Cannot set invalid MsBuild path");
+        _logger.LogWarning("Cannot set invalid or unsupported MSBuild path. MSBuild 18+ is required.");
         return false;
     }
 
@@ -139,7 +142,21 @@ public class EditorSettingsService : IEditorSettingsService
         return false;
     }
 
-    private bool IsMsBuildFileValid(string path) => File.Exists(path);
+    private bool IsMsBuildFileValid(string path)
+    {
+        if (!File.Exists(path)) return false;
+        if (!string.Equals(Path.GetFileName(path), "MSBuild.exe", StringComparison.OrdinalIgnoreCase)) return false;
+
+        try
+        {
+            return FileVersionInfo.GetVersionInfo(path).FileMajorPart >= MINIMUM_MSBUILD_MAJOR_VERSION;
+        }
+        catch (Exception e)
+        {
+            _logger.LogException(e);
+            return false;
+        }
+    }
 
     private static bool IsTextEditorFileValid(string path)
     {

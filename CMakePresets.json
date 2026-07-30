@@ -1,15 +1,15 @@
 {
   "version": 3,
   "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 22,
+    "major": 4,
+    "minor": 2,
     "patch": 0
   },
   "configurePresets": [
     {
-      "name": "vs2022-debug",
-      "displayName": "VS2022 Debug x64",
-      "generator": "Visual Studio 17 2022",
+      "name": "vs2026-debug",
+      "displayName": "VS2026 Debug x64",
+      "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "architecture": "x64",
       "cacheVariables": {
@@ -20,14 +20,14 @@
   ],
   "buildPresets": [
     {
-      "name": "vs2022-debug-rei",
-      "configurePreset": "vs2022-debug",
+      "name": "vs2026-debug-rei",
+      "configurePreset": "vs2026-debug",
       "configuration": "Debug",
       "targets": ["Rei"]
     },
     {
-      "name": "vs2022-debug-sandbox",
-      "configurePreset": "vs2022-debug",
+      "name": "vs2026-debug-sandbox",
+      "configurePreset": "vs2026-debug",
       "configuration": "Debug",
       "targets": ["ReiSandbox"]
     }

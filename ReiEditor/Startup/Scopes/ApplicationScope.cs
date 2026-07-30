@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using Avalonia.Platform.Storage;
+using ReiEditor.Mcp.Contracts;
 using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.EditorApp.Shutdown;
 using ReiEditor.Models.EditorApp.Storage;
@@ -11,6 +12,8 @@ using ReiEditor.Models.Resources.Editor;
 using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Services.Mcp.Editor;
+using ReiEditor.Models.Services.Mcp.Hosting;
 using ReiEditor.Models.Services.Preferences;
 using ReiEditor.Startup.Common;
 using ReiEditor.Startup.EntryPoints;
@@ -30,6 +33,7 @@ public class ApplicationScope : BaseLifetimeScope
         await Scope.Resolve<IEditorPreferencesService>().InitializeAsync();
         await Scope.Resolve<IEditorSettingsService>().InitializeAsync();
         await Scope.Resolve<IEngineSettingsProvider>().InitializeAsync();
+        await Scope.Resolve<IMcpHostLifecycleService>().StartAsync();
 		
         Scope.Resolve<ApplicationEntryPoint>().Start();
     }
@@ -43,6 +47,11 @@ public class ApplicationScope : BaseLifetimeScope
 		
         b.RegisterGeneric(typeof(Factory<>)).As(typeof(IFactory<>));
         b.RegisterModule<SerializationModule>();
+
+        b.RegisterSingleton<McpEditorSessionAccessor>().As<IMcpEditorSessionAccessor>();
+        b.RegisterSingleton<AvaloniaEditorThreadDispatcher>().As<IEditorThreadDispatcher>();
+        b.RegisterSingleton<McpEditorGateway>().As<IReiEditorGateway>();
+        b.RegisterSingleton<McpHostLifecycleService>().As<IMcpHostLifecycleService>();
 
         b.RegisterSingleton<EditorResourceService>().As<IEditorResourceService>();
         b.RegisterSingleton<EngineSettingsProvider>().As<IEngineSettingsProvider>();

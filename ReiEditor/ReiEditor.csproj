@@ -16,6 +16,10 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ReiEditor.Mcp\ReiEditor.Mcp.csproj" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="Autofac" Version="7.1.0" />

@@ -70,6 +70,7 @@ public class EditorSetupTabViewModel : BaseViewModel
 		_editorSettingsService.EditorConfigurationChangedEvent += HandleEditorSettingsChangedEvent;
 
 		EnginePath = _editorSettingsService.GetEngineLocation();
+		MsBuildPath = _editorSettingsService.GetMsBuildLocation();
 	}
 
 	private void HandleEnginePathSetEvent(string path) => EnginePath = path;

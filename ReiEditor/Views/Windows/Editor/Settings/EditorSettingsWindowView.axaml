@@ -27,9 +27,9 @@
         <Grid Row="1" Margin="20" RowDefinitions="Auto, *">
             <StackPanel>
 
-                <!-- MsBuild Location -->
+                <!-- MSBuild 18+ Location -->
                 <StackPanel Spacing="5">
-                    <TextBlock Text="MsBuild Location" Classes="h4" />
+                    <TextBlock Text="MSBuild 18+ Location" Classes="h4" />
                     <Button
                         Command="{Binding SetMsBuildLocationCommand}"
                         Classes.valid="{Binding Validation.IsMsBuildPathValid}"

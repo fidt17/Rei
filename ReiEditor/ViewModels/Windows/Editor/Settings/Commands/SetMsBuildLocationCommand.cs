@@ -60,7 +60,7 @@ public class SetMsBuildLocationCommand : ICommand
 	{
 		var result = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
 		{
-			Title = "Select MsBuild.exe",
+			Title = "Select MSBuild 18+ executable",
 			AllowMultiple = false,
 			FileTypeFilter = new [] { FileExtensions.GetFilePicker(FileExtensions.EXE) }
 		});
