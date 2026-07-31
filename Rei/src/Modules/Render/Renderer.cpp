@@ -1,11 +1,19 @@
 #include "Renderer.h"
 
+#include <algorithm>
+#include <utility>
+
 #include "Material/Material.h"
 #include "RenderScenario/DefaultRenderScenario.h"
 #include "Textures/Texture.h"
 
 namespace rei::render
 {
+    Renderer::Renderer(std::vector<std::unique_ptr<CustomRenderModule>> customRenderModules)
+        : _customRenderModules(std::move(customRenderModules))
+    {
+        std::erase_if(_customRenderModules, [](const auto& module) { return module == nullptr; });
+    }
 
     void Renderer::SetCamera(const ecs::ComponentRef<Camera>& camera)
     {
@@ -42,7 +50,7 @@ namespace rei::render
         }
 
         PrepareAssets();
-        _renderScenario = std::make_unique<DefaultRenderScenario>(_target);
+        _renderScenario = std::make_unique<DefaultRenderScenario>(_target, _customRenderModules);
         _renderScenario->Setup();
         
         if (!_camera.IsNull())
@@ -73,11 +81,15 @@ namespace rei::render
 
     void Renderer::Dispose()
     {
+        if (_target != nullptr) glfwMakeContextCurrent(_target);
+
         if (_renderScenario != nullptr)
         {
             _renderScenario->Dispose();
+            _renderScenario.reset();
         }
 
+        _customRenderModules.clear();
         SetTarget(nullptr);
     }
 

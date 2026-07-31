@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -19,8 +20,11 @@
 #include "rei_behaviours/render/SpriteRenderer.h"
 #include "rei_behaviours/transformation/Transform.h"
 
-rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
+rei::render::DefaultRenderScenario::DefaultRenderScenario(
+    GLFWwindow* target,
+    const std::vector<std::unique_ptr<CustomRenderModule>>& customRenderModules)
     : BaseRenderScenario(target),
+      _customRenderModules(customRenderModules),
       _cameraModule(std::make_shared<CameraModule>()),
       _gizmos(std::make_shared<Gizmos>(_cameraModule)),
       _bvh(std::make_shared<BVHRenderModule>(_gizmos)),
@@ -65,6 +69,11 @@ void rei::render::DefaultRenderScenario::Setup()
     _gridRenderModule->Setup();
     _debugOverlayModule->Setup(_target);
     _uiRenderModule->Setup();
+
+    for (const auto& customRenderModule : _customRenderModules)
+    {
+        customRenderModule->Setup();
+    }
 }
 
 void rei::render::DefaultRenderScenario::ClearBuffer(const i32 clearMask, const i32 stencilMask) const
@@ -157,6 +166,16 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
     _lighting->Render();
 
+    const RenderContext context {
+        _cameraModule->GetWidth(),
+        _cameraModule->GetHeight()
+    };
+
+    for (const auto& customRenderModule : _customRenderModules)
+    {
+        customRenderModule->Render(context);
+    }
+
     _gizmos->Render();
 
     if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
@@ -195,6 +214,11 @@ void rei::render::DefaultRenderScenario::RenderInDepthMode() const
 
 void rei::render::DefaultRenderScenario::Dispose()
 {
+    for (const auto& customRenderModule : std::views::reverse(_customRenderModules))
+    {
+        customRenderModule->Dispose();
+    }
+
     FrameCaptureCallback callback;
     {
         std::scoped_lock lock(_frameCaptureMutex);

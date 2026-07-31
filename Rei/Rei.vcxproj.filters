@@ -101,6 +101,8 @@
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Scenes\SceneEntity.h" />
+    <ClInclude Include="src\Modules\Render\CustomRenderModule.h" />
+    <ClInclude Include="src\Modules\Render\RenderContext.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="external\eventpp\callbacklist.h" />
     <ClInclude Include="external\eventpp\eventdispatcher.h" />

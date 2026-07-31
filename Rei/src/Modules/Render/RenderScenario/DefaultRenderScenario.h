@@ -1,9 +1,12 @@
 ﻿#pragma once
+#include <memory>
 #include <mutex>
+#include <vector>
 
 #include "BaseRenderScenario.h"
 #include "CameraModule.h"
 #include "FrameBuffer.h"
+#include "Modules/Render/CustomRenderModule.h"
 #include "Modules/Render/Material/Material.h"
 #include "Modules/Render/Modules/BVHRenderModule.h"
 #include "Modules/Render/Modules/Gizmos.h"
@@ -23,7 +26,9 @@ namespace rei::render
     class DefaultRenderScenario : public BaseRenderScenario
     {
     public:
-        explicit DefaultRenderScenario(GLFWwindow* target);
+        explicit DefaultRenderScenario(
+            GLFWwindow* target,
+            const std::vector<std::unique_ptr<CustomRenderModule>>& customRenderModules);
 
         void Setup() override;
         void OnBeforeRender() override;
@@ -54,6 +59,7 @@ namespace rei::render
         }
 
     private:
+        const std::vector<std::unique_ptr<CustomRenderModule>>& _customRenderModules;
         std::shared_ptr<CameraModule> _cameraModule;
         std::shared_ptr<Gizmos> _gizmos;
         std::shared_ptr<BVHRenderModule> _bvh;

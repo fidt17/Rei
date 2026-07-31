@@ -1,7 +1,11 @@
 ﻿#pragma once
 
+#include <memory>
+#include <vector>
+
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "Ecs/ComponentRef.h"
+#include "CustomRenderModule.h"
 #include "RenderScenario/BaseRenderScenario.h"
 
 namespace rei::render
@@ -9,7 +13,7 @@ namespace rei::render
     class Renderer
     {
     public:
-        Renderer() = default;
+        explicit Renderer(std::vector<std::unique_ptr<CustomRenderModule>> customRenderModules = {});
 
         void SetCamera(const ecs::ComponentRef<Camera>& camera);
         ecs::ComponentRef<Camera> GetCamera() const;
@@ -24,6 +28,7 @@ namespace rei::render
     private:
         GLFWwindow* _target = nullptr;
         ecs::ComponentRef<Camera> _camera;
+        std::vector<std::unique_ptr<CustomRenderModule>> _customRenderModules;
         std::unique_ptr<BaseRenderScenario> _renderScenario = nullptr;
 
         void PrepareAssets() const;

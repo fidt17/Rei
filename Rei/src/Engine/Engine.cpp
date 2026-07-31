@@ -20,7 +20,6 @@ namespace rei::internal::engine
         _windowManager(std::make_shared<window::WindowManager>()),
         _mainWindowHandler(std::make_shared<window::MainWindowHandler>()),
         _mainThread(std::make_shared<TaskExecutor>()),
-        _mainRenderer(std::make_shared<render::Renderer>()),
         _app(std::move(app)),
         _internalWorld(std::make_shared<InternalEngineWorld>()),
         _assetManager(std::make_shared<assets::AssetManager>()),
@@ -38,15 +37,20 @@ namespace rei::internal::engine
         Services::GetInstance()->SetDiagnostics(_diagnostics);
 
         render::ShaderGenerator::GetInstance().Initialize();
+        _mainRenderer = std::make_shared<render::Renderer>(_app->CreateCustomRenderModules());
     }
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow(const WindowCreationSettings& settings)
     {
         auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager, settings);
+        mainWindow->WindowClosingEvent.append([this](const window::Window&)
+        {
+            _mainRenderer->Dispose();
+        });
+
         _mainWindowHandler->MainWindowClosedEvent.append([&]
         {
             LOG("Main window was closed")
-            _mainRenderer->SetTarget(nullptr);
             ExecuteOnMainThread([&]
             {
                 Shutdown(MAIN_WINDOW_CLOSED_EXIT_CODE);

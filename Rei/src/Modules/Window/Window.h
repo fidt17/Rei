@@ -10,6 +10,7 @@ namespace rei::window
     class Window
     {
     public:
+        eventpp::CallbackList<void (Window&)> WindowClosingEvent;
         eventpp::CallbackList<void (Window&)> WindowClosedEvent;
         eventpp::CallbackList<void (i32 key, i32 action, i32 mods)> OnKeyEvent;
         eventpp::CallbackList<void (f32 x, f32 y)> OnMouseMoveEvent;

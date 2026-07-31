@@ -695,6 +695,8 @@
     <ClInclude Include="src\Modules\Render\Modules\UIRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\DebugOverlayModule.h" />
     <ClInclude Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.h" />
+    <ClInclude Include="src\Modules\Render\CustomRenderModule.h" />
+    <ClInclude Include="src\Modules\Render\RenderContext.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\CameraModule.h" />

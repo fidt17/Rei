@@ -69,6 +69,7 @@ namespace rei::window
     {
         if (_glfwWindow == nullptr) return;
 
+        WindowClosingEvent(*this);
         glfwDestroyWindow(_glfwWindow);
         _glfwWindow = nullptr;
 
