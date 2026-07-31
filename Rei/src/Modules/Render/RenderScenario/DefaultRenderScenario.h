@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <mutex>
+
 #include "BaseRenderScenario.h"
 #include "CameraModule.h"
 #include "FrameBuffer.h"
@@ -26,12 +28,15 @@ namespace rei::render
         void Setup() override;
         void OnBeforeRender() override;
         void Render() override;
+        void RenderWithoutCamera() override;
+        bool RequestFrameCapture(const FrameCaptureCallback& callback) override;
         void Dispose() override;
 
     private:
         void RenderInWireframeMode() const;
         void RenderInNormalMode();
         void RenderInDepthMode() const;
+        void CaptureFrame(i32 readBuffer);
         
         void SetBackgroundColor(const Color& color) const;
         void ClearBuffer(i32 clearMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, i32 stencilMask = 0xFF) const;
@@ -60,6 +65,9 @@ namespace rei::render
         std::shared_ptr<UIRenderModule> _uiRenderModule;
 
         FrameBuffer _mainFrameBuffer;
+        std::mutex _frameCaptureMutex;
+        FrameCaptureCallback _frameCaptureCallback;
+        bool _acceptFrameCapture = true;
 
         assets::AssetRef<Material> _depthMaterial{};
     };

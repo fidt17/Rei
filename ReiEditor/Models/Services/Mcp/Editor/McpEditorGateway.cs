@@ -21,7 +21,7 @@ internal sealed class McpEditorGateway : IReiEditorGateway
         {
             return _sessionAccessor.TryGetSession(out var session)
                 ? session!.GetState()
-                : new ReiEditorState(ReiEditorStatus.PROJECT_MANAGEMENT, null, null, null);
+                : new ReiEditorState(ReiEditorStatus.PROJECT_MANAGEMENT, null, null, null, null);
         }, cancellationToken);
     }
 
@@ -43,6 +43,46 @@ internal sealed class McpEditorGateway : IReiEditorGateway
     public Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().SaveProjectAsync(), cancellationToken);
+    }
+
+    public Task<ReiOperationInfo> StartAssetRefreshAsync(CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().StartAssetRefresh(), cancellationToken);
+    }
+
+    public Task<ReiOperationInfo> StartBuildAsync(ReiBuildOptions options, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().StartBuild(options), cancellationToken);
+    }
+
+    public Task<ReiOperationInfo> StartPlaymodeAsync(CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().StartPlaymode(), cancellationToken);
+    }
+
+    public Task<ReiOperationInfo> StopPlaymodeAsync(CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().StopPlaymode(), cancellationToken);
+    }
+
+    public Task<ReiOperationInfo> GetOperationAsync(string operationId, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().GetOperation(operationId), cancellationToken);
+    }
+
+    public Task<ReiOperationInfo> CancelOperationAsync(string operationId, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().CancelOperation(operationId), cancellationToken);
+    }
+
+    public Task<ReiLogList> GetLogsAsync(string? operationId, string minimumLevel, int limit, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().GetLogs(operationId, minimumLevel, limit), cancellationToken);
+    }
+
+    public Task<ReiFrameCapture> CaptureFrameAsync(CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().CaptureFrameAsync(cancellationToken), cancellationToken);
     }
 
     private IMcpEditorSession GetRequiredSession()

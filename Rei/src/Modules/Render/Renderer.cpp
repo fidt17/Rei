@@ -57,12 +57,18 @@ namespace rei::render
         if (!_renderScenario->IsCameraSet())
         {
             LOG("No active camera found...")
-            _renderScenario->Clear();
+            _renderScenario->RenderWithoutCamera();
             return;
         }
 
         _renderScenario->OnBeforeRender();
         _renderScenario->Render();
+    }
+
+    bool Renderer::RequestFrameCapture(const FrameCaptureCallback& callback) const
+    {
+        if (_renderScenario == nullptr) return false;
+        return _renderScenario->RequestFrameCapture(callback);
     }
 
     void Renderer::Dispose()

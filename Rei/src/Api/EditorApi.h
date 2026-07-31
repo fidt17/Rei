@@ -71,6 +71,14 @@ REI_EXTERN_API inline HWND GetWindowHandle(const rei::window::Window* window)
     return window->GetWindowHandle();
 }
 
+typedef void (*FrameCaptureCallbackDelegate)(const u8* pixels, i32 width, i32 height);
+REI_EXTERN_API inline i32 RequestFrameCapture(const FrameCaptureCallbackDelegate callback)
+{
+    if (callback == nullptr || !rei::GetEngine().IsRunning()) return 0;
+
+    return rei::GetEngine().RequestFrameCapture(callback) ? 1 : 0;
+}
+
 REI_EXTERN_API inline void ChangeRenderMode(i32 modeInt, const bool isUiRenderingEnabled)
 {
     rei::GetEngine().ExecuteOnMainThread([=]

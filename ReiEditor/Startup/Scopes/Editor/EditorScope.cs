@@ -61,6 +61,9 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterModule<BuildModule>();
         b.RegisterModule<StatusBarModule>();
 
+        b.RegisterSingleton<McpEditorOperationCoordinator>().As<IMcpEditorOperationCoordinator>();
+        b.RegisterSingleton<McpEditorAutomationService>().As<IMcpEditorAutomationService>();
+
         b.RegisterSingleton<McpEditorSessionRegistration>();
         b.RegisterBuildCallback(scope => scope.Resolve<McpEditorSessionRegistration>());
 		

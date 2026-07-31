@@ -19,6 +19,7 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 public class EngineRunner : IEngineRunner, IAsyncDisposable
 {
     public event Action? EngineStartedEvent;
+    public event Action? EngineStartFailedEvent;
     
     public Utils.Common.IObservable<bool> IsActive => _isActive;
     public Utils.Common.IObservable<bool> IsPlaymodeActive => _isPlaymodeActive;
@@ -96,8 +97,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             
             if (!LoadClientDll())
             {
-                _isEngineStarting.Value = false;
-                EndStartProcedure();
+                HandleEngineStartFailure();
                 return;
             }
             
@@ -120,8 +120,6 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
             {
                 _logger.LogError("Engine failure...");
                 _logger.LogException(e);
-                _isEngineStarting.Value = false;
-                EndStartProcedure();
                 HandleEngineStartFailure();
             }
             finally
@@ -201,6 +199,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _isEditormodeActive.Value = false;
         _isEngineStarting.Value = false;
         EndStartProcedure();
+        EngineStartFailedEvent?.Invoke();
     }
 
     private bool LoadClientDll()

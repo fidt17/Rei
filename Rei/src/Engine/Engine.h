@@ -40,6 +40,7 @@ namespace rei::internal::engine
 
         REI_API std::shared_ptr<window::Window> CreateMainWindow(const WindowCreationSettings& settings);
         REI_API std::shared_ptr<Task> ExecuteOnMainThread(std::function<void()>) const;
+        REI_API bool RequestFrameCapture(const render::FrameCaptureCallback& callback) const;
 
     private:
         EngineMode _mode;

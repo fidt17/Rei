@@ -15,6 +15,7 @@ public class PlaymodeModule : Module
     protected override void Load(ContainerBuilder builder)
     {
         builder.RegisterSingleton<PlaymodeStarter>().As<IPlaymodeStarter>();
+        builder.RegisterSingleton<PlaymodeStartWorkflow>().As<IPlaymodeStartWorkflow>();
         builder.RegisterSingleton<EditorModeStarter>().As<IEditorModeStarter>();
         
         builder.RegisterSingleton<EngineRunner>().As<IEngineRunner>();

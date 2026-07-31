@@ -156,6 +156,11 @@ namespace rei::internal::engine
         return _exitCode;
     }
 
+    bool Engine::RequestFrameCapture(const render::FrameCaptureCallback& callback) const
+    {
+        return _mainRenderer->RequestFrameCapture(callback);
+    }
+
     std::shared_ptr<Task> Engine::ExecuteOnMainThread(std::function<void()> fn) const
     {
         auto t = std::make_shared<Task>(fn);

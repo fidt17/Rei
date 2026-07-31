@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Capture;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Input;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -14,6 +15,7 @@ public class EngineModule : Module
     {
         builder.RegisterSingleton<ClientDllManager>().As<IClientDllManager>();
         builder.RegisterSingleton<EngineApi>().As<IEngineApi>();
+        builder.RegisterSingleton<EngineFrameCaptureService>().As<IEngineFrameCaptureService>();
         builder.RegisterSingleton<EntityApi>().As<IEntityApi>();
         builder.RegisterSingleton<AssetApi>().As<IAssetApi>();
 		

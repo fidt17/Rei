@@ -138,7 +138,7 @@ Live property edits push into the runtime and reflect back into the editor.
 
 ReiEditor hosts a loopback-only Streamable HTTP MCP server for typed, thread-safe editor automation. Protocol hosting is isolated in `ReiEditor.Mcp`; ReiEditor exposes current project scope through a narrow gateway and marshals operations onto Avalonia UI thread.
 
-Current tools cover editor status, entity hierarchy/details, rename, and explicit project save. Architecture, security rules, client setup, and extension workflow are documented in [MCP bridge documentation](docs/mcp-bridge.md).
+Current tools cover project state, entities, save, asset refresh, project build, play/stop lifecycle, operation polling/cancellation, scoped logs, and direct PNG frame capture. Architecture, Engine/Editor/Project boundaries, client setup, and iteration workflow are documented in [MCP bridge documentation](docs/mcp-bridge.md).
 
 Default endpoint: `http://127.0.0.1:18777/mcp`.
 

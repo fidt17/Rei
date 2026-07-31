@@ -6,6 +6,7 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 public interface IEngineRunner
 {
     event Action EngineStartedEvent;
+    event Action EngineStartFailedEvent;
     
     Utils.Common.IObservable<bool> IsActive { get; }
     Utils.Common.IObservable<bool> IsPlaymodeActive { get; }

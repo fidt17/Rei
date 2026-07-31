@@ -13,6 +13,7 @@ public interface IEngineApi
     delegate void FunctionPointerDelegate(IntPtr ptr);
     delegate void IntPtrCallbackDelegate(IntPtr ptr);
     delegate void IntCallbackDelegate(int value);
+    delegate void FrameCaptureCallbackDelegate(IntPtr pixels, int width, int height);
 	
     bool IsEngineRunning { get; }
 
@@ -35,6 +36,7 @@ public interface IEngineApi
     void SetEditorGridSettings(SetViewportGridSettingsRequest settings);
     void ChangeTransformationMode(TransformationMode mode, bool worldSpace);
     int GetTransformationMode();
+    bool RequestFrameCapture(IntPtr callback);
 
     void MarkEngineStopped();
 

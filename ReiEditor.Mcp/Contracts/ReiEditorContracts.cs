@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ReiEditor.Mcp.Contracts;
 
 public static class ReiEditorStatus
@@ -9,9 +11,14 @@ public static class ReiEditorStatus
 
 public sealed record ReiEditorState(
     string Status,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     ReiProjectInfo? Project,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     ReiSceneInfo? Scene,
-    ReiEngineInfo? Engine);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    ReiEngineInfo? Engine,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    ReiAutomationState? Automation);
 
 public sealed record ReiProjectInfo(
     string Name,
@@ -26,6 +33,7 @@ public sealed record ReiSceneInfo(
 
 public sealed record ReiEngineInfo(
     string Status,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     string? Mode);
 
 public sealed record ReiEntityList(
@@ -61,6 +69,7 @@ public sealed record ReiPropertyDetails(
     string Name,
     string Type,
     string SourceType,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     object? Value);
 
 public sealed record ReiEntityMutationResult(

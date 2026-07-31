@@ -17,6 +17,7 @@ namespace rei::render
         void SetTarget(GLFWwindow* target);
 
         void Render() const;
+        bool RequestFrameCapture(const FrameCaptureCallback& callback) const;
 
         void Dispose();
 

@@ -7,31 +7,48 @@ namespace ReiEditor.Models.EditorApp.Console;
 
 public class EditorConsoleService : IEditorConsoleService
 {
-	public event Action<LogMessage>? NewLogEvent;
-	public event Action? LogsClearedEvent;
+    public event Action<LogMessage>? NewLogEvent;
+    public event Action? LogsClearedEvent;
 
-	public Utils.Common.IObservable<int> LogsCount => _logsCount;
-	
-	public IEnumerable<LogMessage> Logs => _logs;
+    public Utils.Common.IObservable<int> LogsCount => _logsCount;
 
-	private readonly List<LogMessage> _logs = new();
-	private readonly Observable<int> _logsCount = new(0);
+    public IEnumerable<LogMessage> Logs
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _logs.ToArray();
+            }
+        }
+    }
 
-	public void Log(LogMessage message)
-	{
-		_logs.Add(message);
-		
-		NewLogEvent?.Invoke(message);
-		_logsCount.Value = _logs.Count;
-	}
+    private readonly object _sync = new();
+    private readonly List<LogMessage> _logs = new();
+    private readonly Observable<int> _logsCount = new(0);
 
-	public void ClearConsole()
-	{
-		if (_logs.Count == 0) return;
-		
-		_logs.Clear();
-		
-		LogsClearedEvent?.Invoke();
-		_logsCount.Value = _logs.Count;
-	}
+    public void Log(LogMessage message)
+    {
+        int logsCount;
+        lock (_sync)
+        {
+            _logs.Add(message);
+            logsCount = _logs.Count;
+        }
+
+        _logsCount.Value = logsCount;
+        NewLogEvent?.Invoke(message);
+    }
+
+    public void ClearConsole()
+    {
+        lock (_sync)
+        {
+            if (_logs.Count == 0) return;
+            _logs.Clear();
+        }
+
+        _logsCount.Value = 0;
+        LogsClearedEvent?.Invoke();
+    }
 }

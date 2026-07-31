@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Mcp.Contracts;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.ProjectManagement.Active;
-using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
-using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Components;
-using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Scenes;
@@ -24,10 +22,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly ISceneManagementService _sceneManagementService;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IEntityRenameCommand _entityRenameCommand;
-    private readonly IAssetsService _assetsService;
-    private readonly ISceneStateSynchronizer _sceneStateSynchronizer;
-    private readonly IEngineRunner _engineRunner;
-    private readonly IBuildService _buildService;
+    private readonly IMcpEditorAutomationService _automationService;
     private readonly IDisposable _sessionLease;
 
     public McpEditorSessionRegistration(
@@ -36,19 +31,13 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         ISceneManagementService sceneManagementService,
         IBehaviourRegistry behaviourRegistry,
         IEntityRenameCommand entityRenameCommand,
-        IAssetsService assetsService,
-        ISceneStateSynchronizer sceneStateSynchronizer,
-        IEngineRunner engineRunner,
-        IBuildService buildService)
+        IMcpEditorAutomationService automationService)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
         _behaviourRegistry = behaviourRegistry;
         _entityRenameCommand = entityRenameCommand;
-        _assetsService = assetsService;
-        _sceneStateSynchronizer = sceneStateSynchronizer;
-        _engineRunner = engineRunner;
-        _buildService = buildService;
+        _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
 
@@ -66,7 +55,8 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
             scene == null ? ReiEditorStatus.PROJECT_LOADING : ReiEditorStatus.READY,
             new ReiProjectInfo(project.ProjectName, project.GetDirectoryPath(), project.ProjectFilePath, project.ProjectSolutionPath),
             scene == null ? null : new ReiSceneInfo(scene.AssetId, scene.Name, scene.Entities.Count()),
-            GetEngineInfo());
+            _automationService.GetEngineInfo(),
+            _automationService.GetState());
     }
 
     public ReiEntityList ListEntities()
@@ -116,41 +106,29 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _entityRenameCommand.Execute(new EntityRenameCommandTarget(entity, newName));
         if (!string.Equals(entity.Name, newName, StringComparison.Ordinal))
         {
-            throw new ReiMcpOperationException("rename_failed", $"Editor did not apply name '{newName}' to entity {entityId}.");
+            throw new ReiMcpOperationException("rename_failed", $"Editor did not apply name {newName} to entity {entityId}.");
         }
 
         return new ReiEntityMutationResult(true, CreateEntitySummary(entity, GetEntityDepth(entity)), "Entity renamed. Save project to persist change.");
     }
 
-    public async Task<ReiProjectSaveResult> SaveProjectAsync()
-    {
-        if (_engineRunner.IsPlaymodeActive.Value)
-        {
-            throw new ReiMcpOperationException("save_unavailable", "Project cannot be saved while play mode is active.");
-        }
+    public Task<ReiProjectSaveResult> SaveProjectAsync() => _automationService.SaveProjectAsync();
 
-        if (_buildService.BuildInProgress.Value)
-        {
-            throw new ReiMcpOperationException("save_unavailable", "Project cannot be saved while a build is running.");
-        }
+    public ReiOperationInfo StartAssetRefresh() => _automationService.StartAssetRefresh();
 
-        if (_assetsService.SaveInProcess.Value)
-        {
-            throw new ReiMcpOperationException("save_in_progress", "Another project save is already running.");
-        }
+    public ReiOperationInfo StartBuild(ReiBuildOptions options) => _automationService.StartBuild(options);
 
-        _sceneStateSynchronizer.SynchronizeStateWithEngine();
-        await _assetsService.SaveProject();
+    public ReiOperationInfo StartPlaymode() => _automationService.StartPlaymode();
 
-        return new ReiProjectSaveResult(true, DateTimeOffset.UtcNow, "Project saved.");
-    }
+    public ReiOperationInfo StopPlaymode() => _automationService.StopPlaymode();
 
-    private ReiEngineInfo GetEngineInfo()
-    {
-        if (_engineRunner.IsEngineStarting.Value) return new ReiEngineInfo("starting", _engineRunner.ActiveMode.ToString());
-        if (_engineRunner.IsActive.Value) return new ReiEngineInfo("running", _engineRunner.ActiveMode.ToString());
-        return new ReiEngineInfo("stopped", null);
-    }
+    public ReiOperationInfo GetOperation(string operationId) => _automationService.GetOperation(operationId);
+
+    public ReiOperationInfo CancelOperation(string operationId) => _automationService.CancelOperation(operationId);
+
+    public ReiLogList GetLogs(string? operationId, string minimumLevel, int limit) => _automationService.GetLogs(operationId, minimumLevel, limit);
+
+    public Task<ReiFrameCapture> CaptureFrameAsync(CancellationToken cancellationToken) => _automationService.CaptureFrameAsync(cancellationToken);
 
     private Scene GetRequiredScene()
     {

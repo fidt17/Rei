@@ -134,6 +134,13 @@ public class EngineApi : IEngineApi
         return Invoke<int>(typeof(GetTransformationModeDelegate), "GetTransformationMode");
     }
 
+    private delegate int RequestFrameCaptureDelegate(IntPtr callback);
+    public bool RequestFrameCapture(IntPtr callback)
+    {
+        if (!IsEngineRunning || callback == IntPtr.Zero) return false;
+        return Invoke<int>(typeof(RequestFrameCaptureDelegate), "RequestFrameCapture", callback) == 1;
+    }
+
     public void MarkEngineStopped()
     {
         IsEngineRunning = false;

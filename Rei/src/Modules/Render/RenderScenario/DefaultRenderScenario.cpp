@@ -1,6 +1,11 @@
 ﻿#include "pch.h"
 #include "DefaultRenderScenario.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <utility>
+#include <vector>
+
 #include "FrameBuffer.h"
 #include "Common/Time/Stopwatch.h"
 #include "Engine/Engine.h"
@@ -27,6 +32,17 @@ rei::render::DefaultRenderScenario::DefaultRenderScenario(GLFWwindow* target)
       _uiRenderModule(std::make_shared<UIRenderModule>(_cameraModule))
 {
     Services::GetInstance()->SetGizmos(_gizmos);
+}
+
+bool rei::render::DefaultRenderScenario::RequestFrameCapture(const FrameCaptureCallback& callback)
+{
+    if (!callback) return false;
+
+    std::scoped_lock lock(_frameCaptureMutex);
+    if (!_acceptFrameCapture || _frameCaptureCallback) return false;
+
+    _frameCaptureCallback = callback;
+    return true;
 }
 
 void rei::render::DefaultRenderScenario::Setup()
@@ -86,12 +102,19 @@ void rei::render::DefaultRenderScenario::Render()
     GetDiagnostics().SetRenderCpuTime(renderStopwatch.ElapsedMs());
 
     _debugOverlayModule->Render();
+    CaptureFrame(GL_BACK);
 
     time::Stopwatch presentStopwatch;
     presentStopwatch.Start();
     glfwSwapBuffers(_target);
     presentStopwatch.Stop();
     GetDiagnostics().SetPresentTime(presentStopwatch.ElapsedMs());
+}
+
+void rei::render::DefaultRenderScenario::RenderWithoutCamera()
+{
+    Clear();
+    CaptureFrame(GL_FRONT);
 }
 
 void rei::render::DefaultRenderScenario::RenderInWireframeMode() const
@@ -172,7 +195,48 @@ void rei::render::DefaultRenderScenario::RenderInDepthMode() const
 
 void rei::render::DefaultRenderScenario::Dispose()
 {
+    FrameCaptureCallback callback;
+    {
+        std::scoped_lock lock(_frameCaptureMutex);
+        _acceptFrameCapture = false;
+        callback = std::move(_frameCaptureCallback);
+    }
+
+    if (callback) callback(nullptr, 0, 0);
     _debugOverlayModule->Dispose();
+}
+
+void rei::render::DefaultRenderScenario::CaptureFrame(const i32 readBuffer)
+{
+    FrameCaptureCallback callback;
+    {
+        std::scoped_lock lock(_frameCaptureMutex);
+        callback = std::move(_frameCaptureCallback);
+    }
+
+    if (!callback) return;
+    i32 width = 0;
+    i32 height = 0;
+    glfwGetFramebufferSize(_target, &width, &height);
+    if (width <= 0 || height <= 0)
+    {
+        callback(nullptr, 0, 0);
+        return;
+    }
+
+    const auto rowSize = static_cast<size_t>(width) * 4;
+    std::vector<u8> pixels(rowSize * static_cast<size_t>(height));
+    glReadBuffer(readBuffer);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+
+    for (i32 y = 0; y < height / 2; y++)
+    {
+        auto top = pixels.begin() + static_cast<ptrdiff_t>(static_cast<size_t>(y) * rowSize);
+        auto bottom = pixels.begin() + static_cast<ptrdiff_t>(static_cast<size_t>(height - y - 1) * rowSize);
+        std::swap_ranges(top, top + static_cast<ptrdiff_t>(rowSize), bottom);
+    }
+
+    callback(pixels.data(), width, height);
 }
 
 void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) const

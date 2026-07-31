@@ -4,12 +4,10 @@ using ReiEditor.Mcp.Contracts;
 
 namespace ReiEditor.Models.Services.Mcp.Editor;
 
-internal interface IMcpEditorSession
+internal interface IMcpEditorAutomationService
 {
-    ReiEditorState GetState();
-    ReiEntityList ListEntities();
-    ReiEntityDetails GetEntity(int entityId);
-    ReiEntityMutationResult RenameEntity(int entityId, string newName);
+    ReiAutomationState GetState();
+    ReiEngineInfo GetEngineInfo();
     Task<ReiProjectSaveResult> SaveProjectAsync();
     ReiOperationInfo StartAssetRefresh();
     ReiOperationInfo StartBuild(ReiBuildOptions options);
