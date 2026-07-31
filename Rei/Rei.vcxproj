@@ -697,6 +697,7 @@
     <ClInclude Include="src\Modules\Render\Systems\DebugOverlayToggleSystem.h" />
     <ClInclude Include="src\Modules\Render\CustomRenderModule.h" />
     <ClInclude Include="src\Modules\Render\RenderContext.h" />
+    <ClInclude Include="src\Modules\Render\Batching\InstancedQuadBatch.h" />
     <ClInclude Include="src\Modules\Render\Renderer.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\BaseRenderScenario.h" />
     <ClInclude Include="src\Modules\Render\RenderScenario\CameraModule.h" />
@@ -773,6 +774,7 @@
     <ClCompile Include="src\Common\Math\Ray.cpp" />
     <ClCompile Include="src\Common\Math\Vector2.cpp" />
     <ClCompile Include="src\Common\Math\Vector3.cpp" />
+    <ClCompile Include="src\Modules\Render\Batching\InstancedQuadBatch.cpp" />
     <ClCompile Include="src\Common\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">Create</PrecompiledHeader>
