@@ -50,6 +50,28 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.RenameEntityAsync(entityId, newName, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_add_behaviour", Title = "Add Rei behaviour", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Adds a registered behaviour to one current-scene entity by type name. Existing behaviour is an unchanged success. Save project to persist change.")]
+    public Task<ReiBehaviourMutationResult> AddBehaviour(
+        [Description("Stable entity id from rei_editor_list_entities.")] int entityId,
+        [Description("Registered C++ behaviour type name, for example SymbolGridBehaviour.")] string behaviourName,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.AddBehaviourAsync(entityId, behaviourName, cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_set_behaviour_property", Title = "Set Rei behaviour property", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Sets one serialized behaviour property using a JSON-compatible value. Custom values accept partial objects; AssetRef values use {\"Id\":\"asset-guid\"}. Save project to persist change.")]
+    public Task<ReiBehaviourPropertyMutationResult> SetBehaviourProperty(
+        [Description("Stable entity id from rei_editor_list_entities.")] int entityId,
+        [Description("Attached registered C++ behaviour type name.")] string behaviourName,
+        [Description("Exact serialized property name returned by rei_editor_get_entity.")] string propertyName,
+        [Description("JSON-compatible property value.")] JsonElement value,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.SetBehaviourPropertyAsync(entityId, behaviourName, propertyName, value, cancellationToken));
+    }
+
     [McpServerTool(Name = "rei_editor_save_project", Title = "Save Rei project", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Synchronizes current scene from engine and saves dirty project assets. Rejected during play mode, build, or another save.")]
     public Task<ReiProjectSaveResult> SaveProject(CancellationToken cancellationToken)

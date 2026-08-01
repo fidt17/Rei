@@ -77,6 +77,18 @@ public sealed record ReiEntityMutationResult(
     ReiEntitySummary Entity,
     string Message);
 
+public sealed record ReiBehaviourMutationResult(
+    bool Changed,
+    ReiEntityDetails Entity,
+    string Message);
+
+public sealed record ReiBehaviourPropertyMutationResult(
+    bool Changed,
+    int EntityId,
+    ReiBehaviourDetails Behaviour,
+    ReiPropertyDetails Property,
+    string Message);
+
 public sealed record ReiProjectSaveResult(
     bool Saved,
     DateTimeOffset CompletedAtUtc,

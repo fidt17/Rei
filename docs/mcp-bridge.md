@@ -131,7 +131,8 @@ Editor must be running before client uses tools. Reconnect client after changing
 - Kestrel binds only to `127.0.0.1`.
 - Middleware accepts only `127.0.0.1` and `localhost` Host headers.
 - CORS is disabled.
-- Inputs are untrusted. Gateway validates ids, readiness, names, build options, log filters, and operation state.
+- Inputs are untrusted. Gateway validates ids, readiness, entity and behaviour names, serialized property names and value shapes, build options, log filters, and operation state.
+- Behaviour mutations resolve registered types by name, reject missing properties and incompatible values, and verify add postconditions.
 - Expected failures use safe codes such as `entity_not_found`, `operation_in_progress`, and `capture_unavailable`.
 - Arbitrary internal exception details are not returned through MCP.
 - Editor model entry runs on Avalonia UI thread.
@@ -148,6 +149,8 @@ Editor must be running before client uses tools. Reconnect client after changing
 | `rei_editor_list_entities` | Read-only | Current hierarchy in display order with ids, parent/order/depth, and behaviours. |
 | `rei_editor_get_entity` | Read-only | Entity behaviours and normalized JSON-compatible property values. |
 | `rei_editor_rename_entity` | Mutation, idempotent | Renames through existing entity command; requires explicit save. |
+| `rei_editor_add_behaviour` | Mutation, idempotent | Adds registered Behaviour by type name. Existing attachment is unchanged success. |
+| `rei_editor_set_behaviour_property` | Mutation, idempotent | Sets primitive, collection, or partial custom serialized value. Asset refs use `{"Id":"asset-guid"}`. |
 | `rei_editor_save_project` | Mutation, destructive, idempotent | Syncs scene from engine, then saves dirty project assets. |
 | `rei_editor_refresh_assets` | Mutation, destructive, idempotent | Starts full reimport, meta cleanup/update, behaviour refresh, shader refresh, and scene import. |
 | `rei_editor_start_build` | Mutation, destructive, idempotent | Starts Editor project build pipeline. |
@@ -186,15 +189,18 @@ Cancellation is cooperative. Import has no cancellable internal API, so refresh 
 1. Call `rei_editor_get_state`; require `ready` and no active operation.
 2. Edit project files.
 3. Start `rei_editor_refresh_assets` and poll returned id.
-4. On failure, read `rei_editor_get_logs` with operation id and fix issue.
-5. Start `rei_editor_start_build` using `editor_debug`; poll and inspect logs.
-6. Start `rei_editor_start_playmode`; incremental build should reuse current build state.
-7. Poll until play mode started.
-8. Call `rei_editor_capture_frame`; inspect returned PNG directly.
-9. Read engine/editor logs, filtered by level when useful.
-10. Stop play mode, edit, and repeat.
+4. If scene authoring changed, inspect entity, add required Behaviour, set serialized properties, then save.
+5. On failure, read `rei_editor_get_logs` with operation id and fix issue.
+6. Start `rei_editor_start_build` using `editor_debug`; poll and inspect logs.
+7. Start `rei_editor_start_playmode`; incremental build should reuse current build state.
+8. Poll until play mode started.
+9. Call `rei_editor_capture_frame`; inspect returned PNG directly.
+10. Read engine/editor logs, filtered by level when useful.
+11. Stop play mode, edit, and repeat.
 
 For quick visual iteration, separate explicit build may be skipped because `rei_editor_start_playmode` already saves and runs incremental `EditorDebug` build.
+
+Property writes use exact serialized names returned by `rei_editor_get_entity`. Custom objects may be partial: `{"Id":"..."}` updates only `AssetRef.Id`; omitted nested fields remain unchanged.
 
 ## Build and tests
 
@@ -228,8 +234,8 @@ Avoid generic `execute_command` and reflection-based â€œcall any Editor methodâ€
 
 ## Next iterations
 
-1. Typed behaviour-property writes, including vectors, colors, collections, and exact symbol-cell control.
-2. Create/delete/reparent entity with explicit destructive metadata and postcondition snapshots.
+1. Create/delete/reparent entity with explicit destructive metadata and postcondition snapshots.
+2. Delete/enable/disable Behaviour commands with dependency checks.
 3. Scene list/load/create tools and scene resources.
 4. Optional capture parameters: target size, scene-only/UI inclusion, and named artifact persistence.
 5. Structured build diagnostics beyond log records.

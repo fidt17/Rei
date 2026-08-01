@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ReiEditor.Mcp.Configuration;
@@ -17,6 +18,11 @@ public sealed class ReiMcpHostIntegrationTests
         public int? RenamedEntityId { get; private set; }
         public string? RenamedEntityName { get; private set; }
         public ReiBuildOptions? BuildOptions { get; private set; }
+        public int? AddedBehaviourEntityId { get; private set; }
+        public string? AddedBehaviourName { get; private set; }
+        public string? SetPropertyBehaviourName { get; private set; }
+        public string? SetPropertyName { get; private set; }
+        public object? SetPropertyValue { get; private set; }
 
         public Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken)
         {
@@ -50,6 +56,38 @@ public sealed class ReiMcpHostIntegrationTests
             RenamedEntityId = entityId;
             RenamedEntityName = newName;
             return Task.FromResult(new ReiEntityMutationResult(true, CreateEntitySummary(newName), "Entity renamed."));
+        }
+
+        public Task<ReiBehaviourMutationResult> AddBehaviourAsync(
+            int entityId,
+            string behaviourName,
+            CancellationToken cancellationToken)
+        {
+            AddedBehaviourEntityId = entityId;
+            AddedBehaviourName = behaviourName;
+            return Task.FromResult(new ReiBehaviourMutationResult(
+                true,
+                CreateEntityDetails(behaviourName),
+                "Behaviour added."));
+        }
+
+        public Task<ReiBehaviourPropertyMutationResult> SetBehaviourPropertyAsync(
+            int entityId,
+            string behaviourName,
+            string propertyName,
+            object? value,
+            CancellationToken cancellationToken)
+        {
+            SetPropertyBehaviourName = behaviourName;
+            SetPropertyName = propertyName;
+            SetPropertyValue = value;
+            var property = new ReiPropertyDetails(propertyName, "Integer", "i32", 64);
+            return Task.FromResult(new ReiBehaviourPropertyMutationResult(
+                true,
+                entityId,
+                new ReiBehaviourDetails(5, behaviourName, [property]),
+                property,
+                "Behaviour property changed."));
         }
 
         public Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken)
@@ -126,6 +164,16 @@ public sealed class ReiMcpHostIntegrationTests
         {
             return new ReiEntitySummary(42, name, 0, 0, 0, [new ReiBehaviourSummary(1, "Transform")]);
         }
+
+        private static ReiEntityDetails CreateEntityDetails(string behaviourName)
+        {
+            return new ReiEntityDetails(
+                42,
+                "Grid",
+                0,
+                0,
+                [new ReiBehaviourDetails(5, behaviourName, [])]);
+        }
     }
 
     [Fact]
@@ -155,11 +203,13 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(13, tools.Count);
+        Assert.Equal(15, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
         Assert.Contains(tools, x => x.Name == "rei_editor_rename_entity");
+        Assert.Contains(tools, x => x.Name == "rei_editor_add_behaviour");
+        Assert.Contains(tools, x => x.Name == "rei_editor_set_behaviour_property");
         Assert.Contains(tools, x => x.Name == "rei_editor_save_project");
         Assert.Contains(tools, x => x.Name == "rei_editor_refresh_assets");
         Assert.Contains(tools, x => x.Name == "rei_editor_start_build");
@@ -202,6 +252,37 @@ public sealed class ReiMcpHostIntegrationTests
         Assert.NotEqual(true, renameResult.IsError);
         Assert.Equal(42, gateway.RenamedEntityId);
         Assert.Equal("Symbols Grid", gateway.RenamedEntityName);
+
+        var addBehaviourResult = await client.CallToolAsync(
+            "rei_editor_add_behaviour",
+            new Dictionary<string, object?>
+            {
+                ["entityId"] = 42,
+                ["behaviourName"] = "SymbolGridBehaviour"
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotEqual(true, addBehaviourResult.IsError);
+        Assert.Equal(42, gateway.AddedBehaviourEntityId);
+        Assert.Equal("SymbolGridBehaviour", gateway.AddedBehaviourName);
+
+        var setPropertyResult = await client.CallToolAsync(
+            "rei_editor_set_behaviour_property",
+            new Dictionary<string, object?>
+            {
+                ["entityId"] = 42,
+                ["behaviourName"] = "SymbolGridBehaviour",
+                ["propertyName"] = "_columns",
+                ["value"] = 64
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotEqual(true, setPropertyResult.IsError);
+        Assert.Equal("SymbolGridBehaviour", gateway.SetPropertyBehaviourName);
+        Assert.Equal("_columns", gateway.SetPropertyName);
+        var propertyValue = Assert.IsType<JsonElement>(gateway.SetPropertyValue);
+        Assert.Equal(64, propertyValue.GetInt32());
+        Assert.Contains("\"value\":64", GetText(setPropertyResult));
 
         var buildResult = await client.CallToolAsync(
             "rei_editor_start_build",

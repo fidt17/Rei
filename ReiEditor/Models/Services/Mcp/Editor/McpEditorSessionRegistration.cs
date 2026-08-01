@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using ReiEditor.Mcp.Contracts;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
@@ -17,6 +19,8 @@ namespace ReiEditor.Models.Services.Mcp.Editor;
 internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposable
 {
     private const int MAX_ENTITY_NAME_LENGTH = 128;
+    private const int MAX_BEHAVIOUR_NAME_LENGTH = 256;
+    private const int MAX_PROPERTY_NAME_LENGTH = 256;
 
     private readonly IActiveProjectService _activeProjectService;
     private readonly ISceneManagementService _sceneManagementService;
@@ -24,6 +28,8 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IEntityRenameCommand _entityRenameCommand;
     private readonly IMcpEditorAutomationService _automationService;
     private readonly IDisposable _sessionLease;
+    private readonly IEntityManagementService _entityManagementService;
+    private readonly IBehaviourComponentsService _behaviourComponentsService;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -31,12 +37,16 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         ISceneManagementService sceneManagementService,
         IBehaviourRegistry behaviourRegistry,
         IEntityRenameCommand entityRenameCommand,
+        IEntityManagementService entityManagementService,
+        IBehaviourComponentsService behaviourComponentsService,
         IMcpEditorAutomationService automationService)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
         _behaviourRegistry = behaviourRegistry;
         _entityRenameCommand = entityRenameCommand;
+        _entityManagementService = entityManagementService;
+        _behaviourComponentsService = behaviourComponentsService;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
@@ -112,6 +122,68 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         return new ReiEntityMutationResult(true, CreateEntitySummary(entity, GetEntityDepth(entity)), "Entity renamed. Save project to persist change.");
     }
 
+    public ReiBehaviourMutationResult AddBehaviour(int entityId, string behaviourName)
+    {
+        var behaviourInfo = GetRequiredBehaviourInfo(behaviourName);
+        var entity = GetRequiredEntity(entityId);
+
+        if (entity.HasComponent(behaviourInfo.BehaviourId))
+        {
+            return new ReiBehaviourMutationResult(false, GetEntity(entityId), "Entity already has requested behaviour.");
+        }
+
+        _entityManagementService.AddBehaviour(entity, behaviourInfo.BehaviourId);
+        if (!entity.HasComponent(behaviourInfo.BehaviourId))
+        {
+            throw new ReiMcpOperationException(
+                "add_behaviour_failed",
+                $"Editor did not add behaviour {behaviourInfo.ObjectName} to entity {entityId}.");
+        }
+
+        return new ReiBehaviourMutationResult(true, GetEntity(entityId), "Behaviour added. Save project to persist change.");
+    }
+
+    public ReiBehaviourPropertyMutationResult SetBehaviourProperty(
+        int entityId,
+        string behaviourName,
+        string propertyName,
+        object? value)
+    {
+        var behaviourInfo = GetRequiredBehaviourInfo(behaviourName);
+        var entity = GetRequiredEntity(entityId);
+        var behaviour = entity.GetBehaviour(behaviourInfo.BehaviourId) ??
+                        throw new ReiMcpOperationException(
+                            "behaviour_not_attached",
+                            $"Entity {entityId} does not have behaviour {behaviourInfo.ObjectName}.");
+
+        propertyName = ValidateName(propertyName, MAX_PROPERTY_NAME_LENGTH, "property", "invalid_property_name");
+        if (!behaviour.HasProperty(propertyName))
+        {
+            throw new ReiMcpOperationException(
+                "property_not_found",
+                $"Behaviour {behaviourInfo.ObjectName} does not have serialized property {propertyName}.");
+        }
+
+        var property = behaviour.GetProperty(propertyName);
+        var editorValue = McpValueConverter.ToEditorValue(value);
+        ValidatePropertyValue(property, editorValue);
+
+        var before = McpValueConverter.ToContractValue(property.Value);
+        _behaviourComponentsService.ApplySerializedValue(property, editorValue);
+        var after = McpValueConverter.ToContractValue(property.Value);
+        var changed = !ContractValuesEqual(before, after);
+        var message = changed
+            ? "Behaviour property changed. Save project to persist change."
+            : "Behaviour property already has requested value.";
+
+        return new ReiBehaviourPropertyMutationResult(
+            changed,
+            entityId,
+            CreateBehaviourDetails(behaviour),
+            CreatePropertyDetails(property),
+            message);
+    }
+
     public Task<ReiProjectSaveResult> SaveProjectAsync() => _automationService.SaveProjectAsync();
 
     public ReiOperationInfo StartAssetRefresh() => _automationService.StartAssetRefresh();
@@ -166,10 +238,110 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     {
         var properties = behaviour.Properties.Values
             .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(x => new ReiPropertyDetails(x.Name, x.Type.ToString(), x.SourceType, McpValueConverter.ToContractValue(x.Value)))
+            .Select(CreatePropertyDetails)
             .ToList();
 
         return new ReiBehaviourDetails(behaviour.Id, GetBehaviourName(behaviour.Id), properties);
+    }
+
+    private static ReiPropertyDetails CreatePropertyDetails(SerializedProperty property)
+    {
+        return new ReiPropertyDetails(
+            property.Name,
+            property.Type.ToString(),
+            property.SourceType,
+            McpValueConverter.ToContractValue(property.Value));
+    }
+
+    private BehaviourAssetInfo GetRequiredBehaviourInfo(string behaviourName)
+    {
+        behaviourName = ValidateName(
+            behaviourName,
+            MAX_BEHAVIOUR_NAME_LENGTH,
+            "Behaviour",
+            "invalid_behaviour_name");
+
+        var matches = _behaviourRegistry.Behaviours.Values
+            .Where(x => string.Equals(x.ObjectName, behaviourName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return matches.Count switch
+        {
+            1 => matches[0],
+            0 => throw new ReiMcpOperationException(
+                "behaviour_not_found",
+                $"Behaviour {behaviourName} is not registered. Refresh assets after adding behaviour source."),
+            _ => throw new ReiMcpOperationException(
+                "ambiguous_behaviour_name",
+                $"More than one registered behaviour is named {behaviourName}.")
+        };
+    }
+
+    private static string ValidateName(string value, int maximumLength, string label, string errorCode)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ReiMcpOperationException(errorCode, $"{label} name must not be empty.");
+        }
+
+        value = value.Trim();
+        if (value.Length > maximumLength)
+        {
+            throw new ReiMcpOperationException(errorCode, $"{label} name must not exceed {maximumLength} characters.");
+        }
+
+        return value;
+    }
+
+    private static void ValidatePropertyValue(SerializedProperty property, object? value)
+    {
+        if (property.Type == SerializedTypeEnum.Custom)
+        {
+            if (value is not JObject objectValue)
+            {
+                throw CreateInvalidPropertyValueException(property, "Expected a JSON object.");
+            }
+
+            if (property.Value is not IReadOnlyDictionary<string, SerializedProperty> nestedProperties)
+            {
+                throw CreateInvalidPropertyValueException(property, "Editor has no nested property schema.");
+            }
+
+            foreach (var nestedValue in objectValue.Properties())
+            {
+                if (!nestedProperties.TryGetValue(nestedValue.Name, out var nestedProperty))
+                {
+                    throw CreateInvalidPropertyValueException(property, $"Unknown nested property {nestedValue.Name}.");
+                }
+
+                ValidatePropertyValue(nestedProperty, McpValueConverter.ToEditorValue(nestedValue.Value));
+            }
+
+            return;
+        }
+
+        if (property.Type == SerializedTypeEnum.Collection && value is not JArray)
+        {
+            throw CreateInvalidPropertyValueException(property, "Expected a JSON array.");
+        }
+
+        if (!property.Type.IsValidValue(value))
+        {
+            throw CreateInvalidPropertyValueException(
+                property,
+                $"Value is incompatible with serialized type {property.Type} ({property.SourceType}).");
+        }
+    }
+
+    private static ReiMcpOperationException CreateInvalidPropertyValueException(SerializedProperty property, string reason)
+    {
+        return new ReiMcpOperationException("invalid_property_value", $"Cannot set property {property.Name}. {reason}");
+    }
+
+    private static bool ContractValuesEqual(object? left, object? right)
+    {
+        if (left == null || right == null) return left == null && right == null;
+        return JToken.DeepEquals(JToken.FromObject(left), JToken.FromObject(right));
     }
 
     private string GetBehaviourName(int behaviourId)

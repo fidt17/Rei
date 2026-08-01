@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Components;
 
@@ -14,6 +15,19 @@ internal static class McpValueConverter
     public static object? ToContractValue(object? value)
     {
         return ConvertValue(value, 0);
+    }
+
+    public static object? ToEditorValue(object? value)
+    {
+        if (value is JsonElement element)
+        {
+            return ToEditorValue(JToken.Parse(element.GetRawText()));
+        }
+
+        if (value is JValue scalar) return scalar.Value;
+        if (value is JObject or JArray) return value;
+        if (value is JToken token) return token.ToObject<object?>();
+        return value;
     }
 
     private static object? ConvertValue(object? value, int depth)

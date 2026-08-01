@@ -10,6 +10,8 @@ internal interface IMcpEditorSession
     ReiEntityList ListEntities();
     ReiEntityDetails GetEntity(int entityId);
     ReiEntityMutationResult RenameEntity(int entityId, string newName);
+    ReiBehaviourMutationResult AddBehaviour(int entityId, string behaviourName);
+    ReiBehaviourPropertyMutationResult SetBehaviourProperty(int entityId, string behaviourName, string propertyName, object? value);
     Task<ReiProjectSaveResult> SaveProjectAsync();
     ReiOperationInfo StartAssetRefresh();
     ReiOperationInfo StartBuild(ReiBuildOptions options);
