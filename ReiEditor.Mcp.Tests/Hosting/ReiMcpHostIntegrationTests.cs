@@ -23,6 +23,9 @@ public sealed class ReiMcpHostIntegrationTests
         public string? SetPropertyBehaviourName { get; private set; }
         public string? SetPropertyName { get; private set; }
         public object? SetPropertyValue { get; private set; }
+        public string? MaterialAssetId { get; private set; }
+        public string? MaterialPropertyName { get; private set; }
+        public object? MaterialPropertyValue { get; private set; }
 
         public Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken)
         {
@@ -88,6 +91,29 @@ public sealed class ReiMcpHostIntegrationTests
                 new ReiBehaviourDetails(5, behaviourName, [property]),
                 property,
                 "Behaviour property changed."));
+        }
+
+        public Task<ReiMaterialPropertyMutationResult> SetMaterialPropertyAsync(
+            string materialAssetId,
+            string propertyName,
+            object? value,
+            CancellationToken cancellationToken)
+        {
+            MaterialAssetId = materialAssetId;
+            MaterialPropertyName = propertyName;
+            MaterialPropertyValue = value;
+            var property = new ReiPropertyDetails(
+                propertyName,
+                "Texture",
+                "sampler2D",
+                new Dictionary<string, object?> { ["Id"] = "texture-1" });
+            return Task.FromResult(new ReiMaterialPropertyMutationResult(
+                true,
+                materialAssetId,
+                "shader-1",
+                property,
+                true,
+                "Material property changed."));
         }
 
         public Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken)
@@ -203,13 +229,14 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(15, tools.Count);
+        Assert.Equal(16, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
         Assert.Contains(tools, x => x.Name == "rei_editor_rename_entity");
         Assert.Contains(tools, x => x.Name == "rei_editor_add_behaviour");
         Assert.Contains(tools, x => x.Name == "rei_editor_set_behaviour_property");
+        Assert.Contains(tools, x => x.Name == "rei_editor_set_material_property");
         Assert.Contains(tools, x => x.Name == "rei_editor_save_project");
         Assert.Contains(tools, x => x.Name == "rei_editor_refresh_assets");
         Assert.Contains(tools, x => x.Name == "rei_editor_start_build");
@@ -283,6 +310,23 @@ public sealed class ReiMcpHostIntegrationTests
         var propertyValue = Assert.IsType<JsonElement>(gateway.SetPropertyValue);
         Assert.Equal(64, propertyValue.GetInt32());
         Assert.Contains("\"value\":64", GetText(setPropertyResult));
+
+        var setMaterialResult = await client.CallToolAsync(
+            "rei_editor_set_material_property",
+            new Dictionary<string, object?>
+            {
+                ["materialAssetId"] = "material-1",
+                ["propertyName"] = "_MainTex",
+                ["value"] = new Dictionary<string, object?> { ["Id"] = "texture-1" }
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotEqual(true, setMaterialResult.IsError);
+        Assert.Equal("material-1", gateway.MaterialAssetId);
+        Assert.Equal("_MainTex", gateway.MaterialPropertyName);
+        var materialValue = Assert.IsType<JsonElement>(gateway.MaterialPropertyValue);
+        Assert.Equal("texture-1", materialValue.GetProperty("Id").GetString());
+        Assert.Contains("\"runtimeSynced\":true", GetText(setMaterialResult));
 
         var buildResult = await client.CallToolAsync(
             "rei_editor_start_build",

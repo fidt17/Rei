@@ -3,15 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Mcp.Contracts;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
+using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Hierarchies;
+using ReiEditor.Models.Services.Render;
 using ReiEditor.Models.Services.Scenes;
 
 namespace ReiEditor.Models.Services.Mcp.Editor;
@@ -21,6 +27,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private const int MAX_ENTITY_NAME_LENGTH = 128;
     private const int MAX_BEHAVIOUR_NAME_LENGTH = 256;
     private const int MAX_PROPERTY_NAME_LENGTH = 256;
+    private const int MAX_ASSET_ID_LENGTH = 256;
 
     private readonly IActiveProjectService _activeProjectService;
     private readonly ISceneManagementService _sceneManagementService;
@@ -30,6 +37,10 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IDisposable _sessionLease;
     private readonly IEntityManagementService _entityManagementService;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly IAssetsService _assetsService;
+    private readonly IAssetRegistry _assetRegistry;
+    private readonly IShaderRegistry _shaderRegistry;
+    private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -39,6 +50,10 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IEntityRenameCommand entityRenameCommand,
         IEntityManagementService entityManagementService,
         IBehaviourComponentsService behaviourComponentsService,
+        IAssetsService assetsService,
+        IAssetRegistry assetRegistry,
+        IShaderRegistry shaderRegistry,
+        IAssetRuntimeSyncService assetRuntimeSyncService,
         IMcpEditorAutomationService automationService)
     {
         _activeProjectService = activeProjectService;
@@ -47,6 +62,10 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _entityRenameCommand = entityRenameCommand;
         _entityManagementService = entityManagementService;
         _behaviourComponentsService = behaviourComponentsService;
+        _assetsService = assetsService;
+        _assetRegistry = assetRegistry;
+        _shaderRegistry = shaderRegistry;
+        _assetRuntimeSyncService = assetRuntimeSyncService;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
@@ -184,6 +203,75 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
             message);
     }
 
+    public async Task<ReiMaterialPropertyMutationResult> SetMaterialPropertyAsync(
+        string materialAssetId,
+        string propertyName,
+        object? value)
+    {
+        materialAssetId = ValidateAssetId(materialAssetId);
+        propertyName = ValidateName(propertyName, MAX_PROPERTY_NAME_LENGTH, "Material property", "invalid_property_name");
+
+        if (!_assetRegistry.TryGetByIdAndExtensions(materialAssetId, FileExtensions.MaterialAssetExtensions, out var assetInfo))
+        {
+            throw new ReiMcpOperationException(
+                "material_not_found",
+                "Material asset " + materialAssetId + " does not exist in current project.");
+        }
+
+        var material = await _assetsService.Load<Material>(assetInfo) ??
+                       throw new ReiMcpOperationException(
+                           "material_load_failed",
+                           "Editor could not load material asset " + materialAssetId + ".");
+
+        if (!_shaderRegistry.TryGetById(material.ShaderAssetId, out var shader))
+        {
+            throw new ReiMcpOperationException(
+                "material_shader_not_found",
+                "Material shader " + material.ShaderAssetId + " is not registered. Refresh assets first.");
+        }
+
+        var uniform = shader.Uniforms.SingleOrDefault(x => string.Equals(x.Name, propertyName, StringComparison.Ordinal));
+        if (uniform == null || !uniform.IsSupported)
+        {
+            throw new ReiMcpOperationException(
+                "material_property_not_found",
+                "Shader " + material.ShaderAssetId + " does not have supported property " + propertyName + ".");
+        }
+
+        material.Properties.TryGetValue(propertyName, out var currentValue);
+        var property = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, currentValue);
+        var editorValue = McpValueConverter.ToEditorValue(value);
+        ValidatePropertyValue(property, editorValue);
+        _behaviourComponentsService.ApplySerializedValue(property, editorValue);
+
+        var normalizedValue = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
+        ValidateMaterialTextureReference(uniform.Type, property, normalizedValue);
+
+        var before = McpValueConverter.ToContractValue(currentValue);
+        var after = McpValueConverter.ToContractValue(normalizedValue);
+        var changed = !ContractValuesEqual(before, after);
+        var runtimeSynced = true;
+        if (changed)
+        {
+            material.Properties[propertyName] = normalizedValue;
+            runtimeSynced = _assetRuntimeSyncService.TrySetAssetData(materialAssetId, JsonConvert.SerializeObject(material));
+        }
+
+        var message = changed
+            ? runtimeSynced
+                ? "Material property changed and synchronized. Save project to persist change."
+                : "Material property changed. Runtime sync unavailable; save and reload will apply it."
+            : "Material property already has requested value.";
+
+        return new ReiMaterialPropertyMutationResult(
+            changed,
+            materialAssetId,
+            material.ShaderAssetId,
+            new ReiPropertyDetails(propertyName, uniform.Type.ToString(), uniform.SourceType, after),
+            runtimeSynced,
+            message);
+    }
+
     public Task<ReiProjectSaveResult> SaveProjectAsync() => _automationService.SaveProjectAsync();
 
     public ReiOperationInfo StartAssetRefresh() => _automationService.StartAssetRefresh();
@@ -291,6 +379,46 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         }
 
         return value;
+    }
+
+    private static string ValidateAssetId(string assetId)
+    {
+        if (string.IsNullOrWhiteSpace(assetId))
+        {
+            throw new ReiMcpOperationException("invalid_asset_id", "Material asset id must not be empty.");
+        }
+
+        assetId = assetId.Trim();
+        if (assetId.Length > MAX_ASSET_ID_LENGTH)
+        {
+            throw new ReiMcpOperationException(
+                "invalid_asset_id",
+                "Material asset id must not exceed " + MAX_ASSET_ID_LENGTH + " characters.");
+        }
+
+        return assetId;
+    }
+
+    private void ValidateMaterialTextureReference(
+        ShaderUniformType uniformType,
+        SerializedProperty property,
+        object? value)
+    {
+        if (uniformType != ShaderUniformType.Texture) return;
+
+        var token = value == null ? null : JToken.FromObject(value);
+        var textureAssetId = token?["Id"]?.Value<string>();
+        if (textureAssetId == null)
+        {
+            throw CreateInvalidPropertyValueException(property, "Expected texture value with string Id.");
+        }
+
+        if (textureAssetId.Length == 0) return;
+        if (_assetRegistry.TryGetByIdAndExtensions(textureAssetId, FileExtensions.TextureAssetExtensions, out _)) return;
+
+        throw CreateInvalidPropertyValueException(
+            property,
+            "Texture asset " + textureAssetId + " does not exist in current project.");
     }
 
     private static void ValidatePropertyValue(SerializedProperty property, object? value)

@@ -6,9 +6,8 @@ using System.Collections;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
-using ReiEditor.Models.Services.Render;
 
-namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
+namespace ReiEditor.Models.Services.Render;
 
 public static class MaterialShaderPropertyUtils
 {

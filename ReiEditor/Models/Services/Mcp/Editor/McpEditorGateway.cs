@@ -57,6 +57,17 @@ internal sealed class McpEditorGateway : IReiEditorGateway
             cancellationToken);
     }
 
+    public Task<ReiMaterialPropertyMutationResult> SetMaterialPropertyAsync(
+        string materialAssetId,
+        string propertyName,
+        object? value,
+        CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeTaskAsync(
+            () => GetRequiredSession().SetMaterialPropertyAsync(materialAssetId, propertyName, value),
+            cancellationToken);
+    }
+
     public Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().SaveProjectAsync(), cancellationToken);

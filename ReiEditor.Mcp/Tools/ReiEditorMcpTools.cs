@@ -72,6 +72,17 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.SetBehaviourPropertyAsync(entityId, behaviourName, propertyName, value, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_set_material_property", Title = "Set Rei material property", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Sets one shader-backed material property using a JSON-compatible value. Texture values use {\"Id\":\"asset-guid\"}. Save project to persist change.")]
+    public Task<ReiMaterialPropertyMutationResult> SetMaterialProperty(
+        [Description("Material asset id from its .meta file or editor asset data.")] string materialAssetId,
+        [Description("Exact supported shader uniform name.")] string propertyName,
+        [Description("JSON-compatible property value.")] JsonElement value,
+        CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.SetMaterialPropertyAsync(materialAssetId, propertyName, value, cancellationToken));
+    }
+
     [McpServerTool(Name = "rei_editor_save_project", Title = "Save Rei project", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Synchronizes current scene from engine and saves dirty project assets. Rejected during play mode, build, or another save.")]
     public Task<ReiProjectSaveResult> SaveProject(CancellationToken cancellationToken)

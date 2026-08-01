@@ -133,6 +133,7 @@ Editor must be running before client uses tools. Reconnect client after changing
 - CORS is disabled.
 - Inputs are untrusted. Gateway validates ids, readiness, entity and behaviour names, serialized property names and value shapes, build options, log filters, and operation state.
 - Behaviour mutations resolve registered types by name, reject missing properties and incompatible values, and verify add postconditions.
+- Material mutations resolve registered shader uniforms, reuse Inspector conversion, validate texture asset references, and synchronize loaded runtime data.
 - Expected failures use safe codes such as `entity_not_found`, `operation_in_progress`, and `capture_unavailable`.
 - Arbitrary internal exception details are not returned through MCP.
 - Editor model entry runs on Avalonia UI thread.
@@ -151,6 +152,7 @@ Editor must be running before client uses tools. Reconnect client after changing
 | `rei_editor_rename_entity` | Mutation, idempotent | Renames through existing entity command; requires explicit save. |
 | `rei_editor_add_behaviour` | Mutation, idempotent | Adds registered Behaviour by type name. Existing attachment is unchanged success. |
 | `rei_editor_set_behaviour_property` | Mutation, idempotent | Sets primitive, collection, or partial custom serialized value. Asset refs use `{"Id":"asset-guid"}`. |
+| `rei_editor_set_material_property` | Mutation, idempotent | Sets one supported shader uniform through Inspector-compatible conversion. Texture values use `{"Id":"asset-guid"}`; explicit save persists. |
 | `rei_editor_save_project` | Mutation, destructive, idempotent | Syncs scene from engine, then saves dirty project assets. |
 | `rei_editor_refresh_assets` | Mutation, destructive, idempotent | Starts full reimport, meta cleanup/update, behaviour refresh, shader refresh, and scene import. |
 | `rei_editor_start_build` | Mutation, destructive, idempotent | Starts Editor project build pipeline. |
@@ -189,7 +191,7 @@ Cancellation is cooperative. Import has no cancellable internal API, so refresh 
 1. Call `rei_editor_get_state`; require `ready` and no active operation.
 2. Edit project files.
 3. Start `rei_editor_refresh_assets` and poll returned id.
-4. If scene authoring changed, inspect entity, add required Behaviour, set serialized properties, then save.
+4. If authoring changed, inspect entity, add required Behaviour, set serialized properties or Material uniforms, then save.
 5. On failure, read `rei_editor_get_logs` with operation id and fix issue.
 6. Start `rei_editor_start_build` using `editor_debug`; poll and inspect logs.
 7. Start `rei_editor_start_playmode`; incremental build should reuse current build state.
@@ -200,7 +202,7 @@ Cancellation is cooperative. Import has no cancellable internal API, so refresh 
 
 For quick visual iteration, separate explicit build may be skipped because `rei_editor_start_playmode` already saves and runs incremental `EditorDebug` build.
 
-Property writes use exact serialized names returned by `rei_editor_get_entity`. Custom objects may be partial: `{"Id":"..."}` updates only `AssetRef.Id`; omitted nested fields remain unchanged.
+Behaviour property writes use exact serialized names returned by `rei_editor_get_entity`. Custom objects may be partial: `{"Id":"..."}` updates only `AssetRef.Id`; omitted nested fields remain unchanged. Material property writes use exact supported uniform names from registered shader and validate referenced texture assets before mutation.
 
 ## Build and tests
 

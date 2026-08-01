@@ -12,6 +12,8 @@ namespace rei::render
         math::Vector2 Center;
         math::Vector2 Size;
         Color Tint;
+        math::Vector2 UvMin = math::Vector2(0.0f, 0.0f);
+        math::Vector2 UvMax = math::Vector2(1.0f, 1.0f);
     };
 
     class REI_API InstancedQuadBatch

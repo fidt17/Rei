@@ -89,6 +89,14 @@ public sealed record ReiBehaviourPropertyMutationResult(
     ReiPropertyDetails Property,
     string Message);
 
+public sealed record ReiMaterialPropertyMutationResult(
+    bool Changed,
+    string MaterialAssetId,
+    string ShaderAssetId,
+    ReiPropertyDetails Property,
+    bool RuntimeSynced,
+    string Message);
+
 public sealed record ReiProjectSaveResult(
     bool Saved,
     DateTimeOffset CompletedAtUtc,
