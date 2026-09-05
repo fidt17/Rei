@@ -12,6 +12,29 @@ namespace ReiEditor.Tests.Models.Services.Preferences;
 public sealed class EditorPreferencesInitializationTests
 {
     /// <summary>
+    /// Storage read failures propagate and do not replace existing data with defaults.
+    /// </summary>
+    [Fact]
+    public async Task InitializePropagatesStorageReadFailureWithoutWriting()
+    {
+        var writes = 0;
+        var storage = new TestEditorStorageService(
+            _ => Task.FromException<string?>(new IOException("read failed")),
+            (_, _) =>
+            {
+                writes++;
+                return Task.FromResult(true);
+            });
+        IEditorPreferencesService service = new EditorPreferencesService(
+            storage, new TestLogger<EditorPreferencesService>(), new JsonSerializer());
+
+        var exception = await Assert.ThrowsAsync<IOException>(() => service.InitializeAsync());
+
+        Assert.Equal("read failed", exception.Message);
+        Assert.Equal(0, writes);
+    }
+
+    /// <summary>
     /// Initialization remains pending until storage supplies the saved preferences, then exposes their values.
     /// </summary>
     [Fact]

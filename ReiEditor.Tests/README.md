@@ -72,9 +72,13 @@ The scene slice adds hierarchy/entity models, selection and commands, state read
 
 The asset slice covers registry/metadata, resource IO and search, file operations and commands, asset load/save/import, creation utilities, supported C++ reflection parsing, scripting registries/code generation/component refresh, and shader/runtime dispatch. File operations use isolated project and engine-source fixtures. Generated C++ is checked as text; no native compiler or engine is invoked.
 
+The projects/settings slice covers active projects and bookmarks, creation validation, template and solution generation, project creation/update/setup/deletion, engine resource copying, editor preferences, configuration validation and engine-settings reloads. Storage is controlled in memory; project files and deletion targets use owned temporary directories. Positive MSBuild version validation remains deferred until a controlled versioned executable fixture or version-reader seam exists.
+
 The full run contains active regressions for `1f` parsing as `10`, generated-file/meta extension casing, and `OtherProject/Scripts/bin` filtering. Scene regressions additionally check duplicate hierarchy insertion atomicity, cross-parent move source index, oversized same-parent insertion, and preservation of a surviving child when its old parent disappears from an engine snapshot. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
 
 Asset regressions cover repeated filename segments in resource writes, missing-extension validation during creation, duplicate scene entities after reload, deleted enum/property definitions surviving refresh, and code lost between separate block comments.
+
+Project/settings regressions cover uppercase source extensions and XML include escaping, default-scene fallback with an empty build configuration, loading-procedure cleanup after setup failures, and preserving prior engine settings when a replacement has no valid version.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
