@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using ReiEditor.Models.ProjectManagement.Creation;
 using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
@@ -82,26 +83,18 @@ public class SolutionGenerator : ISolutionGenerator
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        for (var index = includesList.Count - 1; index >= 0; index--)
-        {
-            if (!includesList[index].EndsWith(".cpp", StringComparison.OrdinalIgnoreCase)
-                && !includesList[index].EndsWith(".h", StringComparison.OrdinalIgnoreCase))
-            {
-                includesList.RemoveAt(index);
-            }
-        }
-
         var compileStr = new StringBuilder();
         var includeStr = new StringBuilder();
-        foreach (var s in includesList)
+        foreach (var includePath in includesList)
         {
-            if (s.EndsWith(".cpp"))
+            var extension = Path.GetExtension(includePath);
+            if (string.Equals(extension, FileExtensions.CPP, StringComparison.OrdinalIgnoreCase))
             {
-                compileStr.AppendLine($"   <ClCompile Include=\"{s}\" />");
+                compileStr.AppendLine(CreateProjectItem("ClCompile", includePath));
             }
-            else if (s.EndsWith(".h"))
+            else if (string.Equals(extension, FileExtensions.H, StringComparison.OrdinalIgnoreCase))
             {
-                includeStr.AppendLine($"   <ClInclude Include=\"{s}\" />");
+                includeStr.AppendLine(CreateProjectItem("ClInclude", includePath));
             }
         }
         
@@ -117,6 +110,12 @@ public class SolutionGenerator : ISolutionGenerator
         return normalized.StartsWith("\\")
             ? normalized.Remove(0, 1)
             : normalized;
+    }
+
+    private static string CreateProjectItem(string itemName, string includePath)
+    {
+        var includeAttribute = new XAttribute("Include", includePath);
+        return $"   <{itemName} {includeAttribute} />";
     }
 
     private static string ReplaceItemGroupContents(string projectFile, string itemGroupName, string itemGroupContent)

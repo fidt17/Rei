@@ -55,25 +55,30 @@ public class ProjectSetupService : IProjectSetupService
         var prepareProjectProcedure = new Procedure("Loading project");
         _editorProceduresService.TrackProcedure(prepareProjectProcedure);
 
-        var project = _activeProjectService.GetActiveProject();
-        
-        await _projectUpdateService.UpdateProject(project);
-        await _sceneManagementService.InitializeAsync();
-		
-        if (!project.HasBeenSetup)
+        try
         {
-            await SetupNewProject();
-            project.SetHasBeenSetup(true);
-            await _assetsService.SaveProject();
-        }
-        else
-        {
-            await OpenLastScene();
-        }
+            var project = _activeProjectService.GetActiveProject();
 
-        await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
-		
-        prepareProjectProcedure.Complete();
+            await _projectUpdateService.UpdateProject(project);
+            await _sceneManagementService.InitializeAsync();
+
+            if (!project.HasBeenSetup)
+            {
+                await SetupNewProject();
+                project.SetHasBeenSetup(true);
+                await _assetsService.SaveProject();
+            }
+            else
+            {
+                await OpenLastScene();
+            }
+
+            await _buildStarter.BuildProject(BuildConfigurationEnum.EditorDebug);
+        }
+        finally
+        {
+            prepareProjectProcedure.Complete();
+        }
     }
 	
     private async Task SetupNewProject()
@@ -95,8 +100,11 @@ public class ProjectSetupService : IProjectSetupService
 
         if (lastScene == null)
         {
-            var sceneFromBuildConfig = _sceneManagementService.GetBuildConfiguration().Scenes.First().Value;
-            lastScene = await _assetsService.Load<Scene>(sceneFromBuildConfig);
+            var sceneFromBuildConfig = _sceneManagementService.GetBuildConfiguration().Scenes.FirstOrDefault().Value;
+            if (sceneFromBuildConfig != null)
+            {
+                lastScene = await _assetsService.Load<Scene>(sceneFromBuildConfig);
+            }
 
             if (lastScene == null)
             {

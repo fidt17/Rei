@@ -125,6 +125,7 @@ public sealed class SolutionGeneratorTests : IDisposable
             @"scripts\PLAYER.cpp",
             @"\Scripts\Player.h",
             "Scripts/notes.txt",
+            "scripts/NOTES.TXT",
             " ",
             null!
         });
@@ -143,25 +144,56 @@ public sealed class SolutionGeneratorTests : IDisposable
     {
         var projectPath = await WriteProjectFile("Uppercase.vcxproj");
 
-        await CreateGenerator().AddSourceFiles(projectPath, new[] { "Source.CPP", "Header.H" });
+        await CreateGenerator().AddSourceFiles(projectPath, new[]
+        {
+            "Source.CPP",
+            "source.cpp",
+            "Mixed.CpP",
+            "Header.H",
+            "header.h",
+            "Mixed.h",
+            "Ignored.cpp.bak",
+            "Ignored.hpp"
+        });
 
         var project = await File.ReadAllTextAsync(projectPath);
+        Assert.Equal(2, Regex.Matches(project, "<ClCompile Include=").Count);
+        Assert.Equal(2, Regex.Matches(project, "<ClInclude Include=").Count);
         Assert.Contains("<ClCompile Include=\"Source.CPP\" />", project);
+        Assert.Contains("<ClCompile Include=\"Mixed.CpP\" />", project);
         Assert.Contains("<ClInclude Include=\"Header.H\" />", project);
+        Assert.Contains("<ClInclude Include=\"Mixed.h\" />", project);
+        Assert.DoesNotContain("Ignored.cpp.bak", project);
+        Assert.DoesNotContain("Ignored.hpp", project);
     }
 
-    /// <summary>Source include paths are XML escaped before insertion into project document.</summary>
+    /// <summary>Source include paths round-trip through XML escaping without double escaping on repeated updates.</summary>
     [Fact]
     public async Task TestAddSourceFilesEscapesXmlIncludePaths()
     {
         var projectPath = await WriteProjectFile("Escaping.vcxproj");
+        var generator = CreateGenerator();
+        var includes = new[]
+        {
+            "Scripts/A&B.cpp",
+            "Scripts/Unicode файл & header.h",
+            "Scripts/Literal&amp;Entity.cpp"
+        };
 
-        await CreateGenerator().AddSourceFiles(projectPath, new[] { "Scripts/A&B.cpp" });
+        await generator.AddSourceFiles(projectPath, includes);
+        var first = await File.ReadAllTextAsync(projectPath);
+        await generator.AddSourceFiles(projectPath, includes);
+        var second = await File.ReadAllTextAsync(projectPath);
 
-        var project = await File.ReadAllTextAsync(projectPath);
-        var document = XDocument.Parse(project);
-        var compile = Assert.Single(document.Descendants("ClCompile"));
-        Assert.Equal(@"Scripts\A&B.cpp", compile.Attribute("Include")?.Value);
+        var document = XDocument.Parse(second);
+        Assert.Equal(
+            new[] { @"Scripts\A&B.cpp", @"Scripts\Literal&amp;Entity.cpp" },
+            document.Descendants("ClCompile").Select(x => x.Attribute("Include")!.Value).ToArray());
+        Assert.Equal(@"Scripts\Unicode файл & header.h", Assert.Single(document.Descendants("ClInclude")).Attribute("Include")?.Value);
+        Assert.Contains("A&amp;B.cpp", second);
+        Assert.Contains("Unicode файл &amp; header.h", second);
+        Assert.Contains("Literal&amp;amp;Entity.cpp", second);
+        Assert.Equal(first, second);
     }
 
     /// <summary>Empty source list clears both managed item groups and remains stable on repeated updates.</summary>

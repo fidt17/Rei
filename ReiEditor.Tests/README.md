@@ -92,7 +92,9 @@ The asset/scripting fixes derive the parent directory for resource writes, rejec
 
 Scene reload replaces the persisted entity collection while retaining the cached scene instance and rebuilding hierarchy. Component refresh removes fields absent from the current definition, preserves compatible properties and replaces changed types. Property callbacks are tracked per component and detached during deletion or refresh, including callbacks on previously replaced children; surviving properties are resubscribed after refresh. Tests protect nested fields, repeated refreshes, failed refresh cleanup, rejected deletion and independent entities. Enum editors synchronize selected options with external values without writing back to the model.
 
-Project/settings regressions cover uppercase source extensions and XML include escaping, default-scene fallback with an empty build configuration, loading-procedure cleanup after setup failures, and preserving prior engine settings when a replacement has no valid version.
+Project generation classifies C++ source/header extensions once without case sensitivity and escapes include attributes before inserting XML fragments. Repeated updates preserve normalized path text without double escaping. Project opening handles an empty build scene configuration through the existing default-scene fallback; setup finishes its loading procedure in a finally block while propagating errors and cancellation. Tests protect successful and failed asynchronous builds, scene creation/loading/template failures, fallback creation failure, and exactly-once procedure completion.
+
+Remaining settings regressions cover preserving prior engine settings when a replacement has no valid version.
 
 Build regressions cover success published after cancellation during asset building, compound `.vcxproj.user` paths entering asset packing, and case-sensitive exclusions for source/project/meta files in the packing filter.
 
