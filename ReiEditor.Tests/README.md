@@ -94,9 +94,9 @@ Scene reload replaces the persisted entity collection while retaining the cached
 
 Project generation classifies C++ source/header extensions once without case sensitivity and escapes include attributes before inserting XML fragments. Repeated updates preserve normalized path text without double escaping. Project opening handles an empty build scene configuration through the existing default-scene fallback; setup finishes its loading procedure in a finally block while propagating errors and cancellation. Tests protect successful and failed asynchronous builds, scene creation/loading/template failures, fallback creation failure, and exactly-once procedure completion.
 
-Remaining settings regressions cover preserving prior engine settings when a replacement has no valid version.
+Engine settings reload validates candidate settings and their base path before replacing the working state. Tests preserve all previously loaded paths and version after invalid JSON or a missing version, then verify a valid reload from a different engine directory.
 
-Build regressions cover success published after cancellation during asset building, compound `.vcxproj.user` paths entering asset packing, and case-sensitive exclusions for source/project/meta files in the packing filter.
+Build cancellation is checked after preparation/evaluation, before success persistence and after it completes. Canceled stages stop later work and release readiness/procedure state; cancellation during persistence marks that result failed. The asset builder has no cancellation-token parameter, so an active asset task is awaited before cancellation cleanup. Tests cover skipped builds, solution-only builds, pending asset work and retry. Asset packing excludes source/project/meta extensions without case sensitivity and handles the exact `.vcxproj.user` suffix while preserving other `.user` files and runtime assets.
 
 ViewModel regressions cover original vector-child subscriptions surviving replacement/disposal, custom child editors recreated on unchanged data, descendant hierarchy VMs surviving controller disposal, sibling project paths passing move validation, console/status/playmode subscriptions surviving disposal, and a created dialog VM leaking when its window factory throws. These tests remain active; production fixes are separate work.
 

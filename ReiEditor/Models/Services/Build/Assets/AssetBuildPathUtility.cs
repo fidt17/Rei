@@ -5,24 +5,24 @@ namespace ReiEditor.Models.Services.Build.Assets;
 
 public static class AssetBuildPathUtility
 {
+    private static readonly string[] EXCLUDED_FILE_EXTENSIONS =
+    {
+        FileExtensions.META,
+        FileExtensions.H,
+        FileExtensions.CPP,
+        FileExtensions.VS_PROJECT,
+        FileExtensions.VS_SOLUTION
+    };
+
     public static bool ShouldBuildPath(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return false;
 
         var normalizedPath = Path.GetFullPath(path).Replace('/', '\\');
         if (IsInHiddenDirectory(normalizedPath)) return false;
+        if (FileExtensions.HasAnyExtension(normalizedPath, EXCLUDED_FILE_EXTENSIONS)) return false;
 
-        var extension = Path.GetExtension(normalizedPath);
-        return extension switch
-        {
-            FileExtensions.META => false,
-            FileExtensions.H => false,
-            FileExtensions.CPP => false,
-            FileExtensions.VS_PROJECT => false,
-            FileExtensions.VS_PROJECT_USER => false,
-            FileExtensions.VS_SOLUTION => false,
-            _ => true
-        };
+        return !normalizedPath.EndsWith(FileExtensions.VS_PROJECT_USER, System.StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsInHiddenDirectory(string path)

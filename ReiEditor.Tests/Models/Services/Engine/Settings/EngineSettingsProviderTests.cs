@@ -144,7 +144,7 @@ public sealed class EngineSettingsProviderTests
         var root = directory.RootPath;
         var validPath = directory.GetPath("valid.json");
         var invalidPath = directory.GetPath("invalid.json");
-        await WriteSettings(validPath, "1", "\\debug", "", "", "");
+        await WriteSettings(validPath, "1", "\\debug", "\\release", "\\src1;\\src2", "\\resources");
         await File.WriteAllTextAsync(invalidPath, invalidSettings);
         var preferences = new TestPreferencesService { EnginePath = validPath };
         var editorSettings = new TestEditorSettingsService { IsValid = true };
@@ -158,7 +158,41 @@ public sealed class EngineSettingsProviderTests
         Assert.Equal(root, provider.GetEnginePath());
         Assert.Equal("1", provider.GetEngineVersion());
         Assert.Equal(root + "\\debug", provider.GetEngineDebugIncludeDir());
+        Assert.Equal(root + "\\release", provider.GetEngineReleaseIncludeDir());
+        Assert.Equal(";" + root + "\\src1;" + root + "\\src2", provider.GetEngineSourceIncludes());
+        Assert.Equal(root + "\\resources", provider.GetEngineResourcesDir());
+        Assert.Equal(root + "\\resources\\rei_behaviours", provider.GetEngineBehavioursDir());
         Assert.Contains(logger.Entries, entry => entry.Exception != null);
+    }
+
+    /// <summary>
+    /// Successful reload after a failed reload publishes settings and path from the same new file.
+    /// </summary>
+    [Fact]
+    public async Task ValidReloadAfterFailedReloadPublishesNewState()
+    {
+        using var directory = new TemporaryDirectory();
+        var initialPath = directory.GetPath("initial.json");
+        var invalidPath = directory.GetPath("invalid.json");
+        var newRoot = directory.GetPath("new-engine");
+        Directory.CreateDirectory(newRoot);
+        var newPath = Path.Combine(newRoot, "engine.json");
+        await WriteSettings(initialPath, "1", "\\debug1", "", "", "");
+        await File.WriteAllTextAsync(invalidPath, "{\"EngineVersion\":\" \"}");
+        await WriteSettings(newPath, "2", "\\debug2", "", "", "");
+        var preferences = new TestPreferencesService { EnginePath = initialPath };
+        var editorSettings = new TestEditorSettingsService { IsValid = true };
+        using var provider = CreateProvider(preferences, editorSettings);
+        await provider.InitializeAsync();
+
+        preferences.EnginePath = invalidPath;
+        editorSettings.PublishConfigurationSet();
+        preferences.EnginePath = newPath;
+        editorSettings.PublishConfigurationSet();
+
+        Assert.Equal(newRoot, provider.GetEnginePath());
+        Assert.Equal("2", provider.GetEngineVersion());
+        Assert.Equal(newRoot + "\\debug2", provider.GetEngineDebugIncludeDir());
     }
 
     /// <summary>

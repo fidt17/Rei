@@ -68,11 +68,14 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
         {
             var filePath = _preferences.GetEnginePath() ?? throw new Exception("Missing engine file");
             var file = File.ReadAllText(filePath);
-        
-            _engineSettings = _serializer.Deserialize<EngineSettings>(file);
-            if (_engineSettings == null) throw new Exception("Could not deserialize engine settings file");
-            if (string.IsNullOrWhiteSpace(_engineSettings.EngineVersion)) throw new Exception("EngineVersion is missing in engine settings file");
-            _enginePath = Path.GetDirectoryName(filePath) ?? throw new Exception("Could not get engine directory path");
+
+            var engineSettings = _serializer.Deserialize<EngineSettings>(file);
+            if (engineSettings == null) throw new Exception("Could not deserialize engine settings file");
+            if (string.IsNullOrWhiteSpace(engineSettings.EngineVersion)) throw new Exception("EngineVersion is missing in engine settings file");
+            var enginePath = Path.GetDirectoryName(filePath) ?? throw new Exception("Could not get engine directory path");
+
+            _engineSettings = engineSettings;
+            _enginePath = enginePath;
         }
         catch (Exception e)
         {

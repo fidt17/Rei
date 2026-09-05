@@ -108,8 +108,10 @@ public class BuildService : IBuildService, IAsyncDisposable
             if (!_sourceFilesUtility.AreSourceFilesValid) throw new Exception("Cannot build project with source files validation errors");
 
             await _buildPreparationService.Prepare(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
             var buildStateEvaluation = await _projectBuildStateService.CalculateState(configuration, executionContext, buildSolution, buildAssets);
+            cancellationToken.ThrowIfCancellationRequested();
             var shouldBuildSolution = buildSolution && (forceSolutionRebuild || buildStateEvaluation.ShouldBuildSolution);
             var shouldBuildAssets = buildAssets && (forceAssetRebuild || buildStateEvaluation.ShouldBuildAssets);
 
@@ -132,9 +134,11 @@ public class BuildService : IBuildService, IAsyncDisposable
                 cancellationToken.ThrowIfCancellationRequested();
                 await _assetBuilder.BuildAssets(executionContext, forceAssetRebuild, onAssetBuilding);
             }
+            cancellationToken.ThrowIfCancellationRequested();
             stopwatch.Stop();
 
             await _projectBuildStateService.SaveSuccessfulBuild(configuration, executionContext, buildSolution, buildAssets);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (_discardBuild)
             {
