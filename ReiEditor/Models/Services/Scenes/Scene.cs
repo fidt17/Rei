@@ -22,8 +22,8 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
     [JsonIgnore]
     public Hierarchy<GameEntity> Hierarchy { get; private set; } = new("");
     
-    [JsonProperty("Entities")]
-    private List<GameEntity> _entities { get; } = new();
+    [JsonProperty("Entities", ObjectCreationHandling = ObjectCreationHandling.Replace, NullValueHandling = NullValueHandling.Ignore)]
+    private List<GameEntity> _entities { get; set; } = new();
 
     public Scene(string name)
     {

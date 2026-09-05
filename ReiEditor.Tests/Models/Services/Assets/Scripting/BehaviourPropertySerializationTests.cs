@@ -398,6 +398,108 @@ public sealed class BehaviourPropertySerializationTests
         Assert.Empty(changes);
     }
 
+    /// <summary>Explicit and schema-driven component removal detach nested properties while new components remain subscribed.</summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void RemovedComponentDetachesNestedProperties(bool removeDefinition, bool collection)
+    {
+        var definitions = new TestDefinitions();
+        definitions.DefineObject("Options", new() { ["Count"] = Data(SerializedTypeEnum.Integer, "int", "1") });
+        definitions.DefineBehaviour("Mover", new() { ["Options"] = Data(collection ? SerializedTypeEnum.Collection : SerializedTypeEnum.Custom, collection ? "std::vector<Options>" : "Options") });
+        var service = CreateService(definitions);
+        var entity = new GameEntity(10, "Entity");
+        Assert.True(service.AddComponent(entity, 1));
+        var oldComponent = entity.GetBehaviour(1)!;
+        var root = oldComponent.GetProperty("Options");
+        if (collection)
+        {
+            service.ApplySerializedValue(root, JArray.Parse("[{\"Count\":1}]"));
+            service.RefreshComponents(entity);
+        }
+        var leaf = Children(collection ? Items(root)[0] : root)["Count"];
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+        if (removeDefinition)
+        {
+            definitions.Definitions.Clear();
+            service.RefreshComponents(entity);
+        }
+        else
+        {
+            Assert.True(service.DeleteComponent(entity, oldComponent));
+        }
+
+        leaf.Value = 2;
+        root.TriggerChangedEvent();
+        Assert.Empty(entity.Behaviours);
+        Assert.Empty(changes);
+
+        definitions.DefineBehaviour("Mover", new() { ["Count"] = Data(SerializedTypeEnum.Integer, "int", "0") });
+        Assert.True(service.AddComponent(entity, 1));
+        var newComponent = entity.GetBehaviour(1)!;
+        newComponent.GetProperty("Count").Value = 3;
+        Assert.Same(newComponent, Assert.Single(changes).Component);
+        Assert.NotSame(oldComponent, newComponent);
+    }
+
+    /// <summary>Schema removal and type replacement detach the former nested field and subscribe its replacement once.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RefreshDetachesRemovedNestedField(bool replaceType)
+    {
+        var definitions = new TestDefinitions();
+        definitions.DefineObject("Options", new() { ["Count"] = Data(SerializedTypeEnum.Integer, "int", "1") });
+        definitions.DefineBehaviour("Mover", new() { ["Options"] = Data(SerializedTypeEnum.Custom, "Options") });
+        var service = CreateService(definitions);
+        var entity = new GameEntity(10, "Entity");
+        Assert.True(service.AddComponent(entity, 1));
+        var component = entity.GetBehaviour(1)!;
+        var oldRoot = component.GetProperty("Options");
+        var oldLeaf = Children(oldRoot)["Count"];
+        var replacementName = replaceType ? "Options" : "Count";
+        definitions.DefineBehaviour("Mover", new() { [replacementName] = Data(SerializedTypeEnum.Integer, "int", "0") });
+
+        service.RefreshComponents(entity);
+        service.RefreshComponents(entity);
+        Assert.Equal(replacementName, Assert.Single(component.Properties).Key);
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+        oldLeaf.Value = 4;
+        oldRoot.TriggerChangedEvent();
+        Assert.Empty(changes);
+
+        var replacement = component.GetProperty(replacementName);
+        replacement.Value = 5;
+        Assert.Same(replacement, Assert.Single(changes).Property);
+    }
+
+    /// <summary>Deletion also detaches a previously subscribed child that was replaced before cleanup.</summary>
+    [Fact]
+    public void DeletionDetachesPreviouslyReplacedChildren()
+    {
+        var definitions = new TestDefinitions();
+        definitions.DefineObject("Options", new() { ["Count"] = Data(SerializedTypeEnum.Integer, "int", "1") });
+        definitions.DefineBehaviour("Mover", new() { ["Options"] = Data(SerializedTypeEnum.Custom, "Options") });
+        var service = CreateService(definitions);
+        var entity = new GameEntity(10, "Entity");
+        Assert.True(service.AddComponent(entity, 1));
+        var component = entity.GetBehaviour(1)!;
+        var root = component.GetProperty("Options");
+        var oldLeaf = Children(root)["Count"];
+        root.Value = new Dictionary<string, SerializedProperty>();
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+
+        Assert.True(service.DeleteComponent(entity, component));
+        oldLeaf.Value = 8;
+
+        Assert.Empty(changes);
+    }
+
     private static BehaviourComponentsService CreateService(TestDefinitions definitions) => new(new TestLogger<BehaviourComponentsService>(), definitions, definitions);
     private static SerializableObjectInfo.SerializedPropertyData Data(SerializedTypeEnum type, string source, string? value = null)
         => new(type, source, null, SerializedTypeEnum.Invalid, null, null, value, false);

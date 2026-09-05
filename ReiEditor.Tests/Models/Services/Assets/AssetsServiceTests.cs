@@ -161,7 +161,7 @@ public sealed class AssetsServiceTests
         Assert.Single(context.Logger.Entries);
     }
 
-    /// <summary>Reloading a cached scene must replace its persisted entity collection rather than append duplicate IDs.</summary>
+    /// <summary>Repeated scene reloads replace removed and empty entities while rebuilding hierarchy on the cached scene.</summary>
     [Fact]
     public async Task ReloadSceneReplacesEntitiesWithoutDuplicatingIds()
     {
@@ -169,18 +169,59 @@ public sealed class AssetsServiceTests
         var info = context.Info("level", ".scene");
         var scene = new Scene("level");
         scene.AddEntity(new GameEntity(1, "before"));
+        scene.AddEntity(new GameEntity(2, "removed"));
+        var originalHierarchy = scene.Hierarchy;
         context.Registry.AddToLoadedAssets(info, scene);
         var saved = new Scene("level");
         saved.AddEntity(new GameEntity(1, "after"));
+        saved.AddEntity(new GameEntity(3, "added"));
         await File.WriteAllTextAsync(info.FullPath, new JsonSerializer().Serialize(saved));
 
         await context.Service.ReloadLoadedAssetsFromDisk(Array.Empty<string>());
 
         Assert.Same(scene, await context.Service.Load<Scene>("level"));
-        var entity = Assert.Single(scene.Entities);
-        Assert.Equal(1, entity.Id);
-        Assert.Equal("after", entity.Name);
-        Assert.Same(entity, scene.GetById(1));
+        Assert.NotSame(originalHierarchy, scene.Hierarchy);
+        Assert.Equal(new[] { 1, 3 }, scene.Entities.Select(x => x.Id));
+        Assert.Null(scene.GetById(2));
+        var reloadedEntity = Assert.IsType<GameEntity>(scene.GetById(1));
+        Assert.Equal("after", reloadedEntity.Name);
+        Assert.Equal(scene.Entities, scene.Hierarchy.RootNodes.Select(node => node.Content));
+        Assert.All(scene.Entities, entity => Assert.Same(entity, scene.Hierarchy.GetNode(entity)!.Content));
+
+        var firstReloadHierarchy = scene.Hierarchy;
+        await context.Service.ReloadLoadedAssetsFromDisk(Array.Empty<string>());
+
+        Assert.NotSame(firstReloadHierarchy, scene.Hierarchy);
+        Assert.Equal(new[] { 1, 3 }, scene.Entities.Select(x => x.Id));
+        Assert.Equal(scene.Entities, scene.Hierarchy.RootNodes.Select(node => node.Content));
+
+        await File.WriteAllTextAsync(info.FullPath, new JsonSerializer().Serialize(new Scene("level")));
+        await context.Service.ReloadLoadedAssetsFromDisk(Array.Empty<string>());
+
+        Assert.Empty(scene.Entities);
+        Assert.Empty(scene.Hierarchy.RootNodes);
+        Assert.Empty(context.Logger.Entries);
+    }
+
+    /// <summary>Missing or null scene entity data retains the valid cached collection and rebuilds its hierarchy.</summary>
+    [Theory]
+    [InlineData("{\"Name\":\"level\"}")]
+    [InlineData("{\"Name\":\"level\",\"Entities\":null}")]
+    public async Task ReloadSceneWithoutEntityArrayPreservesExistingEntities(string json)
+    {
+        using var context = new TestContext();
+        var info = context.Info("level", ".scene");
+        var scene = new Scene("level");
+        var entity = new GameEntity(1, "existing");
+        scene.AddEntity(entity);
+        var originalHierarchy = scene.Hierarchy;
+        context.Registry.AddToLoadedAssets(info, scene);
+        await File.WriteAllTextAsync(info.FullPath, json);
+
+        await context.Service.ReloadLoadedAssetsFromDisk(Array.Empty<string>());
+
+        Assert.Same(entity, Assert.Single(scene.Entities));
+        Assert.NotSame(originalHierarchy, scene.Hierarchy);
         Assert.NotNull(scene.Hierarchy.GetNode(entity));
         Assert.Empty(context.Logger.Entries);
     }

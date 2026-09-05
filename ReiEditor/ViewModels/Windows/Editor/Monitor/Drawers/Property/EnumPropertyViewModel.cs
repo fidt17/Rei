@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
@@ -48,7 +49,14 @@ public class EnumPropertyViewModel : BasePropertyViewModel<int>
             Options.Add(option.Key);
         }
 
-        SelectedValue = _serializableEnum.Options.First(x => x.Value == Value).Key;
+        PropertyChanged += HandlePropertyChanged;
+        UpdateSelectedValue(_serializableEnum.Options.First(x => x.Value == Value).Key);
+    }
+
+    public override void Dispose()
+    {
+        PropertyChanged -= HandlePropertyChanged;
+        base.Dispose();
     }
 
     protected override int ParseValue(object? value)
@@ -64,5 +72,19 @@ public class EnumPropertyViewModel : BasePropertyViewModel<int>
         }
         
         throw new Exception($"Not supported value type: {value}");
+    }
+
+    private void HandlePropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(Value)) return;
+        if (_serializableEnum.Options.TryGetValue(_selectedValue, out var selectedValue) && selectedValue == Value) return;
+
+        var matchingOption = _serializableEnum.Options.FirstOrDefault(x => x.Value == Value);
+        if (matchingOption.Key != null) UpdateSelectedValue(matchingOption.Key);
+    }
+
+    private void UpdateSelectedValue(string selectedValue)
+    {
+        SetField(ref _selectedValue, selectedValue, nameof(SelectedValue));
     }
 }

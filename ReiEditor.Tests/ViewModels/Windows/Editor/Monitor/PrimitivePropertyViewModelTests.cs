@@ -22,10 +22,20 @@ public sealed class PrimitivePropertyViewModelTests
 
         public SerializableObjectInfo? GetObject(string objectName) => null;
 
-        public SerializableEnum? GetEnum(string enumName)
-            => enumName == "Mode"
-                ? new SerializableEnum { EnumName = enumName, Options = new Dictionary<string, int> { ["Idle"] = 1, ["Run"] = 2 } }
-                : null;
+        public SerializableEnum? GetEnum(string enumName) => enumName switch
+        {
+            "Mode" => new SerializableEnum
+            {
+                EnumName = enumName,
+                Options = new Dictionary<string, int> { ["Idle"] = 1, ["Run"] = 2 }
+            },
+            "AliasedMode" => new SerializableEnum
+            {
+                EnumName = enumName,
+                Options = new Dictionary<string, int> { ["Idle"] = 1, ["Run"] = 2, ["Sprint"] = 2 }
+            },
+            _ => null
+        };
     }
 
     /// <summary>
@@ -105,14 +115,18 @@ public sealed class PrimitivePropertyViewModelTests
     {
         var property = TestProperty(SerializedTypeEnum.Enum, 1, "Game::Mode");
         using var viewModel = new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry());
+        var updates = 0;
+        property.ValueChangedEvent += _ => updates++;
 
         Assert.Equal(new[] { "Idle", "Run" }, viewModel.Options);
         Assert.Equal("Idle", viewModel.SelectedValue);
 
         viewModel.SelectedValue = "Run";
+        viewModel.SelectedValue = "Run";
 
         Assert.Equal(2, property.Value);
         Assert.Equal(2, viewModel.Value);
+        Assert.Equal(1, updates);
     }
 
     /// <summary>
@@ -123,10 +137,71 @@ public sealed class PrimitivePropertyViewModelTests
     {
         var property = TestProperty(SerializedTypeEnum.Enum, 1, "Mode");
         using var viewModel = new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry());
+        var updates = 0;
+        property.ValueChangedEvent += _ => updates++;
 
         property.Value = 2;
 
         Assert.Equal("Run", viewModel.SelectedValue);
+        Assert.Equal(1, updates);
+    }
+
+    /// <summary>
+    /// Unknown external enum values preserve selection, notify later listeners, and allow later valid synchronization.
+    /// </summary>
+    [Fact]
+    public void ExternalUnknownEnumValueDoesNotInterruptSynchronization()
+    {
+        var property = TestProperty(SerializedTypeEnum.Enum, 1, "Mode");
+        using var viewModel = new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry());
+        var updates = 0;
+        property.ValueChangedEvent += _ => updates++;
+
+        property.Value = 99;
+
+        Assert.Equal(99, viewModel.Value);
+        Assert.Equal("Idle", viewModel.SelectedValue);
+        Assert.Equal(1, updates);
+
+        property.Value = 2;
+
+        Assert.Equal("Run", viewModel.SelectedValue);
+        Assert.Equal(2, updates);
+    }
+
+    /// <summary>
+    /// Selecting an enum alias keeps its label while writing the shared numeric value once.
+    /// </summary>
+    [Fact]
+    public void EnumAliasSelectionKeepsSelectedLabel()
+    {
+        var property = TestProperty(SerializedTypeEnum.Enum, 1, "AliasedMode");
+        using var viewModel = new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry());
+        var updates = 0;
+        property.ValueChangedEvent += _ => updates++;
+
+        viewModel.SelectedValue = "Sprint";
+
+        Assert.Equal("Sprint", viewModel.SelectedValue);
+        Assert.Equal(2, viewModel.Value);
+        Assert.Equal(2, property.Value);
+        Assert.Equal(1, updates);
+    }
+
+    /// <summary>
+    /// Disposed enum editor stops mapping later serialized values to selected options.
+    /// </summary>
+    [Fact]
+    public void DisposeUnsubscribesEnumEditor()
+    {
+        var property = TestProperty(SerializedTypeEnum.Enum, 1, "Mode");
+        var viewModel = new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry());
+
+        viewModel.Dispose();
+        property.Value = 2;
+
+        Assert.Equal(1, viewModel.Value);
+        Assert.Equal("Idle", viewModel.SelectedValue);
     }
 
     /// <summary>
@@ -138,6 +213,17 @@ public sealed class PrimitivePropertyViewModelTests
         var property = TestProperty(SerializedTypeEnum.Enum, 1, "Missing");
 
         Assert.Throws<Exception>(() => new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry()));
+    }
+
+    /// <summary>
+    /// Enum editor rejects an initial numeric value absent from known options.
+    /// </summary>
+    [Fact]
+    public void EnumEditorRejectsUnknownInitialValue()
+    {
+        var property = TestProperty(SerializedTypeEnum.Enum, 99, "Mode");
+
+        Assert.Throws<InvalidOperationException>(() => new EnumPropertyViewModel(property, new TestSerializableObjectsRegistry()));
     }
 
     private static SerializedProperty TestProperty(SerializedTypeEnum type, object? value, string sourceType)

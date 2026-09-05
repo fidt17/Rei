@@ -90,13 +90,13 @@ The hierarchy/scene fixes reject duplicate registrations before mutating root st
 
 The asset/scripting fixes derive the parent directory for resource writes, reject missing asset extensions before serialization or file/registry changes, and replace enum definitions on refresh. Comment removal preserves separate blocks, whitespace and line boundaries while retaining comment markers inside ordinary/raw strings and character literals. Regression tests cover repeated filename segments, both creation overloads, repeated enum refreshes, literal boundaries and numeric digit separators. This remains a limited source parser, not a full C++ preprocessor.
 
-Remaining asset regressions cover duplicate scene entities after reload, deleted property definitions surviving refresh, and deleted components continuing to publish property changes.
+Scene reload replaces the persisted entity collection while retaining the cached scene instance and rebuilding hierarchy. Component refresh removes fields absent from the current definition, preserves compatible properties and replaces changed types. Property callbacks are tracked per component and detached during deletion or refresh, including callbacks on previously replaced children; surviving properties are resubscribed after refresh. Tests protect nested fields, repeated refreshes, failed refresh cleanup, rejected deletion and independent entities. Enum editors synchronize selected options with external values without writing back to the model.
 
 Project/settings regressions cover uppercase source extensions and XML include escaping, default-scene fallback with an empty build configuration, loading-procedure cleanup after setup failures, and preserving prior engine settings when a replacement has no valid version.
 
 Build regressions cover success published after cancellation during asset building, compound `.vcxproj.user` paths entering asset packing, and case-sensitive exclusions for source/project/meta files in the packing filter.
 
-ViewModel regressions cover stale enum selection after external edits, original vector-child subscriptions surviving replacement/disposal, custom child editors recreated on unchanged data, descendant hierarchy VMs surviving controller disposal, sibling project paths passing move validation, console/status/playmode subscriptions surviving disposal, and a created dialog VM leaking when its window factory throws. These tests remain active; production fixes are separate work.
+ViewModel regressions cover original vector-child subscriptions surviving replacement/disposal, custom child editors recreated on unchanged data, descendant hierarchy VMs surviving controller disposal, sibling project paths passing move validation, console/status/playmode subscriptions surviving disposal, and a created dialog VM leaking when its window factory throws. These tests remain active; production fixes are separate work.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.

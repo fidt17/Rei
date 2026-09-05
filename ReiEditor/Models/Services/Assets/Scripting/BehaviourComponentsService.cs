@@ -15,7 +15,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 {
     public event Action<EntityBehaviourPropertyChangeEventArgs>? BehaviourPropertyChangedEvent;
 
-    private readonly HashSet<SerializedProperty> _subscribedProperties = new();
+    private readonly Dictionary<BehaviourComponent, Dictionary<SerializedProperty, Action<object?>>> _propertySubscriptions = new();
     
     private readonly ILogger<BehaviourComponentsService> _logger;
     private readonly IBehaviourRegistry _behaviourRegistry;
@@ -87,6 +87,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             return false;
         }
 
+        UnsubscribeFromPropertyChanges(component);
         e.DeleteBehaviour(component);
         return true;
     }
@@ -111,46 +112,53 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     public void RefreshComponents(GameEntity e)
     {
-        var behaviours = e.Behaviours.ToList();
-        
-        foreach (var component in behaviours)
+        foreach (var component in e.Behaviours.ToList())
         {
-            // DELETE INVALID BEHAVIOUR
+            UnsubscribeFromPropertyChanges(component);
+
             if (!_behaviourRegistry.TryGetById(component.Id, out var componentInfo))
             {
                 e.DeleteBehaviour(component);
                 continue;
             }
-            
-            // ADD NEW PROPERTIES
-            foreach (var sp in componentInfo.SerializedProperties)
+
+            try
             {
-                if (!component.HasProperty(sp.Key))
+                foreach (var propertyName in component.Properties.Keys.ToList())
                 {
-                    component.AddProperty(CreateSerializedProperty(sp.Key, sp.Value, null));
+                    if (!componentInfo.SerializedProperties.ContainsKey(propertyName)) component.RemoveProperty(propertyName);
                 }
 
-                var p = component.GetProperty(sp.Key);
-                ParseNestedProperties(p);
-                SubscribeToPropertyChange(e, component, p);
+                foreach (var definition in componentInfo.SerializedProperties)
+                {
+                    var propertyData = definition.Value;
+                    if (component.HasProperty(definition.Key))
+                    {
+                        var existing = component.GetProperty(definition.Key);
+                        if (existing.Type != propertyData.Type || existing.SourceType != propertyData.SourceType)
+                        {
+                            component.RemoveProperty(definition.Key);
+                        }
+                    }
+
+                    if (!component.HasProperty(definition.Key))
+                    {
+                        component.AddProperty(CreateSerializedProperty(definition.Key, propertyData, null));
+                    }
+
+                    var property = component.GetProperty(definition.Key);
+                    if (property.TemplateTypeName == null)
+                    {
+                        property.SetTemplateTypeName(propertyData.TemplateTypeName ?? SourceFilesUtility.GetTemplateTypeName(propertyData.SourceType));
+                    }
+                    ParseNestedProperties(property);
+                }
             }
-
-            // UPDATE PROPERTIES WITH NEW TYPES
-            var cachedProperties = new Dictionary<string, SerializedProperty>(component.Properties);
-            foreach (var sp in cachedProperties)
+            finally
             {
-                if (!componentInfo.SerializedProperties.TryGetValue(sp.Key, out var propertyType)) continue;
-                
-                if (sp.Value.Type != propertyType.Type || sp.Value.SourceType != propertyType.SourceType)
+                foreach (var property in component.Properties.Values)
                 {
-                    component.RemoveProperty(sp.Key);
-                    var p = CreateSerializedProperty(sp.Key, propertyType, null);
-                    component.AddProperty(p);
-                    SubscribeToPropertyChange(e, component, p);
-                }
-                else if (sp.Value.TemplateTypeName == null)
-                {
-                    sp.Value.SetTemplateTypeName(propertyType.TemplateTypeName ?? SourceFilesUtility.GetTemplateTypeName(propertyType.SourceType));
+                    SubscribeToPropertyChange(e, component, property);
                 }
             }
         }
@@ -327,32 +335,41 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private void SubscribeToPropertyChange(GameEntity entity, BehaviourComponent component, SerializedProperty property)
     {
-        if (!_subscribedProperties.Add(property)) return;
-
-        if (property.Value is Dictionary<string, SerializedProperty> sp)
+        if (!_propertySubscriptions.TryGetValue(component, out var subscriptions))
         {
-            foreach (var nested in sp.Values)
+            subscriptions = new Dictionary<SerializedProperty, Action<object?>>();
+            _propertySubscriptions.Add(component, subscriptions);
+        }
+        if (subscriptions.ContainsKey(property)) return;
+
+        if (property.Value is Dictionary<string, SerializedProperty> children)
+        {
+            foreach (var nested in children.Values)
             {
                 SubscribeToPropertyChange(entity, component, nested);
             }
-
-            if (property.Type == SerializedTypeEnum.Collection)
-            {
-                property.ValueChangedEvent += _ => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs(entity, component, property));
-            }
+            if (property.Type != SerializedTypeEnum.Collection) return;
         }
-        else if (property.Value is List<SerializedProperty> valueList)
+        else if (property.Value is List<SerializedProperty> items)
         {
-            foreach (var nested in valueList)
+            foreach (var nested in items)
             {
                 SubscribeToPropertyChange(entity, component, nested);
             }
-
-            property.ValueChangedEvent += _ => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs(entity, component, property));
         }
-        else
+
+        Action<object?> handler = _ => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs(entity, component, property));
+        subscriptions.Add(property, handler);
+        property.ValueChangedEvent += handler;
+    }
+
+    private void UnsubscribeFromPropertyChanges(BehaviourComponent component)
+    {
+        if (!_propertySubscriptions.Remove(component, out var subscriptions)) return;
+
+        foreach (var (property, handler) in subscriptions)
         {
-            property.ValueChangedEvent += _ => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs(entity, component, property));
+            property.ValueChangedEvent -= handler;
         }
     }
 

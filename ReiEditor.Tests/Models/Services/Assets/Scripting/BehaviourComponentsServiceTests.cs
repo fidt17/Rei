@@ -158,6 +158,142 @@ public sealed class BehaviourComponentsServiceTests
         Assert.False(component.HasProperty("Removed"));
     }
 
+    /// <summary>Removing every field leaves an empty component and detaches its former properties across repeated refreshes.</summary>
+    [Fact]
+    public void RefreshRemovesAllPropertiesAndTheirNotifications()
+    {
+        var behaviours = new TestBehaviourRegistry();
+        behaviours.Set(Behaviour(1, "Mover", new() { ["Count"] = Property(SerializedTypeEnum.Integer, "int", "1") }));
+        var service = CreateService(behaviours, new TestSerializableObjectsRegistry());
+        var entity = new GameEntity(1, "Entity");
+        Assert.True(service.AddComponent(entity, 1));
+        var component = entity.GetBehaviour(1)!;
+        var oldProperty = component.GetProperty("Count");
+        behaviours.Set(Behaviour(1, "Mover", new()));
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+
+        service.RefreshComponents(entity);
+        service.RefreshComponents(entity);
+        oldProperty.Value = 9;
+
+        Assert.Same(component, Assert.Single(entity.Behaviours));
+        Assert.Empty(component.Properties);
+        Assert.Empty(changes);
+    }
+
+    /// <summary>Type replacement detaches the old property while preserving compatible identities and one notification per edit.</summary>
+    [Fact]
+    public void RefreshReplacesSubscriptionsAndPreservesCompatibleProperties()
+    {
+        var behaviours = new TestBehaviourRegistry();
+        behaviours.Set(Behaviour(1, "Mover", new()
+        {
+            ["Keep"] = Property(SerializedTypeEnum.Integer, "int", "1"),
+            ["Change"] = Property(SerializedTypeEnum.Integer, "int", "2")
+        }));
+        var service = CreateService(behaviours, new TestSerializableObjectsRegistry());
+        var entity = new GameEntity(1, "Entity");
+        Assert.True(service.AddComponent(entity, 1));
+        var component = entity.GetBehaviour(1)!;
+        var keep = component.GetProperty("Keep");
+        var oldProperty = component.GetProperty("Change");
+        keep.Value = 8;
+        behaviours.Set(Behaviour(1, "Mover", new()
+        {
+            ["Keep"] = Property(SerializedTypeEnum.Integer, "int", "1"),
+            ["Change"] = Property(SerializedTypeEnum.String, "string", "new")
+        }));
+        service.RefreshComponents(entity);
+        service.RefreshComponents(entity);
+        Assert.Same(keep, component.GetProperty("Keep"));
+        Assert.Equal(8, keep.Value);
+        var replacement = component.GetProperty("Change");
+        Assert.Equal("new", replacement.Value);
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+
+        oldProperty.Value = 42;
+        Assert.Empty(changes);
+        keep.Value = 9;
+        replacement.Value = "edited";
+
+        Assert.Equal(new[] { keep, replacement }, changes.Select(change => change.Property));
+        Assert.All(changes, change => Assert.Same(component, change.Component));
+    }
+
+    /// <summary>Rejected deletion keeps the required component alive and subscribed.</summary>
+    [Fact]
+    public void RejectedDeletionPreservesPropertyNotifications()
+    {
+        var behaviours = new TestBehaviourRegistry();
+        behaviours.Set(Behaviour(1, "Required", new() { ["Count"] = Property(SerializedTypeEnum.Integer, "int", "1") }));
+        behaviours.Set(Behaviour(2, "Consumer", new(), "Required"));
+        var service = CreateService(behaviours, new TestSerializableObjectsRegistry());
+        var entity = new GameEntity(1, "Entity");
+        Assert.True(service.AddComponent(entity, 2));
+        var required = entity.GetBehaviour(1)!;
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+
+        Assert.False(service.DeleteComponent(entity, required));
+        required.GetProperty("Count").Value = 7;
+
+        Assert.True(entity.HasBehaviour(required));
+        Assert.Same(required, Assert.Single(changes).Component);
+    }
+
+    /// <summary>Deleting one entity's component leaves another component with the same ID subscribed.</summary>
+    [Fact]
+    public void DeletionDoesNotDetachAnotherEntityWithSameComponentId()
+    {
+        var behaviours = new TestBehaviourRegistry();
+        behaviours.Set(Behaviour(1, "Mover", new() { ["Count"] = Property(SerializedTypeEnum.Integer, "int", "1") }));
+        var service = CreateService(behaviours, new TestSerializableObjectsRegistry());
+        var first = new GameEntity(1, "First");
+        var second = new GameEntity(2, "Second");
+        Assert.True(service.AddComponent(first, 1));
+        Assert.True(service.AddComponent(second, 1));
+        var removed = first.GetBehaviour(1)!;
+        var retained = second.GetBehaviour(1)!;
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+
+        Assert.True(service.DeleteComponent(first, removed));
+        removed.GetProperty("Count").Value = 4;
+        retained.GetProperty("Count").Value = 5;
+
+        var change = Assert.Single(changes);
+        Assert.Same(second, change.Entity);
+        Assert.Same(retained, change.Component);
+    }
+
+    /// <summary>A failed schema refresh restores notifications for surviving properties.</summary>
+    [Fact]
+    public void FailedRefreshPreservesSurvivingPropertyNotifications()
+    {
+        var behaviours = new TestBehaviourRegistry();
+        var objects = new TestSerializableObjectsRegistry();
+        objects.Enums.Add(new SerializableEnum { EnumName = "State", Options = new() { ["Ready"] = 1 } });
+        behaviours.Set(Behaviour(1, "Mover", new() { ["Count"] = Property(SerializedTypeEnum.Integer, "int", "1") }));
+        var service = CreateService(behaviours, objects);
+        var entity = new GameEntity(1, "Entity");
+        Assert.True(service.AddComponent(entity, 1));
+        var property = entity.GetBehaviour(1)!.GetProperty("Count");
+        behaviours.Set(Behaviour(1, "Mover", new()
+        {
+            ["Count"] = Property(SerializedTypeEnum.Integer, "int", "1"),
+            ["Invalid"] = Property(SerializedTypeEnum.Enum, "State", "Missing")
+        }));
+        var changes = new List<EntityBehaviourPropertyChangeEventArgs>();
+        service.BehaviourPropertyChangedEvent += changes.Add;
+
+        Assert.Throws<KeyNotFoundException>(() => service.RefreshComponents(entity));
+        property.Value = 7;
+
+        Assert.Same(property, Assert.Single(changes).Property);
+    }
+
     /// <summary>Creates service with inspectable error log.</summary>
     private static BehaviourComponentsService CreateService(TestBehaviourRegistry behaviours, TestSerializableObjectsRegistry objects)
     {
