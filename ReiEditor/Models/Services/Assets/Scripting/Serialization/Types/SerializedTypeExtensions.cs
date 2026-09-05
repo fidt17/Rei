@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -32,7 +33,7 @@ public static class SerializedTypeExtensions
                 SerializedTypeEnum.Integer => int.Parse(value),
                 SerializedTypeEnum.String => value,
                 SerializedTypeEnum.Boolean => bool.Parse(value),
-                SerializedTypeEnum.Float => float.Parse(value.Replace('f', '0')),
+                SerializedTypeEnum.Float => ParseFloatDefault(value),
                 SerializedTypeEnum.Enum => int.Parse(value),
                 SerializedTypeEnum.Custom => null,
                 SerializedTypeEnum.Collection => null,
@@ -44,6 +45,14 @@ public static class SerializedTypeExtensions
             Console.WriteLine(e);
             return type.GetDefaultValue();
         }
+    }
+
+    private static float ParseFloatDefault(string value)
+    {
+        var text = value.AsSpan().Trim();
+        if (!text.IsEmpty && text[^1] is 'f' or 'F') text = text[..^1];
+
+        return float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
     }
 
     public static object? GetDefaultValue(this SerializedTypeEnum type)

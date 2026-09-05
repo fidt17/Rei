@@ -5,6 +5,12 @@ namespace ReiEditor.Models.Services.FileSystem;
 
 public static class AssetFileFilter
 {
+    private static readonly string[] HIDDEN_FILE_EXTENSIONS =
+    {
+        FileExtensions.META,
+        FileExtensions.VS_PROJECT
+    };
+
     private static readonly string[] EXCLUDED_DIRECTORY_SUFFIXES =
     {
         Path.Combine("Project", "Scripts", "bin"),
@@ -16,9 +22,7 @@ public static class AssetFileFilter
         if (string.IsNullOrWhiteSpace(filePath)) return true;
 
         var normalizedPath = NormalizePath(filePath);
-        var extension = Path.GetExtension(normalizedPath);
-        if (extension == FileExtensions.META) return true;
-        if (extension == FileExtensions.VS_PROJECT) return true;
+        if (FileExtensions.HasAnyExtension(normalizedPath, HIDDEN_FILE_EXTENSIONS)) return true;
         if (normalizedPath.EndsWith(FileExtensions.VS_PROJECT_USER, StringComparison.OrdinalIgnoreCase)) return true;
 
         return false;
@@ -31,7 +35,7 @@ public static class AssetFileFilter
         var normalizedPath = NormalizePath(directoryPath);
         foreach (var excludedSuffix in EXCLUDED_DIRECTORY_SUFFIXES)
         {
-            if (normalizedPath.EndsWith(NormalizeRelativePath(excludedSuffix), StringComparison.OrdinalIgnoreCase))
+            if (normalizedPath.EndsWith(Path.DirectorySeparatorChar + NormalizeRelativePath(excludedSuffix), StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

@@ -100,12 +100,59 @@ public sealed class SerializedTypeExtensionsTests
     }
 
     /// <summary>
-    /// A C++ float suffix must not multiply an integer-valued literal by ten.
+    /// A single float suffix preserves integer, fractional and exponent values and their CLR float type.
     /// </summary>
-    [Fact]
-    public void FloatSuffixPreservesNumericValue()
+    [Theory]
+    [InlineData("1f", 1f)]
+    [InlineData("1F", 1f)]
+    [InlineData("1.5f", 1.5f)]
+    [InlineData("1.5F", 1.5f)]
+    [InlineData("-2.5f", -2.5f)]
+    [InlineData("0f", 0f)]
+    [InlineData("1e2f", 100f)]
+    [InlineData("1e-2f", 0.01f)]
+    [InlineData("+1.25E+2F", 125f)]
+    [InlineData("  1.5f  ", 1.5f)]
+    public void FloatSuffixPreservesNumericValue(string text, float expected)
     {
-        Assert.Equal(1f, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue("1f")));
+        Assert.Equal(expected, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue(text)));
+    }
+
+    /// <summary>Source float literals use a decimal point regardless of the editor's current culture.</summary>
+    [Theory]
+    [InlineData("ru-RU")]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    public void FloatDefaultsAreIndependentOfCurrentCulture(string culture)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            Assert.Equal(1.5f, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue("1.5f")));
+            Assert.Equal(-2.5f, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue("-2.5")));
+            Assert.Equal(100f, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue("1e2F")));
+            Assert.Equal(0f, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue("1,5")));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+        }
+    }
+
+    /// <summary>Malformed float text falls back to zero without removing embedded or repeated suffix characters.</summary>
+    [Theory]
+    [InlineData("1f2")]
+    [InlineData("1ff")]
+    [InlineData("1fF")]
+    [InlineData("f")]
+    [InlineData("F")]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("1e")]
+    public void InvalidFloatDefaultsRetainZeroFallback(string text)
+    {
+        Assert.Equal(0f, Assert.IsType<float>(SerializedTypeEnum.Float.ParseDefaultValue(text)));
     }
 
     /// <summary>

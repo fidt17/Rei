@@ -17,6 +17,14 @@ public sealed class AssetFileFilterTests
     [InlineData("Game.VCXPROJ.USER", true)]
     [InlineData("image.png", false)]
     [InlineData("shader.rshader", false)]
+    [InlineData("image.png.MeTa", true)]
+    [InlineData("Game.VcxProj", true)]
+    [InlineData("Game.VcxProj.User", true)]
+    [InlineData("image.meta.png", false)]
+    [InlineData("Game.vcxproj.backup", false)]
+    [InlineData("Game.vcxproj.user.backup", false)]
+    [InlineData("NoExtension", false)]
+    [InlineData("directory.meta/image.png", false)]
     public void FileVisibilityRecognizesGeneratedExtensions(string fileName, bool hidden)
     {
         Assert.Equal(hidden, AssetFileFilter.ShouldHide(Path.Combine(Path.GetTempPath(), "ReiFilters", fileName)));
@@ -29,6 +37,13 @@ public sealed class AssetFileFilterTests
     [InlineData("Project/Scripts/bin-old", false)]
     [InlineData("OtherProject/Scripts/bin", false)]
     [InlineData("Project/Textures", false)]
+    [InlineData("MyProject/Scripts/bin", false)]
+    [InlineData("OtherProject/Scripts/crash_reports", false)]
+    [InlineData("Project/Scripts2/bin", false)]
+    [InlineData("Project/Scripts/crash_reports-old", false)]
+    [InlineData("Project\\Scripts\\BiN\\", true)]
+    [InlineData("Project/Scripts/./bin/", true)]
+    [InlineData("Project/Scripts/bin/../assets", false)]
     public void DirectoryVisibilityRespectsSegmentBoundaries(string relativePath, bool hidden)
     {
         Assert.Equal(hidden, AssetFileFilter.ShouldHideDirectory(Path.Combine(Path.GetTempPath(), "ReiFilters", relativePath)));
@@ -55,6 +70,14 @@ public sealed class AssetFileFilterTests
     [InlineData(".VCXPROJ", false)]
     [InlineData(".h", true)]
     [InlineData(".png", true)]
+    [InlineData(".MeTa", false)]
+    [InlineData(".Cpp", false)]
+    [InlineData(".VcxProj", false)]
+    [InlineData(".H", true)]
+    [InlineData(".PNG", true)]
+    [InlineData(".RSHADER", true)]
+    [InlineData(".metadata", true)]
+    [InlineData(".cppx", true)]
     public void MetaEligibilityIgnoresExtensionCasing(string extension, bool eligible)
     {
         Assert.Equal(eligible, AssetImportUtils.IsValidAssetExtensionForMetaFile(extension));

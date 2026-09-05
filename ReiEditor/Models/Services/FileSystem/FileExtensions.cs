@@ -85,7 +85,11 @@ public static class FileExtensions
     {
         if (string.IsNullOrWhiteSpace(filePath)) return false;
 
-        var extension = Path.GetExtension(filePath);
+        return MatchesAnyExtension(Path.GetExtension(filePath), extensions);
+    }
+
+    public static bool MatchesAnyExtension(string extension, IReadOnlyCollection<string> extensions)
+    {
         foreach (var supportedExtension in extensions)
         {
             if (string.Equals(extension, supportedExtension, StringComparison.OrdinalIgnoreCase))
