@@ -84,7 +84,8 @@ public class ResourceService : IResourceService
     {
         try
         {
-            Directory.CreateDirectory(fullPath.Replace(Path.GetFileName(fullPath), ""));
+            var directoryPath = Path.GetDirectoryName(Path.GetFullPath(fullPath))!;
+            Directory.CreateDirectory(directoryPath);
             await File.WriteAllTextAsync(fullPath, data);
             return true;
         }

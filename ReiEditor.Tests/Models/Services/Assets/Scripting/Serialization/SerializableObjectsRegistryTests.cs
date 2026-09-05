@@ -75,6 +75,56 @@ public sealed class SerializableObjectsRegistryTests : IDisposable
         Assert.NotNull(_registry.GetEnum("NewState"));
     }
 
+    /// <summary>Refresh removes all prior enum definitions when sources no longer contain enums.</summary>
+    [Fact]
+    public async Task RefreshRemovesAllEnums()
+    {
+        var path = _project.Resources.GetScriptsPath("State.h");
+        File.WriteAllText(path, "SERIALIZABLE_ENUM(State) { Ready };");
+        await _registry.Refresh();
+        Assert.NotNull(_registry.GetEnum("State"));
+
+        File.WriteAllText(path, "class NoEnums {};");
+        await _registry.Refresh();
+
+        Assert.Null(_registry.GetEnum("State"));
+    }
+
+    /// <summary>Refresh replaces values for enum definitions that retain the same name.</summary>
+    [Fact]
+    public async Task RefreshReplacesChangedEnumValues()
+    {
+        var path = _project.Resources.GetScriptsPath("State.h");
+        File.WriteAllText(path, "SERIALIZABLE_ENUM(State) { Ready = 2, Waiting };");
+        await _registry.Refresh();
+        Assert.Equal(new Dictionary<string, int> { ["Ready"] = 2, ["Waiting"] = 3 }, _registry.GetEnum("State")!.Options);
+
+        File.WriteAllText(path, "SERIALIZABLE_ENUM(State) { Disabled = 7 };");
+        await _registry.Refresh();
+
+        Assert.Equal(new Dictionary<string, int> { ["Disabled"] = 7 }, _registry.GetEnum("State")!.Options);
+    }
+
+    /// <summary>Repeated refreshes keep only latest same-name enum definition visible.</summary>
+    [Fact]
+    public async Task RepeatedRefreshesKeepLatestEnumDefinition()
+    {
+        var path = _project.Resources.GetScriptsPath("State.h");
+        SerializableEnum? previous = null;
+
+        for (var value = 0; value < 3; value++)
+        {
+            File.WriteAllText(path, $"SERIALIZABLE_ENUM(State) {{ Current = {value} }};");
+            await _registry.Refresh();
+            var current = _registry.GetEnum("State");
+
+            Assert.NotNull(current);
+            Assert.Equal(value, current.Options["Current"]);
+            Assert.NotSame(previous, current);
+            previous = current;
+        }
+    }
+
     /// <summary>Deletes isolated registry roots.</summary>
     public void Dispose() => _project.Dispose();
 }

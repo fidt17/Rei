@@ -85,6 +85,95 @@ public sealed class SourceFilesUtilityTests : IDisposable
         Assert.Equal(new[] { "VisibleOne", "VisibleTwo" }, properties.Keys);
     }
 
+    /// <summary>Block comments behave as whitespace and do not join adjacent source tokens.</summary>
+    [Theory]
+    [InlineData("SERIALIZE int/**/Count;", "Count")]
+    [InlineData("SERIALIZE int/* explanation */Count;", "Count")]
+    [InlineData("/**/ SERIALIZE int Count; /**/", "Count")]
+    [InlineData("/* first */\nSERIALIZE int Count;\n/* second */", "Count")]
+    public void BlockCommentsPreservePropertyTokens(string source, string expectedName)
+    {
+        var property = Assert.Single(_utility.GetSerializedProperties(source));
+
+        Assert.Equal(expectedName, property.Key);
+        Assert.Equal(SerializedTypeEnum.Integer, property.Value.Type);
+    }
+
+    /// <summary>Comment markers inside ordinary, prefixed and raw string literals remain part of the default text.</summary>
+    [Theory]
+    [InlineData("\"https://host/path\"")]
+    [InlineData("\"/*keep*/\"")]
+    [InlineData("\"quote\\\"//keep\"")]
+    [InlineData("u8\"https://host/path\"")]
+    [InlineData("R\"(/*keep*///keep)\"")]
+    [InlineData("R\"tag(a\"//b/*c*/d)tag\"")]
+    public void CommentMarkersInsideStringDefaultsRemainUnchanged(string literal)
+    {
+        var source = $"SERIALIZE string Text = {literal}; /* removed */\nSERIALIZE int Count;";
+
+        var properties = _utility.GetSerializedProperties(source);
+
+        Assert.Equal(new[] { "Text", "Count" }, properties.Keys);
+        Assert.Equal(literal, properties["Text"].DefaultValue);
+        Assert.Equal(SerializedTypeEnum.String, properties["Text"].Type);
+        Assert.Equal(SerializedTypeEnum.Integer, properties["Count"].Type);
+    }
+
+    /// <summary>Character literals and numeric digit separators do not hide subsequent real comments from removal.</summary>
+    [Theory]
+    [InlineData("'/'")]
+    [InlineData("'//'")]
+    [InlineData("L'/*'")]
+    [InlineData("u8'a'")]
+    [InlineData("'\\''")]
+    [InlineData("1'000")]
+    [InlineData("0xAB'CD")]
+    public void NonStringLiteralSyntaxDoesNotConsumeFollowingComments(string literal)
+    {
+        var source = $"auto ignored = {literal}; // SERIALIZE int Hidden;\nSERIALIZE int Visible;";
+
+        Assert.Equal("Visible", Assert.Single(_utility.GetSerializedProperties(source)).Key);
+    }
+
+    /// <summary>Keyword-adjacent character literals and digit separators do not preserve intervening real comments.</summary>
+    [Theory]
+    [InlineData("char Value() { return'/'; }")]
+    [InlineData("auto value = 1'000;")]
+    [InlineData("auto value = 0xAB'CD;")]
+    [InlineData("auto value = 0b10'01;")]
+    [InlineData("auto value = 1.2'34;")]
+    public void LiteralBeforeCommentDoesNotConsumeLaterCharacterLiteral(string declaration)
+    {
+        var source = $"{declaration} // SERIALIZE int Hidden;\nchar marker = 'x';\nSERIALIZE int Visible;";
+
+        Assert.Equal("Visible", Assert.Single(_utility.GetSerializedProperties(source)).Key);
+    }
+
+    /// <summary>Removing multiline comments preserves line boundaries used by editor visibility annotations.</summary>
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    public void MultilineCommentPreservesAnnotationLineBoundaries(string newline)
+    {
+        var source = $"HIDE_IN_EDITOR /* comment{newline}continued */ SERIALIZE int Visible;";
+
+        var property = Assert.Single(_utility.GetSerializedProperties(source)).Value;
+
+        Assert.False(property.HideInEditor);
+    }
+
+    /// <summary>Line and block comments at end of file hide declarations while preserving preceding requirements.</summary>
+    [Theory]
+    [InlineData("// REQUIRE_COMPONENT(Hidden)")]
+    [InlineData("/**/")]
+    [InlineData("/* REQUIRE_COMPONENT(Hidden) */")]
+    public void TrailingCommentsDoNotAddRequiredComponents(string trailingComment)
+    {
+        var source = $"REQUIRE_COMPONENT(Visible) {trailingComment}";
+
+        Assert.Equal(new[] { "Visible" }, _utility.GetRequiredComponentNames(source));
+    }
+
     /// <summary>Required component names are trimmed, namespace-normalized, deduplicated, and placeholder-free.</summary>
     [Fact]
     public void ParsesNormalizedUniqueRequiredComponents()

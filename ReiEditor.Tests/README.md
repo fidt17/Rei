@@ -88,7 +88,9 @@ The Core regression fixes parse float defaults with one optional trailing `f`/`F
 
 The hierarchy/scene fixes reject duplicate registrations before mutating root storage, capture the actual source index for cross-parent moves, and clamp insertion indices before same-parent removal. Move events retain the requested insertion index consumed by the UI controller. Snapshot reconciliation detaches surviving nodes from obsolete parents before recursive deletion, preserving object identity and fresh transform data for the final hierarchy rebuild. Regression tests cover root/child moves, extreme indices, VM order and identity, and surviving subtrees across parent removal.
 
-Asset regressions cover repeated filename segments in resource writes, missing-extension validation during creation, duplicate scene entities after reload, deleted enum/property definitions surviving refresh, and code lost between separate block comments.
+The asset/scripting fixes derive the parent directory for resource writes, reject missing asset extensions before serialization or file/registry changes, and replace enum definitions on refresh. Comment removal preserves separate blocks, whitespace and line boundaries while retaining comment markers inside ordinary/raw strings and character literals. Regression tests cover repeated filename segments, both creation overloads, repeated enum refreshes, literal boundaries and numeric digit separators. This remains a limited source parser, not a full C++ preprocessor.
+
+Remaining asset regressions cover duplicate scene entities after reload, deleted property definitions surviving refresh, and deleted components continuing to publish property changes.
 
 Project/settings regressions cover uppercase source extensions and XML include escaping, default-scene fallback with an empty build configuration, loading-procedure cleanup after setup failures, and preserving prior engine settings when a replacement has no valid version.
 

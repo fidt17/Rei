@@ -156,18 +156,22 @@ public sealed class ResourceServiceTests
         Assert.Single(fixture.ResourceLogger.Entries, entry => entry.Level == LogLevelEnum.Error);
     }
 
-    /// <summary>
-    /// Write creates parent when filename text also appears as directory segment.
-    /// </summary>
-    [Fact]
-    public async Task WriteHandlesRepeatedFilenameSegment()
+    /// <summary>Write creates exact parent when filename text also appears in directory segments.</summary>
+    [Theory]
+    [InlineData("settings.json/settings.json", "other.txt")]
+    [InlineData("Nested/settings.json/settings.json", "Nested/other.txt")]
+    public async Task WriteHandlesRepeatedFilenameSegmentWithoutChangingOtherFiles(string relativeTarget, string relativeOther)
     {
         using var fixture = new TemporaryProjectFixture();
-        var path = fixture.Directory.GetPath("settings.json", "settings.json");
+        var path = fixture.Directory.GetPath(relativeTarget.Split('/'));
+        var otherPath = fixture.Directory.GetPath(relativeOther.Split('/'));
+        Directory.CreateDirectory(Path.GetDirectoryName(otherPath)!);
+        await File.WriteAllTextAsync(otherPath, "sentinel");
 
         var written = await fixture.Resources.Write("content", path);
 
         Assert.True(written);
         Assert.Equal("content", await File.ReadAllTextAsync(path));
+        Assert.Equal("sentinel", await File.ReadAllTextAsync(otherPath));
     }
 }

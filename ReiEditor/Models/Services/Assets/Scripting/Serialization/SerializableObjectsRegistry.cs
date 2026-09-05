@@ -24,6 +24,7 @@ public class SerializableObjectsRegistry : ISerializableObjectsRegistry
     public Task Refresh()
     {
         _serializableObjects.Clear();
+        _serializableEnums.Clear();
 
         var processedFiles = _sourceFilesUtility.ProcessFiles();
         _serializableObjects.AddRange(processedFiles.SerializableObjects);

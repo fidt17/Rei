@@ -52,7 +52,7 @@ public class AssetCreator : IAssetCreator
         {
             var assetPath = _resourceService.GetProjectPath(projectPath);
             var extension = Path.GetExtension(assetPath);
-            if (extension == null) throw new Exception($"Project path {projectPath} is missing extension");
+            if (string.IsNullOrEmpty(extension)) throw new Exception($"Project path {projectPath} is missing extension");
             if (_resourceService.Exists(assetPath)) throw new Exception($"Cannot create asset because another file exists at {assetPath}");
 			
             var data = _serializer.Serialize(asset);

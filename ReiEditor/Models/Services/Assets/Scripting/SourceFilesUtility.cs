@@ -347,6 +347,24 @@ public class SourceFilesUtility
 
     private static string RemoveComments(string original)
     {
-        return Regex.Replace(original, @"((\/[*])([\s\S]+)([*]\/))|([/]{2,}[^\n]+)", "");
+        const string TOKEN_PATTERN =
+            @"R""(?<delimiter>[^()\s\\]{0,16})\([\s\S]*?\)\k<delimiter>""" +
+            @"|""(?:\\[\s\S]|[^""\\])*""" +
+            @"|\b[0-9](?:[\w.]|'(?=\w))*" +
+            @"|(?:u8|u|U|L)?'(?:\\[\s\S]|[^'\\])*'" +
+            @"|//[^\r\n]*|/\*[\s\S]*?(?:\*/|\z)";
+
+        return Regex.Replace(original, TOKEN_PATTERN, match =>
+        {
+            if (match.Value[0] != '/') return match.Value;
+
+            var whitespace = match.Value.ToCharArray();
+            for (var index = 0; index < whitespace.Length; index++)
+            {
+                if (whitespace[index] is not ('\r' or '\n')) whitespace[index] = ' ';
+            }
+
+            return new string(whitespace);
+        });
     }
 }

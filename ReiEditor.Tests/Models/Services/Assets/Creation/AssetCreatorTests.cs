@@ -14,19 +14,39 @@ namespace ReiEditor.Tests.Models.Services.Assets.Creation;
 [Trait("Area", "AssetCreation")]
 public sealed class AssetCreatorTests
 {
+    /// <summary>Counts serialization calls while preserving real JSON serialization behavior.</summary>
+    private sealed class TestSerializer : ISerializer
+    {
+        private readonly JsonSerializer _inner = new();
+
+        public int SerializeCallCount { get; private set; }
+
+        /// <summary>Records serialization of asset and metadata payloads.</summary>
+        public string Serialize<T>(T obj)
+        {
+            SerializeCallCount++;
+            return _inner.Serialize(obj);
+        }
+
+        /// <summary>Deserializes using the production JSON serializer.</summary>
+        public T Deserialize<T>(string source) => _inner.Deserialize<T>(source);
+        /// <summary>Deserializes with the production fallback behavior.</summary>
+        public T Deserialize<T>(string source, T defaultValue) => _inner.Deserialize(source, defaultValue);
+    }
+
     private sealed class TestContext : IDisposable
     {
         public TemporaryProjectFixture Project { get; } = new();
         public TestResourceService Resources { get; }
         public AssetRegistry Registry { get; } = new(new TestLogger<AssetRegistry>());
         public TestLogger<AssetCreator> Logger { get; } = new();
+        public TestSerializer Serializer { get; } = new();
         public AssetCreator Creator { get; }
         public TestContext()
         {
             Resources = new(Project.Resources);
-            var serializer = new JsonSerializer();
-            var meta = new MetaFilesService(Resources, serializer, new TestLogger<MetaFilesService>());
-            Creator = new(Resources, serializer, Logger, Registry, meta);
+            var meta = new MetaFilesService(Resources, Serializer, new TestLogger<MetaFilesService>());
+            Creator = new(Resources, Serializer, Logger, Registry, meta);
         }
         public void Dispose() => Project.Dispose();
     }
@@ -105,15 +125,39 @@ public sealed class AssetCreatorTests
         Assert.NotNull(Assert.Single(context.Logger.Entries).Exception);
     }
 
-    /// <summary>A path without an asset extension must fail validation before producing files or registry entries.</summary>
-    [Fact]
-    public async Task MissingExtensionIsRejectedBeforeWriting()
+    /// <summary>A path without an asset extension fails both overloads before serialization or other side effects.</summary>
+    [Theory]
+    [InlineData(false, "Assets/Untyped")]
+    [InlineData(true, "Assets/Untyped")]
+    [InlineData(false, "Assets/Untyped.")]
+    [InlineData(true, "Assets/Untyped.")]
+    public async Task MissingExtensionIsRejectedBeforeAnySideEffects(bool useExplicitId, string projectPath)
     {
         using var context = new TestContext();
-        var path = context.Resources.GetProjectPath("Assets/Untyped");
-        Assert.False(await context.Creator.Create(new Scene("untyped"), "id", path));
+        var path = context.Resources.GetProjectPath(projectPath);
+
+        var created = useExplicitId
+            ? await context.Creator.Create(new Scene("untyped"), "id", projectPath)
+            : await context.Creator.Create(new Scene("untyped"), projectPath);
+
+        Assert.False(created);
+        Assert.Equal(0, context.Serializer.SerializeCallCount);
         Assert.Empty(context.Resources.Writes);
         Assert.False(File.Exists(path));
+        Assert.False(File.Exists(path + ".meta"));
         Assert.Empty(context.Registry.GetAllAssets());
+    }
+
+    /// <summary>Extension validation accepts valid uppercase extensions.</summary>
+    [Fact]
+    public async Task UppercaseExtensionIsAccepted()
+    {
+        using var context = new TestContext();
+
+        Assert.True(await context.Creator.Create(new Scene("uppercase"), "id", "Assets/Uppercase.SCENE"));
+
+        Assert.Equal(2, context.Serializer.SerializeCallCount);
+        Assert.Equal(2, context.Resources.Writes.Count);
+        Assert.True(context.Registry.TryGetLoadedAsset("id", out _));
     }
 }
