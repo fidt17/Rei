@@ -78,6 +78,8 @@ The build slice covers execution paths and MSBuild arguments, source/build snaps
 
 The editor workflow slice covers console/logging, refresh and disk restore, playmode guards and stop/save/build/start orchestration, engine startup/failure/shutdown, viewport controls and hotkeys, managed input dispatch, and PNG capture from owned RGBA buffers. Engine callbacks use managed delegates through a controlled `IEngineApi`; no engine DLL or GPU is loaded. Capture encoding uses the existing SkiaSharp dependency. Fire-and-forget negative paths without observable completion, watcher integration, precise timer races, and the capture byte-count limit remain deferred. Test classes and test methods include XML summaries.
 
+The ViewModel slice covers search and asset pickers, hierarchy and project browser selection/navigation/operations, property and reference editors, RectTransform editing, component drawers, basic material/monitor state, project and asset creation forms, settings validation, build progress/cancellation, console details/filtering, status/interaction overlay, playmode options/panel, tabs, save commands and dialog ownership. Headless tests assert state, events and command effects; no XAML or appearance snapshots are used. Build tasks use controlled gates with terminal cleanup. Native window behavior, platform pickers, non-empty-output confirmation, inaccessible monitor/texture workers and exact debounce/poll races remain deferred.
+
 The full run contains active regressions for `1f` parsing as `10`, generated-file/meta extension casing, and `OtherProject/Scripts/bin` filtering. Scene regressions additionally check duplicate hierarchy insertion atomicity, cross-parent move source index, oversized same-parent insertion, and preservation of a surviving child when its old parent disappears from an engine snapshot. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
 
 Asset regressions cover repeated filename segments in resource writes, missing-extension validation during creation, duplicate scene entities after reload, deleted enum/property definitions surviving refresh, and code lost between separate block comments.
@@ -85,6 +87,8 @@ Asset regressions cover repeated filename segments in resource writes, missing-e
 Project/settings regressions cover uppercase source extensions and XML include escaping, default-scene fallback with an empty build configuration, loading-procedure cleanup after setup failures, and preserving prior engine settings when a replacement has no valid version.
 
 Build regressions cover success published after cancellation during asset building, compound `.vcxproj.user` paths entering asset packing, and case-sensitive exclusions for source/project/meta files in the packing filter.
+
+ViewModel regressions cover stale enum selection after external edits, original vector-child subscriptions surviving replacement/disposal, custom child editors recreated on unchanged data, descendant hierarchy VMs surviving controller disposal, sibling project paths passing move validation, console/status/playmode subscriptions surviving disposal, and a created dialog VM leaking when its window factory throws. These tests remain active; production fixes are separate work.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
