@@ -70,7 +70,11 @@ The Core slice covers observable state, commands, pools, navigation, path/file u
 
 The scene slice adds hierarchy/entity models, selection and commands, state read/write and reconciliation, scene loading, default templates, asset drop, and canvas/layout service tests. Engine selection and snapshot reconciliation use the headless UI dispatcher. Native execution, OS drag sessions, and timer-driven polling remain outside these suites; explicit synchronization calls do not require sleeps.
 
+The asset slice covers registry/metadata, resource IO and search, file operations and commands, asset load/save/import, creation utilities, supported C++ reflection parsing, scripting registries/code generation/component refresh, and shader/runtime dispatch. File operations use isolated project and engine-source fixtures. Generated C++ is checked as text; no native compiler or engine is invoked.
+
 The full run contains active regressions for `1f` parsing as `10`, generated-file/meta extension casing, and `OtherProject/Scripts/bin` filtering. Scene regressions additionally check duplicate hierarchy insertion atomicity, cross-parent move source index, oversized same-parent insertion, and preservation of a surviving child when its old parent disappears from an engine snapshot. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
+
+Asset regressions cover repeated filename segments in resource writes, missing-extension validation during creation, duplicate scene entities after reload, deleted enum/property definitions surviving refresh, and code lost between separate block comments.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
