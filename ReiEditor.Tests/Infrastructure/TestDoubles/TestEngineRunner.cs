@@ -11,11 +11,14 @@ internal sealed class TestEngineRunner : IEngineRunner
     public Observable<bool> Active { get; } = new(false);
     public Observable<bool> EditorActive { get; } = new(false);
     public Observable<bool> PlaymodeActive { get; } = new(false);
+    public Observable<bool> Starting { get; } = new(false);
+    public Func<EngineRunMode, bool>? OnStart { get; set; }
+    public Func<Task>? OnStop { get; set; }
     public ReiEditor.Utils.Common.IObservable<bool> IsActive => Active;
     public ReiEditor.Utils.Common.IObservable<bool> IsEditorActive => EditorActive;
     public ReiEditor.Utils.Common.IObservable<bool> IsPlaymodeActive => PlaymodeActive;
-    public ReiEditor.Utils.Common.IObservable<bool> IsEngineStarting { get; } = new Observable<bool>(false);
+    public ReiEditor.Utils.Common.IObservable<bool> IsEngineStarting => Starting;
     public EngineRunMode ActiveMode { get; set; }
-    public bool StartEngine(EngineRunMode mode) => throw new NotSupportedException();
-    public Task StopEngine() => throw new NotSupportedException();
+    public bool StartEngine(EngineRunMode mode) => (OnStart ?? throw new NotSupportedException())(mode);
+    public Task StopEngine() => (OnStop ?? throw new NotSupportedException())();
 }

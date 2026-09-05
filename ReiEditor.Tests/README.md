@@ -74,11 +74,15 @@ The asset slice covers registry/metadata, resource IO and search, file operation
 
 The projects/settings slice covers active projects and bookmarks, creation validation, template and solution generation, project creation/update/setup/deletion, engine resource copying, editor preferences, configuration validation and engine-settings reloads. Storage is controlled in memory; project files and deletion targets use owned temporary directories. Positive MSBuild version validation remains deferred until a controlled versioned executable fixture or version-reader seam exists.
 
+The build slice covers execution paths and MSBuild arguments, source/build snapshots, preparation and command guards, stage selection, cache manifests and hashing, asset packing/maps, output staging/promotion, standalone packaging and engine-stop gating. Build and engine interfaces supply controlled results or write known fixture bytes. The real process builder is tested only at invalid-path guards; native sessions and external tools are never started. Timing assertions use controlled task gates; production polling/settling delays remain unchanged.
+
 The full run contains active regressions for `1f` parsing as `10`, generated-file/meta extension casing, and `OtherProject/Scripts/bin` filtering. Scene regressions additionally check duplicate hierarchy insertion atomicity, cross-parent move source index, oversized same-parent insertion, and preservation of a surviving child when its old parent disappears from an engine snapshot. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
 
 Asset regressions cover repeated filename segments in resource writes, missing-extension validation during creation, duplicate scene entities after reload, deleted enum/property definitions surviving refresh, and code lost between separate block comments.
 
 Project/settings regressions cover uppercase source extensions and XML include escaping, default-scene fallback with an empty build configuration, loading-procedure cleanup after setup failures, and preserving prior engine settings when a replacement has no valid version.
+
+Build regressions cover success published after cancellation during asset building, compound `.vcxproj.user` paths entering asset packing, and case-sensitive exclusions for source/project/meta files in the packing filter.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
