@@ -89,6 +89,47 @@ public sealed class HierarchyCollectionAndFocusTests
         controller.Dispose();
     }
 
+    /// <summary>Extreme and forward insertion indices keep model and VM sibling order aligned without recreating VMs.</summary>
+    [Theory]
+    [InlineData(false, int.MaxValue)]
+    [InlineData(true, int.MaxValue)]
+    [InlineData(false, 3)]
+    [InlineData(true, 3)]
+    public void TestClampedMoveKeepsViewModelOrderAndIdentity(bool nested, int insertionIndex)
+    {
+        var selection = new SelectionService(new TestEntityApi());
+        var hierarchy = new Hierarchy<GameEntity>("Scene");
+        var parent = nested ? new HierarchyNode<GameEntity>(new GameEntity(10, "Parent"), null) : null;
+        if (parent != null) hierarchy.AddNode(parent, isRoot: true);
+        var nodes = Enumerable.Range(1, 3).Select(id => new HierarchyNode<GameEntity>(new GameEntity(id, $"Entity {id}"), parent)).ToArray();
+        foreach (var node in nodes)
+        {
+            parent?.PushChild(node);
+            hierarchy.AddNode(node, isRoot: parent == null);
+        }
+        var created = new List<HierarchyNodeViewModel>();
+        var controller = new HierarchyNodeCollectionController(new TestNodeFactory(selection), created.Add);
+        try
+        {
+            controller.SetHierarchy(hierarchy, new HashSet<int>());
+            var originalVms = nodes.Select(node => controller.FindByEntityId(node.Content.Id)).ToArray();
+
+            Assert.True(hierarchy.MoveNode(nodes[0], parent, insertionIndex));
+
+            var viewModels = parent == null ? controller.Nodes : controller.FindByEntityId(parent.Content.Id)!.ChildNodes;
+            Assert.Equal(new[] { 2, 3, 1 }, viewModels.Select(vm => vm.Node.Content.Id));
+            Assert.Equal((parent?.ChildNodes ?? hierarchy.RootNodes).Select(node => node.Content.Id), viewModels.Select(vm => vm.Node.Content.Id));
+            Assert.Equal(nested ? 4 : 3, created.Count);
+            Assert.Equal(new[] { originalVms[1], originalVms[2], originalVms[0] }, viewModels);
+        }
+        finally
+        {
+            controller.Dispose();
+            // Descendant disposal is a separate known regression; explicitly release every created VM here.
+            foreach (var viewModel in created) viewModel.Dispose();
+        }
+    }
+
     /// <summary>
     /// Scene-style add as root followed by move under parent relocates same VM without duplicate collection entries.
     /// </summary>

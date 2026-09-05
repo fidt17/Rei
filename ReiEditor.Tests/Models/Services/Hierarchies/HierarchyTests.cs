@@ -66,6 +66,43 @@ public sealed class HierarchyTests
         Assert.Equal(0, addedCount);
     }
 
+    /// <summary>Re-registering the same root fails without duplication and leaves later valid registrations usable.</summary>
+    [Fact]
+    public void TestRepeatedRootInstanceRegistrationLeavesHierarchyUsable()
+    {
+        var hierarchy = new Hierarchy<string>("Scene");
+        var root = AddRoot(hierarchy, "root");
+        var events = new List<HierarchyNode<string>>();
+        hierarchy.NodeAddedEvent += events.Add;
+
+        Assert.Throws<ArgumentException>(() => hierarchy.AddNode(root, isRoot: true));
+        var next = AddRoot(hierarchy, "next");
+
+        Assert.Equal(new[] { root, next }, hierarchy.RootNodes);
+        Assert.Same(root, hierarchy.GetNode("root"));
+        Assert.Same(next, hierarchy.GetNode("next"));
+        Assert.Same(next, Assert.Single(events));
+    }
+
+    /// <summary>Content already registered as a child cannot be inserted again as a root.</summary>
+    [Fact]
+    public void TestDuplicateChildContentDoesNotCreateAnOrphanRoot()
+    {
+        var hierarchy = new Hierarchy<string>("Scene");
+        var parent = AddRoot(hierarchy, "parent");
+        var child = AddChild(hierarchy, parent, "child");
+        var events = 0;
+        hierarchy.NodeAddedEvent += _ => events++;
+
+        Assert.Throws<ArgumentException>(() => hierarchy.AddNode(new HierarchyNode<string>("child", null), isRoot: true));
+
+        Assert.Same(parent, Assert.Single(hierarchy.RootNodes));
+        Assert.Same(child, Assert.Single(parent.ChildNodes));
+        Assert.Same(parent, child.Parent);
+        Assert.Same(child, hierarchy.GetNode("child"));
+        Assert.Equal(0, events);
+    }
+
     /// <summary>
     /// Deleting a node removes its full subtree from lookup and emits one event after state changes.
     /// </summary>
@@ -155,6 +192,64 @@ public sealed class HierarchyTests
 
         Assert.Null(exception);
         Assert.Equal(new[] { "second", "first" }, hierarchy.RootNodes.Select(x => x.Content));
+    }
+
+    /// <summary>Same-parent root and child moves clamp before removal while preserving raw insertion indices in events.</summary>
+    [Theory]
+    [InlineData(false, 0, int.MaxValue, "b,c,a")]
+    [InlineData(true, 0, int.MaxValue, "b,c,a")]
+    [InlineData(false, 2, int.MinValue, "c,a,b")]
+    [InlineData(true, 2, int.MinValue, "c,a,b")]
+    [InlineData(false, 1, 99, "a,c,b")]
+    [InlineData(true, 1, 99, "a,c,b")]
+    [InlineData(false, 0, 3, "b,c,a")]
+    [InlineData(true, 0, 3, "b,c,a")]
+    public void TestSameParentMoveClampsBeforeRemoval(bool nested, int sourceIndex, int insertionIndex, string expectedOrder)
+    {
+        var hierarchy = new Hierarchy<string>("Scene");
+        var parent = nested ? AddRoot(hierarchy, "parent") : null;
+        var nodes = new[] { "a", "b", "c" }.Select(name => parent == null ? AddRoot(hierarchy, name) : AddChild(hierarchy, parent, name)).ToArray();
+        var movedNode = nodes[sourceIndex];
+        var events = new List<(HierarchyNode<string> Node, HierarchyNode<string>? Parent, int Old, int New)>();
+        hierarchy.NodeMovedEvent += (node, oldParent, oldOrder, newOrder) => events.Add((node, oldParent, oldOrder, newOrder));
+
+        Assert.True(hierarchy.MoveNode(movedNode, parent, insertionIndex));
+
+        var siblings = (parent?.ChildNodes ?? hierarchy.RootNodes).ToArray();
+        Assert.Equal(expectedOrder, string.Join(',', siblings.Select(node => node.Content)));
+        Assert.Equal(3, siblings.Distinct().Count());
+        Assert.All(nodes, node => Assert.Same(node, hierarchy.GetNode(node.Content)));
+        Assert.Same(parent, movedNode.Parent);
+        Assert.Equal((movedNode, parent, sourceIndex, insertionIndex), Assert.Single(events));
+    }
+
+    /// <summary>Root/child transfers report the actual source index and preserve all nodes when destination indices are extreme.</summary>
+    [Theory]
+    [InlineData(false, int.MaxValue)]
+    [InlineData(false, int.MinValue)]
+    [InlineData(true, int.MaxValue)]
+    [InlineData(true, int.MinValue)]
+    public void TestCrossParentMoveRetainsSourceIndexAndClampsDestination(bool toRoot, int insertionIndex)
+    {
+        var hierarchy = new Hierarchy<string>("Scene");
+        var parent = AddRoot(hierarchy, "parent");
+        var rootSibling = AddRoot(hierarchy, "root-sibling");
+        var childSibling = AddChild(hierarchy, parent, "child-sibling");
+        var moved = toRoot ? AddChild(hierarchy, parent, "moved") : AddRoot(hierarchy, "moved");
+        var sourceParent = moved.Parent;
+        var sourceIndex = toRoot ? 1 : 2;
+        var destinationParent = toRoot ? null : parent;
+        var events = new List<(HierarchyNode<string>? Parent, int Old, int New)>();
+        hierarchy.NodeMovedEvent += (_, oldParent, oldOrder, newOrder) => events.Add((oldParent, oldOrder, newOrder));
+
+        Assert.True(hierarchy.MoveNode(moved, destinationParent, insertionIndex));
+
+        Assert.Equal((sourceParent, sourceIndex, insertionIndex), Assert.Single(events));
+        Assert.Same(destinationParent, moved.Parent);
+        var destination = (destinationParent?.ChildNodes ?? hierarchy.RootNodes).ToArray();
+        Assert.Same(moved, insertionIndex < 0 ? destination.First() : destination.Last());
+        Assert.Equal(toRoot ? new[] { childSibling } : new[] { parent, rootSibling }, toRoot ? parent.ChildNodes : hierarchy.RootNodes);
+        Assert.All(new[] { parent, rootSibling, childSibling, moved }, node => Assert.Same(node, hierarchy.GetNode(node.Content)));
     }
 
     /// <summary>

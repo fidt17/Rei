@@ -102,6 +102,8 @@ public sealed class SceneSyncServiceTests
         _runner.Active.Value = true;
         _api.OnGetSceneEntities = () => Snapshot(2);
         _api.OnGetEntityData = id => State(id, 0);
+        var rebuilds = 0;
+        scene.HierarchyRebuiltEvent += () => rebuilds++;
 
         CreateService().SynchronizeWithEngine();
         Assert.Empty(_logger.Entries);
@@ -109,6 +111,154 @@ public sealed class SceneSyncServiceTests
         Assert.Null(scene.GetById(1));
         Assert.Equal(0, child.Transform.Parent);
         Assert.NotNull(scene.Hierarchy.GetNode(child));
+        Assert.Equal(1, rebuilds);
+    }
+
+    /// <summary>A surviving child can move from a removed parent to another existing surviving entity.</summary>
+    [AvaloniaFact]
+    public void RemovingOldParentPreservesChildReparentedToExistingEntity()
+    {
+        var scene = new Scene("sync");
+        var oldParent = new GameEntity(1, "removed");
+        var child = new GameEntity(2, "survivor");
+        var newParent = new GameEntity(3, "new parent");
+        var sibling = new GameEntity(4, "sibling");
+        scene.AddEntity(oldParent);
+        scene.AddEntity(child);
+        scene.AddEntity(newParent);
+        scene.AddEntity(sibling);
+        scene.MoveEntity(child, oldParent, 0);
+        scene.MoveEntity(sibling, newParent, 0);
+        _scenes.Scene.Value = scene;
+        _runner.Active.Value = true;
+        _api.OnGetSceneEntities = () => Snapshot(2, 3, 4);
+        _api.OnGetEntityData = id => id switch
+        {
+            2 => State(id, newParent.Id, 1),
+            4 => State(id, newParent.Id, 0),
+            _ => State(id, 0)
+        };
+
+        CreateService().SynchronizeWithEngine();
+
+        Assert.Empty(_logger.Entries);
+        Assert.Equal(3, scene.Entities.Count());
+        Assert.Same(child, scene.GetById(child.Id));
+        Assert.Same(newParent, scene.GetById(newParent.Id));
+        Assert.Same(sibling, scene.GetById(sibling.Id));
+        var newParentNode = scene.Hierarchy.GetNode(newParent);
+        Assert.Same(newParentNode, scene.Hierarchy.GetNode(child)!.Parent);
+        Assert.Equal(1, child.Transform.Order);
+        Assert.Equal(new[] { sibling, child }, newParentNode!.ChildNodes.Select(x => x.Content));
+    }
+
+    /// <summary>A surviving child can move from a removed parent to a parent added by the same snapshot.</summary>
+    [AvaloniaFact]
+    public void RemovingOldParentPreservesChildReparentedToNewEntity()
+    {
+        var scene = new Scene("sync");
+        var oldParent = new GameEntity(1, "removed");
+        var child = new GameEntity(2, "survivor");
+        scene.AddEntity(oldParent);
+        scene.AddEntity(child);
+        scene.MoveEntity(child, oldParent, 0);
+        _scenes.Scene.Value = scene;
+        _runner.Active.Value = true;
+        _api.OnGetSceneEntities = () => Snapshot(2, 3);
+        _api.OnGetEntityData = id => State(id, id == child.Id ? 3 : 0);
+
+        CreateService().SynchronizeWithEngine();
+
+        Assert.Empty(_logger.Entries);
+        var newParent = scene.GetById(3);
+        Assert.NotNull(newParent);
+        Assert.Same(child, scene.GetById(child.Id));
+        Assert.Same(scene.Hierarchy.GetNode(newParent), scene.Hierarchy.GetNode(child)!.Parent);
+    }
+
+    /// <summary>Detaching a surviving subtree boundary retains descendants while its old ancestor is removed.</summary>
+    [AvaloniaTheory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void RemovingOldAncestorPreservesSurvivingSubtree(int obsoleteAncestorLevels)
+    {
+        var scene = new Scene("sync");
+        var oldAncestor = new GameEntity(1, "removed");
+        var subtreeRoot = new GameEntity(2, "surviving root");
+        var child = new GameEntity(3, "surviving child");
+        scene.AddEntity(oldAncestor);
+        scene.AddEntity(subtreeRoot);
+        scene.AddEntity(child);
+        var oldParent = oldAncestor;
+        if (obsoleteAncestorLevels == 2)
+        {
+            oldParent = new GameEntity(4, "removed middle");
+            scene.AddEntity(oldParent);
+            scene.MoveEntity(oldParent, oldAncestor, 0);
+        }
+
+        scene.MoveEntity(subtreeRoot, oldParent, 0);
+        scene.MoveEntity(child, subtreeRoot, 0);
+        _scenes.Scene.Value = scene;
+        _runner.Active.Value = true;
+        _api.OnGetSceneEntities = () => Snapshot(2, 3);
+        _api.OnGetEntityData = id => State(id, id == child.Id ? subtreeRoot.Id : 0);
+
+        CreateService().SynchronizeWithEngine();
+
+        Assert.Empty(_logger.Entries);
+        Assert.Equal(2, scene.Entities.Count());
+        Assert.Same(subtreeRoot, scene.GetById(subtreeRoot.Id));
+        Assert.Same(child, scene.GetById(child.Id));
+        Assert.Null(scene.Hierarchy.GetNode(subtreeRoot)!.Parent);
+        Assert.Same(scene.Hierarchy.GetNode(subtreeRoot), scene.Hierarchy.GetNode(child)!.Parent);
+    }
+
+    /// <summary>A surviving child with unavailable state is retained and repaired to the root after its parent disappears.</summary>
+    [AvaloniaFact]
+    public void RemovingOldParentPreservesChildWithUnavailableState()
+    {
+        var scene = new Scene("sync");
+        var oldParent = new GameEntity(1, "removed");
+        var child = new GameEntity(2, "survivor");
+        scene.AddEntity(oldParent);
+        scene.AddEntity(child);
+        scene.MoveEntity(child, oldParent, 0);
+        _scenes.Scene.Value = scene;
+        _runner.Active.Value = true;
+        _api.OnGetSceneEntities = () => Snapshot(2);
+        _api.OnGetEntityData = _ => null;
+
+        CreateService().SynchronizeWithEngine();
+
+        Assert.Empty(_logger.Entries);
+        Assert.Same(child, Assert.Single(scene.Entities));
+        Assert.Equal(0, child.Transform.Parent);
+        Assert.Null(scene.Hierarchy.GetNode(child)!.Parent);
+    }
+
+    /// <summary>A removed parent still deletes its full subtree when none of those entities survive the snapshot.</summary>
+    [AvaloniaFact]
+    public void RemovingObsoleteParentDeletesObsoleteSubtree()
+    {
+        var scene = new Scene("sync");
+        var oldParent = new GameEntity(1, "removed");
+        var oldChild = new GameEntity(2, "removed child");
+        scene.AddEntity(oldParent);
+        scene.AddEntity(oldChild);
+        scene.MoveEntity(oldChild, oldParent, 0);
+        _scenes.Scene.Value = scene;
+        _runner.Active.Value = true;
+        _api.OnGetSceneEntities = () => Snapshot();
+        var rebuilds = 0;
+        scene.HierarchyRebuiltEvent += () => rebuilds++;
+
+        CreateService().SynchronizeWithEngine();
+
+        Assert.Empty(_logger.Entries);
+        Assert.Empty(scene.Entities);
+        Assert.Empty(scene.Hierarchy.RootNodes);
+        Assert.Equal(1, rebuilds);
     }
 
     /// <summary>A missing scene is logged without applying a returned snapshot.</summary>
@@ -140,13 +290,13 @@ public sealed class SceneSyncServiceTests
         Entities = ids.Select(id => new GetSceneEntitiesResponse.SceneEntitiesResponseEntity { Id = id }).ToList()
     };
 
-    private static GetEntityDataResponse State(int id, int parent) => new()
+    private static GetEntityDataResponse State(int id, int parent, int order = 0) => new()
     {
         SceneId = id,
         Name = $"engine-{id}",
         Behaviours = new()
         {
-            new() { ["REI_TYPE"] = EngineBehavioursConstants.TRANSFORM, [EngineBehavioursConstants.TRANSFORM_PARENT] = parent, [EngineBehavioursConstants.TRANSFORM_ORDER] = 0 }
+            new() { ["REI_TYPE"] = EngineBehavioursConstants.TRANSFORM, [EngineBehavioursConstants.TRANSFORM_PARENT] = parent, [EngineBehavioursConstants.TRANSFORM_ORDER] = order }
         }
     };
 }

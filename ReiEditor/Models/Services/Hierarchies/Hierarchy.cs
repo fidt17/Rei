@@ -36,12 +36,13 @@ public class Hierarchy<T> where T : notnull
 
     public void AddNode(HierarchyNode<T> node, bool isRoot)
     {
+        _nodeMap.Add(node.Content, node);
+
         if (isRoot)
         {
             _rootNodes.Add(node);
         }
         
-        _nodeMap.Add(node.Content, node);
         NodeAddedEvent?.Invoke(node);
     }
 
@@ -66,23 +67,15 @@ public class Hierarchy<T> where T : notnull
         if (node == parent) return false;
         if (GetAllChildNodes(node).Contains(parent)) return false;
 
-        var oldOrder = 0;
-        var newOrder = order;
-        
         var oldParent = node.Parent;
-        if (node.Parent == parent)
-        {
-            oldOrder = parent?.GetChildIdx(node) ?? _rootNodes.IndexOf(node);
-            if (oldOrder == order) return false;
-            
-            if (oldOrder < order)
-            {
-                order -= 1;
-            }
-        }
+        var oldOrder = GetNodeOrder(node);
+        // Event consumers apply the removal offset to the requested insertion index themselves.
+        var newOrder = order;
+        if (oldParent == parent && oldOrder == order) return false;
 
         var targetListCount = parent == null ? _rootNodes.Count : parent.ChildNodes.Count();
         order = Math.Clamp(order, 0, targetListCount);
+        if (oldParent == parent && oldOrder < order) order -= 1;
 
         if (node.Parent == null)
         {

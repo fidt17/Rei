@@ -131,6 +131,7 @@ public class SceneSyncService : ISceneSyncService
     {
         var needsHierarchyRefresh = false;
         var orderedEntityIds = EntitySyncUtility.BuildOrderedEntityIds(parentByEntityId, orderByEntityId);
+        var engineEntityIds = entities.Entities.Select(x => x.Id).ToHashSet();
 
         foreach (var entityId in orderedEntityIds)
         {
@@ -157,12 +158,30 @@ public class SceneSyncService : ISceneSyncService
             }
         }
 
-        foreach (var gameEntity in currentSceneEntities.Where(x => !entities.Entities.Exists(y => y.Id == x.Id)))
+        DetachSurvivingEntitiesFromRemovedParents(scene, currentSceneEntities, engineEntityIds);
+
+        foreach (var gameEntity in currentSceneEntities.Where(x => !engineEntityIds.Contains(x.Id)))
         {
             scene.DeleteEntity(gameEntity, refreshTransforms: false);
             needsHierarchyRefresh = true;
         }
 
         return needsHierarchyRefresh;
+    }
+
+    private static void DetachSurvivingEntitiesFromRemovedParents(
+        Scene scene,
+        IReadOnlyCollection<GameEntity> currentSceneEntities,
+        IReadOnlySet<int> engineEntityIds)
+    {
+        foreach (var gameEntity in currentSceneEntities)
+        {
+            if (!engineEntityIds.Contains(gameEntity.Id)) continue;
+
+            var node = scene.Hierarchy.GetNode(gameEntity);
+            if (node?.Parent == null || engineEntityIds.Contains(node.Parent.Content.Id)) continue;
+
+            scene.Hierarchy.MoveNode(node, null, int.MaxValue);
+        }
     }
 }
