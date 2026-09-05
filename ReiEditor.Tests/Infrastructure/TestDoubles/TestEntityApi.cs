@@ -8,11 +8,13 @@ public sealed class TestEntityApi : IEntityApi
     private readonly List<IReadOnlyList<int>> _selections = new();
 
     public IReadOnlyList<IReadOnlyList<int>> Selections => _selections;
+    public Func<GetSceneEntitiesResponse?>? OnGetSceneEntities { get; set; }
+    public Func<int, GetEntityDataResponse?>? OnGetEntityData { get; set; }
 
     public void SetEntitySelection(SetEntitySelectionRequest request) => _selections.Add(request.EntityIds.ToArray());
 
-    public GetSceneEntitiesResponse? GetSceneEntities() => throw UnexpectedCall();
-    public GetEntityDataResponse? GetEntityData(int sceneEntityId) => throw UnexpectedCall();
+    public GetSceneEntitiesResponse? GetSceneEntities() => (OnGetSceneEntities ?? throw UnexpectedCall())();
+    public GetEntityDataResponse? GetEntityData(int sceneEntityId) => (OnGetEntityData ?? throw UnexpectedCall())(sceneEntityId);
     public InstantiateEntityResponse? CreateNewEntity(string name) => throw UnexpectedCall();
     public void DestroyEntity(int sceneEntityId) => throw UnexpectedCall();
     public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();

@@ -38,7 +38,7 @@ Package versions match the existing MCP test stack: xUnit 2.9.3, runner 3.1.4, T
 
 - Construct the subject directly. Use the real production Autofac module only for composition tests; do not duplicate its registrations or start ApplicationScope/EditorScope.
 - `TemporaryDirectory` owns one unique directory under the OS temp directory. `GetPath` rejects traversal and foreign absolute paths; disposal deletes only its owned root. `TemporaryProjectFixture` supplies an active in-memory Project and real ResourceService. No current-directory changes or user preference writes. Do not create junctions/symlinks in these fixtures.
-- `TestEntityApi` records copied selection IDs and rejects all other API calls. `TestEditorStorageService` controls asynchronous reads and rejects writes. Extend doubles only when a test needs a new operation; do not silently return success for unexpected calls.
+- `TestEntityApi` records copied selection IDs and supports explicitly configured scene/entity snapshot reads; all unconfigured operations fail. `TestEditorStorageService` controls asynchronous reads and rejects writes. Extend doubles only when a test needs a new operation; do not silently return success for unexpected calls.
 - `TestLogger<T>` captures messages/exceptions, with snapshots safe for background logging. Builders create only the domain shapes currently needed.
 - `TestData` contains small source-controlled fixtures copied to test output. File tests copy/write them to their own temporary project, never mutate shared output fixtures.
 - Use TaskCompletionSource with RunContinuationsAsynchronously to gate async work. Await operations and use bounded waits; do not synchronize with sleeps. Release gates in finally, dispose the subject, remove subscriptions, then delete files. Initialize IAsyncInitializable before using its loaded state.
@@ -68,7 +68,9 @@ Tests, infrastructure, and this README form the first slice. Planning and scenar
 
 The Core slice covers observable state, commands, pools, navigation, path/file utilities, JSON and binary serialization, serialized properties/components, type and shader parsing, render data/math, and asset migrations. Coverage measures the whole editor; these suites do not imply complete coverage of every contract in those areas.
 
-The full run currently contains active regressions for four production defects (seven failing theory/fact cases): `1f` parses as `10`; generated-file visibility compares extensions case-sensitively; meta-file eligibility compares excluded extensions case-sensitively; generated-directory filtering also hides `OtherProject/Scripts/bin`. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
+The scene slice adds hierarchy/entity models, selection and commands, state read/write and reconciliation, scene loading, default templates, asset drop, and canvas/layout service tests. Engine selection and snapshot reconciliation use the headless UI dispatcher. Native execution, OS drag sessions, and timer-driven polling remain outside these suites; explicit synchronization calls do not require sleeps.
+
+The full run contains active regressions for `1f` parsing as `10`, generated-file/meta extension casing, and `OtherProject/Scripts/bin` filtering. Scene regressions additionally check duplicate hierarchy insertion atomicity, cross-parent move source index, oversized same-parent insertion, and preservation of a surviving child when its old parent disappears from an engine snapshot. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
