@@ -1,6 +1,6 @@
 # ReiEditor.Tests
 
-Infrastructure and feature tests for the .NET 10/x64 editor. No native DLL, GPU, production application startup, or visible window is required. Run commands from the repository root.
+Infrastructure and feature tests for the .NET 10/x64 editor. No native engine DLL, GPU, production application startup, or visible window is required. Run commands from the repository root.
 
 ## Run
 
@@ -44,7 +44,7 @@ Package versions match the existing MCP test stack: xUnit 2.9.3, runner 3.1.4, T
 - Use TaskCompletionSource with RunContinuationsAsynchronously to gate async work. Await operations and use bounded waits; do not synchronize with sleeps. Release gates in finally, dispose the subject, remove subscriptions, then delete files. Initialize IAsyncInitializable before using its loaded state.
 - `[AvaloniaFact]` and `[Collection(HeadlessCollection.NAME)]` identify UI-thread tests. `AvaloniaTestApplication` points to an empty Application with the headless backend; it never calls ReiEditor.App or Program. The collection prevents overlap with other test collections. Ordinary facts do not start Avalonia. Add themes/resources only when a later test needs controls.
 - The property VM example explicitly dispatches its update to UI; it does not claim that IntegerPropertyViewModel marshals arbitrary background changes itself.
-- No InternalsVisibleTo or production interface changes are needed yet. Add friend-assembly access only when testing internal implementations.
+- `InternalsVisibleTo("ReiEditor.Tests")` grants access to internal capture implementations. Runtime interfaces and behavior remain unchanged.
 
 ## Initial examples
 
@@ -75,6 +75,8 @@ The asset slice covers registry/metadata, resource IO and search, file operation
 The projects/settings slice covers active projects and bookmarks, creation validation, template and solution generation, project creation/update/setup/deletion, engine resource copying, editor preferences, configuration validation and engine-settings reloads. Storage is controlled in memory; project files and deletion targets use owned temporary directories. Positive MSBuild version validation remains deferred until a controlled versioned executable fixture or version-reader seam exists.
 
 The build slice covers execution paths and MSBuild arguments, source/build snapshots, preparation and command guards, stage selection, cache manifests and hashing, asset packing/maps, output staging/promotion, standalone packaging and engine-stop gating. Build and engine interfaces supply controlled results or write known fixture bytes. The real process builder is tested only at invalid-path guards; native sessions and external tools are never started. Timing assertions use controlled task gates; production polling/settling delays remain unchanged.
+
+The editor workflow slice covers console/logging, refresh and disk restore, playmode guards and stop/save/build/start orchestration, engine startup/failure/shutdown, viewport controls and hotkeys, managed input dispatch, and PNG capture from owned RGBA buffers. Engine callbacks use managed delegates through a controlled `IEngineApi`; no engine DLL or GPU is loaded. Capture encoding uses the existing SkiaSharp dependency. Fire-and-forget negative paths without observable completion, watcher integration, precise timer races, and the capture byte-count limit remain deferred. Test classes and test methods include XML summaries.
 
 The full run contains active regressions for `1f` parsing as `10`, generated-file/meta extension casing, and `OtherProject/Scripts/bin` filtering. Scene regressions additionally check duplicate hierarchy insertion atomicity, cross-parent move source index, oversized same-parent insertion, and preservation of a surviving child when its old parent disappears from an engine snapshot. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
 
