@@ -1,0 +1,11 @@
+{
+    "Name": "textures",
+    "Type": 7,
+    "SourceType": "std::vector<AssetRef<Texture>>",
+    "Value": [
+        "texture-id",
+        null,
+        { "Type": 2, "Value": 17 },
+        [1, 2]
+    ]
+}

@@ -1,6 +1,6 @@
 # ReiEditor.Tests
 
-Initial infrastructure for .NET 10/x64 editor tests. No native DLL, GPU, production application startup, or visible window is required. Run commands from the repository root.
+Infrastructure and feature tests for the .NET 10/x64 editor. No native DLL, GPU, production application startup, or visible window is required. Run commands from the repository root.
 
 ## Run
 
@@ -65,6 +65,10 @@ Test replacements live in `Infrastructure/TestDoubles` and use the `Test` prefix
 Tests, infrastructure, and this README form the first slice. Planning and scenario research documents stay local and are excluded from commits. Bug fixes and wider feature coverage belong to subsequent slices; commits require an explicit user request.
 
 ## Slice workflow
+
+The Core slice covers observable state, commands, pools, navigation, path/file utilities, JSON and binary serialization, serialized properties/components, type and shader parsing, render data/math, and asset migrations. Coverage measures the whole editor; these suites do not imply complete coverage of every contract in those areas.
+
+The full run currently contains active regressions for four production defects (seven failing theory/fact cases): `1f` parses as `10`; generated-file visibility compares extensions case-sensitively; meta-file eligibility compares excluded extensions case-sensitively; generated-directory filtering also hides `OtherProject/Scripts/bin`. Production fixes are separate work. These failures remain in the default run and are not skipped or filtered out.
 
 1. Select one slice and plan its scenarios, alone or with research agents.
 2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
