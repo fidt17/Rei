@@ -66,6 +66,7 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
     {
         base.Dispose();
         _consoleService.NewLogEvent -= HandleNewLogEvent;
+        _consoleService.LogsClearedEvent -= HandleLogsClearedEvent;
         ClearEditorConsoleCommand.Dispose();
 
         ConsoleFilter.FilterChangedEvent -= HandleFilterChangedEvent;

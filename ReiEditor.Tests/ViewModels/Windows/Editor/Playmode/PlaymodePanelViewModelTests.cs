@@ -175,7 +175,7 @@ public sealed class PlaymodePanelViewModelTests
         Assert.Equal(0, runner.EditorActive.SubscriberCount);
     }
 
-    /// <summary>Disposed panel must unsubscribe active-state handler; source currently leaves one subscription.</summary>
+    /// <summary>Disposed panel releases all engine-state subscriptions and ignores later state changes.</summary>
     [AvaloniaFact]
     public void TestDisposeUnsubscribesEngineActiveState()
     {
@@ -183,8 +183,16 @@ public sealed class PlaymodePanelViewModelTests
         var panel = TestCreatePanel(runner, new TestEngineWindowController());
 
         panel.Dispose();
+        runner.Active.Publish(true);
+        runner.EditorActive.Publish(true);
+        runner.PlaymodeActive.Publish(true);
 
+        Assert.False(panel.EngineActive);
+        Assert.False(panel.EditorModeActive);
+        Assert.False(panel.PlayModeActive);
         Assert.Equal(0, runner.Active.SubscriberCount);
+        Assert.Equal(0, runner.EditorActive.SubscriberCount);
+        Assert.Equal(0, runner.PlaymodeActive.SubscriberCount);
     }
 
     /// <summary>Window pointer creates/removes provider and later pointer updates are ignored after disposal.</summary>

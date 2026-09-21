@@ -124,19 +124,35 @@ public sealed class ConsoleViewModelTests
         Assert.False(vm.ClearEditorConsoleCommand.CanExecute(null));
     }
 
-    /// <summary>Disposed console views must stop reacting to both appended and cleared logs.</summary>
+    /// <summary>Disposed console view freezes while another view keeps handling append and clear events.</summary>
     [AvaloniaFact]
     public void DisposeDetachesClearAndAppendSubscriptions()
     {
         var console = new EditorConsoleService();
-        var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        var disposedVm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        using var liveVm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        var disposedUpdates = 0;
+        var liveUpdates = 0;
+        disposedVm.LogCollectionUpdated += () => disposedUpdates++;
+        liveVm.LogCollectionUpdated += () => liveUpdates++;
         console.Log(Message(LogLevelEnum.Info));
-        vm.Dispose();
-        var rows = vm.FilteredLogs.ToArray();
+        disposedVm.FilteredLogs[0].Expand = true;
+        var details = disposedVm.Details;
+        disposedVm.Dispose();
+        var rows = disposedVm.FilteredLogs.ToArray();
+
         console.Log(Message(LogLevelEnum.Error));
-        Assert.Equal(rows, vm.FilteredLogs);
+        Assert.Equal(rows, disposedVm.FilteredLogs);
+        Assert.Equal(details, disposedVm.Details);
+        Assert.Equal(1, disposedUpdates);
+        Assert.Equal(2, liveUpdates);
+        Assert.Equal(2, liveVm.FilteredLogs.Count);
+
         console.ClearConsole();
-        Assert.Equal(rows, vm.FilteredLogs);
+        Assert.Equal(rows, disposedVm.FilteredLogs);
+        Assert.Equal(details, disposedVm.Details);
+        Assert.Equal(1, disposedUpdates);
+        Assert.Empty(liveVm.FilteredLogs);
     }
 
     private static LogMessage Message(LogLevelEnum level) => new(LogScopeEnum.Editor, level, new DateTime(2026, 1, 2, 3, 4, 5), "message", "detail");

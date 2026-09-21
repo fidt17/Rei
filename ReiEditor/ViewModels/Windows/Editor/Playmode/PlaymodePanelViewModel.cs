@@ -149,6 +149,7 @@ public class PlaymodePanelViewModel : BaseViewModel
 
         _engineRunner.IsPlaymodeActive.Unsubscribe(HandlePlaymodeActiveValueChangedEvent);
         _engineRunner.IsEditorActive.Unsubscribe(HandleIsEditorActiveValueChangedEvent);
+        _engineRunner.IsActive.Unsubscribe(HandleIsEngineActiveValueChangedEvent);
         _engineWindow.WindowPointer.Unsubscribe(HandleWindowPointerChangedEvent);
 
         RenderModeSelection.Dispose();

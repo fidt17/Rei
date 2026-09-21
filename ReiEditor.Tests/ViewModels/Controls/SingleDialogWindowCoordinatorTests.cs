@@ -73,13 +73,80 @@ public sealed class SingleDialogWindowCoordinatorTests
         Assert.All(logger.Entries, entry => Assert.Same(failure, entry.Exception));
     }
 
-    /// <summary>A window factory failure must release the already-created view model.</summary>
+    /// <summary>A window factory failure releases its view model, preserves the exception and permits a successful retry.</summary>
     [AvaloniaFact]
     public void WindowFactoryFailureDisposesCreatedViewModel()
     {
         var vm = new TestViewModel();
+        var failure = new InvalidOperationException("controlled factory failure");
         var coordinator = new SingleDialogWindowCoordinator(new TestMainWindowService(), new TestLogger<SingleDialogWindowCoordinator>());
-        Assert.Throws<InvalidOperationException>(() => coordinator.Open(() => vm, _ => throw new InvalidOperationException("controlled factory failure")));
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => coordinator.Open(() => vm, _ => throw failure)));
         Assert.Equal(1, vm.DisposeCount);
+        var retry = new TestViewModel();
+        try
+        {
+            coordinator.Open(() => retry, _ => new Window());
+            Assert.Equal(0, retry.DisposeCount);
+        }
+        finally
+        {
+            coordinator.Close();
+        }
+        Assert.Equal(1, vm.DisposeCount);
+        Assert.Equal(1, retry.DisposeCount);
+    }
+
+    /// <summary>A view model factory exception never invokes the window factory and does not block the next open.</summary>
+    [AvaloniaFact]
+    public void ViewModelFactoryFailurePreservesExceptionAndAllowsRetry()
+    {
+        var failure = new InvalidOperationException("controlled view model failure");
+        var coordinator = new SingleDialogWindowCoordinator(new TestMainWindowService(), new TestLogger<SingleDialogWindowCoordinator>());
+        var windowFactoryCalled = false;
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => coordinator.Open<TestViewModel>(
+            () => throw failure,
+            _ => { windowFactoryCalled = true; return new Window(); })));
+        Assert.False(windowFactoryCalled);
+        var retry = new TestViewModel();
+        try
+        {
+            coordinator.Open(() => retry, _ => new Window());
+            Assert.Equal(0, retry.DisposeCount);
+        }
+        finally
+        {
+            coordinator.Close();
+        }
+        Assert.Equal(1, retry.DisposeCount);
+    }
+
+    /// <summary>A window closed synchronously before ShowDialog fails releases its view model only once.</summary>
+    [AvaloniaFact]
+    public void ShowFailureAfterSynchronousCloseDoesNotDisposeTwice()
+    {
+        var failure = new InvalidOperationException("show failed after closing");
+        var logger = new TestLogger<SingleDialogWindowCoordinator>();
+        var mainWindow = new TestMainWindowService
+        {
+            OnShow = window => { window.Show(); window.Close(); throw failure; }
+        };
+        var coordinator = new SingleDialogWindowCoordinator(mainWindow, logger);
+        var vm = new TestViewModel();
+
+        coordinator.Open(() => vm, _ => new Window());
+
+        Assert.Equal(1, vm.DisposeCount);
+        Assert.Same(failure, Assert.Single(logger.Entries).Exception);
+        mainWindow.OnShow = window => window.Show();
+        var retry = new TestViewModel();
+        try
+        {
+            coordinator.Open(() => retry, _ => new Window());
+        }
+        finally
+        {
+            coordinator.Close();
+        }
+        Assert.Equal(1, retry.DisposeCount);
     }
 }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.ViewModels.Common;
@@ -30,49 +29,44 @@ public class StatusBarViewModel : BaseViewModel
 
 	#endregion
 
-	private IProcedure? _activeProcedure;
-	private readonly Stack<IProcedure> _runningProcedures = new();
 	private readonly IEditorProceduresService _editorProceduresService;
 
 #pragma warning disable CS8618
 	public StatusBarViewModel() { }
 #pragma warning restore CS8618
 
-	public StatusBarViewModel(IEditorProceduresService editorProceduresService)
-	{
-		_editorProceduresService = editorProceduresService;
-		_editorProceduresService.ProcedureStartedEvent += HandleProcedureStartedEvent;
-	}
+    public StatusBarViewModel(IEditorProceduresService editorProceduresService)
+    {
+        _editorProceduresService = editorProceduresService;
+        _editorProceduresService.ProcedureStartedEvent += HandleProcedureStartedEvent;
+        _editorProceduresService.ProcedureFinishedEvent += HandleProcedureFinishedEvent;
+    }
 
-	public override void Dispose()
-	{
-		_editorProceduresService.ProcedureStartedEvent -= HandleProcedureStartedEvent;
-	}
+    public override void Dispose()
+    {
+        _editorProceduresService.ProcedureStartedEvent -= HandleProcedureStartedEvent;
+        _editorProceduresService.ProcedureFinishedEvent -= HandleProcedureFinishedEvent;
+        base.Dispose();
+    }
 
-	private void HandleProcedureStartedEvent(IProcedure procedure)
-	{
-		DisplayProcedure(procedure);
-		
-		procedure.FinishedEvent += () =>
-		{
-			_activeProcedure = null;
-			
-			var nextProcedure = _editorProceduresService.ActiveProcedures.LastOrDefault();
-			if (nextProcedure == null)
-			{
-				ActiveProcedureText = "";
-				ShowStatusBar = false;
-				return;
-			}
-			
-			DisplayProcedure(nextProcedure);
-		};
-	}
+    private void HandleProcedureStartedEvent(IProcedure procedure) => DisplayProcedure(procedure);
 
-	private void DisplayProcedure(IProcedure procedure)
-	{
-		_activeProcedure = procedure;
-		ActiveProcedureText = procedure.Name + "...";
-		ShowStatusBar = true;
-	}
+    private void HandleProcedureFinishedEvent(IProcedure procedure)
+    {
+        var nextProcedure = _editorProceduresService.ActiveProcedures.LastOrDefault();
+        if (nextProcedure == null)
+        {
+            ActiveProcedureText = "";
+            ShowStatusBar = false;
+            return;
+        }
+
+        DisplayProcedure(nextProcedure);
+    }
+
+    private void DisplayProcedure(IProcedure procedure)
+    {
+        ActiveProcedureText = procedure.Name + "...";
+        ShowStatusBar = true;
+    }
 }

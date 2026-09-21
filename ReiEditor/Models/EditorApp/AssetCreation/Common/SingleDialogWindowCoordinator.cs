@@ -30,10 +30,24 @@ public class SingleDialogWindowCoordinator
         }
 
         var viewModel = createViewModel();
-        var window = createWindow(viewModel);
-
-        void HandleWindowClosed(object? _, EventArgs __)
+        Window window;
+        try
         {
+            window = createWindow(viewModel);
+        }
+        catch
+        {
+            viewModel.Dispose();
+            throw;
+        }
+        var released = false;
+
+        void HandleWindowClosed(object? _, EventArgs __) => ReleaseWindow();
+
+        void ReleaseWindow()
+        {
+            if (released) return;
+            released = true;
             window.Closed -= HandleWindowClosed;
             viewModel.Dispose();
             if (ReferenceEquals(_window, window))
@@ -51,9 +65,7 @@ public class SingleDialogWindowCoordinator
         }
         catch (Exception e)
         {
-            window.Closed -= HandleWindowClosed;
-            viewModel.Dispose();
-            _window = null;
+            ReleaseWindow();
             _logger.LogException(e);
         }
     }
