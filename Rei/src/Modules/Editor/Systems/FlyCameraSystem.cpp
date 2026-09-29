@@ -2,6 +2,7 @@
 #include "FlyCameraSystem.h"
 
 #include "glm/ext/quaternion_trigonometric.hpp"
+#include "Engine/Services.h"
 #include "Modules/Input/Input.h"
 #include "Modules/Window/WindowManager.h"
 #include "rei_behaviours/render/camera/Camera.h"
@@ -13,9 +14,6 @@ namespace rei::editor
     {
         _cameraFilter = FILTER(Transform, render::Camera);
     }
-
-    f32 deltaTime = 0.0f; // Time between current frame and last frame
-    f32 lastFrame = 0.0f; // Time of last frame
 
     f32 lastX = -1, lastY = -1;
     bool didSetCursorPos;
@@ -104,15 +102,11 @@ namespace rei::editor
             didSetCursorPos = false;
         }
 
-        f64 currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-
         FOR(e, _cameraFilter)
         {
             auto& transform = GET(e, Transform);
 
-            f32 cameraSpeed = 3.0f * deltaTime;
+            f32 cameraSpeed = 3.0f * static_cast<f32>(GetTime().GetDeltaSeconds());
 
             if (Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
             {

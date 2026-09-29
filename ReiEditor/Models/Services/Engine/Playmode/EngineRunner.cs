@@ -28,6 +28,10 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
 
     public EngineRunMode ActiveMode { get; private set; }
 
+    private readonly object _lifecycleLock = new();
+    private readonly object _nativeCallLock = new();
+    private Task _engineCompletion = Task.CompletedTask;
+    private Task _startNotification = Task.CompletedTask;
     private IntPtr? _enginePtr;
     private readonly IEngineApi.VoidCallbackDelegate _startCallbackDelegate;
     
@@ -70,60 +74,79 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
         _editorProceduresService = editorProceduresService;
 
         _startCallbackDelegate = HandleEngineStartedEvent;
-
-        _shutdownListener.EngineShutdownEvent += HandleEngineShutdownEvent;
     }
 
     public async ValueTask DisposeAsync()
     {
         await StopEngine();
-        _shutdownListener.EngineShutdownEvent -= HandleEngineShutdownEvent;
     }
 
     public bool StartEngine(EngineRunMode mode)
     {
-        if (_enginePtr != null)
+        lock (_lifecycleLock)
         {
-            _logger.LogError("Cannot start playmode because EnginePtr already exists");
-            return false;
-        }
+            if (!_engineCompletion.IsCompleted)
+            {
+                _logger.LogError("Cannot start engine while its previous lifecycle is still running");
+                return false;
+            }
 
-        BeginStartProcedure();
-        _isEngineStarting.Value = true;
-        
-        Task.Run(() =>
+            // Reserve the lifecycle before scheduling: two callers must never load the same DLL concurrently.
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _engineCompletion = completion.Task;
+            _startNotification = Task.CompletedTask;
+            BeginStartProcedure();
+            _isEngineStarting.Value = true;
+            Task.Run(() => RunEngine(mode, completion));
+            return true;
+        }
+    }
+
+    private void RunEngine(EngineRunMode mode, TaskCompletionSource completion)
+    {
+        var enginePtr = IntPtr.Zero;
+        var startFailed = false;
+        try
         {
-            var enginePtr = IntPtr.Zero;
-            
             if (!LoadClientDll())
             {
-                HandleEngineStartFailure();
+                startFailed = true;
                 return;
             }
-            
-            try
-            {
-                ActiveMode = mode;
-                
-                enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
-                _enginePtr = enginePtr;
 
-                _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
-                _engineLogger.SubscribeToClient();
-                _engineInputService.SubscribeToClient();
-                _shutdownListener.SubscribeToClient();
-                _engineWindowController.SetupWindow();
-                
-                _engineApi.Start(enginePtr);
-            }
-            catch (Exception e)
+            ActiveMode = mode;
+            enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
+            lock (_nativeCallLock) _enginePtr = enginePtr;
+            _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
+            _engineLogger.SubscribeToClient();
+            _engineInputService.SubscribeToClient();
+            _shutdownListener.SubscribeToClient();
+            _engineWindowController.SetupWindow();
+            _engineApi.Start(enginePtr);
+        }
+        catch (Exception e)
+        {
+            startFailed = true;
+            _logger.LogError("Engine failure...");
+            _logger.LogException(e);
+        }
+        finally
+        {
+            // Drain the queued start callback so it cannot reactivate a stopped/new engine.
+            _startNotification.GetAwaiter().GetResult();
+            // Shutdown may still be returning through the project DLL after Start exits.
+            // Keep that native call, destruction and FreeLibrary mutually exclusive.
+            lock (_nativeCallLock)
             {
-                _logger.LogError("Engine failure...");
-                _logger.LogException(e);
-                HandleEngineStartFailure();
-            }
-            finally
-            {
+                try
+                {
+                    _engineWindowController.DestroyWindow();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogException(e);
+                }
+
                 if (enginePtr != IntPtr.Zero)
                 {
                     try
@@ -135,71 +158,58 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
                         _logger.LogException(e);
                     }
                 }
-
+                _enginePtr = null;
                 try
                 {
-                    if (_clientDllManager.DllLoaded.Value)
-                    {
-                        _clientDllManager.UnloadDll();
-                    }
+                    if (_clientDllManager.DllLoaded.Value) _clientDllManager.UnloadDll();
                 }
                 catch (Exception e)
                 {
                     _logger.LogException(e);
                 }
             }
-        });
 
-        return true;
+            if (startFailed) _engineApi.MarkEngineStopped();
+            lock (_lifecycleLock)
+            {
+                _isActive.Value = false;
+                _isPlaymodeActive.Value = false;
+                _isEditormodeActive.Value = false;
+                _isEngineStarting.Value = false;
+                EndStartProcedure();
+                completion.TrySetResult();
+            }
+            if (startFailed) EngineStartFailedEvent?.Invoke();
+        }
     }
 
     public async Task StopEngine()
     {
-        if (!_isActive.Value) return;
-        
-        try
+        Task completion;
+        lock (_lifecycleLock) completion = _engineCompletion;
+        while (!completion.IsCompleted)
         {
-            if (_enginePtr == null) return;
-            if (!_engineApi.IsEngineRunning) return;
-            
-            _engineApi?.Shutdown(_enginePtr.Value, 1);
+            lock (_nativeCallLock)
+            {
+                if (completion.IsCompleted) break;
+                if (_enginePtr is { } pointer && _isActive.Value && _engineApi.IsEngineRunning)
+                {
+                    try
+                    {
+                        _engineApi.Shutdown(pointer, 1);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError("Could not stop engine");
+                        _logger.LogException(e);
+                    }
+                    break;
+                }
+            }
+            // A stop during startup must wait for either readiness or startup failure.
+            await Task.WhenAny(completion, Task.Delay(25));
         }
-        catch (Exception e)
-        {
-            _logger.LogError("Could not stop engine");
-            _logger.LogException(e);
-        }
-
-        while (_isActive.Value)
-        {
-            await Task.Delay(100);
-        }
-    }
-
-    private void HandleEngineShutdownEvent(int obj)
-    {
-        _engineWindowController.DestroyWindow();
-        _enginePtr = null;
-        
-        _isActive.Value = false;
-        _isPlaymodeActive.Value = false;
-        _isEditormodeActive.Value = false;
-        _isEngineStarting.Value = false;
-        EndStartProcedure();
-    }
-
-    private void HandleEngineStartFailure()
-    {
-        _engineApi.MarkEngineStopped();
-        _engineWindowController.DestroyWindow();
-        _enginePtr = null;
-
-        _isActive.Value = false;
-        _isPlaymodeActive.Value = false;
-        _isEditormodeActive.Value = false;
-        _isEngineStarting.Value = false;
-        EndStartProcedure();
-        EngineStartFailedEvent?.Invoke();
+        await completion;
     }
 
     private bool LoadClientDll()
@@ -225,7 +235,7 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
 
     private void HandleEngineStartedEvent()
     {
-        Task.Run(() =>
+        _startNotification = Task.Run(() =>
         {
             try
             {

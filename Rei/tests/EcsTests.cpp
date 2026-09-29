@@ -308,18 +308,18 @@ TEST_CASE("Counter system")
         int _step;
     };
 
-    World w;
-    ECS_WORLD_LOCAL(w);
+    const auto w = std::make_shared<World>();
+    ECS_WORLD(w);
 
-    w.AddSystem<CounterSystem>(2);
+    w->AddSystem<CounterSystem>(2);
 
     auto e = NEW_ENTITY();
     GET(e, Counter);
 
-    w.Refresh();
+    w->Refresh();
     for (int i = 0; i < 100; i++)
     {
-        w.Run();
+        w->Run();
     }
 
     REQUIRE(GET(e, Counter).Value == 200);
@@ -390,20 +390,41 @@ TEST_CASE("Entity Creation Destruction Systems")
         std::shared_ptr<Filter> _counterFilter;
     };
 
-    World w;
-    ECS_WORLD_LOCAL(w);
-    w.AddSystem<EntityCreationSystem>();
-    w.AddSystem<HandleDestroyEntityEventSystem>();
+    const auto w = std::make_shared<World>();
+    ECS_WORLD(w);
+    w->AddSystem<EntityCreationSystem>();
+    w->AddSystem<HandleDestroyEntityEventSystem>();
 
     const auto counterEntity = NEW_ENTITY();
     GET(counterEntity, Counter);
 
-    w.Refresh();
+    w->Refresh();
     for (int i = 0; i < 100; i++)
     {
-        w.Run();
+        w->Run();
     }
 
     REQUIRE(GET(counterEntity, Counter).CreatedEntities == 100);
     REQUIRE(GET(counterEntity, Counter).DestroyedEntities == 100);
+}
+
+TEST_CASE("Failed system registration unwinds caller scope", "[ecs]")
+{
+    struct ScopeExit
+    {
+        bool& Exited;
+        ~ScopeExit() { Exited = true; }
+    };
+
+    World world;
+    bool scopeExited = false;
+    REQUIRE_THROWS_AS([&]
+    {
+        ScopeExit guard{scopeExited};
+        world.AddSystem(std::function<void()>{[] {}});
+    }(), std::bad_weak_ptr);
+    REQUIRE(scopeExited);
+
+    const auto entity = world.GetRegistry()->NewEntity();
+    REQUIRE(world.GetRegistry()->IsAlive(entity));
 }

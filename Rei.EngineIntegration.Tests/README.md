@@ -77,6 +77,7 @@ Teardown terminates only the owned Editor process and children. Existing user Ed
 - Lifecycle: saved values across DLL rebuild/reload, further edits, Play rollback, disk state.
 - Lifecycle: saved values survive full process restart; unsaved changes disappear; sync works after restart.
 - Lifecycle: newly created assets remain unloaded in native state during inspection.
+- Lifecycle / Time: native frame-clock readings, first-frame delta, elapsed progress, stable same-frame values and three Play/Stop resets; test asset disk bytes unchanged.
 
 Not yet covered: unavailable-engine edits, nested reference collections, multiple behaviour consumers observing
 the same asset, Monitor UI input/debounce through native readback, entity/behaviour synchronization, and

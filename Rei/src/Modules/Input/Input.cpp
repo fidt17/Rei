@@ -100,6 +100,18 @@ namespace rei
         y = _mouseY;
     }
 
+    MouseState Input::GetMouseState()
+    {
+        MouseState state;
+        if (_window == nullptr || glfwGetCurrentContext() != _window) return state;
+        state.X = _mouseX;
+        state.Y = _mouseY;
+        glfwGetWindowSize(_window, &state.Width, &state.Height);
+        state.HasFocus = glfwGetWindowAttrib(_window, GLFW_FOCUSED) == GLFW_TRUE;
+        state.IsHovered = glfwGetWindowAttrib(_window, GLFW_HOVERED) == GLFW_TRUE;
+        return state;
+    }
+
     f64 Input::GetScrollX()
     {
         return _scrollX;

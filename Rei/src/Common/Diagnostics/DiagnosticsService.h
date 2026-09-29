@@ -40,7 +40,6 @@ namespace rei::common::diagnostics
 
     private:
         DiagnosticsSnapshot _snapshot = {};
-        f64 _lastFrameTime = 0.0;
         bool _isDebugOverlayEnabled = false;
 
         std::array<f32, SAMPLE_COUNT> _fpsSamples = {};

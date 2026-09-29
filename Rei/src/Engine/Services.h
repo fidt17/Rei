@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common/Time/TimeService.h"
+
 namespace rei::window
 {
     class WindowManager;
@@ -38,6 +40,9 @@ namespace rei
         void SetEngine(internal::engine::Engine* value) { _engine = value; }
         REI_API internal::engine::Engine& GetEngine() const { return *_engine; }
 
+        void SetTime(const std::shared_ptr<time::TimeService>& value) { _time = value; }
+        REI_API const time::TimeService& GetTime() const { return *_time; }
+
         void SetInternalWorld(const std::shared_ptr<ecs::World>& world) { _internalWorld = world; }
         REI_API std::shared_ptr<ecs::World> GetInternalWorld() const { return _internalWorld; }
 
@@ -66,6 +71,7 @@ namespace rei
         static Services* _instance;
 
         internal::engine::Engine* _engine;
+        std::shared_ptr<time::TimeService> _time;
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<EntityManager> _entityManager;
         std::shared_ptr<assets::AssetManager> _assetManager;
@@ -75,6 +81,7 @@ namespace rei
         std::shared_ptr<render::Gizmos> _gizmos;
     };
 
+    inline const time::TimeService& GetTime() { return Services::GetInstance()->GetTime(); }
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
     inline std::shared_ptr<ecs::World> GetInternalWorld() { return Services::GetInstance()->GetInternalWorld(); }
     inline EntityManager& GetEntityManager() { return Services::GetInstance()->GetEntityManager(); }

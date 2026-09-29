@@ -796,4 +796,9 @@
       <Filter>external\imgui\backends</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Common\Time\TimeService.cpp"><Filter>src\Common\Time</Filter></ClCompile>
+    <ClInclude Include="src\Common\Time\TimeService.h"><Filter>src\Common\Time</Filter></ClInclude>
+    <ClCompile Include="tests\TimeServiceTests.cpp" />
+  </ItemGroup>
 </Project>

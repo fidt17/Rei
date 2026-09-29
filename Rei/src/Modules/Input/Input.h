@@ -3,6 +3,16 @@
 
 namespace rei
 {
+    struct MouseState
+    {
+        f32 X = 0;
+        f32 Y = 0;
+        i32 Width = 0;
+        i32 Height = 0;
+        bool HasFocus = false;
+        bool IsHovered = false;
+    };
+
     class Input {
     public:
         static void SetSource(GLFWwindow* window);
@@ -21,6 +31,8 @@ namespace rei
         REI_API static f64 GetMouseX();
         REI_API static f64 GetMouseY();
         REI_API static void GetMousePosition(f32& x, f32& y);
+        // Read on the engine thread. Coordinates and dimensions share window-local units.
+        REI_API static MouseState GetMouseState();
     
         REI_API static f64 GetScrollX();
         REI_API static f64 GetScrollY();

@@ -5,6 +5,7 @@
 #include "Api/EditorEventsRelay.h"
 #include "Common/Diagnostics/DiagnosticsService.h"
 #include "Common/Tasks/TaskExecutor.h"
+#include "Common/Time/TimeService.h"
 #include "Modules/Render/Renderer.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Modules/Window/MainWindowHandler.h"
@@ -56,6 +57,7 @@ namespace rei::internal::engine
         std::shared_ptr<render::Renderer> _mainRenderer;
 
         std::shared_ptr<App> _app;
+        std::shared_ptr<time::TimeService> _time;
         std::shared_ptr<InternalEngineWorld> _internalWorld;
 
         std::shared_ptr<assets::AssetManager> _assetManager;

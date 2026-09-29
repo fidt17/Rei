@@ -57,6 +57,7 @@ public sealed class EngineRunnerTests
         {
             Assert.Equal(new IntPtr(123), enginePtr);
             context.Touch("destroy");
+            context.WaitForCleanupGate("destroy");
         }
         public override void MarkEngineStopped() { Running = false; context.Calls.Enqueue("stopped"); }
     }
@@ -75,6 +76,7 @@ public sealed class EngineRunnerTests
         public bool UnloadDll()
         {
             context.Calls.Enqueue("unload");
+            context.WaitForCleanupGate("unload");
             Loaded.Value = false;
             context.Unloaded.TrySetResult();
             return true;
@@ -122,6 +124,9 @@ public sealed class EngineRunnerTests
         public EngineRunner Runner { get; }
         public string? FailedStage { get; set; }
         public bool LoadSucceeded { get; set; }
+        public string? BlockedCleanupStage { get; set; }
+        public TaskCompletionSource CleanupEntered { get; } = Signal();
+        public TaskCompletionSource AllowCleanup { get; } = Signal();
         public TaskCompletionSource Release { get; private set; } = Signal();
         public TaskCompletionSource Started { get; private set; } = Signal();
         public TaskCompletionSource Failed { get; private set; } = Signal();
@@ -143,6 +148,13 @@ public sealed class EngineRunnerTests
         {
             Calls.Enqueue(stage);
             if (stage == FailedStage) throw new IOException("controlled " + stage + " failure");
+        }
+
+        public void WaitForCleanupGate(string stage)
+        {
+            if (BlockedCleanupStage != stage) return;
+            CleanupEntered.TrySetResult();
+            AllowCleanup.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
         }
 
         public bool Start(EngineRunMode mode)
@@ -249,6 +261,33 @@ public sealed class EngineRunnerTests
         Assert.Equal(calls, context.Calls);
         Assert.Empty(context.Procedures.ActiveProcedures);
         Assert.Equal(EngineRunMode.EditorMode, context.Runner.ActiveMode);
+    }
+
+    /// <summary>Shutdown notification must not permit DLL reuse during native destruction or unload.</summary>
+    [Theory]
+    [InlineData("destroy")]
+    [InlineData("unload")]
+    public async Task StopWaitsForNativeCleanupBeforeAllowingRestart(string stage)
+    {
+        await using var context = new TestContext { BlockedCleanupStage = stage };
+        Assert.True(context.Start(EngineRunMode.PlayMode));
+        await context.AwaitStarted();
+        var stopping = Task.Run(context.Runner.StopEngine);
+        try
+        {
+            await context.CleanupEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(context.Runner.IsActive.Value);
+            Assert.False(stopping.IsCompleted);
+            Assert.False(context.Start(EngineRunMode.EditorMode));
+            Assert.Single(context.Calls, call => call == "load");
+        }
+        finally
+        {
+            context.AllowCleanup.TrySetResult();
+            await stopping.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        Assert.False(context.Dll.Loaded.Value);
+        Assert.False(context.Runner.IsActive.Value);
     }
 
     /// <summary>DLL, creation, window and start failures reset state, clean owned resources and permit a later start.</summary>

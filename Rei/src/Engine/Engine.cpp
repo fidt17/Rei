@@ -21,6 +21,7 @@ namespace rei::internal::engine
         _mainWindowHandler(std::make_shared<window::MainWindowHandler>()),
         _mainThread(std::make_shared<TaskExecutor>()),
         _app(std::move(app)),
+        _time(std::make_shared<time::TimeService>()),
         _internalWorld(std::make_shared<InternalEngineWorld>()),
         _assetManager(std::make_shared<assets::AssetManager>()),
         _entityManager(std::make_shared<EntityManager>(_internalWorld->GetWorld())),
@@ -29,6 +30,7 @@ namespace rei::internal::engine
         _diagnostics(std::make_shared<common::diagnostics::DiagnosticsService>())
     {
         Services::GetInstance()->SetEngine(this);
+        Services::GetInstance()->SetTime(_time);
         Services::GetInstance()->SetAssetManager(_assetManager);
         Services::GetInstance()->SetInternalWorld(_internalWorld->GetWorld());
         Services::GetInstance()->SetEntityManager(_entityManager);
@@ -80,6 +82,7 @@ namespace rei::internal::engine
                 _mainThread->CompleteTasks();
             }
 
+            _time->Reset();
             _runEngine.store(true);
             _internalWorld->Configure(_app, _mainRenderer, _mainThread, _entityManager);
             _sceneManager->LoadScene(0);
@@ -106,6 +109,7 @@ namespace rei::internal::engine
         {
             while (_runEngine.load())
             {
+                _time->BeginFrame();
                 _internalWorld->Run();
             }
         }

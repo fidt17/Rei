@@ -6,7 +6,7 @@
 #include <psapi.h>
 #endif
 
-#include "GLFW/glfw3.h"
+#include "Engine/Services.h"
 
 namespace rei::common::diagnostics
 {
@@ -54,23 +54,17 @@ namespace rei::common::diagnostics
         _snapshot.DiagnosticsTimeMs = ComputeAverage(_diagnosticsTimeSamples, _diagnosticsTimeSampleSize);
         _snapshot.FrameTimeMs = activeFrameTimeMs;
 
-        const f64 now = glfwGetTime();
-        if (_lastFrameTime > 0.0)
+        const auto delta = GetTime().GetDeltaSeconds();
+        if (delta > 0.0)
         {
-            const f64 delta = now - _lastFrameTime;
-            if (delta > 0.0)
-            {
-                const auto fps = static_cast<f32>(1.0 / delta);
+            const auto fps = static_cast<f32>(1.0 / delta);
 
-                PushSample(_fpsSamples, _fpsSampleIndex, _fpsSampleSize, fps);
-                PushSample(_frameTimeSamples, _frameTimeSampleIndex, _frameTimeSampleSize, activeFrameTimeMs);
+            PushSample(_fpsSamples, _fpsSampleIndex, _fpsSampleSize, fps);
+            PushSample(_frameTimeSamples, _frameTimeSampleIndex, _frameTimeSampleSize, activeFrameTimeMs);
 
-                _snapshot.Fps = ComputeAverage(_fpsSamples, _fpsSampleSize);
-                _snapshot.FrameTimeMs = ComputeAverage(_frameTimeSamples, _frameTimeSampleSize);
-            }
+            _snapshot.Fps = ComputeAverage(_fpsSamples, _fpsSampleSize);
+            _snapshot.FrameTimeMs = ComputeAverage(_frameTimeSamples, _frameTimeSampleSize);
         }
-
-        _lastFrameTime = now;
 
         f32 workingSetMegabytes = 0.0f;
         f32 privateMegabytes = 0.0f;

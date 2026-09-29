@@ -594,6 +594,7 @@
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />
     <ClInclude Include="src\Common\Time\ScopedTimer.h" />
     <ClInclude Include="src\Common\Time\Stopwatch.h" />
+    <ClInclude Include="src\Common\Time\TimeService.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentRef.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
@@ -790,6 +791,7 @@
     <ClCompile Include="src\Common\Tasks\TaskExecutor.cpp" />
     <ClCompile Include="src\Common\Time\ScopedTimer.cpp" />
     <ClCompile Include="src\Common\Time\Stopwatch.cpp" />
+    <ClCompile Include="src\Common\Time\TimeService.cpp" />
     <ClCompile Include="src\Ecs\BitMask.cpp" />
     <ClCompile Include="src\Ecs\EcsRegistry.cpp" />
     <ClCompile Include="src\Ecs\Entity.cpp" />
@@ -881,6 +883,11 @@
     <ClCompile Include="src\Modules\Window\Window.cpp" />
     <ClCompile Include="src\Modules\Window\WindowManager.cpp" />
     <ClCompile Include="tests\BitMaskTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\TimeServiceTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -1022,7 +1029,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
       <ForcedIncludeFiles>pch.h;Core.h;</ForcedIncludeFiles>
       <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)external;$(ProjectDir)external\imgui;$(ProjectDir)external\freetype\include;$(ProjectDir)resources;</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
-      <ExceptionHandling>false</ExceptionHandling>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -1033,10 +1040,7 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
     <PostBuildEvent>
       <Command>xcopy /y /d "$(ProjectDir)external\glfw\lib-vc2022\glfw3.lib" "$(TargetDir)"
 xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.lib" "$(TargetDir)"
-xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"
-
-xcopy /y /d "$(TargetDir)..\Rei\Rei.dll" "$(TargetDir)..\ReiSandbox\"
-xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\"</Command>
+xcopy /y /d "$(ProjectDir)external\assimp\assimp-vc143-mt.dll" "$(TargetDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
