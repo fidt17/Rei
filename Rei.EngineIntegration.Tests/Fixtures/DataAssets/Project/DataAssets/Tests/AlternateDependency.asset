@@ -1,0 +1,12 @@
+{
+  "SerializedData": {
+    "_value": {
+      "Value": 99.25,
+      "Name": "_value",
+      "Type": 4,
+      "SourceType": "f32"
+    }
+  },
+  "DataAssetTypeId": 1,
+  "SerializerVersion": 1
+}

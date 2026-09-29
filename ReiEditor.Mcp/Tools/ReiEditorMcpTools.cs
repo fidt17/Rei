@@ -24,6 +24,20 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.GetStateAsync(cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_select_asset", Title = "Select Rei asset", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Selects an asset in Project and Monitor using the normal Editor selection pipeline. Does not save or change asset values.")]
+    public Task<ReiAssetSelection> SelectAsset([Description("Registered asset id.")] string assetId, CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.SelectAssetAsync(assetId, cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_get_asset_state", Title = "Read Rei asset state", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Reads serialized values from explicit source: editor or runtime. Runtime reads native state without loading assets or falling back to Editor. Status distinguishes loaded, unloaded, unsupported, engine_unavailable, read_failed, and too_large. Editor supports DataAsset and Material.")]
+    public Task<ReiAssetState> GetAssetState([Description("Registered asset id.")] string assetId, [Description("editor or runtime.")] string source, CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.GetAssetStateAsync(assetId, source, cancellationToken));
+    }
+
     [McpServerTool(Name = "rei_editor_list_entities", Title = "List current scene entities", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Lists current scene hierarchy in display order, including entity ids, parent ids, depth, and attached behaviours.")]
     public Task<ReiEntityList> ListEntities(CancellationToken cancellationToken)

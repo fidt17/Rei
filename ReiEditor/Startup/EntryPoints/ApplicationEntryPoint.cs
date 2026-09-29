@@ -50,7 +50,9 @@ public class ApplicationEntryPoint : IDisposable
 		{
 			try
 			{
-				await EnterProjectManagementScope();
+                var startupProject = EditorLaunchOptions.LoadStartupProject(Environment.GetEnvironmentVariable("REI_STARTUP_PROJECT"));
+                await EnterProjectManagementScope();
+                if (startupProject != null) _activeProjectService.OpenProject(startupProject);
 			}
 			catch (Exception e)
 			{

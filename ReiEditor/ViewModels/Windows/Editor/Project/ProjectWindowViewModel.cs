@@ -136,6 +136,7 @@ public class ProjectWindowViewModel : BaseViewModel
         SearchField.Query.ChangedEvent += HandleSearchQueryChanged;
         _editorRefreshService.RefreshedEvent += HandleEditorRefreshedEvent;
         _projectAssetFocusService.FocusAssetRequested += HandleFocusAssetRequestedEvent;
+        _projectAssetFocusService.SelectAssetRequested += HandleSelectAssetRequestedEvent;
         _projectAssetFocusService.FocusAssetPathRequested += HandleFocusAssetPathRequestedEvent;
     }
 
@@ -151,6 +152,7 @@ public class ProjectWindowViewModel : BaseViewModel
         if (_projectAssetFocusService != null)
         {
             _projectAssetFocusService.FocusAssetRequested -= HandleFocusAssetRequestedEvent;
+            _projectAssetFocusService.SelectAssetRequested -= HandleSelectAssetRequestedEvent;
             _projectAssetFocusService.FocusAssetPathRequested -= HandleFocusAssetPathRequestedEvent;
         }
 
@@ -164,6 +166,13 @@ public class ProjectWindowViewModel : BaseViewModel
             SetupContextMenus();
             RefreshView(affectsTree: true);
         });
+    }
+
+    private void HandleSelectAssetRequestedEvent(string assetId)
+    {
+        if (_assetRegistry == null || !_assetRegistry.TryGetById(assetId, out var assetInfo) || assetInfo == null) return;
+        FocusAssetByPath(assetInfo.FullPath);
+        _assetSelectionHandler.SelectAssetByPath(assetInfo.FullPath, ActiveItems);
     }
 
     private void HandleFocusAssetRequestedEvent(string assetId)

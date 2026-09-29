@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include "Engine/Services.h"
 #include "Modules/Render/Material/Material.h"
 
@@ -44,6 +46,29 @@ inline bool DispatchTrySetAssetData(const std::string& assetId, const std::strin
     {
         return rei::GetAssetManager().TrySetLoadedAssetData(assetId, data);
     });
+}
+
+// Returns required UTF-8 buffer size including terminator; never loads an asset.
+REI_EXTERN_API inline i32 GetLoadedAssetState(const char* assetId, char* outputBuffer, const i32 bufferSize)
+{
+    if (assetId == nullptr || outputBuffer == nullptr || bufferSize <= 0) return 0;
+    i32 requiredSize = 0;
+    outputBuffer[0] = '\0';
+    rei::GetEngine().ExecuteOnMainThread([&]
+    {
+        try
+        {
+            const auto json = rei::GetAssetManager().InspectLoadedAsset(assetId).dump();
+            if (json.size() >= static_cast<u64>((std::numeric_limits<i32>::max)())) return;
+            requiredSize = static_cast<i32>(json.size()) + 1;
+            if (requiredSize <= bufferSize) memcpy(outputBuffer, json.c_str(), requiredSize);
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR("GetLoadedAssetState failed: {}", e.what())
+        }
+    })->WaitForCompletion();
+    return requiredSize;
 }
 
 REI_EXTERN_API inline bool GetAssetData(const char* assetId, const char* assetType, char* outputBuffer, const i32 bufferSize)

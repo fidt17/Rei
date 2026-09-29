@@ -143,6 +143,13 @@ public sealed class ReiMcpHostIntegrationTests
                 "DataAsset created."));
         }
 
+        public Task<ReiAssetSelection> SelectAssetAsync(string assetId, CancellationToken cancellationToken)
+            => Task.FromResult(new ReiAssetSelection(assetId, "Config", true));
+
+        public Task<ReiAssetState> GetAssetStateAsync(string assetId, string source, CancellationToken cancellationToken)
+            => Task.FromResult(new ReiAssetState(assetId, source, source == "runtime" ? "unloaded" : "loaded",
+                source == "runtime" ? null : JsonSerializer.SerializeToElement(new { _floatValue = 12.5 })));
+
         public Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId, CancellationToken cancellationToken)
         {
             DataAssetId = assetId;
@@ -286,7 +293,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(21, tools.Count);
+        Assert.Equal(23, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
@@ -498,6 +505,25 @@ public sealed class ReiMcpHostIntegrationTests
         Assert.True(result.IsError);
         Assert.Contains("entity_not_found", GetText(result));
         Assert.Contains("Entity 999 does not exist", GetText(result));
+    }
+
+    [Fact]
+    public async Task AssetSelectionAndInspectionPreserveSourceOverTransport()
+    {
+        await using var host = CreateHost(new FakeEditorGateway());
+        await host.StartAsync();
+        await using var client = await CreateClient(host.Endpoint!);
+        var selected = await client.CallToolAsync("rei_editor_select_asset", new Dictionary<string, object?> { ["assetId"] = "config" });
+        Assert.False(selected.IsError == true);
+        Assert.Contains("\"assetId\":\"config\"", GetText(selected));
+        foreach (var source in new[] { "editor", "runtime" })
+        {
+            var result = await client.CallToolAsync("rei_editor_get_asset_state", new Dictionary<string, object?> { ["assetId"] = "config", ["source"] = source });
+            Assert.False(result.IsError == true);
+            using var document = JsonDocument.Parse(GetText(result));
+            Assert.Equal(source, document.RootElement.GetProperty("source").GetString());
+            Assert.Equal(source == "runtime" ? "unloaded" : "loaded", document.RootElement.GetProperty("status").GetString());
+        }
     }
 
     private static ReiMcpHost CreateHost(IReiEditorGateway gateway)

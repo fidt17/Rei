@@ -16,6 +16,8 @@ internal interface IMcpEditorSession
     ReiDataAssetTypeList ListDataAssetTypes();
     ReiDataAssetList ListDataAssets();
     Task<ReiDataAssetCreationResult> CreateDataAssetAsync(string typeName, string projectPath);
+    ReiAssetSelection SelectAsset(string assetId);
+    Task<ReiAssetState> GetAssetStateAsync(string assetId, string source);
     Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId);
     Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value);
     Task<ReiProjectSaveResult> SaveProjectAsync();

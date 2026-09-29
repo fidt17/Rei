@@ -264,3 +264,11 @@ Avoid generic `execute_command` and reflection-based â€œcall any Editor methodâ€
 4. Optional capture parameters: target size, scene-only/UI inclusion, and named artifact persistence.
 5. Structured build diagnostics beyond log records.
 6. Optional request authentication if transport expands beyond loopback.
+
+## Asset selection and independent inspection
+
+- `rei_editor_select_asset(assetId)` navigates Project to the asset and replaces selection through the normal selection handler. Returns assetId, assetName and monitorSupported. Monitor loading may finish asynchronously. Unknown IDs return asset_not_found; unavailable Project selection returns selection_failed.
+- `rei_editor_get_asset_state(assetId, source)` requires source=editor or runtime. Returns assetId, source, status and values. Editor supports DataAsset and Material and may populate its asset cache. Runtime calls native GetLoadedAssetState on the engine thread; never loads assets or falls back to Editor values. Status: loaded, unloaded, unsupported, engine_unavailable, read_failed, too_large. Unknown IDs return asset_not_found; invalid sources return invalid_source. DataAsset values use plain field names on both sides; native snapshots also retain REI_TYPE metadata. Floating-point roundoff requires tolerances when comparing snapshots.
+- Native inspection negotiates UTF-8 buffer size, up to 16 MiB in the managed caller. Values represent memory, not disk. Runtime values can change between calls; use bounded waits in tests.
+
+Real-engine tests and commands: [Rei.EngineIntegration.Tests](../Rei.EngineIntegration.Tests/README.md). Optional REI_EDITOR_STORAGE isolates preferences; REI_STARTUP_PROJECT opens an absolute .rei path after normal window initialization.

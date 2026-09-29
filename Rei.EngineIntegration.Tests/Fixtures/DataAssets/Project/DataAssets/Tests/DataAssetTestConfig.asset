@@ -1,0 +1,153 @@
+{
+  "SerializedData": {
+    "_enabled": {
+      "Value": true,
+      "Name": "_enabled",
+      "Type": 3,
+      "SourceType": "bool"
+    },
+    "_signedValue": {
+      "Value": -42,
+      "Name": "_signedValue",
+      "Type": 2,
+      "SourceType": "i32"
+    },
+    "_unsignedValue": {
+      "Value": 42,
+      "Name": "_unsignedValue",
+      "Type": 2,
+      "SourceType": "u32"
+    },
+    "_floatValue": {
+      "Value": 12.5,
+      "Name": "_floatValue",
+      "Type": 4,
+      "SourceType": "f32"
+    },
+    "_label": {
+      "Value": "live MCP config",
+      "Name": "_label",
+      "Type": 1,
+      "SourceType": "string"
+    },
+    "_mode": {
+      "Value": 1,
+      "Name": "_mode",
+      "Type": 6,
+      "SourceType": "DataAssetTestMode"
+    },
+    "_position2D": {
+      "Value": {
+        "x": {
+          "Value": 1.25,
+          "Name": "x",
+          "Type": 4,
+          "SourceType": "f32"
+        },
+        "y": {
+          "Value": -2.5,
+          "Name": "y",
+          "Type": 4,
+          "SourceType": "f32"
+        }
+      },
+      "Name": "_position2D",
+      "Type": 5,
+      "SourceType": "Vector2"
+    },
+    "_position3D": {
+      "Value": {
+        "x": {
+          "Value": 3,
+          "Name": "x",
+          "Type": 4,
+          "SourceType": "f32"
+        },
+        "y": {
+          "Value": 4,
+          "Name": "y",
+          "Type": 4,
+          "SourceType": "f32"
+        },
+        "z": {
+          "Value": 5,
+          "Name": "z",
+          "Type": 4,
+          "SourceType": "f32"
+        }
+      },
+      "Name": "_position3D",
+      "Type": 5,
+      "SourceType": "Vector3"
+    },
+    "_tint": {
+      "Value": {
+        "r": {
+          "Value": 0.1,
+          "Name": "r",
+          "Type": 4,
+          "SourceType": "f32"
+        },
+        "g": {
+          "Value": 0.2,
+          "Name": "g",
+          "Type": 4,
+          "SourceType": "f32"
+        },
+        "b": {
+          "Value": 0.3,
+          "Name": "b",
+          "Type": 4,
+          "SourceType": "f32"
+        },
+        "a": {
+          "Value": 0.75,
+          "Name": "a",
+          "Type": 4,
+          "SourceType": "f32"
+        }
+      },
+      "Name": "_tint",
+      "Type": 5,
+      "SourceType": "Color"
+    },
+    "_weights": {
+      "Value": [
+        0.25,
+        0.5,
+        1
+      ],
+      "Name": "_weights",
+      "Type": 7,
+      "SourceType": "vector<f32>"
+    },
+    "_material": {
+      "Value": {
+        "Id": {
+          "Value": "",
+          "Name": "Id",
+          "Type": 1,
+          "SourceType": "string"
+        }
+      },
+      "Name": "_material",
+      "Type": 5,
+      "SourceType": "AssetRef<Material>"
+    },
+    "_dependency": {
+      "Value": {
+        "Id": {
+          "Value": "73374dc4-754d-4004-9c85-b1b302f66c62",
+          "Name": "Id",
+          "Type": 1,
+          "SourceType": "string"
+        }
+      },
+      "Name": "_dependency",
+      "Type": 5,
+      "SourceType": "AssetRef<DataAssetTestDependency>"
+    }
+  },
+  "DataAssetTypeId": 0,
+  "SerializerVersion": 1
+}

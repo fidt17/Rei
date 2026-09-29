@@ -1,4 +1,6 @@
 using System;
+using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Engine.Api;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,6 +51,9 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IDataAssetService _dataAssetService;
     private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
     private readonly IResourceService _resourceService;
+    private readonly IProjectAssetFocusService _assetFocusService;
+    private readonly ISelectionService _selectionService;
+    private readonly IAssetRuntimeInspectionService _runtimeInspection;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -66,7 +71,10 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IDataAssetService dataAssetService,
         IDataAssetTypeRegistry dataAssetTypeRegistry,
         IResourceService resourceService,
-        IMcpEditorAutomationService automationService)
+        IMcpEditorAutomationService automationService,
+        IProjectAssetFocusService assetFocusService,
+        ISelectionService selectionService,
+        IAssetRuntimeInspectionService runtimeInspection)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
@@ -82,6 +90,9 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _dataAssetService = dataAssetService;
         _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _resourceService = resourceService;
+        _assetFocusService = assetFocusService;
+        _selectionService = selectionService;
+        _runtimeInspection = runtimeInspection;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
@@ -342,6 +353,45 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
                         $"Editor could not create {typeInfo.ObjectName} at {normalizedProjectPath}.");
         var details = CreateDataAssetDetails(asset, typeInfo);
         return new ReiDataAssetCreationResult(true, details, "DataAsset created. Save project after further edits.");
+    }
+
+    public ReiAssetSelection SelectAsset(string assetId)
+    {
+        assetId = ValidateAssetId(assetId);
+        if (!_assetRegistry.TryGetById(assetId, out _))
+            throw new ReiMcpOperationException("asset_not_found", $"Asset {assetId} does not exist.");
+        _assetFocusService.SelectAsset(assetId);
+        if (_selectionService.ActiveSelection.Value is not IAssetSelectable selected || selected.AssetId != assetId)
+            throw new ReiMcpOperationException("selection_failed", $"Could not select asset {assetId}.");
+        return new(assetId, selected.AssetName, selected.IsAssetSupportedInMonitor);
+    }
+
+    public async Task<ReiAssetState> GetAssetStateAsync(string assetId, string source)
+    {
+        assetId = ValidateAssetId(assetId);
+        if (source != "editor" && source != "runtime")
+            throw new ReiMcpOperationException("invalid_source", "Source must be editor or runtime.");
+        if (!_assetRegistry.TryGetById(assetId, out var info))
+            throw new ReiMcpOperationException("asset_not_found", $"Asset {assetId} does not exist.");
+        if (source == "runtime") return _runtimeInspection.Read(assetId);
+        JToken values;
+        if (info is DataAssetInfo)
+        {
+            var asset = await _dataAssetService.Load(assetId);
+            if (asset == null) return new(assetId, source, "read_failed", null);
+            values = JObject.FromObject(asset.Properties.ToDictionary(x => x.Key, x => McpValueConverter.ToContractValue(x.Value.Value)));
+        }
+        else if (RuntimeAssetTypeResolver.TryResolveAssetType(_assetRegistry, assetId, out var type) && type == "Material")
+        {
+            var material = await _assetsService.Load<Material>(assetId);
+            if (material == null) return new(assetId, source, "read_failed", null);
+            var materialValues = JObject.FromObject(material);
+            materialValues.Remove(nameof(Asset.SerializerVersion));
+            values = materialValues;
+        }
+        else return new(assetId, source, "unsupported", null);
+        using var document = System.Text.Json.JsonDocument.Parse(values.ToString(Formatting.None));
+        return new(assetId, source, "loaded", document.RootElement.Clone());
     }
 
     public async Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId)

@@ -1,0 +1,22 @@
+#ifdef VERTEX
+    void main()
+    {
+        REI_CalculateFragPosAndNormal();
+    }
+#endif
+
+#ifdef FRAGMENT
+    uniform vec4 _Color;
+    uniform sampler2D _MainTex;
+
+    void main()
+    {
+        float alpha = texture(_MainTex, _TexCoords).r;
+        if (alpha <= 0.001)
+        {
+            discard;
+        }
+
+        FragColor = vec4(_Color.rgb, _Color.a * alpha);
+    }
+#endif

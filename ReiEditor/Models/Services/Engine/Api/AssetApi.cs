@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Runtime.InteropServices;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -36,7 +37,7 @@ public class AssetApi : IAssetApi
         }
     }
 
-    private delegate bool SetAssetDataDelegate(string assetId, string assetType, string jsonData);
+    private delegate bool SetAssetDataDelegate(string assetId, string assetType, [MarshalAs(UnmanagedType.LPUTF8Str)] string jsonData);
     public bool TrySetAssetData(string assetId, string assetType, string jsonData)
     {
         if (!_engineApi.IsEngineRunning) return false;
@@ -53,7 +54,7 @@ public class AssetApi : IAssetApi
         }
     }
 
-    private delegate bool PatchAssetDataDelegate(string assetId, string assetType, string jsonPatch);
+    private delegate bool PatchAssetDataDelegate(string assetId, string assetType, [MarshalAs(UnmanagedType.LPUTF8Str)] string jsonPatch);
     public bool TryPatchAssetData(string assetId, string assetType, string jsonPatch)
     {
         if (!_engineApi.IsEngineRunning) return false;

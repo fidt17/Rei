@@ -1,0 +1,21 @@
+﻿#ifdef VERTEX
+    void main()
+    {
+        gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); 
+        _TexCoords = aTexCoords;
+    }
+#endif
+
+#ifdef FRAGMENT
+    uniform sampler2D _tex;
+
+    vec4 Inversion(vec4 color)
+    {
+        return vec4(vec3(1.0 - color), 1.0);
+    }
+
+    void main()
+    {   
+        FragColor = Inversion(REI_Sample(_tex));
+    }
+#endif

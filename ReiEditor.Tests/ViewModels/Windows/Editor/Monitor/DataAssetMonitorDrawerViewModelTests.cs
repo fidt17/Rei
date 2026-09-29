@@ -93,6 +93,27 @@ public sealed class DataAssetMonitorDrawerViewModelTests
         Assert.DoesNotContain("Loading", drawer.StatusText);
     }
 
+    [AvaloniaFact]
+    public async Task RapidEditsAreDebouncedAndPendingEditFlushesOnceOnDispose()
+    {
+        var asset = CreateAsset();
+        var assets = new TestDataAssets(Task.FromResult<DataAsset?>(asset));
+        var drawer = CreateDrawer(assets);
+        await drawer.LoadingTask;
+        asset.GetProperty("value").Value = 2f;
+        asset.GetProperty("value").Value = 3f;
+        var wait = System.Diagnostics.Stopwatch.StartNew();
+        while (assets.SyncCount == 0 && wait.Elapsed < TimeSpan.FromSeconds(2)) await Task.Delay(10);
+        Assert.Equal(1, assets.SyncCount);
+
+        asset.GetProperty("value").Value = 4f;
+        drawer.Dispose();
+        Assert.Equal(2, assets.SyncCount);
+        await Task.Delay(100);
+        asset.GetProperty("value").Value = 5f;
+        Assert.Equal(2, assets.SyncCount);
+    }
+
     private static DataAsset CreateAsset()
     {
         var asset = new DataAsset(1);

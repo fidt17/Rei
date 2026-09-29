@@ -31,6 +31,19 @@ public sealed class ProjectAssetFocusServiceTests
         Assert.Empty(pathRequests);
     }
 
+    [Fact]
+    public void SelectionRequestsAreSeparateFromFocusAndIgnoreBlankIds()
+    {
+        var service = new ProjectAssetFocusService();
+        var requests = new List<string>();
+        service.SelectAssetRequested += requests.Add;
+        service.FocusAssetRequested += _ => Assert.Fail("Selection must not be a highlight-only request.");
+        service.SelectAsset("");
+        service.SelectAsset(" ");
+        service.SelectAsset("config-id");
+        Assert.Equal(new[] { "config-id" }, requests);
+    }
+
     /// <summary>
     /// Nonblank focus values are published without trimming or normalization.
     /// </summary>

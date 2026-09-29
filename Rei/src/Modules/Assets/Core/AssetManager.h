@@ -54,6 +54,8 @@ namespace rei::assets
         REI_API i64 GetLoadedAssetsSize() const;
         REI_API i32 GetLoadedAssetCount() const;
 
+        REI_API nlohmann::json InspectLoadedAsset(const std::string& id) const;
+
         REI_API bool TryGetLoadedAssetData(const std::string& id, nlohmann::json& data) const;
         REI_API bool TrySetLoadedAssetData(const std::string& id, const nlohmann::json& data);
 

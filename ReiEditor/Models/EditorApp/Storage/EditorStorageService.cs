@@ -7,7 +7,6 @@ namespace ReiEditor.Models.EditorApp.Storage;
 
 public class EditorStorageService : IEditorStorageService
 {
-	private const string STORAGE_DIRECTORY_NAME = "Rei Engine";
 	
 	private readonly ILogger<EditorStorageService> _logger;
 	private readonly string _appStorageDirectory;
@@ -56,7 +55,8 @@ public class EditorStorageService : IEditorStorageService
 		try
 		{
 			var documentsDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-			var appStoragePath = Path.Combine(documentsDir, STORAGE_DIRECTORY_NAME);
+            var appStoragePath = ReiEditor.Startup.EditorLaunchOptions.GetStorageDirectory(
+                Environment.GetEnvironmentVariable("REI_EDITOR_STORAGE"), documentsDir);
 			
 			Directory.CreateDirectory(appStoragePath);
 

@@ -85,6 +85,16 @@ internal sealed class McpEditorGateway : IReiEditorGateway
             cancellationToken);
     }
 
+    public Task<ReiAssetSelection> SelectAssetAsync(string assetId, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().SelectAsset(assetId), cancellationToken);
+    }
+
+    public Task<ReiAssetState> GetAssetStateAsync(string assetId, string source, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().GetAssetStateAsync(assetId, source), cancellationToken);
+    }
+
     public Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId, CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeTaskAsync(

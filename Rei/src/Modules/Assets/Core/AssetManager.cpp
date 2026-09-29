@@ -74,6 +74,17 @@ namespace rei::assets
         return record->DataAccessor.get();
     }
 
+    nlohmann::json AssetManager::InspectLoadedAsset(const std::string& id) const
+    {
+        const auto record = _registry.FindRecord(id);
+        if (record == nullptr || record->State != AssetState::Loaded || record->Value == nullptr)
+            return {{"status", "unloaded"}, {"values", nullptr}};
+        if (record->DataAccessor == nullptr) return {{"status", "unsupported"}, {"values", nullptr}};
+        nlohmann::json data;
+        if (!record->DataAccessor->TryGetData(data)) return {{"status", "read_failed"}, {"values", nullptr}};
+        return {{"status", "loaded"}, {"values", std::move(data)}};
+    }
+
     bool AssetManager::TryGetLoadedAssetData(const std::string& id, nlohmann::json& data) const
     {
         const auto accessor = FindLoadedAssetDataAccessor(id);

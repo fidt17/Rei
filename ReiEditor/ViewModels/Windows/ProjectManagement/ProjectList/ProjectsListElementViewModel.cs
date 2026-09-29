@@ -43,12 +43,6 @@ public class ProjectsListElementViewModel : BaseViewModel
 		ContextMenu.AddOption(new ContextMenuOption("Delete Project", DeleteProject));
 
 		OpenProjectCommand = new RelayCommand(() => activeProjectService.OpenProject(Project));
-
-		// todo: remove
-		if (project.ProjectName == "Symbols")
-		{
-			OpenProjectCommand.Execute(null);
-		}
 	}
 
 	private void RevealInFileExplorer() => _fileExplorerProvider.OpenDirectory(Project.GetDirectoryPath());

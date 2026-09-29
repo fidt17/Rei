@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReiEditor.Mcp.Tests", "ReiE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReiEditor.Tests", "ReiEditor.Tests\ReiEditor.Tests.csproj", "{C1819916-1069-4C92-A736-3CCF87A11839}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rei.EngineIntegration.Tests", "Rei.EngineIntegration.Tests\Rei.EngineIntegration.Tests.csproj", "{9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +30,24 @@ Global
 		Tests|x86 = Tests|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Debug|x64.ActiveCfg = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Debug|x64.Build.0 = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Debug|x86.ActiveCfg = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Debug|x86.Build.0 = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Release|Any CPU.Build.0 = Release|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Release|x64.ActiveCfg = Release|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Release|x64.Build.0 = Release|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Release|x86.ActiveCfg = Release|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Release|x86.Build.0 = Release|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Tests|Any CPU.ActiveCfg = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Tests|Any CPU.Build.0 = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Tests|x64.ActiveCfg = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Tests|x64.Build.0 = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Tests|x86.ActiveCfg = Debug|Any CPU
+        {9BB677E8-BCA6-49FB-BCF4-1D34BB1A22C1}.Tests|x86.Build.0 = Debug|Any CPU
         {C1819916-1069-4C92-A736-3CCF87A11839}.Debug|Any CPU.ActiveCfg = Debug|x64
         {C1819916-1069-4C92-A736-3CCF87A11839}.Debug|Any CPU.Build.0 = Debug|x64
         {C1819916-1069-4C92-A736-3CCF87A11839}.Debug|x64.ActiveCfg = Debug|x64

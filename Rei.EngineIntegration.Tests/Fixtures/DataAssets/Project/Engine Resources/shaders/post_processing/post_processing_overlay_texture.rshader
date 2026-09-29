@@ -1,0 +1,16 @@
+﻿#ifdef VERTEX
+    void main()
+    {
+        gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); 
+        _TexCoords = aTexCoords;
+    }
+#endif
+
+#ifdef FRAGMENT
+    uniform sampler2D _tex;
+
+    void main()
+    {   
+        FragColor = REI_Sample(_tex);
+    }
+#endif

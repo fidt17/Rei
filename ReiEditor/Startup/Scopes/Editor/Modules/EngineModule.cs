@@ -18,6 +18,7 @@ public class EngineModule : Module
         builder.RegisterSingleton<EngineFrameCaptureService>().As<IEngineFrameCaptureService>();
         builder.RegisterSingleton<EntityApi>().As<IEntityApi>();
         builder.RegisterSingleton<AssetApi>().As<IAssetApi>();
+        builder.RegisterSingleton<AssetRuntimeInspectionService>().As<IAssetRuntimeInspectionService>();
 		
         builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
         builder.RegisterSingleton<EngineInputService>().As<IEngineInputService>();

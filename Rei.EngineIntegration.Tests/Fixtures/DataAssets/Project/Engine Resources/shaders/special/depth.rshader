@@ -1,0 +1,14 @@
+﻿#ifdef VERTEX
+    void main()
+    {
+       REI_CalculateFragPosAndNormal();
+    }
+#endif
+
+#ifdef FRAGMENT
+    void main()
+    {    
+        float d = gl_FragCoord.a;
+        FragColor = vec4(d, d, d, 1);
+    }
+#endif

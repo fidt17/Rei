@@ -48,6 +48,8 @@ public sealed class ReferencePropertyViewModelTests
     /// </summary>
     private sealed class TestProjectAssetFocusService : IProjectAssetFocusService
     {
+        public event Action<string>? SelectAssetRequested;
+        public void SelectAsset(string assetId) => SelectAssetRequested?.Invoke(assetId);
         public event Action<string>? FocusAssetRequested;
         public event Action<string>? FocusAssetPathRequested;
         public List<string> AssetIds { get; } = [];

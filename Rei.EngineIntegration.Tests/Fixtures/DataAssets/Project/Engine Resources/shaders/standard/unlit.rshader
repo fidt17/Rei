@@ -1,0 +1,15 @@
+﻿#ifdef VERTEX
+    void main()
+    {
+        REI_CalculateFragPosAndNormal();
+    }
+#endif
+
+#ifdef FRAGMENT
+    uniform sampler2D texture_diffuse1;
+
+    void main()
+    {   
+        FragColor = REI_Sample(texture_diffuse1);
+    }
+#endif
