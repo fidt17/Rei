@@ -1,5 +1,6 @@
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Sync;
@@ -14,6 +15,7 @@ public static class MonitorDrawerUtils
     public static BaseMonitorDrawer? CreateDrawer(
         ISelectable? selection,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
+        IFactory<DataAssetMonitorDrawerViewModel> dataAssetMonitorFactory,
         IAssetsService assetsService,
         IAssetSearchService assetSearchService,
         IShaderRegistry shaderRegistry,
@@ -39,6 +41,11 @@ public static class MonitorDrawerUtils
         if (AssetMonitorSupportUtility.IsTexturePreviewAsset(assetSelection.AssetPath, isDirectory: false))
         {
             return new TextureMonitorDrawerViewModel(assetSelection);
+        }
+
+        if (assetRegistry.TryGetById(assetSelection.AssetId, out var assetInfo) && AssetMonitorSupportUtility.IsDataAsset(assetInfo.FullPath, isDirectory: false, assetInfo))
+        {
+            return dataAssetMonitorFactory.CreateInstance(assetSelection);
         }
 
         if (!assetSelection.IsAssetSupportedInMonitor)

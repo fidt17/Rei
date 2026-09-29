@@ -35,14 +35,14 @@ public class ProjectAssetItemBuilder
         {
             if (AssetFileFilter.ShouldHideDirectory(directory)) continue;
 
-            items.Add(CreateItem(IOPath.GetFileName(directory), directory, ProjectAssetType.Directory, "", actions, activeFolderContextMenu));
+            items.Add(CreateItem(IOPath.GetFileName(directory), directory, ProjectAssetType.Directory, null, actions, activeFolderContextMenu));
         }
 
         foreach (var file in Directory.EnumerateFiles(directoryPath).OrderBy(IOPath.GetFileName))
         {
             if (AssetFileFilter.ShouldHide(file)) continue;
 
-            items.Add(CreateItem(IOPath.GetFileName(file), file, GetAssetType(file), ResolveAssetId(file), actions, activeFolderContextMenu));
+            items.Add(CreateItem(IOPath.GetFileName(file), file, GetAssetType(file), ResolveAssetInfo(file), actions, activeFolderContextMenu));
         }
 
         return items;
@@ -57,24 +57,21 @@ public class ProjectAssetItemBuilder
         foreach (var result in results)
         {
             var assetType = result.IsDirectory ? ProjectAssetType.Directory : GetAssetType(result.FullPath);
-            var assetId = result.IsDirectory ? "" : ResolveAssetId(result.FullPath);
-            items.Add(CreateItem(result.Name, result.FullPath, assetType, assetId, actions, activeFolderContextMenu));
+            var assetInfo = result.IsDirectory ? null : ResolveAssetInfo(result.FullPath);
+            items.Add(CreateItem(result.Name, result.FullPath, assetType, assetInfo, actions, activeFolderContextMenu));
         }
 
         return items;
     }
 
-    private ProjectAssetItemViewModel CreateItem(string name, string fullPath, ProjectAssetType assetType, string assetId, ProjectAssetItemActions actions, ContextMenuViewModel activeFolderContextMenu)
+    private ProjectAssetItemViewModel CreateItem(string name, string fullPath, ProjectAssetType assetType, AssetInfo? assetInfo, ProjectAssetItemActions actions, ContextMenuViewModel activeFolderContextMenu)
     {
-        return new ProjectAssetItemViewModel(name, fullPath, assetType, assetId, actions, activeFolderContextMenu, _fileExplorerProvider!);
+        return new ProjectAssetItemViewModel(name, fullPath, assetType, assetInfo, actions, activeFolderContextMenu, _fileExplorerProvider!);
     }
 
-    private string ResolveAssetId(string filePath)
+    private AssetInfo? ResolveAssetInfo(string filePath)
     {
-        return _assetRegistry != null &&
-               _assetRegistry.TryGetByPath(filePath, out var assetInfo) &&
-               assetInfo != null
-            ? assetInfo.Meta.AssetId : "";
+        return _assetRegistry != null && _assetRegistry.TryGetByPath(filePath, out var assetInfo) ? assetInfo : null;
     }
 
     private static ProjectAssetType GetAssetType(string filePath)

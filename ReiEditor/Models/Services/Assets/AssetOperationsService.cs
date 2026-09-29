@@ -6,6 +6,7 @@ using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Path;
 
@@ -19,7 +20,7 @@ public class AssetOperationsService : IAssetOperationsService
     private readonly IAssetRegistry _assetRegistry;
     private readonly IMetaFilesService _metaFilesService;
     private readonly IBehaviourRegistry _behaviourRegistry;
-    private readonly IBehaviourFileUtility _behaviourFileUtility;
+    private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
 
     public AssetOperationsService(
         ILogger<AssetOperationsService> logger,
@@ -28,7 +29,7 @@ public class AssetOperationsService : IAssetOperationsService
         IAssetRegistry assetRegistry,
         IMetaFilesService metaFilesService,
         IBehaviourRegistry behaviourRegistry,
-        IBehaviourFileUtility behaviourFileUtility)
+        IDataAssetTypeRegistry dataAssetTypeRegistry)
     {
         _logger = logger;
         _resourceService = resourceService;
@@ -36,7 +37,7 @@ public class AssetOperationsService : IAssetOperationsService
         _assetRegistry = assetRegistry;
         _metaFilesService = metaFilesService;
         _behaviourRegistry = behaviourRegistry;
-        _behaviourFileUtility = behaviourFileUtility;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
     }
 
     public Task RenameAsync(string assetPath, string newName)
@@ -140,7 +141,7 @@ public class AssetOperationsService : IAssetOperationsService
                 _resourceService.CopyFilesRecursively(assetPath, targetPath);
                 await _metaFilesService.RegenerateMetaFilesInDirectory(
                     targetPath,
-                    await GetRegenerationPolicyForTargets(new[] { targetPath }));
+                    GetRegenerationPolicy());
             }
             else
             {
@@ -149,7 +150,7 @@ public class AssetOperationsService : IAssetOperationsService
                 File.Copy(assetPath, targetPath);
                 await _metaFilesService.RegenerateMetaFileForAsset(
                     targetPath,
-                    await GetRegenerationPolicyForTargets(new[] { targetPath }));
+                    GetRegenerationPolicy());
             }
 
             await _assetImporter.ReimportPaths(new[] { targetPath });
@@ -221,35 +222,17 @@ public class AssetOperationsService : IAssetOperationsService
             {
                 await _metaFilesService.RegenerateMetaFilesForTargets(
                     createdPaths,
-                    await GetRegenerationPolicyForTargets(createdPaths));
+                    GetRegenerationPolicy());
                 await _assetImporter.ReimportPaths(createdPaths);
             }
         });
     }
 
-    private async Task<IMetaFileRegenerationPolicy> GetRegenerationPolicyForTargets(IEnumerable<string> targets)
+    private IMetaFileRegenerationPolicy GetRegenerationPolicy()
     {
-        foreach (var target in targets)
-        {
-            if (Directory.Exists(target))
-            {
-                foreach (var file in Directory.EnumerateFiles(target, "*.*", SearchOption.AllDirectories))
-                {
-                    if (await _behaviourFileUtility.IsBehaviourFile(file))
-                    {
-                        return new BehaviourMetaFileRegenerationPolicy(_behaviourRegistry.AllocateBehaviourId);
-                    }
-                }
-                continue;
-            }
-
-            if (await _behaviourFileUtility.IsBehaviourFile(target))
-            {
-                return new BehaviourMetaFileRegenerationPolicy(_behaviourRegistry.AllocateBehaviourId);
-            }
-        }
-
-        return DefaultMetaFileRegenerationPolicy.Instance;
+        return new CompositeMetaFileRegenerationPolicy(
+            new BehaviourMetaFileRegenerationPolicy(_behaviourRegistry.AllocateBehaviourId),
+            new DataAssetMetaFileRegenerationPolicy(_dataAssetTypeRegistry.AllocateDataAssetTypeId));
     }
 
     public Task CreateFolderAsync(string parentDirectory, string folderName)

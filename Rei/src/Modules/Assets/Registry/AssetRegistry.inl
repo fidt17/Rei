@@ -29,15 +29,20 @@ namespace rei::assets
 
         {
             std::scoped_lock lock(_recordsMutex);
-            record->Value = std::shared_ptr<void>(
-                value,
-                [](void* ptr)
-                {
-                    delete static_cast<T*>(ptr);
-                });
+            const auto typedValue = std::shared_ptr<T>(value);
+            record->Value = typedValue;
             record->AssetSize = assetSize;
             record->State = value != nullptr ? state : AssetState::Unloaded;
             assetRef.Record = record;
+
+            if constexpr (AssetDataAccessor<T>::IS_SUPPORTED)
+            {
+                record->DataAccessor = std::make_unique<AssetDataAccessor<T>>(typedValue);
+            }
+            else
+            {
+                record->DataAccessor.reset();
+            }
         }
 
         AddLoadedAssetsSize(assetSize);

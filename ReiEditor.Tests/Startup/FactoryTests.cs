@@ -18,6 +18,13 @@ public sealed class FactoryTests
         public string Name { get; } = name;
         public int Count { get; } = count;
     }
+    private sealed class TestDesignProduct
+    {
+        public ITestDependency? Dependency { get; }
+        public TestDesignProduct() { }
+        public TestDesignProduct(ITestDependency dependency) => Dependency = dependency;
+    }
+
     private sealed class TestOwnedResource : IDisposable
     {
         public int DisposeCount { get; private set; }
@@ -40,6 +47,18 @@ public sealed class FactoryTests
         Assert.Equal("named", product.Name);
         Assert.Equal(12, product.Count);
         Assert.Empty(logger.Entries);
+    }
+
+    [Fact]
+    public void InterfaceArgumentDoesNotFallBackToDesignConstructor()
+    {
+        var builder = new ContainerBuilder();
+        builder.RegisterType<TestDesignProduct>();
+        using var container = builder.Build();
+        var factory = new Factory<TestDesignProduct>(container, new TestLogger<Factory<TestDesignProduct>>());
+        var dependency = new TestDependency();
+
+        Assert.Same(dependency, factory.CreateInstance(dependency).Dependency);
     }
 
     /// <summary>The factory respects singleton ownership and the container disposes its returned object once.</summary>
@@ -77,16 +96,20 @@ public sealed class FactoryTests
         Assert.Same(failure, Assert.Single(logger.Entries).Exception);
     }
 
-    /// <summary>A derived runtime argument does not masquerade as an interface TypedParameter.</summary>
+    /// <summary>Runtime arguments bind to assignable interface parameters without container registration.</summary>
     [Fact]
-    public void RuntimeArgumentTypeMustMatchConstructorParameterType()
+    public void RuntimeArgumentBindsToInterfaceParameter()
     {
         var builder = new ContainerBuilder();
         builder.RegisterType<TestProduct>();
         using var container = builder.Build();
         var logger = new TestLogger<Factory<TestProduct>>();
         var factory = new Factory<TestProduct>(container, logger);
-        var failure = Assert.Throws<DependencyResolutionException>(() => factory.CreateInstance(new TestDependency(), "name", 2));
-        Assert.Same(failure, Assert.Single(logger.Entries).Exception);
+        var dependency = new TestDependency();
+        var product = factory.CreateInstance(dependency, "name", 2);
+        Assert.Same(dependency, product.Dependency);
+        Assert.Equal("name", product.Name);
+        Assert.Equal(2, product.Count);
+        Assert.Empty(logger.Entries);
     }
 }

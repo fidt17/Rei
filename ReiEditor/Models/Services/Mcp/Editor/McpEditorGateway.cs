@@ -68,6 +68,37 @@ internal sealed class McpEditorGateway : IReiEditorGateway
             cancellationToken);
     }
 
+    public Task<ReiDataAssetTypeList> ListDataAssetTypesAsync(CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().ListDataAssetTypes(), cancellationToken);
+    }
+
+    public Task<ReiDataAssetList> ListDataAssetsAsync(CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().ListDataAssets(), cancellationToken);
+    }
+
+    public Task<ReiDataAssetCreationResult> CreateDataAssetAsync(string typeName, string projectPath, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeTaskAsync(
+            () => GetRequiredSession().CreateDataAssetAsync(typeName, projectPath),
+            cancellationToken);
+    }
+
+    public Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeTaskAsync(
+            () => GetRequiredSession().GetDataAssetAsync(assetId),
+            cancellationToken);
+    }
+
+    public Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeTaskAsync(
+            () => GetRequiredSession().SetDataAssetPropertyAsync(assetId, propertyName, value),
+            cancellationToken);
+    }
+
     public Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().SaveProjectAsync(), cancellationToken);

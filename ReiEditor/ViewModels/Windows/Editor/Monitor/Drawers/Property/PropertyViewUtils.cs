@@ -3,6 +3,7 @@ using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -26,7 +27,8 @@ public static class PropertyViewUtils
         IBehaviourRegistry behaviourRegistry,
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
-        ISelectionService selectionService)
+        ISelectionService selectionService,
+        IDataAssetTypeRegistry? dataAssetTypeRegistry = null)
     {
         return property.Type switch
         {
@@ -35,8 +37,8 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
-            SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService),
+            SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -64,7 +66,8 @@ public static class PropertyViewUtils
         IBehaviourRegistry behaviourRegistry,
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
-        ISelectionService selectionService)
+        ISelectionService selectionService,
+        IDataAssetTypeRegistry? dataAssetTypeRegistry)
     {
         if (property.SourceType == "Vector2")
         {
@@ -80,13 +83,13 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
         {
-            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService);
+            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry);
         }
         else if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal))
         {
             return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService);
         }
 
-        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry);
     }
 }

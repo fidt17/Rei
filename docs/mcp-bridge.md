@@ -153,6 +153,11 @@ Editor must be running before client uses tools. Reconnect client after changing
 | `rei_editor_add_behaviour` | Mutation, idempotent | Adds registered Behaviour by type name. Existing attachment is unchanged success. |
 | `rei_editor_set_behaviour_property` | Mutation, idempotent | Sets primitive, collection, or partial custom serialized value. Asset refs use `{"Id":"asset-guid"}`. |
 | `rei_editor_set_material_property` | Mutation, idempotent | Sets one supported shader uniform through Inspector-compatible conversion. Texture values use `{"Id":"asset-guid"}`; explicit save persists. |
+| `rei_editor_list_data_asset_types` | Read-only | Lists project-defined `DATA_ASSET_BODY` types and serialized property schema. |
+| `rei_editor_list_data_assets` | Read-only | Lists DataAsset instances with stable asset and native type ids. |
+| `rei_editor_create_data_asset` | Mutation, non-idempotent | Creates typed `.asset` instance at project-relative path. |
+| `rei_editor_get_data_asset` | Read-only | Returns typed DataAsset properties and JSON-compatible values. |
+| `rei_editor_set_data_asset_property` | Mutation, idempotent | Sets one property, validates typed refs, and synchronizes loaded native instance when available. |
 | `rei_editor_save_project` | Mutation, destructive, idempotent | Syncs scene from engine, then saves dirty project assets. |
 | `rei_editor_refresh_assets` | Mutation, destructive, idempotent | Starts full reimport, meta cleanup/update, behaviour refresh, shader refresh, and scene import. |
 | `rei_editor_start_build` | Mutation, destructive, idempotent | Starts Editor project build pipeline. |
@@ -162,6 +167,21 @@ Editor must be running before client uses tools. Reconnect client after changing
 | `rei_editor_cancel_operation` | Mutation, idempotent | Requests cooperative cancellation. Non-cancelable phase may finish first. |
 | `rei_editor_get_logs` | Read-only | Returns current console snapshot or retained logs for one operation. |
 | `rei_editor_capture_frame` | Read-only, non-idempotent | Returns frame metadata plus direct `image/png` MCP content. |
+
+### DataAsset authoring
+
+Project code opts into first-class asset creation with `DATA_ASSET_BODY(Type)`. ReiEditor reads or creates stable `DataAssetMeta.DataAssetTypeId` in source-header `.meta`, exposes type under `Create -> Data Asset`, serializes instances as normal `.asset` files, and opens them in standard Monitor property drawers. `AssetRef<MyDataAsset>` uses typed project asset picker. Plain `SERIALIZABLE_BODY` value types such as `Vector3` remain nested values and cannot be created as assets.
+
+Runtime uses existing `AssetManager -> AssetRegistry -> AssetRecord` storage. DataAssets do not enter ECS and need no second runtime type registry. Generated BinaryReader constructors validate native type id, deserialize fields, and resolve nested `AssetRef` dependencies. A typed `IAssetDataAccessor` adapter lets Editor and MCP update loaded native instances through existing asset API; `AssetRecord` stores no raw `void*` get/set callbacks.
+
+MCP flow:
+
+1. List types with `rei_editor_list_data_asset_types`.
+2. Create instance with `rei_editor_create_data_asset`.
+3. Inspect exact property names with `rei_editor_get_data_asset`.
+4. Set values with `rei_editor_set_data_asset_property`; refs use `{"Id":"asset-guid"}`.
+5. Assign DataAsset to Behaviour through `rei_editor_set_behaviour_property`.
+6. Save Editor-mode writes explicitly. Play-mode writes synchronize native value for current session, then play-stop restores disk value; set again in Editor mode before saving.
 
 ### Build options
 
@@ -203,6 +223,8 @@ Cancellation is cooperative. Import has no cancellable internal API, so refresh 
 For quick visual iteration, separate explicit build may be skipped because `rei_editor_start_playmode` already saves and runs incremental `EditorDebug` build.
 
 Behaviour property writes use exact serialized names returned by `rei_editor_get_entity`. Custom objects may be partial: `{"Id":"..."}` updates only `AssetRef.Id`; omitted nested fields remain unchanged. Material property writes use exact supported uniform names from registered shader and validate referenced texture assets before mutation.
+
+DataAsset writes follow same serialized-property validation. A loaded DataAsset updates in place, so Behaviours holding `AssetRef<T>` observe new values without scene reload. Creation and Editor-mode property writes remain explicit project mutations. Play-mode writes are session-only and must be repeated after stop before save.
 
 ## Build and tests
 

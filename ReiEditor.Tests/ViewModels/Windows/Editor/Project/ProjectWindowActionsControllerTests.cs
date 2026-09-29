@@ -7,6 +7,9 @@ using ReiEditor.ViewModels.Controls;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.ViewModels.Windows.Editor.Project.Services;
 
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
+
 namespace ReiEditor.Tests.ViewModels.Windows.Editor.Project;
 
 /// <summary>
@@ -85,9 +88,9 @@ public sealed class ProjectWindowActionsControllerTests : IDisposable
         var actions = controller.CreateAssetItemActions((_, _) => { }, _ => { });
         var explorer = new TestFileExplorerProvider();
         var directoryItem = new ProjectAssetItemViewModel(
-            "Folder", folder, ProjectAssetType.Directory, "", actions, new ContextMenuViewModel(), explorer);
+            "Folder", folder, ProjectAssetType.Directory, null, actions, new ContextMenuViewModel(), explorer);
         var fileItem = new ProjectAssetItemViewModel(
-            "Asset.cpp", file, ProjectAssetType.Script, "asset-id", actions, new ContextMenuViewModel(), explorer);
+            "Asset.cpp", file, ProjectAssetType.Script, new AssetInfo(new AssetMeta("asset-id"), file), actions, new ContextMenuViewModel(), explorer);
         _items.Add(directoryItem);
         _items.Add(fileItem);
 

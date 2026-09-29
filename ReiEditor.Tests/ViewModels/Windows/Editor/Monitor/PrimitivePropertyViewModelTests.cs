@@ -18,7 +18,7 @@ public sealed class PrimitivePropertyViewModelTests
     {
         public IEnumerable<SerializableObjectInfo> GetObjects() => [];
 
-        public Task Refresh() => Task.CompletedTask;
+        public void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums) => throw new NotSupportedException();
 
         public SerializableObjectInfo? GetObject(string objectName) => null;
 

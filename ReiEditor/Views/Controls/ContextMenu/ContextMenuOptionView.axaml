@@ -36,15 +36,6 @@
                     Content="{Binding Text}"
                     IsEnabled="{Binding IsEnabled}"
                     Click="OptionButton_OnClick">
-                <FlyoutBase.AttachedFlyout>
-                    <Flyout Placement="RightEdgeAlignedTop"
-                            FlyoutPresenterClasses="Clear">
-                        <contextMenu:ContextMenuView x:Name="NestedMenuView"
-                                                     DataContext="{Binding NestedMenu}"
-                                                     PointerEntered="HoverRegion_OnPointerEntered"
-                                                     PointerExited="HoverRegion_OnPointerExited" />
-                    </Flyout>
-                </FlyoutBase.AttachedFlyout>
             </Button>
 
             <TextBlock Grid.Column="1"
@@ -53,5 +44,13 @@
                        Text=">"
                        IsVisible="{Binding HasNestedMenu}" />
         </Grid>
+        <Popup x:Name="NestedMenuPopup"
+               Placement="RightEdgeAlignedTop"
+               IsLightDismissEnabled="False">
+            <contextMenu:ContextMenuView x:Name="NestedMenuView"
+                                         DataContext="{Binding NestedMenu}"
+                                         PointerEntered="HoverRegion_OnPointerEntered"
+                                         PointerExited="HoverRegion_OnPointerExited" />
+        </Popup>
     </Grid>
 </UserControl>

@@ -85,7 +85,7 @@ public sealed class CollectionPropertyViewModelTests
     }
 
     private static CollectionPropertyViewModel TestCreateViewModel(SerializedProperty property)
-        => new(property, null!, null!, null!, null!, null!, null!, null!, null!);
+        => new(property, null!, null!, null!, null!, null!, null!, null!, null!, null);
 
     private static SerializedProperty TestCollection(params int[] values)
     {

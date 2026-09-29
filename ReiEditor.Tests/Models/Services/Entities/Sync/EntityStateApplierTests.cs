@@ -1,4 +1,5 @@
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Api.DTO;
@@ -25,7 +26,7 @@ public sealed class EntityStateApplierTests
         public Task RefreshBehaviours() => throw new NotSupportedException();
     }
 
-    private sealed class TestBehaviourComponentsService : IBehaviourComponentsService
+    private sealed class TestBehaviourComponentsService : IBehaviourComponentsService, ISerializedPropertiesService
     {
         public event Action<EntityBehaviourPropertyChangeEventArgs>? BehaviourPropertyChangedEvent
         {
@@ -67,7 +68,10 @@ public sealed class EntityStateApplierTests
             return false;
         }
 
-        public void ApplySerializedValue(SerializedProperty property, object? value)
+        public SerializedProperty Create(string name, SerializableObjectInfo.SerializedPropertyData propertyData, SerializedProperty? parentProperty) => throw new NotSupportedException();
+        public void Refresh(SerializedProperty property) => throw new NotSupportedException();
+
+        public void ApplyValue(SerializedProperty property, object? value)
         {
             if (property.Name == ThrowForProperty) throw new InvalidOperationException("property failed");
             property.Value = value;
@@ -218,5 +222,5 @@ public sealed class EntityStateApplierTests
         {
             [EngineBehavioursConstants.TRANSFORM] = 1,
             ["Mover"] = 2
-        }), components);
+        }), components, components);
 }

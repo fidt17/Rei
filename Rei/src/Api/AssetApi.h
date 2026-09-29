@@ -1,59 +1,49 @@
 #pragma once
 
-#include <concepts>
-
 #include "Engine/Services.h"
 #include "Modules/Render/Material/Material.h"
 
-template <typename T>
-concept SerializableAsset = requires(T t, const T ct, const nlohmann::json& data)
+// Project-defined asset types are only known to their DLL. Both built-in and
+// project asset JSON access goes through the typed adapter stored on AssetRecord.
+template <typename Action>
+inline bool WithSerializableAssetData(const std::string& assetId, const std::string& assetType, Action&& action)
 {
-    { ct.REI_GET() } -> std::same_as<nlohmann::json>;
-    { t.REI_SET(data) } -> std::same_as<void>;
-};
+    if (assetType != "Material" && assetType != "DataAsset") return false;
+    if (action()) return true;
+    if (assetType != "Material") return false;
 
-template <typename T>
-requires SerializableAsset<T>
-inline bool TryGetAssetDataImpl(const std::string& assetId, char* outputBuffer, const i32 bufferSize)
-{
-    auto asset = rei::GetAssetManager().GetById<T>(assetId);
-    if (!asset.IsLoaded()) return false;
-
-    const auto data = asset->REI_GET();
-    strncpy_s(outputBuffer, bufferSize, data.dump().c_str(), _TRUNCATE);
-    return true;
-}
-
-template <typename T>
-requires SerializableAsset<T>
-inline bool TrySetAssetDataImpl(const std::string& assetId, const std::string& jsonData)
-{
-    auto asset = rei::GetAssetManager().GetById<T>(assetId);
-    if (!asset.IsLoaded()) return false;
-
-    const auto data = nlohmann::json::parse(jsonData);
-    asset->REI_SET(data);
-    return true;
+    // Preserve lazy loading for built-in materials. Project DataAssets must
+    // already be loaded through an AssetRef<T> in the project DLL.
+    const auto material = rei::GetAssetManager().GetById<rei::render::Material>(assetId);
+    return material.IsLoaded() && action();
 }
 
 inline bool DispatchTryGetAssetData(const std::string& assetId, const std::string& assetType, char* outputBuffer, const i32 bufferSize)
 {
-    if (assetType == "Material")
+    nlohmann::json data;
+    if (!WithSerializableAssetData(assetId, assetType, [&]
     {
-        return TryGetAssetDataImpl<rei::render::Material>(assetId, outputBuffer, bufferSize);
+        return rei::GetAssetManager().TryGetLoadedAssetData(assetId, data);
+    })) return false;
+
+    const auto json = data.dump();
+    if (json.size() >= static_cast<u64>(bufferSize))
+    {
+        outputBuffer[0] = '\0';
+        return false;
     }
 
-    return false;
+    strcpy_s(outputBuffer, bufferSize, json.c_str());
+    return true;
 }
 
 inline bool DispatchTrySetAssetData(const std::string& assetId, const std::string& assetType, const std::string& jsonData)
 {
-    if (assetType == "Material")
+    const auto data = nlohmann::json::parse(jsonData);
+    return WithSerializableAssetData(assetId, assetType, [&]
     {
-        return TrySetAssetDataImpl<rei::render::Material>(assetId, jsonData);
-    }
-
-    return false;
+        return rei::GetAssetManager().TrySetLoadedAssetData(assetId, data);
+    });
 }
 
 REI_EXTERN_API inline bool GetAssetData(const char* assetId, const char* assetType, char* outputBuffer, const i32 bufferSize)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using IOPath = System.IO.Path;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
@@ -16,10 +17,12 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Path;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls;
 using ReiEditor.ViewModels.Utils;
@@ -44,6 +47,8 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private readonly IResourceService? _resourceService;
     private readonly IAssetRegistry? _assetRegistry;
+    private readonly IDataAssetService? _dataAssetService;
+    private readonly IDataAssetTypeRegistry? _dataAssetTypeRegistry;
     private readonly IBehaviourCreationWindowService? _behaviourCreationWindowService;
     private readonly IMaterialCreationWindowService? _materialCreationWindowService;
     private readonly IShaderCreationWindowService? _shaderCreationWindowService;
@@ -89,6 +94,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IResourceService resourceService,
         IStorageProvider storageProvider,
         IAssetRegistry assetRegistry,
+        IDataAssetService dataAssetService,
+        IDataAssetTypeRegistry dataAssetTypeRegistry,
         IAssetOperationsService assetOperationsService,
         IProjectAssetDeleteCommand projectAssetDeleteCommand,
         IProjectAssetDuplicateCommand projectAssetDuplicateCommand,
@@ -108,6 +115,8 @@ public class ProjectWindowViewModel : BaseViewModel
     {
         _resourceService = resourceService;
         _assetRegistry = assetRegistry;
+        _dataAssetService = dataAssetService;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _behaviourCreationWindowService = behaviourCreationWindowService;
         _materialCreationWindowService = materialCreationWindowService;
         _shaderCreationWindowService = shaderCreationWindowService;
@@ -152,6 +161,7 @@ public class ProjectWindowViewModel : BaseViewModel
     {
         Dispatcher.UIThread.InvokeAsync(() =>
         {
+            SetupContextMenus();
             RefreshView(affectsTree: true);
         });
     }
@@ -174,14 +184,36 @@ public class ProjectWindowViewModel : BaseViewModel
 
     private void SetupContextMenus()
     {
+        ActiveFolderContextMenu.Options.Clear();
+
         var createMenu = new ContextMenuViewModel();
         createMenu.AddOption(new ContextMenuOption("Folder", CreateFolder));
         createMenu.AddOption(new ContextMenuOption("Behaviour", OpenCreateBehaviourOverlay));
         createMenu.AddOption(new ContextMenuOption("Shader", OpenCreateShaderOverlay));
         createMenu.AddOption(new ContextMenuOption("Material", OpenCreateMaterialOverlay));
 
+        var dataAssetMenu = CreateDataAssetContextMenu();
+        if (dataAssetMenu.Options.Count > 0)
+        {
+            createMenu.AddOption(new ContextMenuOption("Data Asset", dataAssetMenu));
+        }
+
         ActiveFolderContextMenu.AddOption(new ContextMenuOption("Show in Explorer", OpenActiveFolderInExplorer));
         ActiveFolderContextMenu.AddOption(new ContextMenuOption("Create", createMenu));
+    }
+
+    private ContextMenuViewModel CreateDataAssetContextMenu()
+    {
+        var contextMenu = new ContextMenuViewModel();
+        if (_dataAssetTypeRegistry == null) return contextMenu;
+
+        foreach (var dataAssetType in _dataAssetTypeRegistry.GetDataAssetTypes().OrderBy(x => x.ObjectName))
+        {
+            var capturedType = dataAssetType;
+            contextMenu.AddOption(new ContextMenuOption(capturedType.ObjectName, () => _ = CreateDataAssetAsync(capturedType)));
+        }
+
+        return contextMenu;
     }
 
     private void OpenActiveFolderInExplorer()
@@ -383,6 +415,25 @@ public class ProjectWindowViewModel : BaseViewModel
         _assetSelectionHandler.ResetState();
         _highlightedAsset = null;
         _pendingSearchSelectionPath = "";
+    }
+
+    private async Task CreateDataAssetAsync(DataAssetTypeInfo dataAssetType)
+    {
+        if (_dataAssetService == null || _resourceService == null) return;
+
+        var targetDirectory = ActiveDirectoryPath.Value;
+        if (string.IsNullOrWhiteSpace(targetDirectory) || !Directory.Exists(targetDirectory)) return;
+
+        var fullPath = PathNamingUtils.GetUniqueFilePath(targetDirectory, $"{dataAssetType.ObjectName}{FileExtensions.ASSET}");
+        var projectPath = IOPath.GetRelativePath(_resourceService.GetProjectPath(), fullPath);
+        var dataAsset = await _dataAssetService.Create(dataAssetType.TypeId, projectPath);
+        if (dataAsset == null) return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            RefreshView(affectsTree: false);
+            FocusAssetByPath(fullPath);
+        });
     }
 
     private void CreateFolder()

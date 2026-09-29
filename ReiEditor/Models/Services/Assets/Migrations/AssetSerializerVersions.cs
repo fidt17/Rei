@@ -11,6 +11,7 @@ public static class AssetSerializerVersions
     public const int MATERIAL_VERSION = 1;
     public const int SHADER_VERSION = 1;
     public const int BUILD_SCENES_CONFIGURATION_VERSION = 1;
+    public const int DATA_ASSET_VERSION = 1;
 
     public static bool TryGetCurrentVersion(Type assetType, out int version)
     {
@@ -35,6 +36,12 @@ public static class AssetSerializerVersions
         if (assetType == typeof(BuildScenesConfiguration))
         {
             version = BUILD_SCENES_CONFIGURATION_VERSION;
+            return true;
+        }
+
+        if (assetType == typeof(DataAsset))
+        {
+            version = DATA_ASSET_VERSION;
             return true;
         }
 

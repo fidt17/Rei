@@ -54,7 +54,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         string name,
         string fullPath,
         ProjectAssetType assetType,
-        string assetId,
+        AssetInfo? assetInfo,
         ProjectAssetItemActions actions,
         ContextMenuViewModel activeFolderContextMenu,
         IFileExplorerProvider fileExplorerProvider)
@@ -62,9 +62,9 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         Name = new ObservableField<string>(name);
         FullPath = fullPath;
         AssetType = assetType;
-        AssetId = assetId;
+        AssetId = assetInfo?.Meta.AssetId ?? "";
         IsDirectory = assetType == ProjectAssetType.Directory;
-        IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsAssetSupportedInMonitor(fullPath, IsDirectory);
+        IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsAssetSupportedInMonitor(fullPath, IsDirectory, assetInfo);
         Icon = ProjectAssetIconProvider.GetAssetIcon(assetType);
         _selectAction = actions.SelectAction;
         _contextMenuSelectAction = actions.ContextMenuSelectAction;

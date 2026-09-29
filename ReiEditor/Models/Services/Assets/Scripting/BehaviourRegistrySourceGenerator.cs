@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 namespace ReiEditor.Models.Services.Assets.Scripting;
@@ -21,15 +22,16 @@ public class BehaviourRegistrySourceGenerator
         _serializableObjectsRegistry = serializableObjectsRegistry;
     }
 
-    public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects)
+    public Task GenerateBehaviourRegistrySourceFile(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<DataAssetTypeInfo> dataAssetTypes)
     {
-        var source = GetSourceText(behaviours, serializableObjects);
+        var source = GetSourceText(behaviours, serializableObjects, dataAssetTypes);
         return _resourceService.Write(source, _resourceService.GetProjectPath("Scripts", "Internal", "BehaviourRegistry.cpp"));
     }
 
-    private string GetSourceText(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects)
+    private string GetSourceText(Dictionary<int, BehaviourAssetInfo> behaviours, IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<DataAssetTypeInfo> dataAssetTypes)
     {
         var serializableObjectInfos = serializableObjects.ToArray();
+        var dataAssetTypeInfos = dataAssetTypes.ToArray();
         
         var serializableObjectsAndBehaviours = new List<SerializableObjectInfo>();
         serializableObjectsAndBehaviours.AddRange(serializableObjectInfos);
@@ -45,12 +47,14 @@ public class BehaviourRegistrySourceGenerator
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/EntityManagement/EntityManager.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Assets/Core/AssetRefUtils.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Resources/Serialization/BinaryReader.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<type_traits>"));
         str.AppendLine();
         str.AppendLine(GenerateIncludes(serializableObjectsAndBehaviours));
         
         str.AppendLine(GenerateRegistryMethod(behaviours, assetRefTypes));
 
+        str.AppendLine(GenerateDataAssetConstructors(dataAssetTypeInfos));
         str.AppendLine(GenerateSerializationImplementation(serializableObjectsAndBehaviours));
         str.AppendLine(GenerateDeserializationImplementation(serializableObjectsAndBehaviours));
         str.AppendLine(GenerateResolveDependenciesImplementation(serializableObjectsAndBehaviours));
@@ -134,6 +138,33 @@ public class BehaviourRegistrySourceGenerator
         }
 
         return ids.Count == 0 ? "{}" : $"{{{string.Join(", ", ids)}}}";
+    }
+
+    private static string GenerateDataAssetConstructors(IEnumerable<DataAssetTypeInfo> dataAssetTypes)
+    {
+        var str = new StringBuilder();
+        str.AppendLine("// --- DATA ASSET CONSTRUCTORS ---");
+        str.AppendLine();
+
+        foreach (var dataAssetType in dataAssetTypes)
+        {
+            var obj = dataAssetType.SerializableObject;
+            var qualifiedName = GetQualifiedObjectName(obj);
+            var typeId = dataAssetType.TypeId;
+
+            str.AppendLine($"{qualifiedName}::{obj.ObjectName}(rei::resources::BinaryReader& reader)");
+            str.AppendLine("{");
+            str.AppendLine("    const auto root = nlohmann::json::parse(reader.GetStr());");
+            str.AppendLine("    REI_THROW_IF(!root.contains(\"DataAssetTypeId\"), \"Missing DataAssetTypeId\")");
+            str.AppendLine($"    REI_THROW_IF(root.at(\"DataAssetTypeId\").get<i32>() != {typeId}, \"DataAsset type mismatch\")");
+            str.AppendLine("    REI_THROW_IF(!root.contains(\"SerializedData\") || !root.at(\"SerializedData\").is_object(), \"Missing DataAsset SerializedData\")");
+            str.AppendLine("    REI_SET(root.at(\"SerializedData\"));");
+            str.AppendLine("    ResolveDependencies();");
+            str.AppendLine("}");
+            str.AppendLine();
+        }
+
+        return str.ToString();
     }
 
     private string GenerateDeserializationImplementation(IEnumerable<SerializableObjectInfo> objects)
@@ -564,6 +595,13 @@ public class BehaviourRegistrySourceGenerator
     private static string GetSourceTypeBaseName(string sourceType)
     {
         return SerializedTypeNameParser.GetBaseTypeName(sourceType);
+    }
+
+    private static string GetQualifiedObjectName(SerializableObjectInfo obj)
+    {
+        return string.IsNullOrWhiteSpace(obj.Namespace)
+            ? obj.ObjectName
+            : $"{obj.Namespace}::{obj.ObjectName}";
     }
 
     private static string GenerateAssetDependenciesCollector(BehaviourAssetInfo behaviour)

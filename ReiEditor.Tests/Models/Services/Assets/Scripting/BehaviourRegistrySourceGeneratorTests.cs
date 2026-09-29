@@ -22,7 +22,7 @@ public sealed class BehaviourRegistrySourceGeneratorTests : IDisposable
         public IEnumerable<SerializableObjectInfo> GetObjects() => Objects;
 
         /// <summary>Completes without source discovery.</summary>
-        public Task Refresh() => Task.CompletedTask;
+        public void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums) => throw new NotSupportedException();
 
         /// <summary>Finds configured object definition by base name.</summary>
         public SerializableObjectInfo? GetObject(string objectName) => Objects.Find(item => item.ObjectName == objectName.Split('<')[0]);
@@ -71,7 +71,7 @@ public sealed class BehaviourRegistrySourceGeneratorTests : IDisposable
         var resources = new TestResourceService(_project.Resources);
         var generator = new BehaviourRegistrySourceGenerator(resources, registry);
 
-        await generator.GenerateBehaviourRegistrySourceFile(behaviours, registry.GetObjects());
+        await generator.GenerateBehaviourRegistrySourceFile(behaviours, registry.GetObjects(), []);
 
         var write = Assert.Single(resources.Writes);
         Assert.Equal(_project.Resources.GetProjectPath("Scripts", "Internal", "BehaviourRegistry.cpp"), write.Path);

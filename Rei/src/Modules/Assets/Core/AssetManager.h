@@ -54,6 +54,9 @@ namespace rei::assets
         REI_API i64 GetLoadedAssetsSize() const;
         REI_API i32 GetLoadedAssetCount() const;
 
+        REI_API bool TryGetLoadedAssetData(const std::string& id, nlohmann::json& data) const;
+        REI_API bool TrySetLoadedAssetData(const std::string& id, const nlohmann::json& data);
+
         REI_API void DeleteTmpFiles();
 
     private:
@@ -72,6 +75,7 @@ namespace rei::assets
         REI_API void QueueDeferredPostLoad(const std::string& id);
 
         REI_API bool FlushDeferredPostLoads();
+        IAssetDataAccessor* FindLoadedAssetDataAccessor(const std::string& id) const;
 
         template <typename T>
         REI_API bool LoadInternal(AssetRef<T>& ref, bool incrementRefCount);

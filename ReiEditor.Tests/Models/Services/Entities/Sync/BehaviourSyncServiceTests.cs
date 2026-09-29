@@ -11,6 +11,8 @@ using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.Utils.Common;
 
+using Newtonsoft.Json.Linq;
+
 namespace ReiEditor.Tests.Models.Services.Entities.Sync;
 
 /// <summary>
@@ -106,8 +108,8 @@ public sealed class BehaviourSyncServiceTests
         Assert.Equal(20, request.SceneId);
         var behaviour = Assert.Single(request.Behaviours);
         Assert.Equal(3, behaviour[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
-        var value = Assert.IsType<Dictionary<string, object?>>(behaviour["speed"]);
-        Assert.Equal(6, value["Value"]);
+        var value = Assert.IsType<JObject>(behaviour["speed"]);
+        Assert.Equal(6, value["Value"]!.Value<int>());
     }
 
     /// <summary>
@@ -130,10 +132,10 @@ public sealed class BehaviourSyncServiceTests
 
         var behaviour = Assert.Single(api.Request!.Behaviours);
         Assert.False(behaviour.ContainsKey("x"));
-        var rootPayload = Assert.IsType<Dictionary<string, object?>>(behaviour["position"]);
-        var children = Assert.IsType<Dictionary<string, object?>>(rootPayload["Value"]);
-        var xPayload = Assert.IsType<Dictionary<string, object?>>(children["x"]);
-        Assert.Equal(6, xPayload["Value"]);
+        var rootPayload = Assert.IsType<JObject>(behaviour["position"]);
+        var children = Assert.IsType<JObject>(rootPayload["Value"]);
+        var xPayload = Assert.IsType<JObject>(children["x"]);
+        Assert.Equal(6, xPayload["Value"]!.Value<int>());
     }
 
     /// <summary>
@@ -156,9 +158,9 @@ public sealed class BehaviourSyncServiceTests
         service.WriteChangedProperty(new EntityBehaviourPropertyChangeEventArgs(entity, component, second));
 
         var behaviour = Assert.Single(api.Request!.Behaviours);
-        var collectionPayload = Assert.IsType<Dictionary<string, object?>>(behaviour["items"]);
-        var values = Assert.IsType<List<object?>>(collectionPayload["Value"]);
-        Assert.Equal(new object?[] { 4, 8 }, values);
+        var collectionPayload = Assert.IsType<JObject>(behaviour["items"]);
+        var values = Assert.IsType<JArray>(collectionPayload["Value"]);
+        Assert.Equal(new[] { 4, 8 }, values.Values<int>());
     }
 
     /// <summary>

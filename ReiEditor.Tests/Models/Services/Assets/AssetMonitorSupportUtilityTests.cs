@@ -19,7 +19,7 @@ public sealed class AssetMonitorSupportUtilityTests
     [InlineData("image.JPG")]
     public void MonitorSupportsMaterialAndTextureFiles(string path)
     {
-        Assert.True(AssetMonitorSupportUtility.IsAssetSupportedInMonitor(path, isDirectory: false));
+        Assert.True(AssetMonitorSupportUtility.IsAssetSupportedInMonitor(path, isDirectory: false, assetInfo: null));
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public sealed class AssetMonitorSupportUtilityTests
     public void TextPreviewSupportsSourceAndShaderFiles(string path)
     {
         Assert.True(AssetMonitorSupportUtility.IsTextPreviewAsset(path, isDirectory: false));
-        Assert.False(AssetMonitorSupportUtility.IsAssetSupportedInMonitor(path, isDirectory: false));
+        Assert.False(AssetMonitorSupportUtility.IsAssetSupportedInMonitor(path, isDirectory: false, assetInfo: null));
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public sealed class AssetMonitorSupportUtilityTests
     [InlineData("source.cpp", true)]
     public void InvalidMonitorInputsAreRejected(string path, bool isDirectory)
     {
-        Assert.False(AssetMonitorSupportUtility.IsAssetSupportedInMonitor(path, isDirectory));
+        Assert.False(AssetMonitorSupportUtility.IsAssetSupportedInMonitor(path, isDirectory, assetInfo: null));
         Assert.False(AssetMonitorSupportUtility.IsMaterialAsset(path, isDirectory));
         Assert.False(AssetMonitorSupportUtility.IsTexturePreviewAsset(path, isDirectory));
         Assert.False(AssetMonitorSupportUtility.IsTextPreviewAsset(path, isDirectory));

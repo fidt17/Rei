@@ -136,7 +136,7 @@ public sealed class BehaviourRegistryTests : IDisposable
     private sealed class TestSerializableObjectsRegistry : ISerializableObjectsRegistry
     {
         public IEnumerable<SerializableObjectInfo> GetObjects() => Array.Empty<SerializableObjectInfo>();
-        public Task Refresh() => Task.CompletedTask;
+        public void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums) => throw new NotSupportedException();
         public SerializableObjectInfo? GetObject(string objectName) => null;
         public SerializableEnum? GetEnum(string enumName) => null;
     }
@@ -192,7 +192,7 @@ public sealed class BehaviourRegistryTests : IDisposable
         Directory.CreateDirectory(enginePath);
         Directory.CreateDirectory(_project.Resources.GetScriptsPath());
         var sourceFiles = new SourceFilesUtility(_project.Resources, new TestEngineSettingsProvider(enginePath), new TestLogger<SourceFilesUtility>());
-        var serializableObjects = new TestSerializableObjectsRegistry();
+        var serializableObjects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
         var files = new TestBehaviourFileUtility();
         var metaFiles = new TestMetaFilesService();
         var solution = new TestSolutionGenerator();
@@ -206,6 +206,7 @@ public sealed class BehaviourRegistryTests : IDisposable
             _project.Resources,
             new TestLogger<BehaviourRegistry>(),
             serializableObjects,
+            new ReiEditor.Models.Services.Assets.DataAssets.DataAssetTypeRegistry(_project.Resources, metaFiles, new TestAssetCreator(), new TestLogger<ReiEditor.Models.Services.Assets.DataAssets.DataAssetTypeRegistry>()),
             solution,
             activeProject,
             sourceFiles,

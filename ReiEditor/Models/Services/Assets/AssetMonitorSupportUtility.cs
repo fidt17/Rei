@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.FileSystem;
 
 namespace ReiEditor.Models.Services.Assets;
@@ -14,12 +15,22 @@ public static class AssetMonitorSupportUtility
         FileExtensions.RSHADER,
     };
 
-    public static bool IsAssetSupportedInMonitor(string fullPath, bool isDirectory)
+    public static bool IsAssetSupportedInMonitor(string fullPath, bool isDirectory, AssetInfo? assetInfo)
     {
         if (isDirectory) return false;
         if (string.IsNullOrWhiteSpace(fullPath)) return false;
 
-        return IsMaterialAsset(fullPath, isDirectory) || IsTexturePreviewAsset(fullPath, isDirectory);
+        return IsMaterialAsset(fullPath, isDirectory) ||
+               IsTexturePreviewAsset(fullPath, isDirectory) ||
+               IsDataAsset(fullPath, isDirectory, assetInfo);
+    }
+
+    public static bool IsDataAsset(string fullPath, bool isDirectory, AssetInfo? assetInfo)
+    {
+        if (isDirectory) return false;
+        if (string.IsNullOrWhiteSpace(fullPath)) return false;
+
+        return assetInfo is DataAssetInfo;
     }
 
     public static bool IsMaterialAsset(string fullPath, bool isDirectory)

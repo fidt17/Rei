@@ -3,6 +3,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Entities;
@@ -280,7 +281,7 @@ public sealed class SceneSyncServiceTests
             OnAdd = (entity, id) => { entity.AddBehaviour(new BehaviourComponent(id)); return true; },
             OnDelete = (entity, component) => { entity.DeleteBehaviour(component); return true; }
         };
-        var applier = new EntityStateApplier(_logger, registry, components);
+        var applier = new EntityStateApplier(_logger, registry, components, new SerializedPropertiesService(new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>()), new TestLogger<SerializedPropertiesService>()));
         var selection = new SelectionService(_api);
         return new(_importer, _runner, _api, _scenes, _logger, new EngineSelectionSyncService(selection), applier);
     }

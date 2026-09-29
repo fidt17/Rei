@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
@@ -61,7 +62,10 @@ public class AssetCreator : IAssetCreator
             var meta = new AssetMeta(id);
             await _metaFilesService.CreateMetaFile(meta, assetPath);
 			
-            _assetRegistry.AddToLoadedAssets(new AssetInfo(meta, assetPath), asset);
+            var assetInfo = asset is DataAsset dataAsset
+                ? new DataAssetInfo(meta, assetPath, dataAsset.DataAssetTypeId)
+                : new AssetInfo(meta, assetPath);
+            _assetRegistry.AddToLoadedAssets(assetInfo, asset);
 			
             return true;
         }

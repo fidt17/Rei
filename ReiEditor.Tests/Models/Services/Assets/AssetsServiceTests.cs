@@ -40,7 +40,7 @@ public sealed class AssetsServiceTests
             Resources = new(Project.Resources);
             var active = new ActiveProjectService(new TestLogger<ActiveProjectService>());
             active.OpenProject(Project.Project);
-            Service = new(Logger, Resources, new JsonSerializer(), Migrations, active, Procedures, Registry);
+            Service = new(Logger, Resources, new JsonSerializer(), Migrations, active, Procedures, Registry, []);
         }
 
         public AssetInfo Info(string id, string extension = ".asset") => new(new AssetMeta(id), Project.Directory.GetPath(id + extension));

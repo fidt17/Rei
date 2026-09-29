@@ -114,7 +114,7 @@ public sealed class CustomPropertyViewModelTests
     public void CustomEditorReplacementDisposesOriginalEditors()
     {
         var property = TestCustom("settings", "Settings", ("speed", 3f));
-        using var viewModel = new CustomPropertyViewModel(property, null!, null!, null!, null!, null!, null!, null!, null!);
+        using var viewModel = new CustomPropertyViewModel(property, null!, null!, null!, null!, null!, null!, null!, null!, null);
         var originalProperty = TestChildren(property)["speed"];
         var originalEditor = Assert.IsType<FloatPropertyViewModel>(Assert.Single(viewModel.Value));
 
@@ -132,7 +132,7 @@ public sealed class CustomPropertyViewModelTests
     public void CustomEditorKeepsEditorsForUnchangedChildren()
     {
         var property = TestCustom("settings", "Settings", ("speed", 3f));
-        using var viewModel = new CustomPropertyViewModel(property, null!, null!, null!, null!, null!, null!, null!, null!);
+        using var viewModel = new CustomPropertyViewModel(property, null!, null!, null!, null!, null!, null!, null!, null!, null);
         var childEditor = Assert.Single(viewModel.Value);
 
         property.TriggerChangedEvent();

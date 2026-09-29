@@ -16,6 +16,16 @@
     void REI_SET(const nlohmann::json& data); \
     void ResolveDependencies(); \
 
+#define DATA_ASSET_BODY(DATA_ASSET_NAME)\
+    public:\
+    DATA_ASSET_NAME() = default;\
+    explicit DATA_ASSET_NAME(rei::resources::BinaryReader& reader);\
+    DATA_ASSET_NAME& operator=(const DATA_ASSET_NAME& other) = default;\
+    nlohmann::json REI_GET() const;\
+    void REI_SET(const nlohmann::json& data);\
+    void ResolveDependencies();\
+    private:
+
 #define BEHAVIOUR_BODY(BEHAVIOUR_NAME)\
     public:\
     BEHAVIOUR_NAME() = default;\

@@ -8,6 +8,9 @@ using ReiEditor.ViewModels.Controls;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.ViewModels.Windows.Editor.Project.Services;
 
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
+
 namespace ReiEditor.Tests.ViewModels.Windows.Editor.Project;
 
 /// <summary>
@@ -130,7 +133,7 @@ public sealed class ProjectAssetSelectionHandlerTests : IDisposable
                 name,
                 fullPath,
                 ProjectAssetType.Asset,
-                name,
+                new AssetInfo(new AssetMeta(name), fullPath),
                 actions,
                 new ContextMenuViewModel(),
                 new TestFileExplorerProvider()));

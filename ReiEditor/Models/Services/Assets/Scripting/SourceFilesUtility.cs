@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
@@ -19,6 +20,7 @@ public class SourceFilesUtility
     public class ProcessedFilesResult
     {
         public List<SerializableObjectInfo> SerializableObjects { get; } = new();
+        public List<SerializableObjectInfo> DataAssetDeclarations { get; } = new();
         public List<SerializableEnum> SerializableEnums { get; } = new();
     }
 
@@ -48,32 +50,56 @@ public class SourceFilesUtility
         };
         
         AreSourceFilesValid = true;
-        
+
+        var sourceFiles = new List<(string Path, string Contents)>();
         foreach (var rootDir in paths)
         {
             foreach (var path in Directory.EnumerateFiles(rootDir, $"*{FileExtensions.H}", SearchOption.AllDirectories))
             {
                 try
                 {
-                    var fileContents = File.ReadAllText(path);
-
-                    TryAddSerializableObject(fileContents, path, _processedFiles.SerializableObjects);
-                    TryAddSerializableEnum(fileContents, path, _processedFiles.SerializableEnums);
+                    sourceFiles.Add((path, File.ReadAllText(path)));
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError($"Exception while parsing file {path}. \n {e}");
+                    _logger.LogError($"Exception while reading source file {path}. \n {e}");
                     AreSourceFilesValid = false;
                 }
+            }
+        }
+
+        foreach (var sourceFile in sourceFiles)
+        {
+            try
+            {
+                TryAddSerializableEnum(sourceFile.Contents, sourceFile.Path, _processedFiles.SerializableEnums);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Exception while parsing enum file {sourceFile.Path}. \n {e}");
+                AreSourceFilesValid = false;
+            }
+        }
+
+        foreach (var sourceFile in sourceFiles)
+        {
+            try
+            {
+                TryAddSerializableObject(sourceFile.Contents, sourceFile.Path, _processedFiles.SerializableObjects, _processedFiles.DataAssetDeclarations);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Exception while parsing object file {sourceFile.Path}. \n {e}");
+                AreSourceFilesValid = false;
             }
         }
         
         return _processedFiles;
     }
 
-    private void TryAddSerializableObject(string fileContents, string path, List<SerializableObjectInfo> result)
+    private void TryAddSerializableObject(string fileContents, string path, List<SerializableObjectInfo> result, List<SerializableObjectInfo> dataAssetDeclarations)
     {
-        var isSerializable = TryGetSerializableObjectNameFrom(fileContents, out var name, out var isTemplate);
+        var isSerializable = TryGetSerializableObjectNameFrom(fileContents, out var name, out var isTemplate, out var isDataAsset);
         if (!isSerializable) return;
 
         var namespaceStr = GetObjectNamespaceFrom(fileContents, path);
@@ -88,6 +114,7 @@ public class SourceFilesUtility
         }
                 
         result.Add(serializableObject);
+        if (isDataAsset) dataAssetDeclarations.Add(serializableObject);
     }
     
     private void TryAddSerializableEnum(string fileContents, string path, List<SerializableEnum> result)
@@ -151,38 +178,64 @@ public class SourceFilesUtility
 
     public bool TryGetSerializableObjectNameFrom(string text, out string name, out bool isTemplate)
     {
+        return TryGetSerializableObjectNameFrom(text, out name, out isTemplate, out _);
+    }
+
+    public bool TryGetSerializableObjectNameFrom(string text, out string name, out bool isTemplate, out bool isDataAsset)
+    {
         name = "";
         isTemplate = false;
-        
-        var regex = new Regex($@"{SourceFileMacrosConstants.SERIALIZABLE_BODY}\((?<name>.*?)\)");
-        var matches = regex.Matches(text);
-        if (matches.Count == 0) return false;
+        isDataAsset = false;
 
         Match? selectedMatch = null;
-        foreach (Match match in matches)
+        foreach (var (macro, dataAsset) in new[]
+                 {
+                     (SourceFileMacrosConstants.SERIALIZABLE_BODY, false),
+                     (SourceFileMacrosConstants.DATA_ASSET_BODY, true),
+                 })
         {
-            var matchName = match.Groups["name"].Value;
-            if (string.IsNullOrWhiteSpace(matchName) || matchName.Contains("CLASS_NAME")) continue;
-            selectedMatch = match;
+            var regex = new Regex($@"{macro}\((?<name>.*?)\)");
+            foreach (Match match in regex.Matches(text))
+            {
+                var matchName = match.Groups["name"].Value;
+                if (string.IsNullOrWhiteSpace(matchName)) continue;
+                if (matchName.Contains("CLASS_NAME") || matchName.Contains("DATA_ASSET_NAME")) continue;
+
+                if (selectedMatch != null)
+                {
+                    throw new Exception("Multiple serializable root objects were found in one source file. This is not supported.");
+                }
+
+                selectedMatch = match;
+                isDataAsset = dataAsset;
+            }
         }
 
         if (selectedMatch == null) return false;
-            
+
         name = selectedMatch.Groups["name"].Value;
 
         var indexesOfTemplates = text.AllIndexesOf("template <typename");
         indexesOfTemplates.AddRange(text.AllIndexesOf("template<typename"));
 
-        // check that template is before class name and not inside over some method
         if (indexesOfTemplates.Count != 0)
         {
             var firstTemplateIdx = indexesOfTemplates.First();
-            
+
             var idxOfObjectName = text.IndexOf(" " + name, StringComparison.Ordinal);
             isTemplate = firstTemplateIdx < idxOfObjectName;
         }
 
         return true;
+    }
+
+    public async Task<bool> IsDataAssetFileAsync(string path)
+    {
+        if (!Path.GetExtension(path).Equals(FileExtensions.H, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!File.Exists(path)) return false;
+
+        var fileContents = await File.ReadAllTextAsync(path);
+        return TryGetSerializableObjectNameFrom(fileContents, out _, out _, out var isDataAsset) && isDataAsset;
     }
     
     public bool TryGetEnumNameFrom(string text, out string name)

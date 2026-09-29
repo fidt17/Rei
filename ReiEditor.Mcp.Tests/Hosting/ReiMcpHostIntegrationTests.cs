@@ -26,6 +26,11 @@ public sealed class ReiMcpHostIntegrationTests
         public string? MaterialAssetId { get; private set; }
         public string? MaterialPropertyName { get; private set; }
         public object? MaterialPropertyValue { get; private set; }
+        public string? CreatedDataAssetTypeName { get; private set; }
+        public string? CreatedDataAssetProjectPath { get; private set; }
+        public string? DataAssetId { get; private set; }
+        public string? DataAssetPropertyName { get; private set; }
+        public object? DataAssetPropertyValue { get; private set; }
 
         public Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken)
         {
@@ -116,6 +121,48 @@ public sealed class ReiMcpHostIntegrationTests
                 "Material property changed."));
         }
 
+        public Task<ReiDataAssetTypeList> ListDataAssetTypesAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new ReiDataAssetTypeList(
+                [new ReiDataAssetTypeDetails(7, "TestConfig", "Tests", [new ReiPropertySchema("_value", "Float", "f32")])]));
+        }
+
+        public Task<ReiDataAssetList> ListDataAssetsAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new ReiDataAssetList(
+                [new ReiDataAssetSummary("data-1", 7, "TestConfig", "DataAssets/TestConfig.asset")]));
+        }
+
+        public Task<ReiDataAssetCreationResult> CreateDataAssetAsync(string typeName, string projectPath, CancellationToken cancellationToken)
+        {
+            CreatedDataAssetTypeName = typeName;
+            CreatedDataAssetProjectPath = projectPath;
+            return Task.FromResult(new ReiDataAssetCreationResult(
+                true,
+                CreateDataAssetDetails("data-2", projectPath),
+                "DataAsset created."));
+        }
+
+        public Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId, CancellationToken cancellationToken)
+        {
+            DataAssetId = assetId;
+            return Task.FromResult(CreateDataAssetDetails(assetId, "DataAssets/TestConfig.asset"));
+        }
+
+        public Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value, CancellationToken cancellationToken)
+        {
+            DataAssetId = assetId;
+            DataAssetPropertyName = propertyName;
+            DataAssetPropertyValue = value;
+            var property = new ReiPropertyDetails(propertyName, "Float", "f32", 12.5);
+            return Task.FromResult(new ReiDataAssetPropertyMutationResult(
+                true,
+                CreateDataAssetDetails(assetId, "DataAssets/TestConfig.asset"),
+                property,
+                true,
+                "DataAsset property changed."));
+        }
+
         public Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(new ReiProjectSaveResult(true, NOW, "Project saved."));
@@ -191,6 +238,16 @@ public sealed class ReiMcpHostIntegrationTests
             return new ReiEntitySummary(42, name, 0, 0, 0, [new ReiBehaviourSummary(1, "Transform")]);
         }
 
+        private static ReiDataAssetDetails CreateDataAssetDetails(string assetId, string projectPath)
+        {
+            return new ReiDataAssetDetails(
+                assetId,
+                7,
+                "TestConfig",
+                projectPath,
+                [new ReiPropertyDetails("_value", "Float", "f32", 12.5)]);
+        }
+
         private static ReiEntityDetails CreateEntityDetails(string behaviourName)
         {
             return new ReiEntityDetails(
@@ -229,7 +286,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(16, tools.Count);
+        Assert.Equal(21, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
@@ -237,6 +294,11 @@ public sealed class ReiMcpHostIntegrationTests
         Assert.Contains(tools, x => x.Name == "rei_editor_add_behaviour");
         Assert.Contains(tools, x => x.Name == "rei_editor_set_behaviour_property");
         Assert.Contains(tools, x => x.Name == "rei_editor_set_material_property");
+        Assert.Contains(tools, x => x.Name == "rei_editor_list_data_asset_types");
+        Assert.Contains(tools, x => x.Name == "rei_editor_list_data_assets");
+        Assert.Contains(tools, x => x.Name == "rei_editor_create_data_asset");
+        Assert.Contains(tools, x => x.Name == "rei_editor_get_data_asset");
+        Assert.Contains(tools, x => x.Name == "rei_editor_set_data_asset_property");
         Assert.Contains(tools, x => x.Name == "rei_editor_save_project");
         Assert.Contains(tools, x => x.Name == "rei_editor_refresh_assets");
         Assert.Contains(tools, x => x.Name == "rei_editor_start_build");
@@ -327,6 +389,57 @@ public sealed class ReiMcpHostIntegrationTests
         var materialValue = Assert.IsType<JsonElement>(gateway.MaterialPropertyValue);
         Assert.Equal("texture-1", materialValue.GetProperty("Id").GetString());
         Assert.Contains("\"runtimeSynced\":true", GetText(setMaterialResult));
+
+        var dataAssetTypesResult = await client.CallToolAsync(
+            "rei_editor_list_data_asset_types",
+            cancellationToken: CancellationToken.None);
+        Assert.NotEqual(true, dataAssetTypesResult.IsError);
+        Assert.Contains("\"name\":\"TestConfig\"", GetText(dataAssetTypesResult));
+
+        var dataAssetsResult = await client.CallToolAsync(
+            "rei_editor_list_data_assets",
+            cancellationToken: CancellationToken.None);
+        Assert.NotEqual(true, dataAssetsResult.IsError);
+        Assert.Contains("\"assetId\":\"data-1\"", GetText(dataAssetsResult));
+
+        var createDataAssetResult = await client.CallToolAsync(
+            "rei_editor_create_data_asset",
+            new Dictionary<string, object?>
+            {
+                ["typeName"] = "TestConfig",
+                ["projectPath"] = "DataAssets/Created.asset"
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotEqual(true, createDataAssetResult.IsError);
+        Assert.Equal("TestConfig", gateway.CreatedDataAssetTypeName);
+        Assert.Equal("DataAssets/Created.asset", gateway.CreatedDataAssetProjectPath);
+
+        var getDataAssetResult = await client.CallToolAsync(
+            "rei_editor_get_data_asset",
+            new Dictionary<string, object?> { ["assetId"] = "data-2" },
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotEqual(true, getDataAssetResult.IsError);
+        Assert.Equal("data-2", gateway.DataAssetId);
+        Assert.Contains("\"typeName\":\"TestConfig\"", GetText(getDataAssetResult));
+
+        var setDataAssetResult = await client.CallToolAsync(
+            "rei_editor_set_data_asset_property",
+            new Dictionary<string, object?>
+            {
+                ["assetId"] = "data-2",
+                ["propertyName"] = "_value",
+                ["value"] = 12.5
+            },
+            cancellationToken: CancellationToken.None);
+
+        Assert.NotEqual(true, setDataAssetResult.IsError);
+        Assert.Equal("data-2", gateway.DataAssetId);
+        Assert.Equal("_value", gateway.DataAssetPropertyName);
+        var dataAssetValue = Assert.IsType<JsonElement>(gateway.DataAssetPropertyValue);
+        Assert.Equal(12.5, dataAssetValue.GetDouble());
+        Assert.Contains("\"runtimeSynced\":true", GetText(setDataAssetResult));
 
         var buildResult = await client.CallToolAsync(
             "rei_editor_start_build",

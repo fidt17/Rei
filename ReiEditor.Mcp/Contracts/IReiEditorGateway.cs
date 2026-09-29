@@ -18,6 +18,11 @@ public interface IReiEditorGateway
         string propertyName,
         object? value,
         CancellationToken cancellationToken);
+    Task<ReiDataAssetTypeList> ListDataAssetTypesAsync(CancellationToken cancellationToken);
+    Task<ReiDataAssetList> ListDataAssetsAsync(CancellationToken cancellationToken);
+    Task<ReiDataAssetCreationResult> CreateDataAssetAsync(string typeName, string projectPath, CancellationToken cancellationToken);
+    Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId, CancellationToken cancellationToken);
+    Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value, CancellationToken cancellationToken);
     Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken);
     Task<ReiOperationInfo> StartAssetRefreshAsync(CancellationToken cancellationToken);
     Task<ReiOperationInfo> StartBuildAsync(ReiBuildOptions options, CancellationToken cancellationToken);

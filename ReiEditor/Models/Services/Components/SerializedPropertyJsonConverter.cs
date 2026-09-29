@@ -17,8 +17,17 @@ public class SerializedPropertyJsonConverter : JsonConverter<SerializedProperty>
             return;
         }
 
-        SerializeProperty(value).WriteTo(writer);
+        SerializeProperty(value, includeMetadata: true).WriteTo(writer);
     }
+
+    public static JObject SerializeRuntimeProperties(IEnumerable<SerializedProperty> properties)
+    {
+        var result = new JObject();
+        foreach (var property in properties) result[property.Name] = SerializeProperty(property, includeMetadata: false);
+        return result;
+    }
+
+    public static JObject SerializeRuntimeProperty(SerializedProperty property) => SerializeProperty(property, includeMetadata: false);
 
     public override SerializedProperty? ReadJson(
         JsonReader reader,
@@ -38,18 +47,21 @@ public class SerializedPropertyJsonConverter : JsonConverter<SerializedProperty>
         return DeserializeProperty(propertyObject, parentProperty: null);
     }
 
-    private static JObject SerializeProperty(SerializedProperty property)
+    private static JObject SerializeProperty(SerializedProperty property, bool includeMetadata)
     {
-        return new JObject
+        var result = new JObject
         {
-            [nameof(SerializedProperty.Value)] = SerializePropertyValue(property),
-            [nameof(SerializedProperty.Name)] = property.Name,
-            [nameof(SerializedProperty.Type)] = (int)property.Type,
-            [nameof(SerializedProperty.SourceType)] = property.SourceType
+            [nameof(SerializedProperty.Value)] = SerializePropertyValue(property, includeMetadata)
         };
+        if (!includeMetadata) return result;
+
+        result[nameof(SerializedProperty.Name)] = property.Name;
+        result[nameof(SerializedProperty.Type)] = (int)property.Type;
+        result[nameof(SerializedProperty.SourceType)] = property.SourceType;
+        return result;
     }
 
-    private static JToken SerializePropertyValue(SerializedProperty property)
+    private static JToken SerializePropertyValue(SerializedProperty property, bool includeMetadata)
     {
         if (property.Type == SerializedTypeEnum.Collection)
         {
@@ -57,7 +69,7 @@ public class SerializedPropertyJsonConverter : JsonConverter<SerializedProperty>
             var array = new JArray();
             foreach (var item in items)
             {
-                array.Add(SerializeCollectionItem(item));
+                array.Add(SerializeCollectionItem(item, includeMetadata));
             }
 
             return array;
@@ -65,28 +77,28 @@ public class SerializedPropertyJsonConverter : JsonConverter<SerializedProperty>
 
         if (property.Type == SerializedTypeEnum.Custom)
         {
-            return SerializeCustomValue(property);
+            return SerializeCustomValue(property, includeMetadata);
         }
 
         return property.Value == null ? JValue.CreateNull() : JToken.FromObject(property.Value);
     }
 
-    private static JToken SerializeCollectionItem(SerializedProperty property)
+    private static JToken SerializeCollectionItem(SerializedProperty property, bool includeMetadata)
     {
         if (property.Type == SerializedTypeEnum.Custom)
         {
-            return SerializeCustomValue(property);
+            return SerializeCustomValue(property, includeMetadata);
         }
 
         if (property.Type == SerializedTypeEnum.Collection)
         {
-            return SerializePropertyValue(property);
+            return SerializePropertyValue(property, includeMetadata);
         }
 
         return property.Value == null ? JValue.CreateNull() : JToken.FromObject(property.Value);
     }
 
-    private static JObject SerializeCustomValue(SerializedProperty property)
+    private static JObject SerializeCustomValue(SerializedProperty property, bool includeMetadata)
     {
         var value = property.Value as Dictionary<string, SerializedProperty>;
         var obj = new JObject();
@@ -94,7 +106,7 @@ public class SerializedPropertyJsonConverter : JsonConverter<SerializedProperty>
 
         foreach (var nestedProperty in value.Values)
         {
-            obj[nestedProperty.Name] = SerializeProperty(nestedProperty);
+            obj[nestedProperty.Name] = SerializeProperty(nestedProperty, includeMetadata);
         }
 
         return obj;

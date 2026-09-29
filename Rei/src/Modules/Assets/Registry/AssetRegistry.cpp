@@ -8,6 +8,7 @@ namespace rei::assets
     void AssetRegistry::TransitionToUnloadedAndReleasePayload(const std::string& id)
     {
         std::shared_ptr<void> valueToRelease = nullptr;
+        std::unique_ptr<IAssetDataAccessor> accessorToRelease;
         {
             std::scoped_lock lock(_recordsMutex);
 
@@ -18,6 +19,7 @@ namespace rei::assets
                 return;
             }
 
+            accessorToRelease = std::move(existing->second->DataAccessor);
             valueToRelease = std::move(existing->second->Value);
             existing->second->AssetSize = 0;
             existing->second->State = AssetState::Unloaded;
@@ -25,6 +27,7 @@ namespace rei::assets
 
         // Release owned payload outside the registry lock to avoid re-entrant locking
         // if destructors trigger nested asset manager calls.
+        accessorToRelease.reset();
         valueToRelease.reset();
     }
 

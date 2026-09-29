@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Extensions;
 
@@ -8,31 +8,35 @@ namespace ReiEditor.Models.Services.Assets.Scripting.Serialization;
 
 public class SerializableObjectsRegistry : ISerializableObjectsRegistry
 {
-    private readonly List<SerializableObjectInfo> _serializableObjects = new();
-    private readonly List<SerializableEnum> _serializableEnums = new();
-    private readonly SourceFilesUtility _sourceFilesUtility;
+    private readonly object _registryLock = new();
+    private List<SerializableObjectInfo> _serializableObjects = new();
+    private List<SerializableEnum> _serializableEnums = new();
     private readonly ILogger<SerializableObjectsRegistry> _logger;
 
-    public SerializableObjectsRegistry(SourceFilesUtility sourceFilesUtility, ILogger<SerializableObjectsRegistry> logger)
+    public SerializableObjectsRegistry(ILogger<SerializableObjectsRegistry> logger)
     {
-        _sourceFilesUtility = sourceFilesUtility;
         _logger = logger;
     }
 
-    public IEnumerable<SerializableObjectInfo> GetObjects() => _serializableObjects;
-
-    public Task Refresh()
+    public IEnumerable<SerializableObjectInfo> GetObjects()
     {
-        _serializableObjects.Clear();
-        _serializableEnums.Clear();
+        lock (_registryLock)
+        {
+            return _serializableObjects.ToList();
+        }
+    }
 
-        var processedFiles = _sourceFilesUtility.ProcessFiles();
-        _serializableObjects.AddRange(processedFiles.SerializableObjects);
-        _serializableEnums.AddRange(processedFiles.SerializableEnums);
+    public void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums)
+    {
+        var objects = serializableObjects.ToList();
+        var enums = serializableEnums.ToList();
+        lock (_registryLock)
+        {
+            _serializableObjects = objects;
+            _serializableEnums = enums;
+        }
 
-        LogSerializableObjects();
-        
-        return Task.CompletedTask;
+        LogSerializableObjects(objects);
     }
 
     public SerializableObjectInfo? GetObject(string objectName)
@@ -42,20 +46,29 @@ public class SerializableObjectsRegistry : ISerializableObjectsRegistry
         {
             objectName = objectName.Remove(t[0], objectName.Length - t[0]);
         }
-        
-        return _serializableObjects.Find(x => x.ObjectName == objectName);
+
+        lock (_registryLock)
+        {
+            return _serializableObjects.Find(x => x.ObjectName == objectName);
+        }
     }
 
     public SerializableEnum? GetEnum(string enumName)
     {
-        return _serializableEnums.Find(x => x.EnumName == enumName);
+        lock (_registryLock)
+        {
+            return _serializableEnums.Find(x => x.EnumName == enumName);
+        }
     }
 
-    private void LogSerializableObjects()
+    private void LogSerializableObjects(IEnumerable<SerializableObjectInfo> serializableObjects)
     {
         var log = new StringBuilder();
         log.AppendLine("Serializable objects: ");
-        _serializableObjects.ForEach(x => log.AppendLine($"- {x.ObjectName}{(x.IsTemplate ? "<T>" : "")} {x.IncludePath}"));
+        foreach (var objectInfo in serializableObjects)
+        {
+            log.AppendLine($"- {objectInfo.ObjectName}{(objectInfo.IsTemplate ? "<T>" : "")} {objectInfo.IncludePath}");
+        }
         _logger.Log(log.ToString());
     }
 }

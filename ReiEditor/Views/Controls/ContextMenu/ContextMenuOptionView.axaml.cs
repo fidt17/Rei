@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Threading;
 using ReiEditor.ViewModels.Controls;
@@ -21,40 +20,39 @@ public partial class ContextMenuOptionView : UserControl
     {
         InitializeComponent();
 
-        var nestedFlyout = GetNestedFlyout();
-        if (nestedFlyout != null)
+        NestedMenuPopup.PlacementTarget = OptionButton;
+        NestedMenuPopup.Opened += (_, _) =>
         {
-            nestedFlyout.Opened += (_, _) =>
-            {
-                _nestedFlyoutOpenedAtUtc = DateTime.UtcNow;
-                SetSubmenuOpenVisualState(true);
-            };
-            nestedFlyout.Closed += (_, _) =>
-            {
-                _nestedFlyoutOpenedAtUtc = DateTime.MinValue;
-                SetSubmenuOpenVisualState(false);
-            };
-        }
+            _nestedFlyoutOpenedAtUtc = DateTime.UtcNow;
+            SetSubmenuOpenVisualState(true);
+        };
+        NestedMenuPopup.Closed += (_, _) =>
+        {
+            _nestedFlyoutOpenedAtUtc = DateTime.MinValue;
+            SetSubmenuOpenVisualState(false);
+        };
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        NestedMenuPopup.IsOpen = false;
+        base.OnUnloaded(e);
     }
 
     private void OptionButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ContextMenuOption option) return;
         if (!option.HasNestedMenu) return;
-        if (sender is not Control control) return;
-        if (GetNestedFlyout() is not Flyout nestedFlyout) return;
-
         _shouldCloseNestedMenu = false;
-        if (nestedFlyout.IsOpen) return;
+        if (NestedMenuPopup.IsOpen) return;
 
-        FlyoutBase.ShowAttachedFlyout(control);
+        NestedMenuPopup.IsOpen = true;
     }
 
     private void HoverRegion_OnPointerEntered(object? sender, PointerEventArgs e)
     {
         _shouldCloseNestedMenu = false;
-        var nestedFlyout = GetNestedFlyout();
-        if (nestedFlyout == null || !nestedFlyout.IsOpen) return;
+        if (!NestedMenuPopup.IsOpen) return;
         SetSubmenuOpenVisualState(true);
     }
 
@@ -75,8 +73,7 @@ public partial class ContextMenuOptionView : UserControl
         if (OptionButton.IsPointerOver) return;
         if (NestedMenuView.IsPointerOver) return;
         
-        var nestedFlyout = GetNestedFlyout();
-        if (nestedFlyout == null || !nestedFlyout.IsOpen) return;
+        if (!NestedMenuPopup.IsOpen) return;
 
         var elapsedSinceOpen = DateTime.UtcNow - _nestedFlyoutOpenedAtUtc;
         if (elapsedSinceOpen < InitialCloseSuppression)
@@ -85,7 +82,7 @@ public partial class ContextMenuOptionView : UserControl
             return;
         }
 
-        nestedFlyout.Hide();
+        NestedMenuPopup.IsOpen = false;
     }
 
     private void SetSubmenuOpenVisualState(bool isOpen)
@@ -97,10 +94,5 @@ public partial class ContextMenuOptionView : UserControl
         }
 
         OptionButton.Classes.Remove("SubmenuOpen");
-    }
-
-    private Flyout? GetNestedFlyout()
-    {
-        return FlyoutBase.GetAttachedFlyout(OptionButton) as Flyout;
     }
 }

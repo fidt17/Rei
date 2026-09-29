@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
@@ -31,6 +32,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IEntityManagementService _entityManagementService;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
@@ -51,6 +53,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         IEntityManagementService entityManagementService,
         IBehaviourComponentsService behaviourComponentsService,
         ISerializableObjectsRegistry serializableObjectsRegistry,
+        IDataAssetTypeRegistry dataAssetTypeRegistry,
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
@@ -66,6 +69,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _behaviourComponentsService = behaviourComponentsService;
         _entityManagementService = entityManagementService;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
@@ -145,7 +149,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
                 throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
 
             var property = BehaviourComponent.GetProperty(propertyName);
-            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
+            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry));
         }
     }
 }

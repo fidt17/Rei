@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -437,6 +438,6 @@ public sealed class AssetOperationsEdgeCaseTests
         importer = new TestAssetImporter();
         return new AssetOperationsService(
             logger ?? new TestLogger<AssetOperationsService>(), project.Resources, importer, registry, metaService,
-            new TestBehaviourRegistry(), new TestBehaviourFileUtility());
+            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>()));
     }
 }

@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -28,6 +29,7 @@ public class CustomPropertyViewModel : BaseViewModel
     
     private readonly SerializedProperty _property;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly IDataAssetTypeRegistry? _dataAssetTypeRegistry;
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
@@ -49,12 +51,14 @@ public class CustomPropertyViewModel : BaseViewModel
         IBehaviourRegistry behaviourRegistry,
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
-        ISelectionService selectionService)
+        ISelectionService selectionService,
+        IDataAssetTypeRegistry? dataAssetTypeRegistry)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
         
         _property = property;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
@@ -100,7 +104,7 @@ public class CustomPropertyViewModel : BaseViewModel
             
             foreach (var subProperty in subProperties)
             {
-                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService));
+                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry));
             }
         }
         else

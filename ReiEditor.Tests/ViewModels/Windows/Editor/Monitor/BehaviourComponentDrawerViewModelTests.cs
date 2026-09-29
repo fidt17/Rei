@@ -172,6 +172,7 @@ public sealed class BehaviourComponentDrawerViewModelTests
             null!,
             null!,
             null!,
+            null!,
             custom);
 
     private static BehaviourAssetInfo TestBehaviourInfo(bool includeMissing)

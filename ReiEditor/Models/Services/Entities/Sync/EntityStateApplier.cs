@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -15,15 +16,18 @@ public class EntityStateApplier : IEntityStateApplier
     private readonly ILogger<EntitySyncService> _logger;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly ISerializedPropertiesService _serializedPropertiesService;
 
     public EntityStateApplier(
         ILogger<EntitySyncService> logger,
         IBehaviourRegistry behaviourRegistry,
-        IBehaviourComponentsService behaviourComponentsService)
+        IBehaviourComponentsService behaviourComponentsService,
+        ISerializedPropertiesService serializedPropertiesService)
     {
         _logger = logger;
         _behaviourRegistry = behaviourRegistry;
         _behaviourComponentsService = behaviourComponentsService;
+        _serializedPropertiesService = serializedPropertiesService;
     }
 
     public bool Apply(GameEntity entity, GetEntityDataResponse state)
@@ -76,7 +80,7 @@ public class EntityStateApplier : IEntityStateApplier
                             if (behaviour.HasProperty(propertyName))
                             {
                                 var p = behaviour.GetProperty(propertyName);
-                                _behaviourComponentsService.ApplySerializedValue(p, value);
+                                _serializedPropertiesService.ApplyValue(p, value);
                             }
                         }
                         catch (Exception exception)

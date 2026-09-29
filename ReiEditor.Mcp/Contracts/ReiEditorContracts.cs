@@ -97,6 +97,48 @@ public sealed record ReiMaterialPropertyMutationResult(
     bool RuntimeSynced,
     string Message);
 
+public sealed record ReiDataAssetTypeList(
+    IReadOnlyList<ReiDataAssetTypeDetails> Types);
+
+public sealed record ReiDataAssetTypeDetails(
+    int TypeId,
+    string Name,
+    string Namespace,
+    IReadOnlyList<ReiPropertySchema> Properties);
+
+public sealed record ReiPropertySchema(
+    string Name,
+    string Type,
+    string SourceType);
+
+public sealed record ReiDataAssetList(
+    IReadOnlyList<ReiDataAssetSummary> Assets);
+
+public sealed record ReiDataAssetSummary(
+    string AssetId,
+    int TypeId,
+    string TypeName,
+    string ProjectPath);
+
+public sealed record ReiDataAssetDetails(
+    string AssetId,
+    int TypeId,
+    string TypeName,
+    string ProjectPath,
+    IReadOnlyList<ReiPropertyDetails> Properties);
+
+public sealed record ReiDataAssetCreationResult(
+    bool Created,
+    ReiDataAssetDetails Asset,
+    string Message);
+
+public sealed record ReiDataAssetPropertyMutationResult(
+    bool Changed,
+    ReiDataAssetDetails Asset,
+    ReiPropertyDetails Property,
+    bool RuntimeSynced,
+    string Message);
+
 public sealed record ReiProjectSaveResult(
     bool Saved,
     DateTimeOffset CompletedAtUtc,

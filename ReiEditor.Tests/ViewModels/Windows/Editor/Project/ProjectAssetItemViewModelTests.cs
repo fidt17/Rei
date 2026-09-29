@@ -5,6 +5,9 @@ using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.ViewModels.Controls;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
+
 namespace ReiEditor.Tests.ViewModels.Windows.Editor.Project;
 
 /// <summary>
@@ -143,7 +146,7 @@ public sealed class ProjectAssetItemViewModelTests : IDisposable
             move ?? (_ => { }),
             open ?? (_ => { }));
         var item = new ProjectAssetItemViewModel(
-            name, fullPath, type, "asset-id", actions, new ContextMenuViewModel(), new TestFileExplorerProvider());
+            name, fullPath, type, new AssetInfo(new AssetMeta("asset-id"), fullPath), actions, new ContextMenuViewModel(), new TestFileExplorerProvider());
         _items.Add(item);
         return item;
     }

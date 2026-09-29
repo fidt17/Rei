@@ -83,6 +83,41 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.SetMaterialPropertyAsync(materialAssetId, propertyName, value, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_list_data_asset_types", Title = "List Rei DataAsset types", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Lists project C++ types marked with DATA_ASSET_BODY, stable numeric type ids, and serialized property schemas.")]
+    public Task<ReiDataAssetTypeList> ListDataAssetTypes(CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.ListDataAssetTypesAsync(cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_list_data_assets", Title = "List Rei DataAssets", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Lists DataAsset instances in current project with asset ids, native type ids, type names, and project-relative paths.")]
+    public Task<ReiDataAssetList> ListDataAssets(CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.ListDataAssetsAsync(cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_create_data_asset", Title = "Create Rei DataAsset", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Creates one DataAsset instance from a registered DATA_ASSET_BODY type. Path is relative to Project directory and must end with .asset.")]
+    public Task<ReiDataAssetCreationResult> CreateDataAsset([Description("Registered C++ DataAsset type name from rei_editor_list_data_asset_types.")] string typeName, [Description("Path relative to Project directory, for example Assets/Config/SymbolAtlas.asset.")] string projectPath, CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.CreateDataAssetAsync(typeName, projectPath, cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_get_data_asset", Title = "Inspect Rei DataAsset", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Returns one DataAsset instance with type, path, property types, and JSON-compatible values.")]
+    public Task<ReiDataAssetDetails> GetDataAsset([Description("DataAsset id from rei_editor_list_data_assets or creation result.")] string assetId, CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.GetDataAssetAsync(assetId, cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_set_data_asset_property", Title = "Set Rei DataAsset property", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Sets one DataAsset property. Custom values accept partial objects; AssetRef values use {\"Id\":\"asset-guid\"}. Loaded native instances update immediately. Play-mode writes are session-only; persist by setting again in Editor mode and saving.")]
+    public Task<ReiDataAssetPropertyMutationResult> SetDataAssetProperty([Description("DataAsset id from rei_editor_list_data_assets or creation result.")] string assetId, [Description("Exact serialized property name returned by rei_editor_get_data_asset.")] string propertyName, [Description("JSON-compatible property value.")] JsonElement value, CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.SetDataAssetPropertyAsync(assetId, propertyName, value, cancellationToken));
+    }
+
     [McpServerTool(Name = "rei_editor_save_project", Title = "Save Rei project", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Synchronizes current scene from engine and saves dirty project assets. Rejected during play mode, build, or another save.")]
     public Task<ReiProjectSaveResult> SaveProject(CancellationToken cancellationToken)

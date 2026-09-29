@@ -13,6 +13,8 @@ public class AssetInfo
 		FullPath = fullPath;
 	}
 
+    public virtual AssetInfo WithPath(string fullPath) => new(Meta, fullPath);
+
 	public override string ToString()
 	{
 		return $"{Meta.AssetId} - {FullPath}";

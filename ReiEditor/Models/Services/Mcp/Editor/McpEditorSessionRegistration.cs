@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,9 +9,12 @@ using Newtonsoft.Json.Linq;
 using ReiEditor.Mcp.Contracts;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Components;
@@ -37,10 +41,14 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IDisposable _sessionLease;
     private readonly IEntityManagementService _entityManagementService;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
+    private readonly ISerializedPropertiesService _serializedPropertiesService;
     private readonly IAssetsService _assetsService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IShaderRegistry _shaderRegistry;
     private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
+    private readonly IDataAssetService _dataAssetService;
+    private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
+    private readonly IResourceService _resourceService;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -50,10 +58,14 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IEntityRenameCommand entityRenameCommand,
         IEntityManagementService entityManagementService,
         IBehaviourComponentsService behaviourComponentsService,
+        ISerializedPropertiesService serializedPropertiesService,
         IAssetsService assetsService,
         IAssetRegistry assetRegistry,
         IShaderRegistry shaderRegistry,
         IAssetRuntimeSyncService assetRuntimeSyncService,
+        IDataAssetService dataAssetService,
+        IDataAssetTypeRegistry dataAssetTypeRegistry,
+        IResourceService resourceService,
         IMcpEditorAutomationService automationService)
     {
         _activeProjectService = activeProjectService;
@@ -62,10 +74,14 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _entityRenameCommand = entityRenameCommand;
         _entityManagementService = entityManagementService;
         _behaviourComponentsService = behaviourComponentsService;
+        _serializedPropertiesService = serializedPropertiesService;
         _assetsService = assetsService;
         _assetRegistry = assetRegistry;
         _shaderRegistry = shaderRegistry;
         _assetRuntimeSyncService = assetRuntimeSyncService;
+        _dataAssetService = dataAssetService;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
+        _resourceService = resourceService;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
@@ -186,9 +202,10 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         var property = behaviour.GetProperty(propertyName);
         var editorValue = McpValueConverter.ToEditorValue(value);
         ValidatePropertyValue(property, editorValue);
+        ValidateAssetReferenceValue(property, editorValue);
 
         var before = McpValueConverter.ToContractValue(property.Value);
-        _behaviourComponentsService.ApplySerializedValue(property, editorValue);
+        _serializedPropertiesService.ApplyValue(property, editorValue);
         var after = McpValueConverter.ToContractValue(property.Value);
         var changed = !ContractValuesEqual(before, after);
         var message = changed
@@ -242,7 +259,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         var property = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, currentValue);
         var editorValue = McpValueConverter.ToEditorValue(value);
         ValidatePropertyValue(property, editorValue);
-        _behaviourComponentsService.ApplySerializedValue(property, editorValue);
+        _serializedPropertiesService.ApplyValue(property, editorValue);
 
         var normalizedValue = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
         ValidateMaterialTextureReference(uniform.Type, property, normalizedValue);
@@ -270,6 +287,110 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
             new ReiPropertyDetails(propertyName, uniform.Type.ToString(), uniform.SourceType, after),
             runtimeSynced,
             message);
+    }
+
+    public ReiDataAssetTypeList ListDataAssetTypes()
+    {
+        var types = _dataAssetTypeRegistry.GetDataAssetTypes()
+            .OrderBy(x => x.ObjectName, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new ReiDataAssetTypeDetails(
+                x.TypeId,
+                x.ObjectName,
+                x.Namespace,
+                x.SerializedProperties
+                    .Where(p => !p.Value.HideInEditor)
+                    .OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(p => new ReiPropertySchema(p.Key, p.Value.Type.ToString(), p.Value.SourceType))
+                    .ToList()))
+            .ToList();
+        return new ReiDataAssetTypeList(types);
+    }
+
+    public ReiDataAssetList ListDataAssets()
+    {
+        var assets = new List<ReiDataAssetSummary>();
+        foreach (var assetInfo in _assetRegistry.GetAllAssets().OfType<DataAssetInfo>())
+        {
+            var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(assetInfo.DataAssetTypeId);
+            if (typeInfo == null) continue;
+
+            assets.Add(new ReiDataAssetSummary(
+                assetInfo.Meta.AssetId,
+                assetInfo.DataAssetTypeId,
+                typeInfo.ObjectName,
+                GetDataAssetProjectPath(assetInfo.FullPath)));
+        }
+
+        return new ReiDataAssetList(assets
+            .OrderBy(x => x.ProjectPath, StringComparer.OrdinalIgnoreCase)
+            .ToList());
+    }
+
+    public async Task<ReiDataAssetCreationResult> CreateDataAssetAsync(string typeName, string projectPath)
+    {
+        var typeInfo = GetRequiredDataAssetType(typeName);
+        var normalizedProjectPath = ValidateDataAssetProjectPath(projectPath);
+        var fullPath = _resourceService.GetProjectPath(normalizedProjectPath);
+        if (File.Exists(fullPath))
+        {
+            throw new ReiMcpOperationException("asset_already_exists", $"Asset already exists at {normalizedProjectPath}.");
+        }
+
+        var asset = await _dataAssetService.Create(typeInfo.TypeId, normalizedProjectPath) ??
+                    throw new ReiMcpOperationException(
+                        "data_asset_create_failed",
+                        $"Editor could not create {typeInfo.ObjectName} at {normalizedProjectPath}.");
+        var details = CreateDataAssetDetails(asset, typeInfo);
+        return new ReiDataAssetCreationResult(true, details, "DataAsset created. Save project after further edits.");
+    }
+
+    public async Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId)
+    {
+        assetId = ValidateAssetId(assetId);
+        var asset = await _dataAssetService.Load(assetId) ??
+                    throw new ReiMcpOperationException("data_asset_not_found", $"DataAsset {assetId} does not exist or has an unknown type.");
+        var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(asset.DataAssetTypeId) ??
+                       throw new ReiMcpOperationException("data_asset_type_not_found", $"DataAsset {assetId} has unknown type id {asset.DataAssetTypeId}.");
+        return CreateDataAssetDetails(asset, typeInfo);
+    }
+
+    public async Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value)
+    {
+        assetId = ValidateAssetId(assetId);
+        var asset = await _dataAssetService.Load(assetId) ??
+                    throw new ReiMcpOperationException("data_asset_load_failed", $"Editor could not load DataAsset {assetId}.");
+
+        propertyName = ValidateName(propertyName, MAX_PROPERTY_NAME_LENGTH, "DataAsset property", "invalid_property_name");
+        if (!asset.HasProperty(propertyName))
+        {
+            throw new ReiMcpOperationException("property_not_found", $"DataAsset {assetId} does not have property {propertyName}.");
+        }
+
+        var property = asset.GetProperty(propertyName);
+        var editorValue = McpValueConverter.ToEditorValue(value);
+        ValidatePropertyValue(property, editorValue);
+        ValidateAssetReferenceValue(property, editorValue);
+
+        var before = McpValueConverter.ToContractValue(property.Value);
+        if (!_dataAssetService.TrySetProperty(asset, propertyName, editorValue, out var runtimeSynced))
+        {
+            throw new ReiMcpOperationException("data_asset_set_failed", $"Editor could not set property {propertyName}.");
+        }
+
+        var after = McpValueConverter.ToContractValue(property.Value);
+        var changed = !ContractValuesEqual(before, after);
+        var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(asset.DataAssetTypeId)!;
+        var details = CreateDataAssetDetails(asset, typeInfo);
+        var isPlayMode = string.Equals(_automationService.GetEngineInfo().Mode, "PlayMode", StringComparison.Ordinal);
+        var message = changed
+            ? isPlayMode
+                ? "DataAsset property changed for current play session. Stop play mode, set value again, then save to persist it."
+                : runtimeSynced
+                    ? "DataAsset property changed and synchronized. Save project to persist change."
+                    : "DataAsset property changed. Runtime sync unavailable; save and reload will apply it."
+            : "DataAsset property already has requested value.";
+
+        return new ReiDataAssetPropertyMutationResult(changed, details, CreatePropertyDetails(property), runtimeSynced, message);
     }
 
     public Task<ReiProjectSaveResult> SaveProjectAsync() => _automationService.SaveProjectAsync();
@@ -365,6 +486,126 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         };
     }
 
+    private DataAssetTypeInfo GetRequiredDataAssetType(string typeName)
+    {
+        typeName = ValidateName(typeName, MAX_BEHAVIOUR_NAME_LENGTH, "DataAsset type", "invalid_data_asset_type");
+        var matches = _dataAssetTypeRegistry.GetDataAssetTypes()
+            .Where(x => string.Equals(x.ObjectName, typeName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return matches.Count switch
+        {
+            1 => matches[0],
+            0 => throw new ReiMcpOperationException(
+                "data_asset_type_not_found",
+                $"DataAsset type {typeName} is not registered. Add DATA_ASSET_BODY and refresh assets first."),
+            _ => throw new ReiMcpOperationException(
+                "ambiguous_data_asset_type",
+                $"More than one registered DataAsset type is named {typeName}.")
+        };
+    }
+
+    private ReiDataAssetDetails CreateDataAssetDetails(DataAsset asset, DataAssetTypeInfo typeInfo)
+    {
+        if (!_assetRegistry.TryGetById(asset.AssetId, out var assetInfo))
+        {
+            throw new ReiMcpOperationException("data_asset_not_registered", $"DataAsset {asset.AssetId} is not registered.");
+        }
+
+        var properties = asset.Properties.Values
+            .Where(property =>
+                !typeInfo.SerializedProperties.TryGetValue(property.Name, out var schema) ||
+                !schema.HideInEditor)
+            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(CreatePropertyDetails)
+            .ToList();
+        return new ReiDataAssetDetails(
+            asset.AssetId,
+            asset.DataAssetTypeId,
+            typeInfo.ObjectName,
+            GetDataAssetProjectPath(assetInfo.FullPath),
+            properties);
+    }
+
+    private string GetDataAssetProjectPath(string fullPath)
+    {
+        return Path.GetRelativePath(_resourceService.GetProjectPath(), fullPath)
+            .Replace(Path.DirectorySeparatorChar, '/');
+    }
+
+    private string ValidateDataAssetProjectPath(string projectPath)
+    {
+        if (string.IsNullOrWhiteSpace(projectPath))
+        {
+            throw new ReiMcpOperationException("invalid_asset_path", "DataAsset project path must not be empty.");
+        }
+
+        projectPath = projectPath.Trim();
+        if (Path.IsPathRooted(projectPath))
+        {
+            throw new ReiMcpOperationException("invalid_asset_path", "DataAsset project path must be relative to Project directory.");
+        }
+
+        if (!Path.GetExtension(projectPath).Equals(FileExtensions.ASSET, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ReiMcpOperationException("invalid_asset_path", $"DataAsset project path must end with {FileExtensions.ASSET}.");
+        }
+
+        var root = _resourceService.GetProjectPath();
+        var fullPath = Path.GetFullPath(Path.Combine(root, projectPath));
+        var relativePath = Path.GetRelativePath(root, fullPath);
+        if (relativePath.Equals("..", StringComparison.Ordinal) ||
+            relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            throw new ReiMcpOperationException("invalid_asset_path", "DataAsset project path must stay inside Project directory.");
+        }
+
+        return relativePath;
+    }
+
+    private void ValidateAssetReferenceValue(SerializedProperty property, object? value)
+    {
+        if (property.Type != SerializedTypeEnum.Custom ||
+            SerializedTypeNameParser.GetBaseTypeName(property.SourceType) != "AssetRef")
+        {
+            return;
+        }
+
+        if (value is not JObject objectValue)
+        {
+            throw CreateInvalidPropertyValueException(property, "Expected AssetRef object with string Id.");
+        }
+
+        var assetId = objectValue["Id"]?.Value<string>();
+        if (assetId == null)
+        {
+            throw CreateInvalidPropertyValueException(property, "Expected AssetRef object with string Id.");
+        }
+
+        if (assetId.Length == 0) return;
+
+        var referencedTypeName = property.TemplateTypeName ?? SourceFilesUtility.GetTemplateTypeName(property.SourceType);
+        if (referencedTypeName == "Material")
+        {
+            if (_assetRegistry.TryGetByIdAndExtensions(assetId, FileExtensions.MaterialAssetExtensions, out _)) return;
+            throw CreateInvalidPropertyValueException(property, $"Material asset {assetId} does not exist.");
+        }
+
+        var dataAssetType = referencedTypeName == null
+            ? null
+            : _dataAssetTypeRegistry.GetDataAssetType(referencedTypeName);
+        if (dataAssetType == null) return;
+        if (_dataAssetService.TryGetDataAssetTypeId(assetId, out var actualTypeId) &&
+            actualTypeId == dataAssetType.TypeId)
+        {
+            return;
+        }
+
+        throw CreateInvalidPropertyValueException(
+            property,
+            $"Asset {assetId} is not a {dataAssetType.ObjectName} DataAsset.");
+    }
+
     private static string ValidateName(string value, int maximumLength, string label, string errorCode)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -385,7 +626,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     {
         if (string.IsNullOrWhiteSpace(assetId))
         {
-            throw new ReiMcpOperationException("invalid_asset_id", "Material asset id must not be empty.");
+            throw new ReiMcpOperationException("invalid_asset_id", "Asset id must not be empty.");
         }
 
         assetId = assetId.Trim();
@@ -393,7 +634,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         {
             throw new ReiMcpOperationException(
                 "invalid_asset_id",
-                "Material asset id must not exceed " + MAX_ASSET_ID_LENGTH + " characters.");
+                "Asset id must not exceed " + MAX_ASSET_ID_LENGTH + " characters.");
         }
 
         return assetId;

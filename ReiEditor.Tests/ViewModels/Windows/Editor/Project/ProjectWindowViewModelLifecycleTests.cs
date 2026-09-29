@@ -80,6 +80,8 @@ public sealed class ProjectWindowViewModelLifecycleTests : IDisposable
             null!,
             null!,
             null!,
+            null!,
+            null!,
             new TestFileExplorerProvider(),
             new TestAssetSearchService(),
             refresh,

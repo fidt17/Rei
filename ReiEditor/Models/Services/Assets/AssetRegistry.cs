@@ -196,7 +196,7 @@ public class AssetRegistry : IAssetRegistry
 
                 var relative = Path.GetRelativePath(oldFullPath, assetFullPath);
                 var updatedPath = Path.Combine(newFullPath, relative);
-                updated.Add(new AssetInfo(asset.Meta, updatedPath));
+                updated.Add(asset.WithPath(updatedPath));
                 changed = true;
                 continue;
             }
@@ -207,7 +207,7 @@ public class AssetRegistry : IAssetRegistry
                 continue;
             }
 
-            updated.Add(new AssetInfo(asset.Meta, newFullPath));
+            updated.Add(asset.WithPath(newFullPath));
             changed = true;
         }
 

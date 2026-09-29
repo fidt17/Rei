@@ -8,6 +8,7 @@ using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets.Migrations;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.FileSystem;
@@ -37,6 +38,7 @@ public class AssetImporter : IAssetImporter
     private readonly IShaderRegistry _shaderRegistry;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourFileUtility _behaviourFileUtility;
+    private readonly SourceFilesUtility _sourceFilesUtility;
     private readonly ISerializer _serializer;
     private readonly IAssetSerializerMigrationService _assetSerializerMigrationService;
     private readonly IEditorProceduresService _editorProceduresService;
@@ -51,6 +53,7 @@ public class AssetImporter : IAssetImporter
         IAssetRegistry assetRegistry, 
         IBehaviourComponentsService behaviourComponentsService, 
         IBehaviourFileUtility behaviourFileUtility,
+        SourceFilesUtility sourceFilesUtility,
         ISerializer serializer, 
         IAssetSerializerMigrationService assetSerializerMigrationService,
         IAssetsService assetsService,
@@ -65,6 +68,7 @@ public class AssetImporter : IAssetImporter
         _assetRegistry = assetRegistry;
         _behaviourComponentsService = behaviourComponentsService;
         _behaviourFileUtility = behaviourFileUtility;
+        _sourceFilesUtility = sourceFilesUtility;
         _serializer = serializer;
         _assetSerializerMigrationService = assetSerializerMigrationService;
         _assetsService = assetsService;
@@ -140,7 +144,7 @@ public class AssetImporter : IAssetImporter
                         await _metaFilesService.CreateMetaFile(meta, assetPath);
                     }
 
-                    importedAssets.Add(new AssetInfo(meta, assetPath));
+                    importedAssets.Add(await CreateAssetInfo(meta, assetPath));
                     await _assetSerializerMigrationService.TryMigrateAssetFile(assetPath);
                 }
                 catch (Exception e)
@@ -156,16 +160,20 @@ public class AssetImporter : IAssetImporter
                 await ImportScenes();
             }
 
-            bool isAnyBehaviour = false;
+            bool requiresScriptRegistryRefresh = false;
             foreach (var targetFile in targetFiles)
             {
-                if (!await _behaviourFileUtility.IsBehaviourFile(targetFile)) continue;
-                
-                isAnyBehaviour = true;
+                if (!await _behaviourFileUtility.IsBehaviourFile(targetFile) &&
+                    !await _sourceFilesUtility.IsDataAssetFileAsync(targetFile))
+                {
+                    continue;
+                }
+
+                requiresScriptRegistryRefresh = true;
                 break;
             }
 
-            if (isAnyBehaviour)
+            if (requiresScriptRegistryRefresh)
             {
                 await _behaviourRegistry.RefreshBehaviours();
             }
@@ -231,14 +239,14 @@ public class AssetImporter : IAssetImporter
                 {
                     var meta = new AssetMeta(ResolveAssetId(assetPath));
                     await _metaFilesService.CreateMetaFile(meta, assetPath);
-                    importedAssets.Add(new AssetInfo(meta, assetPath));
+                    importedAssets.Add(await CreateAssetInfo(meta, assetPath));
                 }
                 else
                 {
                     var meta = await _resourceService.TryLoad<AssetMeta>(metaFilePath);
                     if (meta == null) throw new Exception($"Tried to load invalid meta at {metaFilePath}");
                     meta = await EnsureEngineResourceAssetId(meta, assetPath);
-                    importedAssets.Add(new AssetInfo(meta, assetPath));
+                    importedAssets.Add(await CreateAssetInfo(meta, assetPath));
                 }
                 
                 await _assetSerializerMigrationService.TryMigrateAssetFile(assetPath);
@@ -250,6 +258,14 @@ public class AssetImporter : IAssetImporter
         }
 
         return importedAssets;
+    }
+
+    private static async Task<AssetInfo> CreateAssetInfo(AssetMeta meta, string assetPath)
+    {
+        var dataAssetTypeId = await DataAssetFileUtility.ReadTypeIdAsync(assetPath);
+        return dataAssetTypeId.HasValue
+            ? new DataAssetInfo(meta, assetPath, dataAssetTypeId.Value)
+            : new AssetInfo(meta, assetPath);
     }
 
     private string ResolveAssetId(string assetPath)

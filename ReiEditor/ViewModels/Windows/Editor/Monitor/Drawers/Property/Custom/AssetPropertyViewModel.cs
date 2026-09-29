@@ -1,8 +1,11 @@
 using System;
+using System.IO;
+using System.Linq;
 using Avalonia.Threading;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
@@ -27,7 +30,8 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         IAssetSearchService assetSearchService,
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
-        IProjectAssetFocusService projectAssetFocusService) : base(property)
+        IProjectAssetFocusService projectAssetFocusService,
+        IDataAssetTypeRegistry? dataAssetTypeRegistry = null) : base(property)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
 
@@ -35,11 +39,27 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
 
         var templateTypeName = property.TemplateTypeName;
         var assetType = assetTypeMapper.GetAssetTypeForTemplateType(templateTypeName);
-        AssetPicker = new AssetPickerViewModel(
-            assetSearchService,
-            assetRegistry,
-            assetTypeMapper.GetExtensionsForAssetType(assetType),
-            (assetId, _) => SelectAsset(assetId));
+        var dataAssetType = templateTypeName == null
+            ? null
+            : dataAssetTypeRegistry?.GetDataAssetType(templateTypeName);
+        if (dataAssetType != null)
+        {
+            var entries = assetRegistry.GetAllAssets().OfType<DataAssetInfo>()
+                .Where(asset => asset.DataAssetTypeId == dataAssetType.TypeId)
+                .Select(asset => new AssetPickerViewModel.Entry(
+                    Path.GetFileNameWithoutExtension(asset.FullPath),
+                    asset.FullPath,
+                    asset.Meta.AssetId));
+            AssetPicker = new AssetPickerViewModel(assetRegistry, entries, (assetId, _) => SelectAsset(assetId));
+        }
+        else
+        {
+            AssetPicker = new AssetPickerViewModel(
+                assetSearchService,
+                assetRegistry,
+                assetTypeMapper.GetExtensionsForAssetType(assetType),
+                (assetId, _) => SelectAsset(assetId));
+        }
         AssetPicker.AssetActivatedEvent += HandleAssetActivatedEvent;
 
         var idProperty = GetNestedProperty("Id");

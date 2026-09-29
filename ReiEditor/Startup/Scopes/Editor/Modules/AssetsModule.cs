@@ -7,6 +7,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Creation;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Creation.Behaviour;
 using ReiEditor.Models.Services.Assets.Creation.Material;
 using ReiEditor.Models.Services.Assets.Creation.Shader;
@@ -34,6 +35,11 @@ public class AssetsModule : Module
         b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();
         b.RegisterSingleton<AssetSearchService>().As<IAssetSearchService>();
         b.RegisterSingleton<AssetRuntimeSyncService>().As<IAssetRuntimeSyncService>();
+        b.RegisterSingleton<DataAssetService>().As<IDataAssetService>();
+        b.RegisterSingleton<DataAssetTypeRegistry>().As<IDataAssetTypeRegistry>();
+        b.RegisterSingleton<DataAssetSchemaService>()
+            .As<IDataAssetSchemaService>()
+            .As<IAssetPostLoadProcessor>();
         b.RegisterSingleton<ShaderUniformParser>().As<IShaderUniformParser>();
         b.RegisterSingleton<ShaderRegistry>().As<IShaderRegistry>();
 
@@ -51,6 +57,7 @@ public class AssetsModule : Module
         b.RegisterSingleton<BehaviourRegistry>().As<IBehaviourRegistry>();
         b.RegisterSingleton<BehaviourFileUtility>().As<IBehaviourFileUtility>();
         b.RegisterSingleton<SourceFilesUtility>();
+        b.RegisterSingleton<SerializedPropertiesService>().As<ISerializedPropertiesService>();
         b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
 
         b.RegisterSingleton<ProjectAssetFocusService>().As<IProjectAssetFocusService>();
@@ -69,5 +76,6 @@ public class AssetsModule : Module
         b.RegisterSingleton<MigrateMaterial_0_1>().As<IAssetSerializerMigration>();
         b.RegisterSingleton<MigrateShader_0_1>().As<IAssetSerializerMigration>();
         b.RegisterSingleton<MigrateBuildScenesConfiguration_0_1>().As<IAssetSerializerMigration>();
+        b.RegisterSingleton<MigrateDataAsset_0_1>().As<IAssetSerializerMigration>();
     }
 }

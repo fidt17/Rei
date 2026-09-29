@@ -65,4 +65,24 @@ namespace rei::assets
 
         return loadedCount;
     }
+
+    IAssetDataAccessor* AssetManager::FindLoadedAssetDataAccessor(const std::string& id) const
+    {
+        const auto record = _registry.FindRecord(id);
+        if (record == nullptr || record->State != AssetState::Loaded || record->Value == nullptr) return nullptr;
+
+        return record->DataAccessor.get();
+    }
+
+    bool AssetManager::TryGetLoadedAssetData(const std::string& id, nlohmann::json& data) const
+    {
+        const auto accessor = FindLoadedAssetDataAccessor(id);
+        return accessor != nullptr && accessor->TryGetData(data);
+    }
+
+    bool AssetManager::TrySetLoadedAssetData(const std::string& id, const nlohmann::json& data)
+    {
+        const auto accessor = FindLoadedAssetDataAccessor(id);
+        return accessor != nullptr && accessor->TrySetData(data);
+    }
 }

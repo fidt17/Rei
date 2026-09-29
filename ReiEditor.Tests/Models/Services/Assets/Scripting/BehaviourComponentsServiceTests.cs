@@ -50,7 +50,7 @@ public sealed class BehaviourComponentsServiceTests
         public IEnumerable<SerializableObjectInfo> GetObjects() => Objects;
 
         /// <summary>Completes without discovery.</summary>
-        public Task Refresh() => Task.CompletedTask;
+        public void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums) => throw new NotSupportedException();
 
         /// <summary>Finds object definition by normalized source type.</summary>
         public SerializableObjectInfo? GetObject(string objectName)
@@ -297,7 +297,7 @@ public sealed class BehaviourComponentsServiceTests
     /// <summary>Creates service with inspectable error log.</summary>
     private static BehaviourComponentsService CreateService(TestBehaviourRegistry behaviours, TestSerializableObjectsRegistry objects)
     {
-        return new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), behaviours, objects);
+        return new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), behaviours, new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>()));
     }
 
     /// <summary>Creates behaviour metadata for component scenarios.</summary>

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -34,6 +35,7 @@ public class CollectionPropertyViewModel : BaseViewModel
 
     private readonly SerializedProperty _property;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly IDataAssetTypeRegistry? _dataAssetTypeRegistry;
     private readonly IAssetSearchService _assetSearchService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IAssetTypeMapper _assetTypeMapper;
@@ -59,12 +61,14 @@ public class CollectionPropertyViewModel : BaseViewModel
         IBehaviourRegistry behaviourRegistry,
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
-        ISelectionService selectionService)
+        ISelectionService selectionService,
+        IDataAssetTypeRegistry? dataAssetTypeRegistry)
     {
         if (property.Type != SerializedTypeEnum.Collection) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Collection}. Actual {property.Type}");
 
         _property = property;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _assetSearchService = assetSearchService;
         _assetRegistry = assetRegistry;
         _assetTypeMapper = assetTypeMapper;
@@ -132,7 +136,8 @@ public class CollectionPropertyViewModel : BaseViewModel
                 _behaviourRegistry,
                 _projectAssetFocusService,
                 _sceneManagementService,
-                _selectionService);
+                _selectionService,
+                _dataAssetTypeRegistry);
 
             Value.Add(new CollectionItemViewModel(item, itemViewModel, () => RemoveItem(item)));
         }

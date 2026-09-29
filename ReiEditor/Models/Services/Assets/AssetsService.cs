@@ -30,6 +30,7 @@ public class AssetsService : IAssetsService
     private readonly IActiveProjectService _activeProject;
     private readonly IEditorProceduresService _editorProceduresService;
     private readonly IAssetRegistry _assetRegistry;
+    private readonly IReadOnlyList<IAssetPostLoadProcessor> _assetPostLoadProcessors;
 
     public AssetsService(
         ILogger<AssetsService> logger,
@@ -38,7 +39,8 @@ public class AssetsService : IAssetsService
         IAssetSerializerMigrationService assetSerializerMigrationService,
         IActiveProjectService activeProject,
         IEditorProceduresService editorProceduresService,
-        IAssetRegistry assetRegistry)
+        IAssetRegistry assetRegistry,
+        IEnumerable<IAssetPostLoadProcessor> assetPostLoadProcessors)
     {
         _logger = logger;
         _resourceService = resourceService;
@@ -47,11 +49,16 @@ public class AssetsService : IAssetsService
         _activeProject = activeProject;
         _editorProceduresService = editorProceduresService;
         _assetRegistry = assetRegistry;
+        _assetPostLoadProcessors = assetPostLoadProcessors.ToArray();
     }
 
     public async Task<T?> Load<T>(string assetId) where T : Asset
     {
-        if (_assetRegistry.TryGetLoadedAsset(assetId, out var loadedAsset)) return (T?) loadedAsset;
+        if (_assetRegistry.TryGetLoadedAsset(assetId, out var loadedAsset))
+        {
+            foreach (var processor in _assetPostLoadProcessors) processor.Process(loadedAsset);
+            return (T?) loadedAsset;
+        }
         if (!_assetRegistry.TryGetById(assetId, out var assetInfo)) return null;
 
         return await Load<T>(assetInfo);
@@ -83,6 +90,11 @@ public class AssetsService : IAssetsService
             var sourceJson = await File.ReadAllTextAsync(assetInfo.FullPath);
             var migrationResult = _assetSerializerMigrationService.MigrateAssetJson(typeof(T), sourceJson);
             asset = _serializer.Deserialize<T>(migrationResult.Json);
+            if (asset != null)
+            {
+                asset.SetAssetInfo(assetInfo);
+                foreach (var processor in _assetPostLoadProcessors) processor.Process(asset);
+            }
 
             if (migrationResult.IsUpdated)
             {
@@ -125,6 +137,11 @@ public class AssetsService : IAssetsService
                 var jsonData = await File.ReadAllTextAsync(assetInfo.FullPath);
                 var migrationResult = _assetSerializerMigrationService.MigrateAssetJson(loadedAsset.GetType(), jsonData);
                 JsonConvert.PopulateObject(migrationResult.Json, loadedAsset);
+
+                foreach (var processor in _assetPostLoadProcessors)
+                {
+                    processor.Process(loadedAsset);
+                }
 
                 if (migrationResult.IsUpdated)
                 {

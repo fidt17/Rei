@@ -1,6 +1,8 @@
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.ViewModels.Windows.Editor.Monitor;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
 
@@ -125,9 +127,9 @@ public sealed class MonitorDrawerUtilsTests
     }
 
     private static BaseMonitorDrawer? TestCreateDrawer(ISelectable? selection, out ReiEditor.Models.Services.Entities.GameEntity? entity)
-        => MonitorDrawerUtils.CreateDrawer(selection, null!, null!, null!, null!, null!, null!, null!, null!, out entity);
+        => MonitorDrawerUtils.CreateDrawer(selection, null!, null!, null!, null!, null!, new AssetRegistry(new TestLogger<AssetRegistry>()), null!, null!, null!, out entity);
 
     private static MonitorWindowViewModel TestCreateMonitor(TestSelectionService selection, TestEditorRefreshService refresh)
-        => new(selection, refresh, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        => new(selection, refresh, null!, null!, null!, null!, null!, new AssetRegistry(new TestLogger<AssetRegistry>()), null!, null!, null!, null!);
 
 }

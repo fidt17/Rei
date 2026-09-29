@@ -31,6 +31,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly IEditorRefreshService _editorRefreshService;
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
+    private readonly IFactory<DataAssetMonitorDrawerViewModel> _dataAssetMonitorFactory;
     private readonly IAssetsService _assetsService;
     private readonly IAssetSearchService _assetSearchService;
     private readonly IShaderRegistry _shaderRegistry;
@@ -51,6 +52,7 @@ public class MonitorWindowViewModel : BaseViewModel
         ISelectionService selectionService,
         IEditorRefreshService editorRefreshService,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
+        IFactory<DataAssetMonitorDrawerViewModel> dataAssetMonitorFactory,
         IAssetsService assetsService,
         IAssetSearchService assetSearchService,
         IShaderRegistry shaderRegistry,
@@ -63,6 +65,7 @@ public class MonitorWindowViewModel : BaseViewModel
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
+        _dataAssetMonitorFactory = dataAssetMonitorFactory;
         _assetsService = assetsService;
         _assetSearchService = assetSearchService;
         _shaderRegistry = shaderRegistry;
@@ -109,6 +112,7 @@ public class MonitorWindowViewModel : BaseViewModel
         Drawer = MonitorDrawerUtils.CreateDrawer(
             obj,
             _entityMonitorFactory,
+            _dataAssetMonitorFactory,
             _assetsService,
             _assetSearchService,
             _shaderRegistry,

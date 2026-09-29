@@ -89,7 +89,7 @@ public sealed class AssetImporterTests
             var serializer = new JsonSerializer();
             var meta = new MetaFilesService(Resources, serializer, new TestLogger<MetaFilesService>());
             var creator = new AssetCreator(Resources, serializer, new TestLogger<AssetCreator>(), Registry, meta);
-            Importer = new(Logger, Resources, creator, meta, Behaviours, Shaders, Registry, Components, BehaviourFiles, serializer, Migrations, Assets, Procedures);
+            Importer = new(Logger, Resources, creator, meta, Behaviours, Shaders, Registry, Components, BehaviourFiles, new SourceFilesUtility(Resources, null!, new TestLogger<SourceFilesUtility>()), serializer, Migrations, Assets, Procedures);
         }
 
         public async Task<string> File(string name, string data = "asset")

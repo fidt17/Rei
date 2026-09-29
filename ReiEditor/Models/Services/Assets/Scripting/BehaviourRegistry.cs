@@ -8,6 +8,7 @@ using ReiEditor.Models.ProjectManagement.Template;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -39,6 +40,7 @@ public class BehaviourRegistry : IBehaviourRegistry
     private readonly BehaviourRegistrySourceGenerator _behaviourRegistrySourceGenerator;
     private readonly ILogger<BehaviourRegistry> _logger;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
     private readonly ISolutionGenerator _solutionGenerator;
     private readonly IActiveProjectService _activeProjectService;
     private readonly IResourceService _resourceService;
@@ -49,6 +51,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         IResourceService resourceService,
         ILogger<BehaviourRegistry> logger,
         ISerializableObjectsRegistry serializableObjectsRegistry,
+        IDataAssetTypeRegistry dataAssetTypeRegistry,
         ISolutionGenerator solutionGenerator,
         IActiveProjectService activeProjectService, 
         SourceFilesUtility sourceFilesUtility,
@@ -59,6 +62,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         _resourceService = resourceService;
         _logger = logger;
         _serializableObjectsRegistry = serializableObjectsRegistry;
+        _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _solutionGenerator = solutionGenerator;
         _activeProjectService = activeProjectService;
         _sourceFilesUtility = sourceFilesUtility;
@@ -97,7 +101,9 @@ public class BehaviourRegistry : IBehaviourRegistry
     {
         _logger.Log("Refreshing behaviours...");
         
-        await _serializableObjectsRegistry.Refresh();
+        var processedFiles = _sourceFilesUtility.ProcessFiles();
+        _serializableObjectsRegistry.Replace(processedFiles.SerializableObjects, processedFiles.SerializableEnums);
+        await _dataAssetTypeRegistry.RefreshAsync(processedFiles.DataAssetDeclarations);
 
         var behaviourFiles = _utility.GetAllBehaviours();
         var metaFiles = await _utility.GetAllBehaviourMetas();
@@ -111,7 +117,7 @@ public class BehaviourRegistry : IBehaviourRegistry
             refreshedBehavioursByName.Add(behaviourAssetInfo.Value.ObjectName, behaviourAssetInfo.Value);
         }
 
-        await _behaviourRegistrySourceGenerator.GenerateBehaviourRegistrySourceFile(refreshedBehaviours, _serializableObjectsRegistry.GetObjects());
+        await _behaviourRegistrySourceGenerator.GenerateBehaviourRegistrySourceFile(refreshedBehaviours, _serializableObjectsRegistry.GetObjects(), _dataAssetTypeRegistry.GetDataAssetTypes());
         await UpdateSolutionFile();
 
         lock (_registryLock)

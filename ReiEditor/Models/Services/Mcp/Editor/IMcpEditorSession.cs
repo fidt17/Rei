@@ -13,6 +13,11 @@ internal interface IMcpEditorSession
     ReiBehaviourMutationResult AddBehaviour(int entityId, string behaviourName);
     ReiBehaviourPropertyMutationResult SetBehaviourProperty(int entityId, string behaviourName, string propertyName, object? value);
     Task<ReiMaterialPropertyMutationResult> SetMaterialPropertyAsync(string materialAssetId, string propertyName, object? value);
+    ReiDataAssetTypeList ListDataAssetTypes();
+    ReiDataAssetList ListDataAssets();
+    Task<ReiDataAssetCreationResult> CreateDataAssetAsync(string typeName, string projectPath);
+    Task<ReiDataAssetDetails> GetDataAssetAsync(string assetId);
+    Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value);
     Task<ReiProjectSaveResult> SaveProjectAsync();
     ReiOperationInfo StartAssetRefresh();
     ReiOperationInfo StartBuild(ReiBuildOptions options);

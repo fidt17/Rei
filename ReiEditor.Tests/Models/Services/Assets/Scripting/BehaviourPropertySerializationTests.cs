@@ -26,7 +26,7 @@ public sealed class BehaviourPropertySerializationTests
         public bool TryGetById(int id, [NotNullWhen(true)] out BehaviourAssetInfo? behaviour) => Definitions.TryGetValue(id, out behaviour);
         public int AllocateBehaviourId() => throw new NotSupportedException();
         public Task RefreshBehaviours() => throw new NotSupportedException();
-        public Task Refresh() => throw new NotSupportedException();
+        public void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums) => throw new NotSupportedException();
         public IEnumerable<SerializableObjectInfo> GetObjects() => Objects.Values;
         public SerializableObjectInfo? GetObject(string name) => Objects.GetValueOrDefault(SerializedTypeNameParser.GetBaseTypeName(name));
         public SerializableEnum? GetEnum(string name) => Enums.GetValueOrDefault(name);
@@ -63,8 +63,8 @@ public sealed class BehaviourPropertySerializationTests
     {
         var definitions = new TestDefinitions();
         definitions.DefineBehaviour("Mover", new() { ["State"] = Data(SerializedTypeEnum.Enum, "Missing") });
-        var logger = new TestLogger<BehaviourComponentsService>();
-        var service = new BehaviourComponentsService(logger, definitions, definitions);
+        var logger = new TestLogger<SerializedPropertiesService>();
+        var service = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), definitions, new SerializedPropertiesService(definitions, logger));
         var entity = new GameEntity(10, "Entity");
 
         Assert.True(service.AddComponent(entity, 1));
@@ -245,24 +245,24 @@ public sealed class BehaviourPropertySerializationTests
     [Fact]
     public void ApplyCollectionReusesItemsAndPublishesStructuralChanges()
     {
-        var service = CreateService(new TestDefinitions());
+        var service = CreatePropertiesService(new TestDefinitions());
         var property = Collection(new List<SerializedProperty>(), "int");
         var changes = 0;
         property.ValueChangedEvent += _ => changes++;
-        service.ApplySerializedValue(property, new JArray(2, 4));
+        service.ApplyValue(property, new JArray(2, 4));
         var list = Items(property);
         var first = list[0];
         var second = list[1];
         Assert.Equal(1, changes);
 
-        service.ApplySerializedValue(property, new JArray(6, 8));
+        service.ApplyValue(property, new JArray(6, 8));
         Assert.Same(list, Items(property));
         Assert.Same(first, list[0]);
         Assert.Same(second, list[1]);
         Assert.Equal(new object?[] { 6, 8 }, list.Select(x => x.Value));
         Assert.Equal(1, changes);
 
-        service.ApplySerializedValue(property, new JArray(10));
+        service.ApplyValue(property, new JArray(10));
         Assert.Same(first, Assert.Single(list));
         Assert.Equal(10, first.Value);
         Assert.Equal(2, changes);
@@ -270,7 +270,7 @@ public sealed class BehaviourPropertySerializationTests
         Assert.Equal(2, changes);
         first.Value = 12;
         Assert.Equal(3, changes);
-        service.ApplySerializedValue(property, new JArray());
+        service.ApplyValue(property, new JArray());
         Assert.Empty(list);
         Assert.Equal(4, changes);
         first.Value = 15;
@@ -281,14 +281,14 @@ public sealed class BehaviourPropertySerializationTests
     [Fact]
     public void ApplyCollectionReplacesIncompatibleItems()
     {
-        var service = CreateService(new TestDefinitions());
+        var service = CreatePropertiesService(new TestDefinitions());
         var property = Collection(new List<SerializedProperty>(), "int");
         var obsolete = new SerializedProperty("wrong", SerializedTypeEnum.String, "old", "string", property);
         property.Value = new List<SerializedProperty> { obsolete };
         var changes = 0;
         property.ValueChangedEvent += _ => changes++;
 
-        service.ApplySerializedValue(property, new JArray(13));
+        service.ApplyValue(property, new JArray(13));
 
         var item = Assert.Single(Items(property));
         Assert.NotSame(obsolete, item);
@@ -303,13 +303,13 @@ public sealed class BehaviourPropertySerializationTests
     [Fact]
     public void ApplyNestedCollectionPreservesExistingParentChain()
     {
-        var service = CreateService(new TestDefinitions());
+        var service = CreatePropertiesService(new TestDefinitions());
         var property = Collection(new List<SerializedProperty>(), "std::vector<int>");
-        service.ApplySerializedValue(property, JArray.Parse("[[1]]"));
+        service.ApplyValue(property, JArray.Parse("[[1]]"));
         var inner = Assert.Single(Items(property));
         var existing = Assert.Single(Items(inner));
 
-        service.ApplySerializedValue(property, JArray.Parse("[[5,7]]"));
+        service.ApplyValue(property, JArray.Parse("[[5,7]]"));
 
         Assert.Same(inner, Assert.Single(Items(property)));
         Assert.Same(existing, Items(inner)[0]);
@@ -328,7 +328,7 @@ public sealed class BehaviourPropertySerializationTests
         var item = Assert.Single(Items(property));
         var count = Children(item)["Count"];
 
-        CreateService(definitions).ApplySerializedValue(property, JArray.Parse("[{\"Count\":8,\"Unknown\":2}]"));
+        CreatePropertiesService(definitions).ApplyValue(property, JArray.Parse("[{\"Count\":8,\"Unknown\":2}]"));
 
         Assert.Same(item, Assert.Single(Items(property)));
         Assert.Same(count, Assert.Single(Children(item)).Value);
@@ -346,7 +346,7 @@ public sealed class BehaviourPropertySerializationTests
         var notifications = new List<object?>();
         parent.ValueChangedEvent += notifications.Add;
 
-        CreateService(new TestDefinitions()).ApplySerializedValue(parent, JObject.Parse("{\"Count\":11,\"Unknown\":4}"));
+        CreatePropertiesService(new TestDefinitions()).ApplyValue(parent, JObject.Parse("{\"Count\":11,\"Unknown\":4}"));
 
         Assert.Equal(11L, count.Value);
         Assert.Equal("keep", label.Value);
@@ -416,7 +416,7 @@ public sealed class BehaviourPropertySerializationTests
         var root = oldComponent.GetProperty("Options");
         if (collection)
         {
-            service.ApplySerializedValue(root, JArray.Parse("[{\"Count\":1}]"));
+            CreatePropertiesService(definitions).ApplyValue(root, JArray.Parse("[{\"Count\":1}]"));
             service.RefreshComponents(entity);
         }
         var leaf = Children(collection ? Items(root)[0] : root)["Count"];
@@ -500,7 +500,8 @@ public sealed class BehaviourPropertySerializationTests
         Assert.Empty(changes);
     }
 
-    private static BehaviourComponentsService CreateService(TestDefinitions definitions) => new(new TestLogger<BehaviourComponentsService>(), definitions, definitions);
+    private static BehaviourComponentsService CreateService(TestDefinitions definitions) => new(new TestLogger<BehaviourComponentsService>(), definitions, CreatePropertiesService(definitions));
+    private static SerializedPropertiesService CreatePropertiesService(TestDefinitions definitions) => new(definitions, new TestLogger<SerializedPropertiesService>());
     private static SerializableObjectInfo.SerializedPropertyData Data(SerializedTypeEnum type, string source, string? value = null)
         => new(type, source, null, SerializedTypeEnum.Invalid, null, null, value, false);
     private static Dictionary<string, SerializedProperty> Children(SerializedProperty property) => Assert.IsType<Dictionary<string, SerializedProperty>>(property.Value);

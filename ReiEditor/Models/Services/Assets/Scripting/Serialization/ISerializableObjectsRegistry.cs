@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace ReiEditor.Models.Services.Assets.Scripting.Serialization;
 
 public interface ISerializableObjectsRegistry
 {
     IEnumerable<SerializableObjectInfo> GetObjects();
-    Task Refresh();
+    void Replace(IEnumerable<SerializableObjectInfo> serializableObjects, IEnumerable<SerializableEnum> serializableEnums);
     SerializableObjectInfo? GetObject(string objectName);
     SerializableEnum? GetEnum(string enumName);
 }
