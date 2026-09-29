@@ -246,7 +246,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
                 "Material asset " + materialAssetId + " does not exist in current project.");
         }
 
-        var material = await _assetsService.Load<Material>(assetInfo) ??
+        var material = await _assetsService.Load<Material>(materialAssetId) ??
                        throw new ReiMcpOperationException(
                            "material_load_failed",
                            "Editor could not load material asset " + materialAssetId + ".");

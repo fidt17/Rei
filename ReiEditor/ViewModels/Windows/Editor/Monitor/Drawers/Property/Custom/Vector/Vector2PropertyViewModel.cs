@@ -49,33 +49,11 @@ public class Vector2PropertyViewModel : BaseCustomPropertyViewModel
 
     public Vector2PropertyViewModel() { }
 
-    public Vector2PropertyViewModel(SerializedProperty property) : base(property)
-    {
-        GetNestedProperty("x")!.ValueChangedEvent += HandleXChanged;
-        GetNestedProperty("y")!.ValueChangedEvent += HandleYChanged;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-
-        GetNestedProperty("x")!.ValueChangedEvent -= HandleXChanged;
-        GetNestedProperty("y")!.ValueChangedEvent -= HandleYChanged;
-    }
+    public Vector2PropertyViewModel(SerializedProperty property) : base(property) { }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
         SetField(ref _x, Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0));
         SetField(ref _y, Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0));
-    }
-
-    private void HandleXChanged(object? obj)
-    {
-        X = Convert.ToSingle(obj);
-    }
-
-    private void HandleYChanged(object? obj)
-    {
-        Y = Convert.ToSingle(obj);
     }
 }

@@ -51,6 +51,36 @@ public sealed class ProjectAssetOperationsHandlerTests : IDisposable
     /// </summary>
     public void Dispose() => _temporaryDirectory.Dispose();
 
+    [Theory]
+    [InlineData(".")]
+    [InlineData("Nested")]
+    [InlineData("Nested/../Other")]
+    public async Task MoveAcceptsProjectRootAndNormalizedDescendants(string relativeDestination)
+    {
+        var root = _temporaryDirectory.GetPath("Project");
+        var target = new ProjectAssetCommandTarget(Path.Combine(root, "Source", "file.asset"), false);
+        var destination = Path.Combine(root, relativeDestination);
+        var move = new TestMoveCommand();
+        var handler = new ProjectAssetOperationsHandler(null, null, null, null, move, null);
+
+        var result = await handler.MoveAsync(new[] { target }, destination, root + Path.DirectorySeparatorChar);
+
+        Assert.NotNull(result);
+        Assert.Equal(Path.GetFullPath(destination), Assert.Single(move.Calls).Destination);
+    }
+
+    [Fact]
+    public async Task MoveRejectsTraversalOutsideProject()
+    {
+        var root = _temporaryDirectory.GetPath("Project");
+        var target = new ProjectAssetCommandTarget(Path.Combine(root, "file.asset"), false);
+        var move = new TestMoveCommand();
+        var handler = new ProjectAssetOperationsHandler(null, null, null, null, move, null);
+
+        Assert.Null(await handler.MoveAsync(new[] { target }, Path.Combine(root, "..", "Project2"), root));
+        Assert.Empty(move.Calls);
+    }
+
     /// <summary>
     /// Delete and duplicate execute every target in order and report tree impact and last created primary path.
     /// </summary>

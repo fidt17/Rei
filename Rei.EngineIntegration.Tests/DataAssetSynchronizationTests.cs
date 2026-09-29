@@ -1,114 +1,102 @@
+using System.Text.Json;
+using Xunit.Abstractions;
+using static Rei.EngineIntegration.Tests.AssetAssertions;
+
 namespace Rei.EngineIntegration.Tests;
 
-public sealed class DataAssetSynchronizationTests
+[Collection(EngineCollection.NAME)]
+[Trait("Category", "EngineIntegration")]
+[Trait("Suite", "Smoke")]
+[Trait("Area", "DataAssets")]
+public sealed class DataAssetSynchronizationTests(SharedEngineFixture fixture, ITestOutputHelper output)
 {
-    private const string CONFIG_ID = "9aa55653-f7e5-4d88-bd47-d65ee602504a";
+    [EngineFact]
+    public Task SelectionAndInspectionValidateRequests() => Run(nameof(SelectionAndInspectionValidateRequests), async engine =>
+    {
+        var selected = await engine.CallAsync("rei_editor_select_asset", new() { ["assetId"] = CONFIG_ID });
+        Assert.Equal(CONFIG_ID, selected.GetProperty("assetId").GetString());
+        Assert.True(selected.GetProperty("monitorSupported").GetBoolean());
+        await engine.AssertToolErrorAsync("rei_editor_select_asset", new() { ["assetId"] = "missing" }, "asset_not_found");
+        await engine.AssertToolErrorAsync("rei_editor_get_asset_state", new() { ["assetId"] = CONFIG_ID, ["source"] = "disk" }, "invalid_source");
+        await engine.AssertToolErrorAsync("rei_editor_get_asset_state", new() { ["assetId"] = "missing", ["source"] = "runtime" }, "asset_not_found");
+        foreach (var source in new[] { "editor", "runtime" })
+            Assert.Equal("unsupported", (await engine.ReadAssetAsync("rei_error.rshader", source)).GetProperty("status").GetString());
+    });
 
     [EngineFact]
-    [Trait("Category", "EngineIntegration")]
-    public async Task EditorChangesReachNativeStateAndSurviveOnlyWhenSaved()
+    public Task ScalarsAndEnumReachNativeState() => Run(nameof(ScalarsAndEnumReachNativeState), async engine =>
     {
-        await using var engine = new EngineIntegrationHarness();
-        try
+        foreach (var (property, value) in new (string, object)[] {
+            ("_enabled", false), ("_signedValue", -123), ("_unsignedValue", 456),
+            ("_floatValue", 73.25), ("_mode", 2) })
         {
-            await engine.StartAsync();
-            var selected = await engine.CallAsync("rei_editor_select_asset", new() { ["assetId"] = CONFIG_ID });
-            Assert.Equal(CONFIG_ID, selected.GetProperty("assetId").GetString());
-            Assert.True(selected.GetProperty("monitorSupported").GetBoolean());
-            await engine.AssertToolErrorAsync("rei_editor_select_asset", new() { ["assetId"] = "missing" }, "asset_not_found");
-            await engine.AssertToolErrorAsync("rei_editor_get_asset_state",
-                new() { ["assetId"] = CONFIG_ID, ["source"] = "disk" }, "invalid_source");
-            await engine.AssertToolErrorAsync("rei_editor_get_asset_state",
-                new() { ["assetId"] = "missing", ["source"] = "runtime" }, "asset_not_found");
-
-            foreach (var source in new[] { "editor", "runtime" })
-                Assert.Equal("unsupported", (await engine.ReadAssetAsync("rei_error.rshader", source)).GetProperty("status").GetString());
-
-            // An Editor-loaded asset must not appear loaded in native state as a side effect of inspection.
-            var created = await engine.CallAsync("rei_editor_create_data_asset",
-                new() { ["typeName"] = "DataAssetTestConfig", ["projectPath"] = "DataAssets/Unloaded.asset" });
-            var unloadedId = created.GetProperty("asset").GetProperty("assetId").GetString()!;
-            Assert.Equal("loaded", (await engine.ReadAssetAsync(unloadedId, "editor")).GetProperty("status").GetString());
-            for (var i = 0; i < 2; i++)
-                Assert.Equal("unloaded", (await engine.ReadAssetAsync(unloadedId, "runtime")).GetProperty("status").GetString());
-
-            var baseline = (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values").GetProperty("_floatValue").GetDouble();
-            await engine.RunOperationAsync("rei_editor_start_playmode");
-            await SetAndCompareFloat(engine, 73.25);
-            const string alternateDependency = "b7662265-f06c-43c2-a5f0-bb861c0ab201";
-            Assert.Equal("unloaded", (await engine.ReadAssetAsync(alternateDependency, "runtime")).GetProperty("status").GetString());
-            await engine.CallAsync("rei_editor_set_data_asset_property", new()
-            {
-                ["assetId"] = CONFIG_ID, ["propertyName"] = "_dependency",
-                ["value"] = new Dictionary<string, object?> { ["Id"] = alternateDependency }
-            });
-            var nativeDependency = await engine.ReadAssetAsync(alternateDependency, "runtime");
-            Assert.Equal("loaded", nativeDependency.GetProperty("status").GetString());
-            Assert.Equal(99.25, nativeDependency.GetProperty("values").GetProperty("_value").GetDouble());
-            Assert.Equal(alternateDependency, (await engine.ReadAssetAsync(CONFIG_ID, "runtime"))
-                .GetProperty("values").GetProperty("_dependency").GetProperty("Id").GetString());
-
-            var label = new string('x', 20000) + " Привет 世界";
-            await engine.CallAsync("rei_editor_set_data_asset_property",
-                new() { ["assetId"] = CONFIG_ID, ["propertyName"] = "_label", ["value"] = label });
-            Assert.Equal(label, (await engine.ReadAssetAsync(CONFIG_ID, "runtime")).GetProperty("values").GetProperty("_label").GetString());
-            Assert.Equal(label, (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values").GetProperty("_label").GetString());
-
-            await engine.CallAsync("rei_editor_set_data_asset_property",
-                new() { ["assetId"] = CONFIG_ID, ["propertyName"] = "_weights", ["value"] = new[] { 0.125, 2.5, 4.0 } });
-            var weights = (await engine.ReadAssetAsync(CONFIG_ID, "runtime")).GetProperty("values").GetProperty("_weights");
-            Assert.Equal(new[] { 0.125, 2.5, 4.0 }, weights.EnumerateArray().Select(x => x.GetDouble()));
-            var editorWeights = (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values").GetProperty("_weights");
-            Assert.Equal(new[] { 0.125, 2.5, 4.0 }, editorWeights.EnumerateArray().Select(x => x.GetDouble()));
-
-            // Stop restores disk values; writing through the Editor alone is not persistence.
-            await engine.RunOperationAsync("rei_editor_stop_playmode");
-            Assert.Equal(baseline, (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values").GetProperty("_floatValue").GetDouble());
-            await SetAndCompareFloat(engine, 31.5);
-            await engine.CallAsync("rei_editor_save_project");
-            var disk = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(
-                Path.Combine(engine.ProjectDirectory, "Project", "DataAssets", "Tests", "DataAssetTestConfig.asset")));
-            using (disk) Assert.Equal(31.5, disk.RootElement.GetProperty("SerializedData").GetProperty("_floatValue").GetProperty("Value").GetDouble());
-
-            // Build unloads/reloads the project DLL and its type-erased adapters.
-            await engine.RunOperationAsync("rei_editor_start_build", new()
-            {
-                ["configuration"] = "editor_debug", ["forceSolutionRebuild"] = true
-            });
-            await engine.RunOperationAsync("rei_editor_start_playmode");
-            await AssertFloat(engine, 31.5);
-            await SetAndCompareFloat(engine, 62.0);
-            await engine.RunOperationAsync("rei_editor_stop_playmode");
-            Assert.Equal(31.5, (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values").GetProperty("_floatValue").GetDouble());
+            await SetAsync(engine, property, value);
+            await AssertPropertyAsync(engine, property, value);
         }
-        catch (Exception error)
+    });
+
+    [EngineFact]
+    public Task VectorsAndColorReachNativeState() => Run(nameof(VectorsAndColorReachNativeState), async engine =>
+    {
+        foreach (var (property, value) in new (string, object)[] {
+            ("_position2D", new { x = -1.25, y = 8.5 }),
+            ("_position3D", new { x = 3.25, y = -9.5, z = 0.125 }),
+            ("_tint", new { r = 0.25, g = 0.5, b = 0.75, a = 1.0 }) })
         {
-            throw new Exception($"Engine integration failed. Artifacts: {engine.RunDirectory}", error);
+            await SetAsync(engine, property, value);
+            await AssertPropertyAsync(engine, property, value);
         }
-    }
+    });
 
-    private static async Task SetAndCompareFloat(EngineIntegrationHarness engine, double value)
+    [EngineFact]
+    public Task LargeUnicodeAndCollectionResizeReachNativeState() => Run(nameof(LargeUnicodeAndCollectionResizeReachNativeState), async engine =>
     {
-        // Stop completion precedes automatic EditorMode restart. Wait for native readiness before editing.
-        await engine.WaitUntilAsync(async () =>
-            (await engine.ReadAssetAsync(CONFIG_ID, "runtime")).GetProperty("status").GetString() == "loaded");
-        var changed = await engine.CallAsync("rei_editor_set_data_asset_property",
-            new() { ["assetId"] = CONFIG_ID, ["propertyName"] = "_floatValue", ["value"] = value });
-        Assert.True(changed.GetProperty("runtimeSynced").GetBoolean());
-        await AssertFloat(engine, value);
-    }
-
-    private static async Task AssertFloat(EngineIntegrationHarness engine, double expected)
-    {
-        await engine.WaitUntilAsync(async () =>
+        var label = new string('x', 20000) + " Привет 世界";
+        await SetAsync(engine, "_label", label);
+        await AssertPropertyAsync(engine, "_label", label);
+        foreach (var weights in new[] { new[] { 0.125, 2.5, 4.0, 8.0 }, Array.Empty<double>(), new[] { 0.5 } })
         {
-            var runtime = await engine.ReadAssetAsync(CONFIG_ID, "runtime");
-            return runtime.GetProperty("status").GetString() == "loaded" &&
-                Math.Abs(runtime.GetProperty("values").GetProperty("_floatValue").GetDouble() - expected) < 0.00001;
-        });
-        var editor = await engine.ReadAssetAsync(CONFIG_ID, "editor");
-        var native = await engine.ReadAssetAsync(CONFIG_ID, "runtime");
-        Assert.Equal(expected, editor.GetProperty("values").GetProperty("_floatValue").GetDouble(), 5);
-        Assert.Equal(expected, native.GetProperty("values").GetProperty("_floatValue").GetDouble(), 5);
-    }
+            await SetAsync(engine, "_weights", weights);
+            await AssertPropertyAsync(engine, "_weights", weights);
+        }
+    });
+
+    [EngineFact]
+    public Task DependencyReplacementLoadsNativeAsset() => Run(nameof(DependencyReplacementLoadsNativeAsset), async engine =>
+    {
+        Assert.Equal("unloaded", (await engine.ReadAssetAsync(ALTERNATE_ID, "runtime")).GetProperty("status").GetString());
+        await SetAsync(engine, "_dependency", new { Id = ALTERNATE_ID });
+        await AssertPropertyAsync(engine, "_dependency", new { Id = ALTERNATE_ID });
+        await AssertPropertyAsync(engine, "_value", 99.25, ALTERNATE_ID);
+    });
+
+    [EngineFact]
+    public Task UnloadedAssetInspectionAndEditingDoNotLoadNativeAsset() => Run(nameof(UnloadedAssetInspectionAndEditingDoNotLoadNativeAsset), async engine =>
+    {
+        Assert.Equal("loaded", (await engine.ReadAssetAsync(ALTERNATE_ID, "editor")).GetProperty("status").GetString());
+        for (var i = 0; i < 2; i++)
+            Assert.Equal("unloaded", (await engine.ReadAssetAsync(ALTERNATE_ID, "runtime")).GetProperty("status").GetString());
+        var result = await SetAsync(engine, "_value", 47.5, ALTERNATE_ID);
+        Assert.False(result.GetProperty("runtimeSynced").GetBoolean());
+        Assert.Equal(47.5, (await engine.ReadAssetAsync(ALTERNATE_ID, "editor")).GetProperty("values").GetProperty("_value").GetDouble());
+        Assert.Equal("unloaded", (await engine.ReadAssetAsync(ALTERNATE_ID, "runtime")).GetProperty("status").GetString());
+    });
+
+    [EngineFact]
+    public Task RejectedReferencesAndValuesLeaveBothStatesUnchanged() => Run(nameof(RejectedReferencesAndValuesLeaveBothStatesUnchanged), async engine =>
+    {
+        var editorBefore = (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values");
+        var nativeBefore = (await engine.ReadAssetAsync(CONFIG_ID, "runtime")).GetProperty("values");
+        foreach (var (property, value) in new (string, object)[] {
+            ("_dependency", new { Id = CONFIG_ID }), ("_dependency", new { Id = "missing" }),
+            ("_material", new { Id = ALTERNATE_ID }), ("_floatValue", "not a number") })
+        {
+            await engine.AssertToolErrorAsync("rei_editor_set_data_asset_property",
+                new() { ["assetId"] = CONFIG_ID, ["propertyName"] = property, ["value"] = JsonSerializer.SerializeToElement(value) }, "invalid_property_value");
+            EqualJson(editorBefore, (await engine.ReadAssetAsync(CONFIG_ID, "editor")).GetProperty("values"));
+            EqualJson(nativeBefore, (await engine.ReadAssetAsync(CONFIG_ID, "runtime")).GetProperty("values"));
+        }
+    });
+
+    private Task Run(string name, Func<EngineIntegrationHarness, Task> test) => fixture.RunAsync(name, output, test);
 }

@@ -1,10 +1,8 @@
 using System.Globalization;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Render;
-using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
@@ -145,23 +143,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     public ColorPropertyViewModel() { }
 
-    public ColorPropertyViewModel(SerializedProperty property) : base(property)
-    {
-        GetNestedProperty("r")!.ValueChangedEvent += HandleComponentValueChanged;
-        GetNestedProperty("g")!.ValueChangedEvent += HandleComponentValueChanged;
-        GetNestedProperty("b")!.ValueChangedEvent += HandleComponentValueChanged;
-        GetNestedProperty("a")!.ValueChangedEvent += HandleComponentValueChanged;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-
-        GetNestedProperty("r")!.ValueChangedEvent -= HandleComponentValueChanged;
-        GetNestedProperty("g")!.ValueChangedEvent -= HandleComponentValueChanged;
-        GetNestedProperty("b")!.ValueChangedEvent -= HandleComponentValueChanged;
-        GetNestedProperty("a")!.ValueChangedEvent -= HandleComponentValueChanged;
-    }
+    public ColorPropertyViewModel(SerializedProperty property) : base(property) { }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
@@ -189,12 +171,6 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
             SetField(ref _colorHex, ColorConversionUtility.ToHex(_r, _g, _b, 1f), nameof(ColorHex));
             SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(_r, _g, _b, 1f)), nameof(PreviewBrush));
         });
-    }
-
-    private void HandleComponentValueChanged(object? _)
-    {
-        if (_suppressComponentValueChanged) return;
-        Dispatcher.UIThread.Execute(() => HandlePropertyValueChangedEvent(null));
     }
 
     private void ApplyFromRgba()

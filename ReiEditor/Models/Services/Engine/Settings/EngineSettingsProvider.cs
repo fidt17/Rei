@@ -50,7 +50,7 @@ public class EngineSettingsProvider : IEngineSettingsProvider, IDisposable
     public string GetEngineReleaseIncludeDir() => _enginePath + _engineSettings.RelativeReleaseIncludeDir;
     public string GetEngineSourceIncludes()
     {
-        var includes = _engineSettings.RelativeSourceIncludes.Split(';');
+        var includes = _engineSettings.RelativeSourceIncludes.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return includes.Aggregate("", (current, include) => current + ";" + (_enginePath + include));
     }
 

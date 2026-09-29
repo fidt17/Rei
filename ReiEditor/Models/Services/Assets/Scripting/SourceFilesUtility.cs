@@ -43,19 +43,21 @@ public class SourceFilesUtility
     {
         _processedFiles = new();
         
-        var paths = new List<string>
-        {
-            _resourceService.GetScriptsPath(),
-            _engineSettings.GetEnginePath(),
-        };
+        var paths = new[] { _resourceService.GetScriptsPath() }
+            .Concat(_engineSettings.GetEngineSourceIncludes().Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
         
         AreSourceFilesValid = true;
 
         var sourceFiles = new List<(string Path, string Contents)>();
+        var visitedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rootDir in paths)
         {
             foreach (var path in Directory.EnumerateFiles(rootDir, $"*{FileExtensions.H}", SearchOption.AllDirectories))
             {
+                if (!visitedFiles.Add(Path.GetFullPath(path))) continue;
+
                 try
                 {
                     sourceFiles.Add((path, File.ReadAllText(path)));

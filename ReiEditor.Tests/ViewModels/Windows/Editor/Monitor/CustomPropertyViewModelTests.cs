@@ -140,6 +140,94 @@ public sealed class CustomPropertyViewModelTests
         Assert.Same(childEditor, Assert.Single(viewModel.Value));
     }
 
+    [AvaloniaTheory]
+    [InlineData("Vector2")]
+    [InlineData("Vector3")]
+    [InlineData("Color")]
+    public void ComponentEditorsTrackReplacementAndDetachOnDispose(string type)
+    {
+        var component = type == "Color" ? "r" : "x";
+        var property = type == "Color"
+            ? TestCustom("value", type, ("r", 0.1f), ("g", 0.2f), ("b", 0.3f), ("a", 1f))
+            : TestCustom("value", type, ("x", 0.1f), ("y", 0.2f), ("z", 0.3f));
+        BaseCustomPropertyViewModel viewModel = type switch
+        {
+            "Vector2" => new Vector2PropertyViewModel(property),
+            "Vector3" => new Vector3PropertyViewModel(property),
+            _ => new ColorPropertyViewModel(property)
+        };
+        float Read() => viewModel switch
+        {
+            Vector2PropertyViewModel vector => vector.X,
+            Vector3PropertyViewModel vector => vector.X,
+            ColorPropertyViewModel color => color.R,
+            _ => throw new InvalidOperationException()
+        };
+        var oldChildren = TestChildren(property);
+        property.Value = TestChildMap(property, oldChildren.Select(pair => (pair.Key, 0.5f)).ToArray());
+        var newChildren = TestChildren(property);
+
+        oldChildren[component].Value = 0.9f;
+        Assert.Equal(0.5f, Read());
+        Assert.Equal(0.5f, newChildren[component].Value);
+        newChildren[component].Value = 0.75f;
+        Assert.Equal(0.75f, Read());
+
+        viewModel.Dispose();
+        oldChildren[component].Value = 0.8f;
+        newChildren[component].Value = 0.2f;
+        Assert.Equal(0.75f, Read());
+    }
+
+    [AvaloniaFact]
+    public void QueuedCustomRefreshDoesNotRecreateEditorsAfterDispose()
+    {
+        var property = TestCustom("settings", "Settings", ("speed", 3f));
+        var viewModel = new CustomPropertyViewModel(property, null!, null!, null!, null!, null!, null!, null!, null!, null);
+        using (Avalonia.Threading.Dispatcher.UIThread.DisableProcessing())
+        {
+            var worker = new Thread(property.TriggerChangedEvent);
+            worker.Start();
+            Assert.True(worker.Join(TimeSpan.FromSeconds(5)));
+            viewModel.Dispose();
+        }
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        Assert.Empty(viewModel.Value);
+    }
+
+    [AvaloniaFact]
+    public void QueuedVectorRefreshDoesNotUpdateDisposedEditor()
+    {
+        var property = TestCustom("size", "Vector2", ("x", 1f), ("y", 2f));
+        var viewModel = new Vector2PropertyViewModel(property);
+        using (Avalonia.Threading.Dispatcher.UIThread.DisableProcessing())
+        {
+            var worker = new Thread(() => TestChildren(property)["x"].Value = 7f);
+            worker.Start();
+            Assert.True(worker.Join(TimeSpan.FromSeconds(5)));
+            Assert.Equal(1f, viewModel.X);
+            viewModel.Dispose();
+        }
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(1f, viewModel.X);
+    }
+
+    [AvaloniaFact]
+    public void CustomEditorTracksNewChildrenAfterSameNameReplacement()
+    {
+        var property = TestCustom("settings", "Settings", ("speed", 3f));
+        using var viewModel = new CustomPropertyViewModel(property, null!, null!, null!, null!, null!, null!, null!, null!, null);
+        property.Value = TestChildMap(property, ("speed", 9f));
+        var replacementEditor = Assert.Single(viewModel.Value);
+
+        TestChildren(property)["speed"].Value = 10f;
+
+        Assert.Same(replacementEditor, Assert.Single(viewModel.Value));
+        Assert.Equal(10f, Assert.IsType<FloatPropertyViewModel>(replacementEditor).Value);
+    }
+
     private static SerializedProperty TestCustom(string name, string sourceType, params (string Name, float Value)[] children)
     {
         var property = new SerializedProperty(name, SerializedTypeEnum.Custom, null, sourceType, null);

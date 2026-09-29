@@ -23,7 +23,7 @@ public sealed class BuildServiceTests
         public Task InitializeAsync() => throw new NotSupportedException();
         public string GetEngineDebugIncludeDir() => throw new NotSupportedException();
         public string GetEngineReleaseIncludeDir() => throw new NotSupportedException();
-        public string GetEngineSourceIncludes() => throw new NotSupportedException();
+        public string GetEngineSourceIncludes() => root;
         public string GetEngineResourcesDir() => throw new NotSupportedException();
         public string GetEngineBehavioursDir() => throw new NotSupportedException();
         public string GetEngineVersion() => throw new NotSupportedException();

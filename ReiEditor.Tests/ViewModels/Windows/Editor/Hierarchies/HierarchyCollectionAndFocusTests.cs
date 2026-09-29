@@ -229,9 +229,30 @@ public sealed class HierarchyCollectionAndFocusTests
         Assert.Empty(scrolledIds);
     }
 
-    /// <summary>
-    /// Creates two roots with one child already attached to first root.
-    /// </summary>
+    [Fact]
+    public void ReplacingHierarchyUnregistersOldDescendantsAndDetachesOldEvents()
+    {
+        var selection = new SelectionService(new TestEntityApi());
+        var oldHierarchy = TestCreateHierarchy(out var root, out var child, out var otherRoot);
+        var grandchild = new HierarchyNode<GameEntity>(new GameEntity(4, "Grandchild"), child);
+        child.PushChild(grandchild);
+        oldHierarchy.AddNode(grandchild, isRoot: false);
+        var controller = new HierarchyNodeCollectionController(new TestNodeFactory(selection), _ => { });
+        controller.SetHierarchy(oldHierarchy, new HashSet<int>());
+
+        var replacement = new Hierarchy<GameEntity>("Replacement");
+        controller.SetHierarchy(replacement, new HashSet<int>());
+
+        foreach (var node in new[] { root, child, grandchild, otherRoot })
+            Assert.Null(selection.GetEntitySelectable(node.Content));
+        oldHierarchy.AddNode(new HierarchyNode<GameEntity>(new GameEntity(5, "Late"), null), isRoot: true);
+        Assert.Empty(controller.Nodes);
+        Assert.Empty(controller.GetAllNodes());
+        Assert.Same(replacement, controller.ActiveHierarchy);
+        controller.Dispose();
+        controller.Dispose();
+    }
+
     private static Hierarchy<GameEntity> TestCreateHierarchy(
         out HierarchyNode<GameEntity> firstRoot,
         out HierarchyNode<GameEntity> child,

@@ -11,6 +11,9 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class EngineIntegrationHarness : IAsyncDisposable
 {
     private readonly string _fixtureName;
+    private bool _prepared;
+    public int LaunchCount { get; private set; }
+    public int ProcessId => _editor?.Id ?? throw new InvalidOperationException("Editor is not running.");
     private Process? _editor;
 
     private McpClient? _client;
@@ -28,25 +31,32 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
 
     public async Task StartAsync()
     {
+        if (_editor != null) throw new InvalidOperationException("Editor already started. Use RestartAsync.");
+        var startup = Stopwatch.StartNew();
         Directory.CreateDirectory(RunDirectory);
         var executable = RequireFile("REI_TEST_EDITOR_EXE");
         var engineFile = RequireFile("REI_TEST_ENGINE_FILE");
         var msbuild = RequireFile("REI_TEST_MSBUILD");
-        var fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", _fixtureName);
-        CopyTree(fixture, ProjectDirectory);
-        var projectFile = Directory.GetFiles(ProjectDirectory, "*.rei").Single();
-        var project = JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
-        project["ProjectSolutionPath"] = ResolveFixturePath(project["ProjectSolutionPath"]!.GetValue<string>());
-        project["ProjectVisualStudioProjectPath"] = ResolveFixturePath(project["ProjectVisualStudioProjectPath"]!.GetValue<string>());
-        await File.WriteAllTextAsync(projectFile, project.ToJsonString());
-        var vcxproj = project["ProjectVisualStudioProjectPath"]!.GetValue<string>();
-        await File.WriteAllTextAsync(vcxproj, (await File.ReadAllTextAsync(vcxproj)).Replace("__REI_ROOT__", Path.GetDirectoryName(engineFile)!));
         var storage = Path.Combine(RunDirectory, "storage");
-        Directory.CreateDirectory(storage);
-        await File.WriteAllTextAsync(Path.Combine(storage, "preferences.json"), JsonSerializer.Serialize(new
+        if (!_prepared)
         {
-            EnginePath = engineFile, MsBuildPath = msbuild, BookmarkedProjectsPaths = Array.Empty<string>()
-        }));
+            var fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", _fixtureName);
+            CopyTree(fixture, ProjectDirectory);
+            var projectFile = Directory.GetFiles(ProjectDirectory, "*.rei").Single();
+            var project = JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
+            project["ProjectSolutionPath"] = ResolveFixturePath(project["ProjectSolutionPath"]!.GetValue<string>());
+            project["ProjectVisualStudioProjectPath"] = ResolveFixturePath(project["ProjectVisualStudioProjectPath"]!.GetValue<string>());
+            await File.WriteAllTextAsync(projectFile, project.ToJsonString());
+            var vcxproj = project["ProjectVisualStudioProjectPath"]!.GetValue<string>();
+            await File.WriteAllTextAsync(vcxproj, (await File.ReadAllTextAsync(vcxproj)).Replace("__REI_ROOT__", Path.GetDirectoryName(engineFile)!));
+            Directory.CreateDirectory(storage);
+            await File.WriteAllTextAsync(Path.Combine(storage, "preferences.json"), JsonSerializer.Serialize(new
+            {
+                EnginePath = engineFile, MsBuildPath = msbuild, BookmarkedProjectsPaths = Array.Empty<string>()
+            }));
+            _prepared = true;
+        }
+        var startupProject = Directory.GetFiles(ProjectDirectory, "*.rei").Single();
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -61,26 +71,17 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
             WindowStyle = ProcessWindowStyle.Hidden
         };
         start.Environment["REI_EDITOR_STORAGE"] = storage;
-        start.Environment["REI_STARTUP_PROJECT"] = projectFile;
+        start.Environment["REI_STARTUP_PROJECT"] = startupProject;
         start.Environment["REI_MCP_ENABLED"] = "true";
         start.Environment["REI_MCP_PORT"] = port.ToString();
         _editor = Process.Start(start) ?? throw new InvalidOperationException("Editor failed to start.");
-        _stdout = CaptureOutputAsync(_editor.StandardOutput, Path.Combine(RunDirectory, "stdout.log"));
-        _stderr = CaptureOutputAsync(_editor.StandardError, Path.Combine(RunDirectory, "stderr.log"));
+        LaunchCount++;
+        _stdout = CaptureOutputAsync(_editor.StandardOutput, Path.Combine(RunDirectory, $"stdout-{LaunchCount}.log"));
+        _stderr = CaptureOutputAsync(_editor.StandardError, Path.Combine(RunDirectory, $"stderr-{LaunchCount}.log"));
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
         var endpoint = new Uri($"http://127.0.0.1:{port}/mcp");
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-        while (true)
-        {
-            EnsureAlive();
-            try
-            {
-                using var response = await http.GetAsync(new Uri(endpoint, "/health"), timeout.Token);
-                if (response.IsSuccessStatusCode) break;
-            }
-            catch (HttpRequestException) { }
-            await Task.Delay(200, timeout.Token);
-        }
+        await WaitForHealthAsync(http, new Uri(endpoint, "/health"), EnsureAlive, timeout.Token);
         _client = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
         {
             Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp
@@ -102,6 +103,26 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         }, TimeSpan.FromMinutes(4));
         var ready = await CallAsync("rei_editor_get_state");
         Assert.Equal(Path.GetFullPath(ProjectDirectory), Path.GetFullPath(ready.GetProperty("project").GetProperty("rootPath").GetString()!));
+        var errors = await CallAsync("rei_editor_get_logs", new() { ["minimumLevel"] = "error", ["limit"] = 500 });
+        Assert.True(errors.GetProperty("entries").GetArrayLength() == 0, $"Startup errors: {errors}. Artifacts: {RunDirectory}");
+        await RecordTimingAsync("startup", startup.Elapsed);
+    }
+
+    internal static async Task WaitForHealthAsync(HttpClient http, Uri endpoint, Action ensureAlive, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ensureAlive();
+            try
+            {
+                using var response = await http.GetAsync(endpoint, cancellationToken);
+                if (response.IsSuccessStatusCode) break;
+            }
+            catch (HttpRequestException) { }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
+            await Task.Delay(200, cancellationToken);
+        }
     }
 
     public async Task<JsonElement> CallAsync(string tool, Dictionary<string, object?>? arguments = null)
@@ -130,6 +151,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
 
     public async Task RunOperationAsync(string tool, Dictionary<string, object?>? arguments = null)
     {
+        var elapsed = Stopwatch.StartNew();
         var started = await CallAsync(tool, arguments);
         var id = started.GetProperty("id").GetString();
         await WaitUntilAsync(async () =>
@@ -139,6 +161,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
             if (status is "failed" or "canceled") throw new InvalidOperationException(operation.ToString());
             return status == "succeeded";
         }, TimeSpan.FromMinutes(4));
+        await RecordTimingAsync(tool, elapsed.Elapsed);
     }
 
     public async Task WaitUntilAsync(Func<Task<bool>> condition, TimeSpan? timeout = null)
@@ -153,7 +176,19 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         throw new TimeoutException($"Engine condition timed out. Artifacts: {RunDirectory}");
     }
 
-    public async ValueTask DisposeAsync()
+    public async Task RestartAsync()
+    {
+        await StopAsync();
+        await StartAsync();
+    }
+
+    public Task RecordTimingAsync(string phase, TimeSpan elapsed) =>
+        File.AppendAllTextAsync(Path.Combine(RunDirectory, "timings.jsonl"),
+            JsonSerializer.Serialize(new { phase, milliseconds = elapsed.TotalMilliseconds, launch = LaunchCount, processId = ProcessId }) + Environment.NewLine);
+
+    public ValueTask DisposeAsync() => new(StopAsync());
+
+    private async Task StopAsync()
     {
         try
         {
@@ -174,6 +209,10 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
                 if (_stdout != null) await _stdout;
                 if (_stderr != null) await _stderr;
                 _editor.Dispose();
+                _editor = null;
+                _client = null;
+                _stdout = null;
+                _stderr = null;
             }
         }
     }

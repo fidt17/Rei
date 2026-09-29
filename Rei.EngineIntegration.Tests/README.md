@@ -16,25 +16,70 @@ $env:REI_RUN_ENGINE_TESTS = "1"
 $env:REI_TEST_EDITOR_EXE = "$repo\.tmp\integration-editor\ReiEditor.exe"
 $env:REI_TEST_ENGINE_FILE = "$repo\ReiEngine.rei_engine"
 $env:REI_TEST_MSBUILD = $msbuild
-dotnet test "$repo\Rei.EngineIntegration.Tests\Rei.EngineIntegration.Tests.csproj"
+dotnet test "$repo\Rei.EngineIntegration.Tests\Rei.EngineIntegration.Tests.csproj" --filter "Suite=Smoke"
 ```
 
 Without REI_RUN_ENGINE_TESTS=1, real-engine tests are explicitly skipped. Once enabled, missing prerequisites, startup/build failures, and timeouts fail tests.
+
+## Selective runs and process lifetime
+
+All real-engine cases have Category=EngineIntegration, Suite=Smoke or Suite=Lifecycle, and an Area trait.
+REI_RUN_ENGINE_TESTS=1 remains the explicit opt-in. Filtering alone does not enable native tests.
+Fixture integrity and harness unit tests run without the opt-in and never launch Editor.
+
+After building the test project once, use --no-build --no-restore to avoid rebuilding the managed test runner.
+This does not skip the isolated project's first native build.
+
+    $tests = "$repo\Rei.EngineIntegration.Tests\Rei.EngineIntegration.Tests.csproj"
+    dotnet test $tests --no-build --no-restore --filter "Suite=Smoke"
+    dotnet test $tests --no-build --no-restore --filter "Suite=Smoke&Area=Materials"
+    dotnet test $tests --no-build --no-restore --filter "FullyQualifiedName~DependencyReplacementLoadsNativeAsset"
+    dotnet test $tests --no-build --no-restore --filter "Suite=Lifecycle"
+    dotnet test $tests --no-build --no-restore --filter "Category=EngineIntegration"
+
+Smoke cases share one lazily started Editor and one initial native project build per test run.
+They execute sequentially in an xUnit collection. Setup loads the observed assets and saves their normalized
+Editor representation once before capturing the baseline. Each case enters PlayMode and stops it in finally.
+Before and after every case, the fixture checks baseline Editor values, independent native values/load status,
+and hashes of all project .asset/.mat files. Failed reset prevents later cases from using contaminated state.
+Smoke cases must not save, create/delete persistent assets, change source files, or rebuild the DLL.
+Keep those operations in isolated lifecycle cases. Adding a new mutable asset to smoke requires including
+its Editor/native state in the reset baseline.
+
+Lifecycle cases each own a fresh harness. DLL rebuild, project creation, and process restart are independently
+selectable. The restart case launches twice against the same owned project/storage/build outputs, without
+copying the fixture over saved files. Restart terminates the owned process without an implicit save; it tests
+persistence across process termination, not the interactive close/save dialog.
+
+A new dotnet test invocation starts a new Editor. No reuse across invocations or attachment to a user Editor.
+A filtered lifecycle-only run does not start an unused smoke Editor. No cross-run native build cache yet:
+each fresh project proves that fixture sources compile, avoiding stale generated code or DLLs.
+
+Use smoke for asset/MCP synchronization changes; lifecycle for persistence, imports, build/DLL loading,
+Play/Stop, or harness changes. Run both for release validation. Pure parsing/settings/conversion changes
+can normally use focused Editor unit tests first; these are selection guidelines, not automatic dependency detection.
 
 ## Isolation and diagnostics
 
 Each harness owns a unique directory under %TEMP%/Rei-engine-tests, a copied fixture, build outputs, separate preferences (REI_EDITOR_STORAGE), and an explicit startup project (REI_STARTUP_PROJECT). It chooses an unused loopback port. Port acquisition has a small bind race; readiness verifies the exact project path before mutations.
 
-Teardown terminates only the owned Editor process and children. Existing user Editors are untouched. Run directories remain for diagnostics: stdout.log, stderr.log, mcp.jsonl, project files and native build outputs. Remove old directories manually when no longer needed. Do not rebuild shared engine binaries while integration tests run.
+Teardown terminates only the owned Editor process and children. Existing user Editors are untouched. Run directories remain for diagnostics: stdout-N.log and stderr-N.log per process launch, mcp.jsonl, timings.jsonl, project files and native build outputs. Test output includes artifact paths and shared Editor PID. timings.jsonl records startup, operations, and smoke-case durations with process/launch identifiers. Remove old directories manually when no longer needed. Do not rebuild shared engine binaries while integration tests run.
 
 ## Coverage
 
-- Project/Monitor selection through normal selection services; invalid asset/source requests.
-- Independent Editor and native values after edits.
-- Unloaded asset inspection without implicit native loading.
-- Typed dependency replacement and native dependency loading.
-- Large JSON, Unicode and collection values.
-- Play-session rollback versus Editor save and disk state.
-- Project DLL rebuild/reload followed by further synchronization.
+- Smoke / DataAssets: Project/Monitor selection through normal selection services; invalid asset/source requests.
+- Smoke / DataAssets: bool, signed/unsigned integer, float, enum, vectors, color, large Unicode, and collection grow/clear/shrink.
+- Smoke / DataAssets: unloaded asset inspection and editing without implicit native loading.
+- Smoke / DataAssets: typed dependency replacement and native dependency loading.
+- Smoke / DataAssets: wrong-type/missing references and invalid values rejected without changing Editor/native state.
+- Smoke / Materials: scalar/color shader uniform edits independently read from Editor and native material.
+- Every smoke case: Play/Stop rollback, disk unchanged, baseline/load-state restoration, one shared process.
+- Lifecycle: saved values across DLL rebuild/reload, further edits, Play rollback, disk state.
+- Lifecycle: saved values survive full process restart; unsaved changes disappear; sync works after restart.
+- Lifecycle: newly created assets remain unloaded in native state during inspection.
+
+Not yet covered: unavailable-engine edits, nested reference collections, multiple behaviour consumers observing
+the same asset, Monitor UI input/debounce through native readback, entity/behaviour synchronization, and
+interactive Editor shutdown. These require additional fixture scenarios or automation capabilities.
 
 EngineIntegrationHarness provides bounded MCP calls, operation waits, condition waits, independent reads, fixture ownership, logs and teardown. Reuse it for new scenarios. MCP setters exercise the service path; Monitor debounce tests belong to the Editor test suite, not simulated UI input here.

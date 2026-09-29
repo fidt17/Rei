@@ -5,7 +5,6 @@ using System.Linq;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Utils.Factory;
-using ReiEditor.ViewModels.Utils;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Hierarchies.Services;
 
@@ -83,7 +82,8 @@ public class HierarchyNodeCollectionController
 
     private void Reset()
     {
-        Nodes.ClearAndDispose();
+        foreach (var node in Nodes.ToArray()) DisposeNodeSubtree(node);
+        Nodes.Clear();
         _nodeMap.Clear();
 
         if (_activeHierarchy != null)

@@ -16,7 +16,6 @@ using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Utils;
-using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Collection;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
@@ -27,6 +26,8 @@ public class CustomPropertyViewModel : BaseViewModel
     public ObservableCollection<BaseViewModel> Value { get; } = new();
     public ObservableField<bool> Expanded { get; } = new(false);
     
+    private readonly List<SerializedProperty> _displayedProperties = new();
+    private bool _disposed;
     private readonly SerializedProperty _property;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
     private readonly IDataAssetTypeRegistry? _dataAssetTypeRegistry;
@@ -75,10 +76,12 @@ public class CustomPropertyViewModel : BaseViewModel
 
     public override void Dispose()
     {
+        _disposed = true;
         base.Dispose();
         
         _property.ValueChangedEvent -= HandlePropertyValueChangedEvent;
         Value.ClearAndDispose();
+        _displayedProperties.Clear();
     }
     
     public void SwitchExpandState() => Expanded.Value = !Expanded.Value;
@@ -90,20 +93,24 @@ public class CustomPropertyViewModel : BaseViewModel
 
     private void HandlePropertyValueChangedEventOnUiThread(object? value)
     {
+        if (_disposed) return;
         if (value is null)
         {
             Value.ClearAndDispose();
+            _displayedProperties.Clear();
             return;
         }
         
         if (value is Dictionary<string, SerializedProperty> subProperties)
         {
-            if (HasSameProperties(subProperties)) return;
+            if (_displayedProperties.SequenceEqual(subProperties.Values)) return;
 
             Value.ClearAndDispose();
+            _displayedProperties.Clear();
             
             foreach (var subProperty in subProperties)
             {
+                _displayedProperties.Add(subProperty.Value);
                 Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry));
             }
         }
@@ -111,48 +118,5 @@ public class CustomPropertyViewModel : BaseViewModel
         {
             throw new Exception($"Not supported value type: {value.GetType()} {value}");
         }
-    }
-
-    private bool HasSameProperties(Dictionary<string, SerializedProperty> subProperties)
-    {
-        var currentProperties = Value.ToArray();
-
-        if (currentProperties.Length != subProperties.Count) return false;
-
-        var propertyNames = currentProperties
-            .Select(GetPropertyName)
-            .ToList();
-
-        if (propertyNames.Count != subProperties.Count || propertyNames.Any(propertyName => propertyName == null)) return false;
-
-        var index = 0;
-        foreach (var (_, property) in subProperties)
-        {
-            if (index >= propertyNames.Count || propertyNames[index] != property.Name)
-            {
-                return false;
-            }
-
-            index++;
-        }
-
-        return true;
-    }
-
-    private static string? GetPropertyName(BaseViewModel viewModel)
-    {
-        return viewModel switch
-        {
-            BasePropertyViewModel<string> propertyViewModel => propertyViewModel.PropertyName.Value,
-            BasePropertyViewModel<float> propertyViewModel => propertyViewModel.PropertyName.Value,
-            BasePropertyViewModel<int> propertyViewModel => propertyViewModel.PropertyName.Value,
-            BasePropertyViewModel<bool> propertyViewModel => propertyViewModel.PropertyName.Value,
-            BasePropertyViewModel<double> propertyViewModel => propertyViewModel.PropertyName.Value,
-            BaseCustomPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
-            CustomPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
-            CollectionPropertyViewModel propertyViewModel => propertyViewModel.PropertyName.Value,
-            null => null,
-            _ => null
-        };
     }
 }

@@ -88,6 +88,23 @@ public sealed class EngineSettingsProviderTests
         Assert.Equal("1.2.3", provider.GetEngineVersion());
     }
 
+    [Theory]
+    [InlineData(@"\src1;\src2;")]
+    [InlineData(@";\src1;; \src2 ; ")]
+    public async Task EmptySourceIncludesDoNotAddRepositoryRoot(string includes)
+    {
+        using var directory = new TemporaryDirectory();
+        var settingsPath = directory.GetPath("engine.json");
+        await WriteSettings(settingsPath, "1.2.3", @"\debug", @"\release", includes, @"\resources");
+        var preferences = new TestPreferencesService { EnginePath = settingsPath };
+        var editorSettings = new TestEditorSettingsService { IsValid = true };
+        using var provider = CreateProvider(preferences, editorSettings);
+
+        await provider.InitializeAsync();
+
+        Assert.Equal(";" + directory.RootPath + @"\src1;" + directory.RootPath + @"\src2", provider.GetEngineSourceIncludes());
+    }
+
     /// <summary>
     /// Invalid editor configuration skips file access during initialization.
     /// </summary>

@@ -85,7 +85,7 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
         });
     }
 
-    private void HandleLogsClearedEvent() => ClearLogs();
+    private void HandleLogsClearedEvent() => Dispatcher.UIThread.Invoke(ClearLogs);
 
     private void ClearLogs()
     {

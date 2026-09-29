@@ -96,7 +96,7 @@ public class MonitorWindowViewModel : BaseViewModel
 
     private void HandleRefreshedEvent()
     {
-        UpdateDrawer(_selectionService.ActiveSelection.Value);
+        Dispatcher.UIThread.Invoke(() => UpdateDrawer(_selectionService.ActiveSelection.Value));
     }
 
     private void UpdateDrawer(ISelectable? obj)

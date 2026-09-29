@@ -1,3 +1,6 @@
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Services.Entities;
@@ -11,6 +14,7 @@ namespace ReiEditor.Tests.ViewModels.Windows.Editor.Monitor;
 /// <summary>
 /// Verifies monitor drawer routing plus selection, refresh, synchronization, and owner lifetime.
 /// </summary>
+[Collection(HeadlessCollection.NAME)]
 [Trait("Area", "Monitor")]
 public sealed class MonitorDrawerUtilsTests
 {
@@ -106,7 +110,7 @@ public sealed class MonitorDrawerUtilsTests
     /// <summary>
     /// Asset selection and refresh choose and recreate current generic drawer, while disposal stops later selection reactions.
     /// </summary>
-    [Fact]
+    [AvaloniaFact]
     public void MonitorTracksSelectionRefreshAndSubscriptionLifetime()
     {
         var selection = new TestSelectionService();
@@ -124,6 +128,27 @@ public sealed class MonitorDrawerUtilsTests
         selection.Active.Value = null;
         refresh.NotifyRefreshed();
         Assert.Same(finalDrawer, viewModel.Drawer);
+    }
+
+    [AvaloniaFact]
+    public async Task BackgroundRefreshReplacesDrawerOnUiThread()
+    {
+        var selection = new TestSelectionService();
+        var refresh = new TestEditorRefreshService();
+        using var viewModel = TestCreateMonitor(selection, refresh);
+        selection.Active.Value = new TestAssetSelectable("mesh.obj", supported: true);
+        var previous = viewModel.Drawer;
+        var changesOnUiThread = new List<bool>();
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(viewModel.Drawer)) changesOnUiThread.Add(Dispatcher.UIThread.CheckAccess());
+        };
+
+        await Task.Run(refresh.NotifyRefreshed);
+
+        Assert.NotSame(previous, viewModel.Drawer);
+        Assert.NotEmpty(changesOnUiThread);
+        Assert.All(changesOnUiThread, onUiThread => Assert.True(onUiThread));
     }
 
     private static BaseMonitorDrawer? TestCreateDrawer(ISelectable? selection, out ReiEditor.Models.Services.Entities.GameEntity? entity)

@@ -26,6 +26,7 @@ public abstract class BaseCustomPropertyViewModel : BaseViewModel
         }
     }
 
+    private bool _disposed;
     private readonly SerializedProperty _property;
     
 #pragma warning disable CS8618
@@ -49,6 +50,7 @@ public abstract class BaseCustomPropertyViewModel : BaseViewModel
     
     public override void Dispose()
     {
+        _disposed = true;
         base.Dispose();
             
         _property.ValueChangedEvent -= HandlePropertyValueChangedEventOnUiThread;
@@ -62,7 +64,10 @@ public abstract class BaseCustomPropertyViewModel : BaseViewModel
 
     private void HandlePropertyValueChangedEventOnUiThread(object? value)
     {
-        Dispatcher.UIThread.Execute(() => HandlePropertyValueChangedEvent(value));
+        Dispatcher.UIThread.Execute(() =>
+        {
+            if (!_disposed) HandlePropertyValueChangedEvent(value);
+        });
     }
 
     protected abstract void HandlePropertyValueChangedEvent(object? value);

@@ -155,5 +155,23 @@ public sealed class ConsoleViewModelTests
         Assert.Empty(liveVm.FilteredLogs);
     }
 
+    [AvaloniaFact]
+    public async Task BackgroundClearMutatesLogCollectionOnlyOnUiThread()
+    {
+        var console = new EditorConsoleService();
+        using var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        console.Log(Message(LogLevelEnum.Info));
+        vm.FilteredLogs[0].Expand = true;
+        var mutationThreads = new List<bool>();
+        vm.FilteredLogs.CollectionChanged += (_, _) => mutationThreads.Add(Avalonia.Threading.Dispatcher.UIThread.CheckAccess());
+
+        await Task.Run(console.ClearConsole);
+
+        Assert.Equal(new[] { true }, mutationThreads);
+        Assert.Empty(vm.FilteredLogs);
+        Assert.False(vm.HasDetails);
+        Assert.Empty(vm.Details);
+    }
+
     private static LogMessage Message(LogLevelEnum level) => new(LogScopeEnum.Editor, level, new DateTime(2026, 1, 2, 3, 4, 5), "message", "detail");
 }

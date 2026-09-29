@@ -12,13 +12,13 @@ namespace ReiEditor.Tests.Models.Services.Assets.Scripting;
 public sealed class SourceFilesUtilityTests : IDisposable
 {
     /// <summary>Provides isolated engine paths required by source discovery.</summary>
-    private sealed class TestEngineSettingsProvider(string enginePath) : IEngineSettingsProvider
+    private sealed class TestEngineSettingsProvider(string enginePath, string? sourceIncludes = null) : IEngineSettingsProvider
     {
         public Task InitializeAsync() => Task.CompletedTask;
         public string GetEnginePath() => enginePath;
         public string GetEngineDebugIncludeDir() => enginePath;
         public string GetEngineReleaseIncludeDir() => enginePath;
-        public string GetEngineSourceIncludes() => enginePath;
+        public string GetEngineSourceIncludes() => sourceIncludes ?? enginePath;
         public string GetEngineResourcesDir() => Path.Combine(enginePath, "Resources");
         public string GetEngineBehavioursDir() => Path.Combine(enginePath, "Behaviours");
         public string GetEngineVersion() => "test";
@@ -228,6 +228,61 @@ public sealed class SourceFilesUtilityTests : IDisposable
     }
 
     /// <summary>Writes source text under an owned temporary root.</summary>
+    [Fact]
+    public void SourceDiscoveryExcludesFixtureAndBuildOutputOutsideConfiguredIncludes()
+    {
+        var sourceRoot = Path.Combine(_enginePath, "src");
+        const string CONFIG = "DATA_ASSET_BODY(Config)\nSERIALIZE float Value;";
+        const string MODE = "SERIALIZABLE_ENUM(Mode) { First, Second };";
+        WriteHeader(_project.Resources.GetScriptsPath("Config.h"), CONFIG);
+        WriteHeader(_project.Resources.GetScriptsPath("Mode.h"), MODE);
+        WriteHeader(Path.Combine(sourceRoot, "Core.h"), "SERIALIZABLE_BODY(Core)\nSERIALIZE bool Enabled;");
+        foreach (var excludedRoot in new[] { "Tests/Fixtures", "Tests/bin" })
+        {
+            WriteHeader(Path.Combine(_enginePath, excludedRoot, "Config.h"), CONFIG);
+            WriteHeader(Path.Combine(_enginePath, excludedRoot, "Mode.h"), MODE);
+        }
+        var utility = new SourceFilesUtility(_project.Resources, new TestEngineSettingsProvider(_enginePath, ";" + sourceRoot + ";"), _logger);
+
+        var result = utility.ProcessFiles();
+
+        Assert.True(utility.AreSourceFilesValid);
+        Assert.Equal(2, result.SerializableObjects.Count);
+        Assert.Single(result.DataAssetDeclarations);
+        Assert.Single(result.SerializableEnums);
+        Assert.Empty(_logger.Entries);
+    }
+
+    [Fact]
+    public void OverlappingSourceRootsReadEachHeaderOnce()
+    {
+        var scripts = _project.Resources.GetScriptsPath();
+        WriteHeader(Path.Combine(scripts, "Config.h"), "DATA_ASSET_BODY(Config)\nSERIALIZE float Value;");
+        WriteHeader(Path.Combine(scripts, "Nested", "Mode.h"), "SERIALIZABLE_ENUM(Mode) { First, Second };");
+        var includes = string.Join(";", scripts, Path.Combine(scripts, "Nested"), Path.Combine(scripts, "."));
+        var utility = new SourceFilesUtility(_project.Resources, new TestEngineSettingsProvider(_enginePath, includes), _logger);
+
+        var result = utility.ProcessFiles();
+
+        Assert.Single(result.SerializableObjects);
+        Assert.Single(result.DataAssetDeclarations);
+        Assert.Single(result.SerializableEnums);
+        Assert.Empty(_logger.Entries);
+    }
+
+    [Fact]
+    public void DistinctHeadersWithDuplicateTypeNamesStillReportErrors()
+    {
+        const string SOURCE = "DATA_ASSET_BODY(Config)\nSERIALIZE float Value;";
+        WriteHeader(_project.Resources.GetScriptsPath("Config.h"), SOURCE);
+        WriteHeader(Path.Combine(_enginePath, "Other.h"), SOURCE);
+
+        var result = _utility.ProcessFiles();
+
+        Assert.Single(result.SerializableObjects);
+        Assert.Contains(_logger.Entries, entry => entry.Message.Contains("Found multiple serializable objects with same name: Config"));
+    }
+
     private static void WriteHeader(string path, string source)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

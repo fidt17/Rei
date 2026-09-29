@@ -86,7 +86,7 @@ public class ProjectAssetOperationsHandler
 
         var fullDestFolderPath = IOPath.GetFullPath(destinationFolderPath);
         var fullRootPath = IOPath.GetFullPath(projectRootPath);
-        if (!fullDestFolderPath.StartsWith(fullRootPath, System.StringComparison.OrdinalIgnoreCase)) return null;
+        if (!IsSameOrDescendantPath(fullDestFolderPath, fullRootPath)) return null;
 
         var moveTargets = targets
             .Where(target => ShouldMoveTarget(target, fullDestFolderPath))
