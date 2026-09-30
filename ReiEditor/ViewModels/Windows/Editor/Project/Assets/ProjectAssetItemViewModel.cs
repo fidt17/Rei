@@ -65,7 +65,7 @@ public class ProjectAssetItemViewModel : BaseViewModel, IAssetSelectable
         AssetId = assetInfo?.Meta.AssetId ?? "";
         IsDirectory = assetType == ProjectAssetType.Directory;
         IsAssetSupportedInMonitor = AssetMonitorSupportUtility.IsAssetSupportedInMonitor(fullPath, IsDirectory, assetInfo);
-        Icon = ProjectAssetIconProvider.GetAssetIcon(assetType);
+        Icon = ProjectAssetIconProvider.GetAssetIcon(assetType, fullPath);
         _selectAction = actions.SelectAction;
         _contextMenuSelectAction = actions.ContextMenuSelectAction;
 

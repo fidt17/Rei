@@ -319,6 +319,7 @@ public class ProjectWindowViewModel : BaseViewModel
             return;
         }
 
+        _directoryBrowser.RefreshIcons();
         if (!string.IsNullOrWhiteSpace(activePath))
         {
             UpdateActiveItems(activePath);

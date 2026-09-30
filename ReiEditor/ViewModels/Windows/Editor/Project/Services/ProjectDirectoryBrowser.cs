@@ -69,6 +69,14 @@ public class ProjectDirectoryBrowser
         SelectDirectory(node);
     }
 
+    public void RefreshIcons()
+    {
+        foreach (var node in _allNodes)
+        {
+            node.RefreshIcon();
+        }
+    }
+
     public void Reset()
     {
         RootDirectories.ClearAndDispose();

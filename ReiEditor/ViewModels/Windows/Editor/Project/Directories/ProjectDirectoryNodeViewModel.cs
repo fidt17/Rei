@@ -1,6 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Avalonia.Media;
 using ReactiveUI;
+using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.Utils.Common;
 using ReiEditor.ViewModels.Common;
 
@@ -16,6 +18,8 @@ public class ProjectDirectoryNodeViewModel : BaseViewModel
 
     public ObservableCollection<ProjectDirectoryNodeViewModel> ChildNodes { get; } = new();
 
+    public IImage Icon => ProjectAssetIconProvider.GetAssetIcon(ProjectAssetType.Directory, FullPath);
+
     public string FullPath { get; }
     public ProjectDirectoryNodeViewModel? Parent { get; }
 
@@ -30,6 +34,8 @@ public class ProjectDirectoryNodeViewModel : BaseViewModel
         Parent = parent;
         SelectCommand = ReactiveCommand.Create(Select);
     }
+
+    public void RefreshIcon() => this.RaisePropertyChanged(nameof(Icon));
 
     public void Select() => Selected.Value = true;
     public void Deselect() => Selected.Value = false;

@@ -43,13 +43,23 @@
                     </Style>
                 </Border.Styles>
 
-                <Grid ColumnDefinitions="20, *">
+                <Grid ColumnDefinitions="20, 22, *">
                     <buttons:HorizontalExpandToggle
                         IsVisible="{Binding ChildNodes.Count, Converter={StaticResource NotEmptyCollectionConverter}}"
                         IsChecked="{Binding Expanded.Value, Mode=TwoWay}" />
 
-                    <TextBlock
+                    <Image
                         Grid.Column="1"
+                        Width="18.4"
+                        Height="18.4"
+                        UseLayoutRounding="True"
+                        RenderOptions.BitmapInterpolationMode="HighQuality"
+                        Source="{Binding Icon}"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center" />
+
+                    <TextBlock
+                        Grid.Column="2"
                         VerticalAlignment="Center"
                         Margin="4,0,0,0"
                         Text="{Binding Name.Value}"

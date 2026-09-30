@@ -53,9 +53,11 @@
             </Style>
         </Border.Styles>
 
-        <Grid ColumnDefinitions="16, *" VerticalAlignment="Center">
-            <Image Width="12"
-                   Height="12"
+        <Grid ColumnDefinitions="22, *" VerticalAlignment="Center">
+            <Image Width="18.4"
+                   Height="18.4"
+                   UseLayoutRounding="True"
+                   RenderOptions.BitmapInterpolationMode="HighQuality"
                    Source="{Binding Icon}"
                    VerticalAlignment="Center"
                    HorizontalAlignment="Center" />

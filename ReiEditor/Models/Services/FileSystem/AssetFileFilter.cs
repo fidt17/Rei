@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace ReiEditor.Models.Services.FileSystem;
 
@@ -42,6 +43,29 @@ public static class AssetFileFilter
         }
 
         return false;
+    }
+
+    public static bool HasVisibleContents(string directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath)) return false;
+
+        try
+        {
+            return Directory.EnumerateDirectories(directoryPath).Any(path => !ShouldHideDirectory(path))
+                || Directory.EnumerateFiles(directoryPath).Any(path => !ShouldHide(path));
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     private static string NormalizePath(string path)

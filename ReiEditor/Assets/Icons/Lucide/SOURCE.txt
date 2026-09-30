@@ -1,0 +1,3 @@
+Lucide https://github.com/lucide-icons/lucide
+Revision 5a92b9ba262de5bf10e864219883267672c05db8
+SVG sources unchanged. PNGs: 1024x1024, currentColor = #E6EDF3 (Editor Info/White).
