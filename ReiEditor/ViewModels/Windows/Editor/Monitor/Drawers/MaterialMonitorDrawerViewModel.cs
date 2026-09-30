@@ -81,6 +81,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         get => _useDepth;
         set
         {
+            if (_disposed) return;
             if (!SetField(ref _useDepth, value)) return;
             _material?.SetUseDepth(value);
             SyncRuntimeMaterial();
@@ -97,6 +98,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         get => _sortingOrder;
         set
         {
+            if (_disposed) return;
             if (!SetField(ref _sortingOrder, value)) return;
             _material?.SetSortingOrder(value);
             SyncRuntimeMaterial();
@@ -118,6 +120,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private CancellationTokenSource? _runtimeSyncDebounceCTS;
     private DispatcherTimer? _runtimePullTimer;
     private bool _suppressRuntimeSync;
+    private bool _disposed;
     private string _lastRuntimeJson = "";
     private const int RuntimeSyncDebounceDelayMs = 40;
     private const int RuntimePullIntervalMs = 200;
@@ -159,8 +162,11 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     public override void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         base.Dispose();
-        PersistUniformValuesFromEditors();
+        // ValueChanged already persists edits. Reapplying stale controls here would
+        // overwrite material values restored from disk after Play stops.
         CancelRuntimeSyncDebounce();
         CancelRuntimePullLoop();
         SyncRuntimeMaterialImmediate();
@@ -177,17 +183,21 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
+                    if (_disposed) return;
                     StatusText = "Material id is missing.";
                     IsMaterialLoaded = false;
                 });
                 return;
             }
 
-            _material = await _assetsService.Load<Material>(AssetId);
+            var material = await _assetsService.Load<Material>(AssetId);
+            if (_disposed) return;
+            _material = material;
             if (_material == null)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
+                    if (_disposed) return;
                     StatusText = "Failed to load material asset.";
                     IsMaterialLoaded = false;
                 });
@@ -196,6 +206,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                if (_disposed) return;
                 _suppressRuntimeSync = true;
                 ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
                 UseDepth = _material.UseDepth;
@@ -210,6 +221,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         {
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                if (_disposed) return;
                 StatusText = $"Failed to load material asset. {e.Message}";
                 IsMaterialLoaded = false;
             });
@@ -218,6 +230,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void HandleShaderChanged(string? shaderAssetId, string? _fullPath)
     {
+        if (_disposed) return;
         if (_material == null) return;
 
         var targetShaderAssetId = shaderAssetId ?? "";
@@ -332,6 +345,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void ApplyUniformPropertyValue(ShaderUniformInfo uniform, SerializedProperty property)
     {
+        if (_disposed) return;
         if (_material == null) return;
         _material.Properties[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
         SyncRuntimeMaterial();
@@ -349,13 +363,15 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void SyncRuntimeMaterial()
     {
+        if (_disposed) return;
         if (_suppressRuntimeSync) return;
         if (_material == null) return;
         if (string.IsNullOrWhiteSpace(AssetId)) return;
 
         CancelRuntimeSyncDebounce();
-        _runtimeSyncDebounceCTS = new CancellationTokenSource();
-        var token = _runtimeSyncDebounceCTS.Token;
+        var source = new CancellationTokenSource();
+        _runtimeSyncDebounceCTS = source;
+        var token = source.Token;
 
         _ = Task.Run(async () =>
         {
@@ -366,12 +382,21 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (token.IsCancellationRequested) return;
+                    if (_disposed || token.IsCancellationRequested) return;
                     SyncRuntimeMaterialImmediate();
                 });
             }
             catch (TaskCanceledException)
             {
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!ReferenceEquals(_runtimeSyncDebounceCTS, source)) return;
+                    _runtimeSyncDebounceCTS = null;
+                    source.Dispose();
+                });
             }
         }, token);
     }
@@ -391,9 +416,9 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void CancelRuntimeSyncDebounce()
     {
-        _runtimeSyncDebounceCTS?.Cancel();
-        _runtimeSyncDebounceCTS?.Dispose();
-        _runtimeSyncDebounceCTS = null;
+        var source = Interlocked.Exchange(ref _runtimeSyncDebounceCTS, null);
+        source?.Cancel();
+        source?.Dispose();
     }
 
     private void StartRuntimePullLoop()
@@ -406,6 +431,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
         _runtimePullTimer.Tick += (_, _) =>
         {
+            if (_disposed) return;
             if (string.IsNullOrWhiteSpace(AssetId)) return;
             if (_runtimeSyncDebounceCTS != null) return;
 

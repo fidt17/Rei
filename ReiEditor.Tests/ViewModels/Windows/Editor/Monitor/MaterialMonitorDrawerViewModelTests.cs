@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -9,11 +10,12 @@ using ReiEditor.Models.Services.Render;
 using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 
 namespace ReiEditor.Tests.ViewModels.Windows.Editor.Monitor;
 
 /// <summary>
-/// Verifies bounded material drawer loading and disposal persistence without timer-dependent assertions.
+/// Verifies material drawer loading, disposal, restored values and debounce release with bounded waits.
 /// </summary>
 [Collection(HeadlessCollection.NAME)]
 [Trait("Category", "Headless")]
@@ -36,15 +38,20 @@ public sealed class MaterialMonitorDrawerViewModelTests
     }
 
     /// <summary>
-    /// Supplies empty shader registry for no-shader material branch.
+    /// Supplies one scalar shader and the no-shader branch for inspector lifecycle checks.
     /// </summary>
     private sealed class TestShaderRegistry : IShaderRegistry
     {
-        public IReadOnlyDictionary<string, Shader> Shaders { get; } = new Dictionary<string, Shader>();
+        public IReadOnlyDictionary<string, Shader> Shaders { get; } = CreateShaders();
+        private static IReadOnlyDictionary<string, Shader> CreateShaders()
+        {
+            var shader = new Shader();
+            shader.SetUniforms([new ShaderUniformInfo("strength", "float", ShaderUniformType.Float)]);
+            return new Dictionary<string, Shader> { ["shader-id"] = shader };
+        }
         public bool TryGetById(string assetId, [NotNullWhen(true)] out Shader? shader)
         {
-            shader = null;
-            return false;
+            return Shaders.TryGetValue(assetId, out shader);
         }
 
         public Task RefreshShaders() => throw new NotSupportedException();
@@ -56,10 +63,11 @@ public sealed class MaterialMonitorDrawerViewModelTests
     private sealed class TestAssetRuntimeSyncService : IAssetRuntimeSyncService
     {
         public List<(string Id, string Json)> Writes { get; } = [];
+        public string RuntimeJson { get; set; } = "";
         public bool TryGetAssetData(string assetId, out string jsonData)
         {
-            jsonData = "";
-            return false;
+            jsonData = RuntimeJson;
+            return !string.IsNullOrEmpty(jsonData);
         }
 
         public bool TrySetAssetData(string assetId, string jsonData)
@@ -122,5 +130,81 @@ public sealed class MaterialMonitorDrawerViewModelTests
         var write = Assert.Single(runtime.Writes);
         Assert.Equal("material-id", write.Id);
         Assert.Contains("\"SortingOrder\":77", write.Json);
+    }
+
+    /// <summary>Closing a stale inspector must keep disk-restored values instead of replaying its old controls.</summary>
+    [AvaloniaFact]
+    public async Task DisposePreservesRestoredUniformAndIgnoresStaleEditors()
+    {
+        var material = new Material("shader-id");
+        material.Properties["strength"] = 1f;
+        var runtime = new TestAssetRuntimeSyncService();
+        var drawer = CreateDrawer(material, runtime);
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        var editor = Assert.IsType<FloatPropertyViewModel>(Assert.Single(drawer.ShaderProperties));
+        editor.Value = 4f;
+        Assert.Equal(4f, material.Properties["strength"]);
+        material.Properties["strength"] = 1f; // Play/Stop restores this same cached asset from disk.
+
+        drawer.Dispose();
+        drawer.Dispose();
+        editor.Value = 9f;
+        drawer.SortingOrder = 90;
+
+        Assert.Equal(1f, material.Properties["strength"]);
+        Assert.Equal(1000, material.SortingOrder);
+        Assert.Contains("\"strength\":1.0", Assert.Single(runtime.Writes).Json);
+    }
+
+    /// <summary>Rapid changes followed by disposal cancel debounce and flush only the latest value once.</summary>
+    [AvaloniaFact]
+    public async Task DisposeWithPendingDebounceFlushesOnce()
+    {
+        var material = new Material("");
+        var runtime = new TestAssetRuntimeSyncService();
+        var drawer = CreateDrawer(material, runtime);
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        drawer.SortingOrder = 41;
+        drawer.SortingOrder = 42;
+        drawer.Dispose();
+        drawer.Dispose();
+        Assert.Contains("\"SortingOrder\":42", Assert.Single(runtime.Writes).Json);
+    }
+
+    /// <summary>A completed debounce must release its pending marker so subsequent native changes reach the inspector.</summary>
+    [AvaloniaFact]
+    public async Task DebounceCompletionResumesRuntimePull()
+    {
+        var material = new Material("");
+        var runtime = new TestAssetRuntimeSyncService();
+        var drawer = CreateDrawer(material, runtime);
+        try
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            drawer.SortingOrder = 42;
+            await WaitFor(() => runtime.Writes.Count > 0);
+            runtime.RuntimeJson = "{\"ShaderAssetId\":\"\",\"UseDepth\":true,\"SortingOrder\":88,\"Properties\":{}}";
+            await WaitFor(() => drawer.SortingOrder == 88);
+            Assert.Equal(88, material.SortingOrder);
+        }
+        finally
+        {
+            drawer.Dispose();
+        }
+    }
+
+    private static MaterialMonitorDrawerViewModel CreateDrawer(Material material, TestAssetRuntimeSyncService runtime) => new(
+        new TestMaterialSelectable(), new TestAssetsService(material), null!, new TestShaderRegistry(),
+        new AssetRegistry(new TestLogger<AssetRegistry>()), null!, runtime, null!);
+
+    private static async Task WaitFor(Func<bool> ready)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (!ready() && elapsed.Elapsed < TimeSpan.FromSeconds(5))
+        {
+            await Task.Delay(10);
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        }
+        Assert.True(ready(), "Material synchronization did not complete within five seconds.");
     }
 }

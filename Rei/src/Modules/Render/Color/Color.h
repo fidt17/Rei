@@ -21,6 +21,7 @@ namespace rei::render
         operator std::string() const;
         
         Color operator*(const Color& col) const;
+        bool operator==(const Color& other) const { return r == other.r && g == other.g && b == other.b && a == other.a; }
 
         static Color Clear();
         static Color White();

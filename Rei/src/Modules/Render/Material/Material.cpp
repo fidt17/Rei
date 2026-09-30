@@ -127,18 +127,30 @@ namespace rei::render
         _useDepth = value;
     }
 
+    i32 Material::GetInt(const std::string& name, const i32 fallback) const
+    {
+        const auto property = _properties.find(name);
+        if (property == _properties.end() || !property->second.is_number()) return fallback;
+        return property->second.get<i32>();
+    }
+
+    f32 Material::GetFloat(const std::string& name, const f32 fallback) const
+    {
+        const auto property = _properties.find(name);
+        if (property == _properties.end() || !property->second.is_number()) return fallback;
+        return property->second.get<f32>();
+    }
+
     void Material::SetInt(const std::string& name, const i32 value)
     {
         if (name.empty()) return;
         _properties[name] = value;
-        SyncShaderBindings();
     }
 
     void Material::SetFloat(const std::string& name, const f32 value)
     {
         if (name.empty()) return;
         _properties[name] = value;
-        SyncShaderBindings();
     }
 
     void Material::SetColor(const std::string& name, const Color& value)
@@ -151,7 +163,6 @@ namespace rei::render
             {"b", value.b},
             {"a", value.a}
         });
-        SyncShaderBindings();
     }
 
     void Material::SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture)
@@ -161,14 +172,12 @@ namespace rei::render
         _properties[name] = nlohmann::json::object({
             {"Id", texture.Id}
         });
-        SyncShaderBindings();
     }
 
     void Material::ClearProperty(const std::string& name)
     {
         if (name.empty()) return;
         _properties.erase(name);
-        SyncShaderBindings();
     }
 
     assets::AssetRef<Material> Material::CreateInstanceFrom(const Material& source)

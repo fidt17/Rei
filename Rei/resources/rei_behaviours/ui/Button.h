@@ -22,6 +22,8 @@ namespace rei::ui
 
         bool _isPointerInside = false;
         bool _isPressed = false;
+        Image* _lastVisualTarget = nullptr;
+        render::Color _lastVisualColor = render::Color::White();
 
     public:
         REI_EVENT(void) ClickedEvent;

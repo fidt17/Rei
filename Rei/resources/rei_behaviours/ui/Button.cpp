@@ -9,6 +9,7 @@ namespace rei::ui
 {
     void Button::Init()
     {
+        _lastVisualTarget = nullptr;
         EnsurePointerCollisionListener();
         EnsureTargetImage();
         ApplyVisualState();
@@ -16,6 +17,7 @@ namespace rei::ui
 
     void Button::AfterREI_SET()
     {
+        _lastVisualTarget = nullptr;
         EnsurePointerCollisionListener();
         EnsureTargetImage();
         ApplyVisualState();
@@ -132,7 +134,12 @@ namespace rei::ui
     {
         if (_targetImage.IsNull()) return;
 
-        _targetImage.Get().SetColorMultiplier(_changeImageColor ? GetCurrentVisualColor() : render::Color::White());
+        auto& image = _targetImage.Get();
+        const auto color = _changeImageColor ? GetCurrentVisualColor() : render::Color::White();
+        if (_lastVisualTarget == &image && _lastVisualColor == color) return;
+        image.SetColorMultiplier(color);
+        _lastVisualTarget = &image;
+        _lastVisualColor = color;
     }
 
     render::Color Button::GetCurrentVisualColor() const

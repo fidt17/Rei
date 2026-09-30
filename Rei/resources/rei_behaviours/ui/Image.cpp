@@ -38,12 +38,14 @@ namespace rei::ui
 
     void Image::SetColor(const render::Color& color)
     {
+        if (_color == color) return;
         _color = color;
         SyncMaterialProperties();
     }
 
     void Image::SetColorMultiplier(const render::Color& colorMultiplier)
     {
+        if (_colorMultiplier == colorMultiplier) return;
         _colorMultiplier = colorMultiplier;
         SyncMaterialProperties();
     }

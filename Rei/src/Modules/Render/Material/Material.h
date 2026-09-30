@@ -25,6 +25,10 @@ namespace rei::render
 
         REI_API bool UseDepth() const;
         REI_API void SetDepth(bool value);
+        REI_API i32 GetInt(const std::string& name, i32 fallback = 0) const;
+        REI_API f32 GetFloat(const std::string& name, f32 fallback = 0) const;
+
+        // Setters update CPU properties; Use binds them before each draw.
         REI_API void SetInt(const std::string& name, i32 value);
         REI_API void SetFloat(const std::string& name, f32 value);
         REI_API void SetColor(const std::string& name, const Color& value);
