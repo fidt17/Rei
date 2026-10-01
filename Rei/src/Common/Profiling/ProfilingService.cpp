@@ -127,6 +127,11 @@ namespace rei::profiling
     Snapshot ProfilingService::CopySnapshot(SnapshotView view) const
     {
         std::scoped_lock lock(_snapshotMutex);
+        return CopySnapshotLocked(view);
+    }
+
+    Snapshot ProfilingService::CopySnapshotLocked(SnapshotView view) const
+    {
         auto result = view == SnapshotView::Recent ? _recent : _capture;
         result.ContinuousEnabled = !_stopped && _enabledRequested;
         result.Enabled = !_stopped && (_enabledRequested || _capture.State == CaptureState::Queued || _capture.State == CaptureState::Recording);
@@ -350,7 +355,7 @@ namespace rei::profiling
             std::scoped_lock lock(_snapshotMutex);
             if (!_logRequested || _capture.State == CaptureState::Queued || _capture.State == CaptureState::Recording) return;
             _logRequested = false;
-            snapshot.emplace(_capture.CaptureId ? _capture : _recent);
+            snapshot.emplace(CopySnapshotLocked(_capture.CaptureId ? SnapshotView::LastCapture : SnapshotView::Recent));
         }
         LOG("Profiling snapshot: {}", ToJson(*snapshot, snapshot->FrameCount ? "ok" : "no_samples"))
     }

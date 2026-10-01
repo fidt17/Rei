@@ -335,7 +335,8 @@ Typical use:
    builds, extra verification engines and frequent MCP polling during benchmark collection.
 
 Existing F4 CPU profiling block provides continuous 120-frame tumbling windows, Capture 120 frames and
-Dump to log. After a capture exists, its result/progress is displayed. Dump waits for an active capture to
+Dump to log. Active capture progress takes priority; after completion, continuous mode displays fresh windows.
+With continuous disabled, the last capture remains displayed. Dump selects the last capture when present and waits for it to
 finish; formatting/log output occurs outside that capture. C++ consumers can use CopySnapshot,
 RequestCapture, SetEnabled and RequestLogDump. Read-only MCP does not print logs.
 
@@ -344,8 +345,8 @@ excludes ImGui and project GL calls outside Rei helpers. SubmittedVertices count
 multiplied by instances, not unique vertices or shader invocations. Triangles counts submitted topology;
 clipping/discard does not reduce these counters. Material property writes, bindings, uniform uploads,
 Texture::Use asset-binding calls, UI items/glyphs, picking candidates and queued tasks have separate counters.
-Property-write counters count setter attempts; uniform-upload counters count glUniform calls, including
-locations that GL ignores. Texture counters exclude direct GL bindings in framebuffer/font/postprocess paths.
+Property-write counters count setter attempts; uniform-upload counters count actual glUniform calls.
+Inactive uniform locations are skipped by Shader setters. Texture counters exclude direct GL bindings in framebuffer/font/postprocess paths.
 No GPU queries, timeline, frame p95, asset attribution or optimization is included.
 
 Validation: native [profiling] tests cover nesting/recursion/unwinding, disabled clock reads, bounded/busy

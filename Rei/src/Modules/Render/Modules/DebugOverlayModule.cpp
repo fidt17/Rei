@@ -18,14 +18,16 @@ namespace rei::render
         if (!ImGui::CollapsingHeader("CPU profiling")) return;
         auto& profiler = GetProfiler();
         const auto capture = profiler.CopySnapshot(profiling::SnapshotView::LastCapture);
-        const auto snapshot = capture.CaptureId ? capture : profiler.CopySnapshot();
+        const bool capturing = capture.State == profiling::CaptureState::Queued || capture.State == profiling::CaptureState::Recording;
+        const bool showCapture = capture.CaptureId && (capturing || !capture.ContinuousEnabled);
+        const auto snapshot = showCapture ? capture : profiler.CopySnapshot();
         bool continuous = snapshot.ContinuousEnabled;
         if (ImGui::Checkbox("Continuous (120-frame windows)", &continuous)) profiler.SetEnabled(continuous);
         if (ImGui::Button("Capture 120 frames")) profiler.RequestCapture(120);
         ImGui::SameLine();
         if (ImGui::Button("Dump to log")) profiler.RequestLogDump();
         const char* state = "idle";
-        switch (snapshot.State)
+        switch (capture.State)
         {
             case profiling::CaptureState::Queued: state = "queued"; break;
             case profiling::CaptureState::Recording: state = "recording"; break;
@@ -33,7 +35,8 @@ namespace rei::render
             case profiling::CaptureState::Cancelled: state = "cancelled"; break;
             default: break;
         }
-        ImGui::Text("Capture: %s | %u/%u frames", state, snapshot.FrameCount, snapshot.TargetFrames);
+        ImGui::Text("Capture: %s | %u/%u frames", state, capture.FrameCount, capture.TargetFrames);
+        ImGui::Text("Showing: %s", showCapture ? "capture" : "continuous window");
         ImGui::Text("CPU wall: %.2f ms avg, %.2f ms max", snapshot.FrameCount ? snapshot.DurationNs / 1e6 / snapshot.FrameCount : 0, snapshot.MaxFrameNs / 1e6);
         if (snapshot.InvalidFrames) ImGui::Text("Incomplete: %u invalid frames", snapshot.InvalidFrames);
         std::array<const profiling::Metric*, profiling::MAX_METRICS> scopes = {};
@@ -78,7 +81,8 @@ namespace rei::render
         ImGui::CreateContext();
         ImGui::StyleColorsDark();
 
-        ImGui_ImplGlfw_InitForOpenGL(_target, false);
+        // Chain Rei input callbacks; backend restores them during Dispose.
+        ImGui_ImplGlfw_InitForOpenGL(_target, true);
         ImGui_ImplOpenGL3_Init("#version 330");
         _isInitialized = true;
     }

@@ -108,6 +108,7 @@ namespace rei::profiling
         void EndScope(u32 depth, u64 generation) noexcept;
         u32 Find(u64 id) const noexcept;
         void InitializeSnapshot(Snapshot& snapshot) const;
+        Snapshot CopySnapshotLocked(SnapshotView view) const;
         void MergeFrame(Snapshot& snapshot, u64 elapsed);
 
         Clock _clock;

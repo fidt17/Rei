@@ -3,6 +3,7 @@
 #include "Common/Profiling/ProfilingService.h"
 #include "Common/Diagnostics/DiagnosticsService.h"
 #include "Engine/Services.h"
+#include "Common/Logging/Log.h"
 #include <atomic>
 #include <thread>
 
@@ -195,4 +196,43 @@ TEST_CASE("Diagnostics separates complete wall delta from selected sections and 
     REQUIRE(snapshot.PresentTimeMs == 20);
     REQUIRE(snapshot.FrameTimeMs == Catch::Approx(time->GetDeltaSeconds() * 1000));
     REQUIRE(snapshot.Fps == Catch::Approx(1000 / snapshot.FrameTimeMs));
+}
+
+TEST_CASE("Profiler log dumps match native snapshot controls and completed metrics", "[profiling][profiling-log]")
+{
+    if (!rei::common::logging::Log::GetLogger()) rei::common::logging::Log::Initialize();
+    now = 0;
+    ProfilingService profiler(1, Clock);
+    REQUIRE(profiler.Register(DESCRIPTORS));
+    profiler.SetEnabled(true);
+    profiler.BeginFrame();
+    Count(COUNT.Id, 3);
+    now = 100;
+    profiler.EndFrame();
+    profiler.BeginFrame();
+    profiler.EndFrame();
+    auto logger = rei::common::logging::Log::GetLogger();
+    auto dump = [&]
+    {
+        std::string message;
+        const auto handle = logger->NewLogEvent.append([&](const auto& log) { message = log.Message; });
+        profiler.RequestLogDump();
+        profiler.FlushLogDump();
+        logger->NewLogEvent.remove(handle);
+        REQUIRE(message.starts_with("Profiling snapshot: "));
+        return nlohmann::json::parse(message.substr(std::string("Profiling snapshot: ").size()));
+    };
+    REQUIRE(dump() == nlohmann::json::parse(ProfilingService::ToJson(profiler.CopySnapshot(), "ok")));
+    profiler.SetEnabled(false);
+    REQUIRE(dump()["continuousEnabled"] == false);
+    REQUIRE(std::string(profiler.RequestCapture(1).Status) == "queued");
+    profiler.BeginFrame();
+    Count(COUNT.Id, 7);
+    now += 100;
+    profiler.EndFrame();
+    profiler.BeginFrame();
+    profiler.EndFrame();
+    profiler.SetEnabled(true);
+    REQUIRE(dump() == nlohmann::json::parse(ProfilingService::ToJson(profiler.CopySnapshot(SnapshotView::LastCapture), "ok")));
+    profiler.Shutdown();
 }

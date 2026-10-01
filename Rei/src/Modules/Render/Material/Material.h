@@ -1,6 +1,8 @@
 #pragma once
 #include <unordered_map>
+#include <map>
 #include <unordered_set>
+#include <variant>
 
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
@@ -42,20 +44,31 @@ namespace rei::render
 
     private:
         void SyncShaderBindings() const;
-        assets::AssetRef<Texture> GetWhiteFallbackTexture() const;
+        const assets::AssetRef<Texture>& GetWhiteFallbackTexture() const;
         std::unordered_set<std::string> BindTextures() const;
         void ApplyShaderProperties(std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const;
         void BindMissingTextureUniforms(const std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const;
         void LoadSerializableFields(const nlohmann::json& data);
+        void UpdatePropertyBinding(const std::string& name, const nlohmann::json& value);
 
         static bool TryReadNumber(const nlohmann::json& value, f32& outFloatValue, i32& outIntValue, bool& isInteger);
         static bool TryReadColor(const nlohmann::json& value, Color& outColor);
         static bool TryReadTextureAssetId(const nlohmann::json& value, std::string& outTextureAssetId);
 
     private:
+        struct TextureBinding
+        {
+            // Use() only updates the resolved asset cache, not the property value.
+            mutable assets::AssetRef<Texture> Asset;
+        };
+        using PropertyBinding = std::variant<i32, f32, Color, TextureBinding>;
+
         assets::AssetRef<Shader> _shader;
         std::vector<assets::AssetRef<Texture>> _textures = {};
         std::unordered_map<std::string, nlohmann::json> _properties = {};
+        // Sorted typed values are updated by writes, never rebuilt in Use.
+        std::map<std::string, PropertyBinding> _propertyBindings;
+        mutable assets::AssetRef<Texture> _whiteFallback;
 
         bool _useDepth = true;
         i32 _sortingOrder = SORTING_ORDER_DEFAULT;

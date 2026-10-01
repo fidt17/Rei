@@ -3,6 +3,7 @@
 #include "Material.h"
 
 #include "glad/glad.h"
+#include <type_traits>
 
 namespace rei::render
 {
@@ -149,6 +150,7 @@ namespace rei::render
         profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
         if (name.empty()) return;
         _properties[name] = value;
+        UpdatePropertyBinding(name, _properties.at(name));
     }
 
     void Material::SetFloat(const std::string& name, const f32 value)
@@ -156,6 +158,7 @@ namespace rei::render
         profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
         if (name.empty()) return;
         _properties[name] = value;
+        UpdatePropertyBinding(name, _properties.at(name));
     }
 
     void Material::SetColor(const std::string& name, const Color& value)
@@ -169,6 +172,7 @@ namespace rei::render
             {"b", value.b},
             {"a", value.a}
         });
+        UpdatePropertyBinding(name, _properties.at(name));
     }
 
     void Material::SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture)
@@ -179,12 +183,15 @@ namespace rei::render
         _properties[name] = nlohmann::json::object({
             {"Id", texture.Id}
         });
+        UpdatePropertyBinding(name, _properties.at(name));
+        std::get<TextureBinding>(_propertyBindings.at(name)).Asset.Record = texture.Record;
     }
 
     void Material::ClearProperty(const std::string& name)
     {
         if (name.empty()) return;
         _properties.erase(name);
+        _propertyBindings.erase(name);
     }
 
     assets::AssetRef<Material> Material::CreateInstanceFrom(const Material& source)
@@ -194,6 +201,7 @@ namespace rei::render
         material->_sortingOrder = source._sortingOrder;
         material->_textures = source._textures;
         material->_properties = source._properties;
+        material->_propertyBindings = source._propertyBindings;
 
         return material;
     }
@@ -208,13 +216,15 @@ namespace rei::render
         BindMissingTextureUniforms(boundTextureUniforms, textureSlot);
     }
 
-    assets::AssetRef<Texture> Material::GetWhiteFallbackTexture() const
+    const assets::AssetRef<Texture>& Material::GetWhiteFallbackTexture() const
     {
-        auto fallbackTexture = GetAssetManager().GetById<Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
-        if (fallbackTexture.IsLoaded()) return fallbackTexture;
-
-        LOG_ERROR("White fallback texture '{}' is not loaded.", REI_WHITE_FALLBACK_TEXTURE_ID)
-        return {};
+        if (!_whiteFallback.IsLoaded())
+        {
+            _whiteFallback.Id = REI_WHITE_FALLBACK_TEXTURE_ID;
+            _whiteFallback.Record = GetAssetManager().GetById<Texture>(_whiteFallback.Id).Record;
+        }
+        if (!_whiteFallback.IsLoaded()) LOG_ERROR("White fallback texture '{}' is not loaded.", REI_WHITE_FALLBACK_TEXTURE_ID)
+        return _whiteFallback;
     }
 
     std::unordered_set<std::string> Material::BindTextures() const
@@ -270,84 +280,82 @@ namespace rei::render
 
     void Material::ApplyShaderProperties(std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const
     {
-        if (!_shader.IsLoaded()) return;
-
-        std::vector<std::pair<std::string, nlohmann::json>> orderedProperties;
-        orderedProperties.reserve(_properties.size());
-        for (const auto& [uniformName, rawValue] : _properties)
+        for (const auto& [uniformName, binding] : _propertyBindings)
         {
-            orderedProperties.emplace_back(uniformName, rawValue);
-        }
-
-        std::sort(orderedProperties.begin(), orderedProperties.end(), [](const auto& lhs, const auto& rhs)
-        {
-            return lhs.first < rhs.first;
-        });
-
-        for (const auto& [uniformName, rawValue] : orderedProperties)
-        {
-            if (uniformName.empty()) continue;
-
-            f32 floatValue = 0.0f;
-            i32 intValue = 0;
-            bool isInteger = false;
-            if (TryReadNumber(rawValue, floatValue, intValue, isInteger))
+            if (_shader->GetLocation(uniformName) < 0) continue;
+            std::visit([&](const auto& value)
             {
-                if (isInteger)
+                using T = std::decay_t<decltype(value)>;
+                if constexpr (std::is_same_v<T, i32>)
                 {
-                    _shader->SetInt(uniformName, intValue);
+                    _shader->SetInt(uniformName, value);
                 }
-                else
+                else if constexpr (std::is_same_v<T, f32>)
                 {
-                    _shader->SetFloat(uniformName, floatValue);
+                    _shader->SetFloat(uniformName, value);
                 }
-                continue;
-            }
-
-            Color colorValue = Color::White();
-            if (TryReadColor(rawValue, colorValue))
-            {
-                _shader->SetColor(uniformName, colorValue);
-                continue;
-            }
-
-            std::string textureAssetId;
-            if (TryReadTextureAssetId(rawValue, textureAssetId))
-            {
-                auto fallbackTexture = GetWhiteFallbackTexture();
-                auto texture = textureAssetId.empty()
-                    ? fallbackTexture
-                    : GetAssetManager().GetById<Texture>(textureAssetId);
-                if (!texture.IsLoaded())
+                else if constexpr (std::is_same_v<T, Color>)
                 {
-                    LOG_WARNING("Texture '{}' is not loaded. Using white fallback texture.", textureAssetId)
-                    texture = fallbackTexture;
+                    _shader->SetColor(uniformName, value);
                 }
-                if (!texture.IsLoaded()) continue;
-
-                _shader->SetInt(uniformName, textureSlot);
-                texture->Use(textureSlot);
-                boundTextureUniforms.insert(uniformName);
-                textureSlot++;
-            }
+                else if constexpr (std::is_same_v<T, TextureBinding>)
+                {
+                    auto& texture = value.Asset;
+                    if (!texture.Id.empty() && !texture.IsLoaded()) texture.Record = GetAssetManager().GetById<Texture>(texture.Id).Record;
+                    const auto& resolved = texture.IsLoaded() ? texture : GetWhiteFallbackTexture();
+                    if (!resolved.IsLoaded()) return;
+                    _shader->SetInt(uniformName, textureSlot);
+                    resolved->Use(textureSlot++);
+                    boundTextureUniforms.insert(uniformName);
+                }
+            }, binding);
         }
     }
 
     void Material::BindMissingTextureUniforms(const std::unordered_set<std::string>& boundTextureUniforms, i32& textureSlot) const
     {
-        if (!_shader.IsLoaded()) return;
-
-        const auto fallbackTexture = GetWhiteFallbackTexture();
-        if (!fallbackTexture.IsLoaded()) return;
-        const auto samplerUniformNames = _shader->GetUniformNamesByType(GL_SAMPLER_2D);
+        const auto& samplerUniformNames = _shader->GetUniformNamesByType(GL_SAMPLER_2D);
         for (const auto& uniformName : samplerUniformNames)
         {
-            if (uniformName.empty()) continue;
-            if (boundTextureUniforms.contains(uniformName)) continue;
-
+            if (uniformName.empty() || boundTextureUniforms.contains(uniformName)) continue;
+            const auto& fallbackTexture = GetWhiteFallbackTexture();
+            if (!fallbackTexture.IsLoaded()) return;
             _shader->SetInt(uniformName, textureSlot);
-            fallbackTexture->Use(textureSlot);
-            textureSlot++;
+            fallbackTexture->Use(textureSlot++);
+        }
+    }
+
+    void Material::UpdatePropertyBinding(const std::string& name, const nlohmann::json& value)
+    {
+        f32 floatValue = 0;
+        i32 intValue = 0;
+        bool isInteger = false;
+        Color color = Color::White();
+        std::string textureId;
+        if (TryReadNumber(value, floatValue, intValue, isInteger))
+        {
+            if (isInteger) _propertyBindings[name] = intValue;
+            else _propertyBindings[name] = floatValue;
+        }
+        else if (TryReadColor(value, color))
+        {
+            _propertyBindings[name] = color;
+        }
+        else if (TryReadTextureAssetId(value, textureId))
+        {
+            auto& binding = _propertyBindings[name];
+            auto* textureBinding = std::get_if<TextureBinding>(&binding);
+            if (!textureBinding) textureBinding = &binding.emplace<TextureBinding>();
+            auto& texture = textureBinding->Asset;
+            if (texture.Id != textureId)
+            {
+                texture.Id = std::move(textureId);
+                texture.Record.reset();
+            }
+        }
+        else
+        {
+            _propertyBindings.erase(name);
         }
     }
 
@@ -374,10 +382,12 @@ namespace rei::render
         if (!data.contains("Properties") || !data.at("Properties").is_object()) return;
 
         _properties.clear();
+        _propertyBindings.clear();
         for (const auto& [uniformName, value] : data.at("Properties").items())
         {
             if (uniformName.empty()) continue;
             _properties[uniformName] = value;
+            UpdatePropertyBinding(uniformName, value);
         }
     }
 
