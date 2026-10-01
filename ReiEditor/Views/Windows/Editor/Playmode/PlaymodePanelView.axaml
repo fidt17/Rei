@@ -13,14 +13,30 @@
     <Border Classes="InnerContent">
         <StackPanel Orientation="Horizontal" Spacing="10">
             <Button Command="{Binding StartPlaymodeCommand}"
+                    Classes="EditorIconButton"
+                    ToolTip.Tip="Start (Ctrl+P)"
                     HotKey="Ctrl+P"
-                    IsVisible="{Binding !PlayModeActive}"
-                    Content="Start" />
+                    IsVisible="{Binding !PlayModeActive}">
+                <Button.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="AutomationProperties.Name" Value="Start" />
+                    </Style>
+                </Button.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/play.png" />
+            </Button>
 
             <Button Command="{Binding StopPlaymodeCommand}"
+                    Classes="EditorIconButton"
+                    ToolTip.Tip="Stop (Ctrl+P)"
                     HotKey="Ctrl+P"
-                    IsVisible="{Binding PlayModeActive}"
-                    Content="Stop" />
+                    IsVisible="{Binding PlayModeActive}">
+                <Button.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="AutomationProperties.Name" Value="Stop" />
+                    </Style>
+                </Button.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/square.png" />
+            </Button>
         </StackPanel>
     </Border>
 

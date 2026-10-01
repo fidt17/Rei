@@ -27,12 +27,10 @@
                         Orientation="Horizontal">
 
                         <Image
+                            Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality"
                             Classes.invisible="{Binding IsLocalSpace}"
                             Classes.visible="{Binding IsWorldSpace}"
-                            Width="15"
-                            Height="15"
-                            Stretch="Fill"
-                            Source="/Assets/Images/globe.png">
+                            Source="/Assets/Icons/Lucide/globe.png">
                             <Image.Styles>
                                 <Style Selector="Image.invisible">
                                     <Setter Property="RenderTransform" Value="scale(0)" />
@@ -61,12 +59,10 @@
                         Orientation="Horizontal">
 
                         <Image
+                            Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality"
                             Classes.invisible="{Binding IsWorldSpace}"
                             Classes.visible="{Binding IsLocalSpace}"
-                            Width="15"
-                            Height="15"
-                            Stretch="Fill"
-                            Source="/Assets/Images/cube.png">
+                            Source="/Assets/Icons/Lucide/box.png">
                             <Image.Styles>
                                 <Style Selector="Image.invisible">
                                     <Setter Property="RenderTransform" Value="scale(0)" />
@@ -90,35 +86,63 @@
             <ToggleButton
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
+                Classes="EditorIconButton"
+                ToolTip.Tip="Move"
                 Command="{Binding SetMovementMode}"
                 IsChecked="{Binding MovementMode, Mode=TwoWay}">
-                <TextBlock Text="M" />
+                <ToggleButton.Styles>
+                    <Style Selector="ToggleButton">
+                        <Setter Property="AutomationProperties.Name" Value="Move" />
+                    </Style>
+                </ToggleButton.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/move.png" />
             </ToggleButton>
             
             <ToggleButton
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
+                Classes="EditorIconButton"
+                ToolTip.Tip="Scale"
                 Command="{Binding SetScaleMode}"
                 IsChecked="{Binding ScaleMode, Mode=TwoWay}">
-                <TextBlock Text="S" />
+                <ToggleButton.Styles>
+                    <Style Selector="ToggleButton">
+                        <Setter Property="AutomationProperties.Name" Value="Scale" />
+                    </Style>
+                </ToggleButton.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/maximize-2.png" />
             </ToggleButton>
             
             <ToggleButton
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
+                Classes="EditorIconButton"
+                ToolTip.Tip="Rotate"
                 Command="{Binding SetRotationMode}"
                 IsChecked="{Binding RotationMode, Mode=TwoWay}">
-                <TextBlock Text="R" />
+                <ToggleButton.Styles>
+                    <Style Selector="ToggleButton">
+                        <Setter Property="AutomationProperties.Name" Value="Rotate" />
+                    </Style>
+                </ToggleButton.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/rotate-3d.png" />
             </ToggleButton>
 
             <ToggleButton
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
+                Classes="EditorIconButton"
+                ToolTip.Tip="Rect Transform"
                 Command="{Binding SetRectTransformMode}"
                 IsChecked="{Binding RectTransformMode, Mode=TwoWay}"
                 IsEnabled="{Binding CanUseRectTransformMode}"
                 IsVisible="{Binding CanUseRectTransformMode}">
-                <TextBlock Text="T" />
+                <ToggleButton.Styles>
+                    <Style Selector="ToggleButton">
+                        <Setter Property="AutomationProperties.Name" Value="Rect Transform" />
+                    </Style>
+                </ToggleButton.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/square-dashed.png" />
             </ToggleButton>
 
         </StackPanel>

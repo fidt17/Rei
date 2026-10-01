@@ -38,11 +38,12 @@
                     Click="OptionButton_OnClick">
             </Button>
 
-            <TextBlock Grid.Column="1"
-                       Margin="8,0,4,0"
-                       VerticalAlignment="Center"
-                       Text=">"
-                       IsVisible="{Binding HasNestedMenu}" />
+            <Image Grid.Column="1"
+                   Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality"
+                   Margin="8,0,4,0"
+                   VerticalAlignment="Center"
+                   Source="/Assets/Icons/Lucide/chevron-right.png"
+                   IsVisible="{Binding HasNestedMenu}" />
         </Grid>
         <Popup x:Name="NestedMenuPopup"
                Placement="RightEdgeAlignedTop"

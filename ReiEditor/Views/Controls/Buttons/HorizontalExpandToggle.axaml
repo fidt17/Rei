@@ -9,8 +9,16 @@
 
     <ToggleButton
         x:Name="toggle"
+        MinWidth="20"
+        MinHeight="20"
+        Padding="0"
+        BorderThickness="0"
+        ToolTip.Tip="Expand/collapse"
         IsChecked="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=buttons:HorizontalExpandToggle}}">
         <ToggleButton.Styles>
+            <Style Selector="ToggleButton">
+                <Setter Property="AutomationProperties.Name" Value="Expand/collapse" />
+            </Style>
             <Style Selector="ToggleButton">
                 <Setter Property="Background" Value="Transparent" />
             </Style>
@@ -25,31 +33,25 @@
             </Style>
         </ToggleButton.Styles>
 
-        <Border
+        <Image
+            Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality"
             Classes.Expanded="{Binding IsChecked, ElementName=toggle}"
-            Width="8"
-            Height="8"
-            BorderThickness="0, 1, 1, 0">
-            <Border.Styles>
-
-                <Style Selector="Border">
-                    <Setter Property="Transitions">
-                        <Transitions>
-                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:.08" />
-                        </Transitions>
-                    </Setter>
+            Source="/Assets/Icons/Lucide/chevron-right.png">
+            <Image.Styles>
+                <Style Selector="Image.Expanded">
+                    <Setter Property="RenderTransform" Value="rotate(90deg)" />
+                    <Setter Property="Opacity" Value="1" />
                 </Style>
-
-                <Style Selector="Border.Expanded">
-                    <Setter Property="RenderTransform" Value="rotate(135deg)" />
-                    <Setter Property="BorderBrush" Value="{StaticResource White}" />
+                <Style Selector="Image:not(.Expanded)">
+                    <Setter Property="RenderTransform" Value="rotate(0deg)" />
+                    <Setter Property="Opacity" Value="0.65" />
                 </Style>
-                <Style Selector="Border:not(.Expanded)">
-                    <Setter Property="RenderTransform" Value="rotate(45deg)" />
-                    <Setter Property="BorderBrush" Value="{StaticResource Gray_2}" />
-                </Style>
-            </Border.Styles>
-
-        </Border>
+            </Image.Styles>
+            <Image.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:.08" />
+                </Transitions>
+            </Image.Transitions>
+        </Image>
     </ToggleButton>
 </UserControl>

@@ -54,16 +54,20 @@
                     <Button
                         Grid.Column="1"
                         Padding="3"
-                        Width="20"
+                        Width="26"
                         Height="30"
                         Margin="0,0,5,0"
-                        Classes="Clear">
+                        Classes="Clear"
+                        ToolTip.Tip="Component options">
                         <Button.Styles>
-                            <Style Selector="Button Ellipse">
-                                <Setter Property="Fill" Value="{StaticResource Gray_1}" />
+                            <Style Selector="Button">
+                                <Setter Property="AutomationProperties.Name" Value="Component options" />
                             </Style>
-                            <Style Selector="Button:pointerover Ellipse">
-                                <Setter Property="Fill" Value="{StaticResource White}" />
+                            <Style Selector="Button Image">
+                                <Setter Property="Opacity" Value="0.55" />
+                            </Style>
+                            <Style Selector="Button:pointerover Image">
+                                <Setter Property="Opacity" Value="1" />
                             </Style>
                         </Button.Styles>
                         <Button.Flyout>
@@ -72,13 +76,10 @@
                             </Flyout>
                         </Button.Flyout>
 
-                        <StackPanel
+                        <Image
+                            Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality"
                             VerticalAlignment="Center"
-                            Spacing="2">
-                            <Ellipse Width="4" Height="4" />
-                            <Ellipse Width="4" Height="4" />
-                            <Ellipse Width="4" Height="4" />
-                        </StackPanel>
+                            Source="/Assets/Icons/Lucide/ellipsis-vertical.png" />
                     </Button>
                 </Grid>
             </Border>

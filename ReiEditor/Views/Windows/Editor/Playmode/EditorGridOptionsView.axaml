@@ -13,12 +13,16 @@
 
     <Button 
         IsVisible="{Binding EngineActive}"
-        Width="30" Height="30">
+        Classes="EditorIconButton"
+        ToolTip.Tip="Grid settings">
+        <Button.Styles>
+            <Style Selector="Button">
+                <Setter Property="AutomationProperties.Name" Value="Grid settings" />
+            </Style>
+        </Button.Styles>
         <Image
-            Width="15"
-            Height="15"
-            Stretch="Fill"
-            Source="/Assets/Images/grid.png" />
+            Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality"
+            Source="/Assets/Icons/Lucide/grid-3x3.png" />
 
         <Button.Flyout>
             <Flyout FlyoutPresenterClasses="Default">

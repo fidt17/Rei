@@ -192,13 +192,4 @@
     </AdditionalFiles>
   </ItemGroup>
 
-
-  <ItemGroup>
-    <None Remove="Views\Resources\Images\grid.png" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <None Include="Assets\Images\grid.png" />
-  </ItemGroup>
 </Project>

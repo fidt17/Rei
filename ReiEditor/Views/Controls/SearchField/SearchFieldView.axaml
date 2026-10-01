@@ -11,7 +11,7 @@
             <TextBox MinWidth="200"
                      Height="22"
                      x:Name="SearchTextBox"
-                     Padding="5,0,20,0"
+                     Padding="5,0,28,0"
                      VerticalContentAlignment="Center"
                      GotFocus="SearchTextBox_OnGotFocus"
                      LostFocus="SearchTextBox_OnLostFocus"
@@ -24,13 +24,22 @@
                        IsVisible="{Binding ShowPlaceholder.Value}"
                        Text="Search" />
             <Button Classes="Clear"
+                    MinWidth="0"
+                    MinHeight="0"
+                    Padding="0"
+                    ToolTip.Tip="Clear search"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Command="{Binding ClearCommand}"
                     IsVisible="{Binding HasQuery.Value}"
                     IsEnabled="{Binding HasQuery.Value}"
                     Margin="0,0,6,0">
-                <TextBlock Text="x" />
+                <Button.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="AutomationProperties.Name" Value="Clear search" />
+                    </Style>
+                </Button.Styles>
+                <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/x.png" />
             </Button>
         </Grid>
     </Border>
