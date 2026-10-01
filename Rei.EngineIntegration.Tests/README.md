@@ -35,6 +35,7 @@ This does not skip the isolated project's first native build.
     dotnet test $tests --no-build --no-restore --filter "Suite=Smoke&Area=Materials"
     dotnet test $tests --no-build --no-restore --filter "FullyQualifiedName~DependencyReplacementLoadsNativeAsset"
     dotnet test $tests --no-build --no-restore --filter "Suite=Lifecycle"
+    dotnet test $tests --no-build --no-restore --filter "Area=Profiling"
     dotnet test $tests --no-build --no-restore --filter "Category=EngineIntegration"
 
 Smoke cases share one lazily started Editor and one initial native project build per test run.
@@ -78,6 +79,8 @@ Teardown terminates only the owned Editor process and children. Existing user Ed
 - Lifecycle: saved values survive full process restart; unsaved changes disappear; sync works after restart.
 - Lifecycle: newly created assets remain unloaded in native state during inspection.
 - Lifecycle / Time: native frame-clock readings, first-frame delta, elapsed progress, stable same-frame values and three Play/Stop resets; test asset disk bytes unchanged.
+- Lifecycle / Profiling: exact native project-DLL scope/counter totals, queued/busy/completed captures, session mismatch, output limits, concurrent reads during Stop, three Play/Stop resets, DLL rebuild/reload and unchanged asset/material/scene bytes. Active test captures deliberately sleep in a child scope; timing is not a performance benchmark.
+- Harness: concurrent diagnostic writes preserve every JSONL record. Optional RunStandaloneSmokeAsync uses only an isolated project build/resources, bounded startup/exit, native startup/shutdown logs and owned-process cleanup. Symbols EyeProfilingTests exercises it after native UI draw-counter checks; it is not part of the generic DataAssets fixture.
 
 Not yet covered: unavailable-engine edits, nested reference collections, multiple behaviour consumers observing
 the same asset, Monitor UI input/debounce through native readback, entity/behaviour synchronization, and

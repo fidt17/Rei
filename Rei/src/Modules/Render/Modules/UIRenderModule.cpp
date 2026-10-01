@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 
 #include "UIRenderModule.h"
 
@@ -47,6 +48,7 @@ namespace rei::render
 
     void UIRenderModule::Render() const
     {
+        REI_PROFILE_SCOPE(profiling::markers::UI.Id);
         if (!_isEnabled) return;
 
         const glm::mat4 projection = glm::ortho(0.0f, static_cast<f32>(_cameraModule->GetWidth()), 0.0f, static_cast<f32>(_cameraModule->GetHeight()), -1.0f, 1.0f);
@@ -57,6 +59,7 @@ namespace rei::render
 
     std::vector<UIRenderModule::UiRenderItem> UIRenderModule::CollectUiRenderItems() const
     {
+        REI_PROFILE_SCOPE(profiling::markers::UI_COLLECT.Id);
         ECS_WORLD(rei::GetInternalWorld())
 
         std::vector<ecs::Entity> canvases;
@@ -111,6 +114,7 @@ namespace rei::render
     {
         for (const auto& renderItem : renderItems)
         {
+            profiling::Count(profiling::markers::UI_ITEMS.Id);
             switch (renderItem.Type)
             {
                 case UiRenderItemType::Image:
@@ -125,6 +129,7 @@ namespace rei::render
 
     void UIRenderModule::DrawImage(const ecs::Entity entity, const glm::mat4& projection, const glm::mat4& view) const
     {
+        REI_PROFILE_SCOPE(profiling::markers::UI_IMAGE.Id);
         if (!_quadModel.IsLoaded()) return;
 
         ECS_WORLD(rei::GetInternalWorld())
@@ -163,6 +168,7 @@ namespace rei::render
 
     void UIRenderModule::DrawUiText(const ecs::Entity entity, const glm::mat4& projection, const glm::mat4& view) const
     {
+        REI_PROFILE_SCOPE(profiling::markers::UI_TEXT.Id);
         if (!_textShader.IsLoaded()) return;
         if (_textVao == 0 || _textVbo == 0) return;
 
@@ -300,6 +306,8 @@ namespace rei::render
         glBindTexture(GL_TEXTURE_2D, textureId);
         glBindBuffer(GL_ARRAY_BUFFER, _textVbo);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices.data());
+        profiling::Count(profiling::markers::GLYPHS.Id);
+        profiling::RecordDraw(6, 2);
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 }

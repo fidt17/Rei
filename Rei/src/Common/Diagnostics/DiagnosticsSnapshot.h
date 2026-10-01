@@ -6,6 +6,7 @@ namespace rei::common::diagnostics
     {
         f32 Fps = 0.0f;
         f32 FrameTimeMs = 0.0f;
+        f32 MeasuredSectionsTimeMs = 0.0f;
         f32 CoreTimeMs = 0.0f;
         f32 RenderTimeMs = 0.0f;
         f32 PresentTimeMs = 0.0f;

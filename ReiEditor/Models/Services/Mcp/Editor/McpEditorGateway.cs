@@ -15,6 +15,16 @@ internal sealed class McpEditorGateway : IReiEditorGateway
         _dispatcher = dispatcher;
     }
 
+    public Task<System.Text.Json.JsonElement> GetProfilingSnapshotAsync(string source, string view, string? expectedSessionId, int limit, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().GetProfilingSnapshot(source, view, expectedSessionId, limit), cancellationToken);
+    }
+
+    public Task<System.Text.Json.JsonElement> StartProfilingCaptureAsync(int frameCount, CancellationToken cancellationToken)
+    {
+        return _dispatcher.InvokeAsync(() => GetRequiredSession().StartProfilingCapture(frameCount), cancellationToken);
+    }
+
     public Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeAsync(() =>

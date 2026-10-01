@@ -27,6 +27,8 @@ public class EngineApi : IEngineApi
         _logInvokingMethods = false;
     }
 
+    public bool HasExport(string name) => _dllPtr is { } pointer && GetProcAddress(pointer, name) != IntPtr.Zero;
+
     public void SetDllPtr(IntPtr dllPtr)
     {
         if (dllPtr == IntPtr.Zero) throw new Exception("Invalid dll");

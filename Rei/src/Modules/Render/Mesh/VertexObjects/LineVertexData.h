@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Common/Profiling/ProfilingService.h"
 #include "glad/glad.h"
 
 class LineVertexData
@@ -37,6 +38,7 @@ public:
         glLineWidth(lineWidth);
         
         glBindVertexArray(_vertexArray);
+        rei::profiling::RecordDraw(2, 0);
         glDrawArrays(GL_LINES, 0, 2);
         glBindVertexArray(0);
     }

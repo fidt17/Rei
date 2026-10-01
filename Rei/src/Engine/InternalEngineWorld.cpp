@@ -1,4 +1,6 @@
 ﻿#include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
+#include <optional>
 #include "InternalEngineWorld.h"
 
 #include "Engine.h"
@@ -32,15 +34,20 @@ namespace rei::internal::engine
 
         const auto frameTimings = std::make_shared<FrameTimings>();
         auto updateStopwatch = std::make_shared<time::Stopwatch>();
+        const auto updateScope = std::make_shared<std::optional<profiling::Scope>>();
 
-        _world->AddSystem([frameTimings, updateStopwatch]
+        _world->AddSystem([frameTimings, updateStopwatch, updateScope]
         {
             time::Stopwatch windowStopwatch;
             windowStopwatch.Start();
-            GetWindowManager().OnUpdate();
+            {
+                REI_PROFILE_SCOPE(profiling::markers::WINDOW.Id);
+                GetWindowManager().OnUpdate();
+            }
             windowStopwatch.Stop();
             frameTimings->WindowTimeMs = windowStopwatch.ElapsedMs();
             updateStopwatch->Start();
+            updateScope->emplace(profiling::markers::UPDATE.Id);
         });
 
         _world->AddSystem<common::diagnostics::DiagnosticsRunnerSystem>();
@@ -61,7 +68,7 @@ namespace rei::internal::engine
         if (GetEngine().IsPlaymode())
         {
             _world->AddSystem<behaviour::UpdateBehavioursSystem>(entityManager);
-            _world->AddSystem([&] { app->OnUpdate(); });
+            _world->AddSystem([&] { REI_PROFILE_SCOPE(profiling::markers::APP.Id); app->OnUpdate(); });
         }
 
         if (GetEngine().IsEditorMode())
@@ -72,8 +79,9 @@ namespace rei::internal::engine
             _world->AddModule<editor::TransformationControlsModule>();
         }
 
-        _world->AddSystem([updateStopwatch]
+        _world->AddSystem([updateStopwatch, updateScope]
         {
+            updateScope->reset();
             updateStopwatch->Stop();
         });
 

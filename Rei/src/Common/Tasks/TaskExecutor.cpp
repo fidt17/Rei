@@ -1,10 +1,12 @@
 ﻿#include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "TaskExecutor.h"
 
 namespace rei
 {
     void TaskExecutor::CompleteTasks()
     {
+        REI_PROFILE_SCOPE(profiling::markers::TASKS.Id);
         while (true)
         {
             std::shared_ptr<Task> task;
@@ -17,6 +19,7 @@ namespace rei
             }
             
             const auto& t = task;
+            profiling::Count(profiling::markers::TASK_COUNT.Id);
             t->Invoke();
         }
     }

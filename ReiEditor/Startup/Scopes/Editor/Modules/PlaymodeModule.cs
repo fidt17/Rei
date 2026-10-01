@@ -18,7 +18,7 @@ public class PlaymodeModule : Module
         builder.RegisterSingleton<PlaymodeStartWorkflow>().As<IPlaymodeStartWorkflow>();
         builder.RegisterSingleton<EditorModeStarter>().As<IEditorModeStarter>();
         
-        builder.RegisterSingleton<EngineRunner>().As<IEngineRunner>();
+        builder.RegisterSingleton<EngineRunner>().As<IEngineRunner>().As<IEngineNativeAccess>();
         builder.RegisterSingleton<EngineWindowController>().As<IEngineWindowController>();
 
         builder.RegisterSingleton<ViewportGridService>().As<IViewportGridService>();

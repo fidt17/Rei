@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "Mesh.h"
 
 #include "glad/glad.h"
@@ -132,6 +133,7 @@ void rei::render::Mesh::Dispose() const
 void rei::render::Mesh::Render() const
 {
     glBindVertexArray(VAO);
+    rei::profiling::RecordDraw(Indices.size(), Indices.size() / 3);
     glDrawElements(GL_TRIANGLES, Indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }

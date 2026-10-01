@@ -1,4 +1,6 @@
 #include "Renderer.h"
+#include "Common/Diagnostics/DiagnosticsService.h"
+#include "Common/Profiling/ProfileMarkers.h"
 
 #include <algorithm>
 #include <utility>
@@ -61,6 +63,10 @@ namespace rei::render
 
     void Renderer::Render() const
     {
+        REI_PROFILE_SCOPE(profiling::markers::RENDER.Id);
+        GetDiagnostics().SetRenderCpuTime(0);
+        GetDiagnostics().SetPresentTime(0);
+        GetDiagnostics().SetDiagnosticsTime(0);
         if (_target == nullptr) return;
         if (!_renderScenario->IsCameraSet())
         {
@@ -69,7 +75,10 @@ namespace rei::render
             return;
         }
 
-        _renderScenario->OnBeforeRender();
+        {
+            REI_PROFILE_SCOPE(profiling::markers::PREPARE.Id);
+            _renderScenario->OnBeforeRender();
+        }
         _renderScenario->Render();
     }
 

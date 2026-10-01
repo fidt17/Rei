@@ -52,18 +52,15 @@ namespace rei::common::diagnostics
         _snapshot.RenderTimeMs = ComputeAverage(_renderTimeSamples, _renderTimeSampleSize);
         _snapshot.PresentTimeMs = ComputeAverage(_presentTimeSamples, _presentTimeSampleSize);
         _snapshot.DiagnosticsTimeMs = ComputeAverage(_diagnosticsTimeSamples, _diagnosticsTimeSampleSize);
-        _snapshot.FrameTimeMs = activeFrameTimeMs;
+        PushSample(_sectionsTimeSamples, _sectionsSampleIndex, _sectionsSampleSize, activeFrameTimeMs);
+        _snapshot.MeasuredSectionsTimeMs = ComputeAverage(_sectionsTimeSamples, _sectionsSampleSize);
 
         const auto delta = GetTime().GetDeltaSeconds();
         if (delta > 0.0)
         {
-            const auto fps = static_cast<f32>(1.0 / delta);
-
-            PushSample(_fpsSamples, _fpsSampleIndex, _fpsSampleSize, fps);
-            PushSample(_frameTimeSamples, _frameTimeSampleIndex, _frameTimeSampleSize, activeFrameTimeMs);
-
-            _snapshot.Fps = ComputeAverage(_fpsSamples, _fpsSampleSize);
+            PushSample(_frameTimeSamples, _frameTimeSampleIndex, _frameTimeSampleSize, static_cast<f32>(delta * 1000.0));
             _snapshot.FrameTimeMs = ComputeAverage(_frameTimeSamples, _frameTimeSampleSize);
+            _snapshot.Fps = _snapshot.FrameTimeMs > 0 ? 1000.0f / _snapshot.FrameTimeMs : 0;
         }
 
         f32 workingSetMegabytes = 0.0f;

@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Profiling;
 using ReiEditor.Models.Services.Engine.Capture;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Input;
@@ -19,6 +20,7 @@ public class EngineModule : Module
         builder.RegisterSingleton<EntityApi>().As<IEntityApi>();
         builder.RegisterSingleton<AssetApi>().As<IAssetApi>();
         builder.RegisterSingleton<AssetRuntimeInspectionService>().As<IAssetRuntimeInspectionService>();
+        builder.RegisterSingleton<EngineProfilingService>().As<IEngineProfilingService>();
 		
         builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
         builder.RegisterSingleton<EngineInputService>().As<IEngineInputService>();

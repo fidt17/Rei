@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "UIPointerCollisionSystem.h"
 
 #include "Common/Transform/RectTransformUtility.h"
@@ -122,6 +123,7 @@ namespace rei::input
 
     void UIPointerCollisionSystem::OnUpdate()
     {
+        REI_PROFILE_SCOPE(profiling::markers::PICK_UI.Id);
         const auto mainCamera = render::Camera::GetMainCamera();
         if (mainCamera.IsNull()) return;
 
@@ -139,6 +141,7 @@ namespace rei::input
 
         FOR(e, _entities)
         {
+            profiling::Count(profiling::markers::PICK_CANDIDATES.Id);
             if (!IsUiHit(e, screenPoint, width, height)) continue;
 
             hitEntities.insert(e);

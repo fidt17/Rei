@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Common/Profiling/ProfilingService.h"
 #include "glad/glad.h"
 
 class CircleVertexData
@@ -66,6 +67,7 @@ public:
     void Render() const
     {
         glBindVertexArray(VAO);
+        rei::profiling::RecordDraw(_indicesCount, 0);
         glDrawElements(GL_LINES, _indicesCount, GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
     }

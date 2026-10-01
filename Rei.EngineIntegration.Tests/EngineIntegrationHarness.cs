@@ -12,6 +12,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
 {
     private readonly string _fixtureName;
     private bool _prepared;
+    private readonly SemaphoreSlim _diagnosticWriteLock = new(1, 1);
     public int LaunchCount { get; private set; }
     public int ProcessId => _editor?.Id ?? throw new InvalidOperationException("Editor is not running.");
     private Process? _editor;
@@ -131,8 +132,8 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var result = await _client!.CallToolAsync(tool, arguments, cancellationToken: timeout.Token);
         var text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
-        await File.AppendAllTextAsync(Path.Combine(RunDirectory, "mcp.jsonl"),
-            JsonSerializer.Serialize(new { tool, arguments, result = text, isError = result.IsError }) + Environment.NewLine);
+        await AppendDiagnosticAsync("mcp.jsonl",
+            JsonSerializer.Serialize(new { tool, arguments, result = text, isError = result.IsError }));
         if (result.IsError == true) throw new InvalidOperationException($"{tool}: {text}. Artifacts: {RunDirectory}");
         using var document = JsonDocument.Parse(text);
         return document.RootElement.Clone();
@@ -183,8 +184,61 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
     }
 
     public Task RecordTimingAsync(string phase, TimeSpan elapsed) =>
-        File.AppendAllTextAsync(Path.Combine(RunDirectory, "timings.jsonl"),
-            JsonSerializer.Serialize(new { phase, milliseconds = elapsed.TotalMilliseconds, launch = LaunchCount, processId = ProcessId }) + Environment.NewLine);
+        AppendDiagnosticAsync("timings.jsonl",
+            JsonSerializer.Serialize(new { phase, milliseconds = elapsed.TotalMilliseconds, launch = LaunchCount, processId = ProcessId }));
+
+    internal async Task AppendDiagnosticAsync(string fileName, string json)
+    {
+        await _diagnosticWriteLock.WaitAsync();
+        try { await File.AppendAllTextAsync(Path.Combine(RunDirectory, fileName), json + Environment.NewLine); }
+        finally { _diagnosticWriteLock.Release(); }
+    }
+
+    // Uses only this harness's isolated build/resources and owns process teardown.
+    public async Task<string> RunStandaloneSmokeAsync(string relativeExecutable)
+    {
+        var executable = ResolveFixturePath(relativeExecutable);
+        if (!File.Exists(executable)) throw new FileNotFoundException("Build the isolated standalone project first.", executable);
+        await StopAsync();
+        var start = new ProcessStartInfo(executable)
+        {
+            WorkingDirectory = Path.Combine(ProjectDirectory, "bin"),
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Standalone failed to start.");
+        var stdoutPath = Path.Combine(RunDirectory, "standalone-stdout.log");
+        var stdout = CaptureOutputAsync(process.StandardOutput, stdoutPath);
+        var stderr = CaptureOutputAsync(process.StandardError, Path.Combine(RunDirectory, "standalone-stderr.log"));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try
+        {
+            while (process.MainWindowHandle == IntPtr.Zero)
+            {
+                if (process.HasExited) throw new InvalidOperationException($"Standalone exited before window creation: {process.ExitCode}. Artifacts: {RunDirectory}");
+                await Task.Delay(50, timeout.Token);
+                process.Refresh();
+            }
+            await Task.Delay(1000, timeout.Token);
+            if (!process.CloseMainWindow()) throw new InvalidOperationException("Standalone window refused close request.");
+            await process.WaitForExitAsync(timeout.Token);
+            Assert.Equal(1, process.ExitCode); // MAIN_WINDOW_CLOSED_EXIT_CODE
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync();
+            await Task.WhenAll(stdout, stderr);
+        }
+        var logs = await File.ReadAllTextAsync(stdoutPath);
+        Assert.Contains("Engine update loop started", logs);
+        Assert.Contains("Shutdown complete", logs);
+        Assert.DoesNotContain("[ERROR]", logs);
+        return logs;
+    }
 
     public ValueTask DisposeAsync() => new(StopAsync());
 

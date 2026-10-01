@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "Engine.h"
 
 #include <utility>
@@ -27,7 +28,8 @@ namespace rei::internal::engine
         _entityManager(std::make_shared<EntityManager>(_internalWorld->GetWorld())),
         _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager)),
         _editorEventsRelay(std::make_shared<api::EditorEventsRelay>()),
-        _diagnostics(std::make_shared<common::diagnostics::DiagnosticsService>())
+        _diagnostics(std::make_shared<common::diagnostics::DiagnosticsService>()),
+        _profiler(std::make_shared<profiling::ProfilingService>(mode))
     {
         Services::GetInstance()->SetEngine(this);
         Services::GetInstance()->SetTime(_time);
@@ -37,6 +39,8 @@ namespace rei::internal::engine
         Services::GetInstance()->SetWindowManager(_windowManager);
         Services::GetInstance()->SetEditorEventsRelay(_editorEventsRelay);
         Services::GetInstance()->SetDiagnostics(_diagnostics);
+        Services::GetInstance()->SetProfiler(_profiler);
+        _profiler->Register(profiling::markers::ALL);
 
         render::ShaderGenerator::GetInstance().Initialize();
         _mainRenderer = std::make_shared<render::Renderer>(_app->CreateCustomRenderModules());
@@ -109,8 +113,11 @@ namespace rei::internal::engine
         {
             while (_runEngine.load())
             {
+                _profiler->BeginFrame();
                 _time->BeginFrame();
                 _internalWorld->Run();
+                _profiler->EndFrame();
+                _profiler->FlushLogDump();
             }
         }
         catch (const std::exception& exc)
@@ -128,6 +135,7 @@ namespace rei::internal::engine
 
         _exitCode = exitCode;
 
+        _profiler->Shutdown();
         _app->OnShutdown();
         _sceneManager->Shutdown();
         _mainRenderer->Dispose();

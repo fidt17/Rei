@@ -1,6 +1,7 @@
 using System;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Profiling;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,6 +55,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IProjectAssetFocusService _assetFocusService;
     private readonly ISelectionService _selectionService;
     private readonly IAssetRuntimeInspectionService _runtimeInspection;
+    private readonly IEngineProfilingService _profiling;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -74,7 +76,8 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IMcpEditorAutomationService automationService,
         IProjectAssetFocusService assetFocusService,
         ISelectionService selectionService,
-        IAssetRuntimeInspectionService runtimeInspection)
+        IAssetRuntimeInspectionService runtimeInspection,
+        IEngineProfilingService profiling)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
@@ -93,9 +96,13 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _assetFocusService = assetFocusService;
         _selectionService = selectionService;
         _runtimeInspection = runtimeInspection;
+        _profiling = profiling;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
+
+    public System.Text.Json.JsonElement GetProfilingSnapshot(string source, string view, string? expectedSessionId, int limit) => _profiling.Read(source, view, expectedSessionId, limit);
+    public System.Text.Json.JsonElement StartProfilingCapture(int frameCount) => _profiling.StartCapture(frameCount);
 
     public void Dispose()
     {

@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "DefaultRenderScenario.h"
 
 #include <algorithm>
@@ -93,20 +94,23 @@ void rei::render::DefaultRenderScenario::Render()
 {
     time::Stopwatch renderStopwatch;
     renderStopwatch.Start();
-    const auto renderMode = _camera.Get().GetRenderMode();
-    if (renderMode == WireframeLines || renderMode == WireframePoints)
     {
-        RenderInWireframeMode();
-    }
-    else if (renderMode == Depth)
-    {
-        RenderInDepthMode();
-    }
-    else
-    {
-        RenderInNormalMode();
-    }
+        REI_PROFILE_SCOPE(profiling::markers::SCENE.Id);
+        const auto renderMode = _camera.Get().GetRenderMode();
+        if (renderMode == WireframeLines || renderMode == WireframePoints)
+        {
+            RenderInWireframeMode();
+        }
+        else if (renderMode == Depth)
+        {
+            RenderInDepthMode();
+        }
+        else
+        {
+            RenderInNormalMode();
+        }
 
+    }
     renderStopwatch.Stop();
     GetDiagnostics().SetRenderCpuTime(renderStopwatch.ElapsedMs());
 
@@ -115,7 +119,10 @@ void rei::render::DefaultRenderScenario::Render()
 
     time::Stopwatch presentStopwatch;
     presentStopwatch.Start();
-    glfwSwapBuffers(_target);
+    {
+        REI_PROFILE_SCOPE(profiling::markers::SWAP.Id);
+        glfwSwapBuffers(_target);
+    }
     presentStopwatch.Stop();
     GetDiagnostics().SetPresentTime(presentStopwatch.ElapsedMs());
 }
@@ -239,6 +246,7 @@ void rei::render::DefaultRenderScenario::CaptureFrame(const i32 readBuffer)
     }
 
     if (!callback) return;
+    REI_PROFILE_SCOPE(profiling::markers::CAPTURE.Id);
     i32 width = 0;
     i32 height = 0;
     glfwGetFramebufferSize(_target, &width, &height);

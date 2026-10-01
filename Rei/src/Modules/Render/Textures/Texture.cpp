@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "Texture.h"
 
 #include "stb_image.h"
@@ -48,6 +49,7 @@ void rei::render::Texture::PostLoad()
 
 void rei::render::Texture::Use(const i32 idx) const
 {
+    profiling::Count(profiling::markers::TEXTURES.Id);
     glActiveTexture(GL_TEXTURE0 + idx);
     glBindTexture(GL_TEXTURE_2D, _id);
 }

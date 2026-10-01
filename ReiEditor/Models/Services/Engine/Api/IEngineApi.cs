@@ -16,6 +16,7 @@ public interface IEngineApi
     delegate void FrameCaptureCallbackDelegate(IntPtr pixels, int width, int height);
 	
     bool IsEngineRunning { get; }
+    bool HasExport(string name) => false;
 
     IntPtr CreateEngine(string resourcesDir, EngineRunMode mode);
     void Start(IntPtr enginePtr);

@@ -12,6 +12,8 @@ namespace rei::render
         void Render();
 
     private:
+        void RenderProfiler() const;
+
         GLFWwindow* _target = nullptr;
         bool _isInitialized = false;
     };

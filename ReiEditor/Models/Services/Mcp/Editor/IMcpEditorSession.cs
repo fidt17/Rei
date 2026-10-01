@@ -6,6 +6,8 @@ namespace ReiEditor.Models.Services.Mcp.Editor;
 
 internal interface IMcpEditorSession
 {
+    System.Text.Json.JsonElement GetProfilingSnapshot(string source, string view, string? expectedSessionId, int limit);
+    System.Text.Json.JsonElement StartProfilingCapture(int frameCount);
     ReiEditorState GetState();
     ReiEntityList ListEntities();
     ReiEntityDetails GetEntity(int entityId);

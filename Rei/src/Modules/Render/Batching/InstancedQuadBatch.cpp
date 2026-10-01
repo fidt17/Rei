@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "InstancedQuadBatch.h"
 
 #include <array>
@@ -87,6 +88,7 @@ namespace rei::render
         if (_instanceCount == 0) return;
 
         glBindVertexArray(_vertexArray);
+        rei::profiling::RecordDraw(6 * static_cast<u64>(_instanceCount), 2 * static_cast<u64>(_instanceCount));
         glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(_instanceCount));
         glBindVertexArray(0);
     }

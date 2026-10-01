@@ -16,7 +16,7 @@ using ReiEditor.Utils.Common.Procedures;
 
 namespace ReiEditor.Models.Services.Engine.Playmode;
 
-public class EngineRunner : IEngineRunner, IAsyncDisposable
+public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
 {
     public event Action? EngineStartedEvent;
     public event Action? EngineStartFailedEvent;
@@ -180,6 +180,16 @@ public class EngineRunner : IEngineRunner, IAsyncDisposable
                 completion.TrySetResult();
             }
             if (startFailed) EngineStartFailedEvent?.Invoke();
+        }
+    }
+
+    public bool TryInvoke(Action<IEngineApi> action)
+    {
+        lock (_nativeCallLock)
+        {
+            if (_enginePtr == null || !_isActive.Value || !_engineApi.IsEngineRunning) return false;
+            action(_engineApi);
+            return true;
         }
     }
 

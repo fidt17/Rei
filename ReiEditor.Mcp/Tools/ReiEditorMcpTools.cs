@@ -17,6 +17,20 @@ public sealed class ReiEditorMcpTools
         _gateway = gateway;
     }
 
+    [McpServerTool(Name = "rei_editor_get_profiling_snapshot", Title = "Read native CPU profiling", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Copies native completed-frame CPU wall-clock aggregates. Never enables recording, starts capture, loads assets, or uses Editor caches. Status: ok, engine_unavailable, disabled, no_samples, session_changed, unsupported, read_failed. Recent contains up to 120 frames in a tumbling window; last_capture includes progress and completion/cancellation state. Draw counters exclude ImGui and direct project GL calls.")]
+    public Task<JsonElement> GetProfilingSnapshot(CancellationToken cancellationToken, string source = "runtime", string view = "recent", string? expectedSessionId = null, int limit = 256)
+    {
+        return Execute(() => _gateway.GetProfilingSnapshotAsync(source, view, expectedSessionId, limit, cancellationToken));
+    }
+
+    [McpServerTool(Name = "rei_editor_start_profiling_capture", Title = "Capture native CPU profile", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Requests 1-3600 native frames starting next frame boundary. Returns sessionId/captureId and queued or busy; busy preserves current capture. Stop cancels pending capture. Read last_capture for progress/result. Does not save or change scene/assets.")]
+    public Task<JsonElement> StartProfilingCapture(int frameCount, CancellationToken cancellationToken)
+    {
+        return Execute(() => _gateway.StartProfilingCaptureAsync(frameCount, cancellationToken));
+    }
+
     [McpServerTool(Name = "rei_editor_get_state", Title = "Get Rei editor state", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Returns active project, scene, engine, import, build, and automation-operation state. Call before other editor tools.")]
     public Task<ReiEditorState> GetState(CancellationToken cancellationToken)

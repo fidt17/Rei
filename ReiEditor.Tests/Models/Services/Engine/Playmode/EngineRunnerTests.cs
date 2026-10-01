@@ -19,6 +19,32 @@ namespace ReiEditor.Tests.Models.Services.Engine.Playmode;
 [Trait("Area", "Engine")]
 public sealed class EngineRunnerTests
 {
+    [Fact]
+    public async Task NativeReadLeasePreventsShutdownAndDllUnloadUntilReadReturns()
+    {
+        await using var context = new TestContext();
+        Assert.True(context.Start(EngineRunMode.PlayMode));
+        await context.AwaitStarted();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var read = Task.Run(() => context.Runner.TryInvoke(_ =>
+        {
+            entered.TrySetResult();
+            release.Task.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+        }));
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var stop = Task.Run(context.Runner.StopEngine);
+        try
+        {
+            Assert.DoesNotContain("shutdown", context.Calls);
+            Assert.DoesNotContain("unload", context.Calls);
+        }
+        finally { release.TrySetResult(); }
+        Assert.True(await read.WaitAsync(TimeSpan.FromSeconds(5)));
+        await stop.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(context.Runner.TryInvoke(_ => throw new InvalidOperationException("Stopped engine must not be invoked.")));
+    }
+
     private sealed class TestRunnerApi(TestContext context) : Infrastructure.TestDoubles.TestEngineApi
     {
         private IEngineApi.VoidCallbackDelegate? _started;

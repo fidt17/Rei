@@ -2,6 +2,7 @@
 #include <atomic>
 
 #include "InternalEngineWorld.h"
+#include "Common/Profiling/ProfilingService.h"
 #include "Api/EditorEventsRelay.h"
 #include "Common/Diagnostics/DiagnosticsService.h"
 #include "Common/Tasks/TaskExecutor.h"
@@ -66,6 +67,7 @@ namespace rei::internal::engine
 
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
         std::shared_ptr<common::diagnostics::DiagnosticsService> _diagnostics;
+        std::shared_ptr<profiling::ProfilingService> _profiler;
 
         void RunUpdateLoop();
     };

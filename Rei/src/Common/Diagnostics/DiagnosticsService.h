@@ -42,21 +42,21 @@ namespace rei::common::diagnostics
         DiagnosticsSnapshot _snapshot = {};
         bool _isDebugOverlayEnabled = false;
 
-        std::array<f32, SAMPLE_COUNT> _fpsSamples = {};
         std::array<f32, SAMPLE_COUNT> _frameTimeSamples = {};
+        std::array<f32, SAMPLE_COUNT> _sectionsTimeSamples = {};
+        i32 _sectionsSampleIndex = 0;
+        i32 _sectionsSampleSize = 0;
         std::array<f32, SAMPLE_COUNT> _coreTimeSamples = {};
         std::array<f32, SAMPLE_COUNT> _renderTimeSamples = {};
         std::array<f32, SAMPLE_COUNT> _presentTimeSamples = {};
         std::array<f32, SAMPLE_COUNT> _diagnosticsTimeSamples = {};
 
-        i32 _fpsSampleIndex = 0;
         i32 _frameTimeSampleIndex = 0;
         i32 _coreTimeSampleIndex = 0;
         i32 _renderTimeSampleIndex = 0;
         i32 _presentTimeSampleIndex = 0;
         i32 _diagnosticsTimeSampleIndex = 0;
 
-        i32 _fpsSampleSize = 0;
         i32 _frameTimeSampleSize = 0;
         i32 _coreTimeSampleSize = 0;
         i32 _renderTimeSampleSize = 0;

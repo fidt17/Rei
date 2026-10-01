@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Common/Profiling/ProfilingService.h"
 #include "glad/glad.h"
 
 class QuadVertexData
@@ -58,6 +59,7 @@ public:
     void Render() const
     {
         glBindVertexArray(_vertexArray);
+        rei::profiling::RecordDraw(6, 2);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
     }

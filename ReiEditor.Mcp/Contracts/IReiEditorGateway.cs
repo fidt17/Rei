@@ -2,6 +2,8 @@ namespace ReiEditor.Mcp.Contracts;
 
 public interface IReiEditorGateway
 {
+    Task<System.Text.Json.JsonElement> GetProfilingSnapshotAsync(string source, string view, string? expectedSessionId, int limit, CancellationToken cancellationToken);
+    Task<System.Text.Json.JsonElement> StartProfilingCaptureAsync(int frameCount, CancellationToken cancellationToken);
     Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken);
     Task<ReiEntityList> ListEntitiesAsync(CancellationToken cancellationToken);
     Task<ReiEntityDetails> GetEntityAsync(int entityId, CancellationToken cancellationToken);

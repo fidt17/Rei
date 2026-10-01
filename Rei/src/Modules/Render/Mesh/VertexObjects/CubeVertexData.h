@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Common/Profiling/ProfilingService.h"
 #include "glad/glad.h"
 
 class CubeVertexData
@@ -81,6 +82,7 @@ public:
     void Render() const
     {
         glBindVertexArray(VAO);
+        rei::profiling::RecordDraw(36, 12);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
     }

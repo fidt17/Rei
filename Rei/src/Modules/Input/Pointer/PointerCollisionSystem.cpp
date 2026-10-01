@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "PointerCollisionSystem.h"
 
 #include "Modules/Components/ActiveTag.h"
@@ -16,6 +17,7 @@ namespace rei::input
 
     void PointerCollisionSystem::OnUpdate()
     {
+        REI_PROFILE_SCOPE(profiling::markers::PICK_3D.Id);
         const auto camera = render::Camera::GetMainCamera();
         if (camera.IsNull()) return;
 
@@ -25,6 +27,7 @@ namespace rei::input
 
         FOR(e, _entities)
         {
+            profiling::Count(profiling::markers::PICK_CANDIDATES.Id);
             auto& transform = GET(e, Transform);
             auto& listener = GET(e, physics::PointerCollisionListener);
 

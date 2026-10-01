@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "GridVertexData.h"
 
 #include "glad/glad.h"
@@ -81,6 +82,7 @@ GridVertexData::~GridVertexData()
 void GridVertexData::Render() const
 {
     glBindVertexArray(VAO);
+    rei::profiling::RecordDraw(_indicesCount, 0);
     glDrawElements(GL_LINES, _indicesCount, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 }

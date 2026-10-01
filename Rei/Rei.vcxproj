@@ -595,6 +595,9 @@
     <ClInclude Include="src\Common\Time\ScopedTimer.h" />
     <ClInclude Include="src\Common\Time\Stopwatch.h" />
     <ClInclude Include="src\Common\Time\TimeService.h" />
+    <ClInclude Include="src\Common\Profiling\ProfilingService.h" />
+    <ClInclude Include="src\Common\Profiling\ProfileMarkers.h" />
+    <ClInclude Include="src\Api\ProfilingApi.h" />
     <ClInclude Include="src\Ecs\BitMask.h" />
     <ClInclude Include="src\Ecs\ComponentRef.h" />
     <ClInclude Include="src\Ecs\ComponentSet.h" />
@@ -792,6 +795,7 @@
     <ClCompile Include="src\Common\Time\ScopedTimer.cpp" />
     <ClCompile Include="src\Common\Time\Stopwatch.cpp" />
     <ClCompile Include="src\Common\Time\TimeService.cpp" />
+    <ClCompile Include="src\Common\Profiling\ProfilingService.cpp" />
     <ClCompile Include="src\Ecs\BitMask.cpp" />
     <ClCompile Include="src\Ecs\EcsRegistry.cpp" />
     <ClCompile Include="src\Ecs\Entity.cpp" />
@@ -891,6 +895,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ProfilingTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\TimeServiceTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>

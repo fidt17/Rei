@@ -272,3 +272,86 @@ Avoid generic `execute_command` and reflection-based â€œcall any Editor methodâ€
 - Native inspection negotiates UTF-8 buffer size, up to 16 MiB in the managed caller. Values represent memory, not disk. Runtime values can change between calls; use bounded waits in tests.
 
 Real-engine tests and commands: [Rei.EngineIntegration.Tests](../Rei.EngineIntegration.Tests/README.md). Optional REI_EDITOR_STORAGE isolates preferences; REI_STARTUP_PROJECT opens an absolute .rei path after normal window initialization.
+
+## Native CPU profiling v1
+
+Rei owns the profiler; Symbols supplies project-specific constexpr markers. No dedicated profiler window.
+Recording has one writer: the engine thread. RAII scopes on other threads are inactive.
+Register descriptors once in App::OnStart, before the first frame. Names/IDs remain stable across builds;
+the engine copies names and rejects collisions, late registration and names longer than 95 bytes.
+
+```cpp
+constexpr auto UPDATE = rei::profiling::MakeScope("Project.Update");
+constexpr auto COUNT = rei::profiling::MakeCounter("Project.Items");
+constexpr std::array DESCRIPTORS = {UPDATE, COUNT};
+// App::OnStart:
+rei::GetProfiler().Register(DESCRIPTORS);
+// Engine-thread work:
+REI_PROFILE_SCOPE(UPDATE.Id);
+rei::profiling::Count(COUNT.Id, itemCount);
+```
+
+Limits: 256 combined scopes/counters, depth 64, capture 1-3600 frames; fixed storage under 256 KiB per service.
+Recording scopes/counters does not allocate, format or take a shared mutex. Runtime disabled scopes do not
+read the clock. Frame publication and snapshot copies use a bounded mutex; no multiple-writer infrastructure.
+Scope nesting is synchronous and thread-local. Inclusive includes children/waits; exclusive subtracts direct
+children. Recursive inclusive totals may exceed frame time. Scopes must end on the same thread and frame.
+Invalid/overflow frames contribute wall time and capture progress but no metric samples; inspect sampleFrames,
+invalidFrames and completeData before comparing averages. Averages/frame use valid sampleFrames, including
+valid frames without a call. maxCallMs is one invocation; maxFrameMs on a scope is its per-frame inclusive sum.
+
+| Tool | Effects | Arguments |
+| --- | --- | --- |
+| rei_editor_get_profiling_snapshot | Read-only native copied data; no recording, loading, saving or Editor-cache fallback | source=runtime, view=recent or last_capture, expectedSessionId optional decimal string, limit=1..256 (default 256) |
+| rei_editor_start_profiling_capture | Explicit bounded recording request; no scene/asset edits or save | frameCount=1..3600 |
+
+Read statuses: ok, engine_unavailable, disabled, no_samples, session_changed, unsupported, read_failed.
+Invalid source/view/session/limit requests return MCP errors. Unsupported means the loaded project DLL lacks
+the profiling export. A session mismatch returns current metadata explicitly marked session_changed.
+A completed last_capture remains readable with status ok after automatic recording ends. A disabled recent
+view can retain earlier data but is explicitly marked disabled. limit truncates output only, never collection.
+
+Start returns queued with sessionId/captureId. Recording starts at the next engine frame boundary. A second
+request while queued/recording returns busy and preserves the existing capture/ID. Read last_capture for
+captureState (idle/queued/recording/complete/cancelled), targetFrames and completedFrames. Capture data is
+published at the following frame-start boundary, after the entire preceding frame interval is known.
+The frame wall interval includes Swap, capture/readback, queued tasks, profiler publication and inter-frame
+waits. CPU scope times include driver waits; they are never GPU timings. durationMs, averageFrameMs,
+maxFrameMs and fps use full frame-start intervals. Core/Render remain selected legacy sections; F4 labels
+their sum Measured sections separately from Frame wall. Hidden F4 and missing-camera paths clear stale timers.
+
+Stop cancels unfinished collection and destroys that session. Returning to EditorMode or DLL reload creates
+a new session with zero samples. Old captures are not archived across engine destruction. Session IDs and
+capture IDs are decimal strings, avoiding JSON client integer precision loss. Managed reads/capture requests
+hold the EngineRunner native lifecycle lease through the DLL call. No native task wait is needed for these
+commands; Stop/destruction/unload cannot race the call.
+
+Typical use:
+
+1. Fix scene/camera/mode/resolution, build config, tracking/depth/blink and UI visibility. Warm up.
+2. Call rei_editor_start_profiling_capture with frameCount=600. Keep returned sessionId/captureId.
+3. Read view=last_capture and expectedSessionId until captureState=complete, then validate captureId and completeData.
+4. Compare inclusive/exclusive averages, calls and counters across separate matched windows. Avoid captures,
+   builds, extra verification engines and frequent MCP polling during benchmark collection.
+
+Existing F4 CPU profiling block provides continuous 120-frame tumbling windows, Capture 120 frames and
+Dump to log. After a capture exists, its result/progress is displayed. Dump waits for an active capture to
+finish; formatting/log output occurs outside that capture. C++ consumers can use CopySnapshot,
+RequestCapture, SetEnabled and RequestLogDump. Read-only MCP does not print logs.
+
+Counters cover engine GL submissions (meshes, primitive paths, UI glyphs and instanced quads). Draw.Calls
+excludes ImGui and project GL calls outside Rei helpers. SubmittedVertices counts index/vertex references
+multiplied by instances, not unique vertices or shader invocations. Triangles counts submitted topology;
+clipping/discard does not reduce these counters. Material property writes, bindings, uniform uploads,
+Texture::Use asset-binding calls, UI items/glyphs, picking candidates and queued tasks have separate counters.
+Property-write counters count setter attempts; uniform-upload counters count glUniform calls, including
+locations that GL ignores. Texture counters exclude direct GL bindings in framebuffer/font/postprocess paths.
+No GPU queries, timeline, frame p95, asset attribution or optimization is included.
+
+Validation: native [profiling] tests cover nesting/recursion/unwinding, disabled clock reads, bounded/busy
+capture, cancellation, registry collision, overflow, coherent concurrent snapshots and frame-window rollover.
+Focused Editor tests cover native export arguments/statuses and the lifecycle lease; MCP tests cover transport
+and annotations. ProfilingLifecycleTests reuses EngineIntegrationHarness with the isolated project DLL,
+known per-frame scopes/counters, repeated Play/Stop, concurrent reads, rebuild/reload and disk-byte checks.
+The fixture sleeps only during active test captures to make busy/Stop checks deterministic; it is not a
+performance benchmark. These tests never attach to the user's project or Editor.

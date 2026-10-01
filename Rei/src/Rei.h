@@ -7,3 +7,4 @@
 #include "Api\EditorApi.h"
 #include "Api/EntityApi.h"
 #include "Api/AssetApi.h"
+#include "Api/ProfilingApi.h"

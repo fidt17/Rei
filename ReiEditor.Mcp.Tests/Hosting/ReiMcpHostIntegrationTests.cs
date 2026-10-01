@@ -32,6 +32,16 @@ public sealed class ReiMcpHostIntegrationTests
         public string? DataAssetPropertyName { get; private set; }
         public object? DataAssetPropertyValue { get; private set; }
 
+        public Task<JsonElement> GetProfilingSnapshotAsync(string source, string view, string? expectedSessionId, int limit, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(JsonSerializer.SerializeToElement(new { source, view, expectedSessionId, limit, status = "no_samples" }));
+        }
+
+        public Task<JsonElement> StartProfilingCaptureAsync(int frameCount, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(JsonSerializer.SerializeToElement(new { status = "queued", frameCount, captureId = "1" }));
+        }
+
         public Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(new ReiEditorState(
@@ -293,7 +303,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(23, tools.Count);
+        Assert.Equal(25, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
@@ -524,6 +534,32 @@ public sealed class ReiMcpHostIntegrationTests
             Assert.Equal(source, document.RootElement.GetProperty("source").GetString());
             Assert.Equal(source == "runtime" ? "unloaded" : "loaded", document.RootElement.GetProperty("status").GetString());
         }
+    }
+
+    [Fact]
+    public async Task ProfilingToolsExposeReadAndExplicitCaptureContracts()
+    {
+        await using var host = CreateHost(new FakeEditorGateway());
+        await host.StartAsync();
+        await using var client = await CreateClient(host.Endpoint!);
+        var tools = await client.ListToolsAsync();
+        var read = Assert.Single(tools, tool => tool.Name == "rei_editor_get_profiling_snapshot");
+        Assert.True(read.ProtocolTool.Annotations?.ReadOnlyHint);
+        var capture = Assert.Single(tools, tool => tool.Name == "rei_editor_start_profiling_capture");
+        Assert.False(capture.ProtocolTool.Annotations?.ReadOnlyHint);
+        Assert.False(capture.ProtocolTool.Annotations?.IdempotentHint);
+        var result = await client.CallToolAsync("rei_editor_get_profiling_snapshot", new Dictionary<string, object?>
+        {
+            ["source"] = "runtime", ["view"] = "last_capture", ["expectedSessionId"] = "123", ["limit"] = 8
+        });
+        Assert.False(result.IsError == true);
+        using var document = JsonDocument.Parse(GetText(result));
+        Assert.Equal("runtime", document.RootElement.GetProperty("source").GetString());
+        Assert.Equal("last_capture", document.RootElement.GetProperty("view").GetString());
+        Assert.Equal("123", document.RootElement.GetProperty("expectedSessionId").GetString());
+        Assert.Equal(8, document.RootElement.GetProperty("limit").GetInt32());
+        var started = await client.CallToolAsync("rei_editor_start_profiling_capture", new Dictionary<string, object?> { ["frameCount"] = 240 });
+        Assert.Contains("\"frameCount\":240", GetText(started));
     }
 
     private static ReiMcpHost CreateHost(IReiEditorGateway gateway)

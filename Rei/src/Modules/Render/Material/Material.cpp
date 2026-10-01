@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "Material.h"
 
 #include "glad/glad.h"
@@ -78,12 +79,14 @@ namespace rei::render
 
     void Material::Use() const
     {
+        REI_PROFILE_SCOPE(profiling::markers::MATERIAL.Id);
         if (!_shader.IsLoaded())
         {
             LOG_ERROR("Shader {} is not loaded. Cannot use this material", _shader.Id);
             return;
         }
 
+        profiling::Count(profiling::markers::MATERIAL_BINDS.Id);
         _shader->Use();
         SyncShaderBindings();
 
@@ -143,18 +146,21 @@ namespace rei::render
 
     void Material::SetInt(const std::string& name, const i32 value)
     {
+        profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
         if (name.empty()) return;
         _properties[name] = value;
     }
 
     void Material::SetFloat(const std::string& name, const f32 value)
     {
+        profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
         if (name.empty()) return;
         _properties[name] = value;
     }
 
     void Material::SetColor(const std::string& name, const Color& value)
     {
+        profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
         if (name.empty()) return;
 
         _properties[name] = nlohmann::json::object({
@@ -167,6 +173,7 @@ namespace rei::render
 
     void Material::SetTexture(const std::string& name, const assets::AssetRef<Texture>& texture)
     {
+        profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
         if (name.empty()) return;
 
         _properties[name] = nlohmann::json::object({

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include "Shader.h"
 
 #include "ShaderGenerator.h"
@@ -77,38 +78,46 @@ namespace rei::render
     void Shader::SetInt(const std::string& name, i32 value) const
     {
         Use();
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform1i(GetLocation(name), value);
     }
 
     void Shader::SetFloat(const std::string& name, const f32 value) const
     {
         Use();
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform1f(GetLocation(name), value);
     }
 
     void Shader::SetVector3(const std::string& name, const math::Vector3& value) const
     {
         Use();
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform3f(GetLocation(name), value.x, value.y, value.z);
     }
 
     void Shader::SetColor(const std::string& name, const Color& value) const
     {
         Use();
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform4f(GetLocation(name), value.r, value.g, value.b, value.a);
     }
 
     void Shader::SetMatrix4f(const std::string& name, glm::mat4 value) const
     {
         Use();
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniformMatrix4fv(GetLocation(name), 1, GL_FALSE, value_ptr(value));
     }
 
     void Shader::SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const
     {
         Use();
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniformMatrix4fv(GetLocation("_Projection"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniformMatrix4fv(GetLocation("_View"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniformMatrix4fv(GetLocation("_Model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
     }
 
