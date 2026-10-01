@@ -6,6 +6,7 @@
 #define STRING(x) std::to_string(x)
 
 #define SERIALIZE
+#define REI_HEADER(TEXT)
 #define HIDE_IN_EDITOR
 #define REQUIRE_COMPONENT(COMPONENT_NAME)
 #define SERIALIZABLE_BODY(CLASS_NAME)\

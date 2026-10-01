@@ -128,21 +128,14 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
             {
                 if (_isDisposed) return;
                 TypeLabel = $"Type: {typeInfo.ObjectName} ({_asset.DataAssetTypeId})";
-                foreach (var property in _asset.Properties.Values.Where(property =>
-                             !typeInfo.SerializedProperties.TryGetValue(property.Name, out var schema) ||
-                             !schema.HideInEditor))
+                var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(_asset.Properties.Values, typeInfo.SerializedProperties).ToList();
+                foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, typeInfo.SerializedProperties, property =>
+                             PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry)))
                 {
-                    Properties.Add(PropertyViewUtils.CreatePropertyViewModel(
-                        property,
-                        _serializableObjectsRegistry,
-                        _assetSearchService,
-                        _assetRegistry,
-                        _assetTypeMapper,
-                        _behaviourRegistry,
-                        _projectAssetFocusService,
-                        _sceneManagementService,
-                        _selectionService,
-                        _dataAssetTypeRegistry));
+                    Properties.Add(row);
+                }
+                foreach (var property in visibleProperties)
+                {
                     Action<object?> handler = _ => ScheduleRuntimeSync();
                     property.ValueChangedEvent += handler;
                     _subscriptions.Add((property, handler));

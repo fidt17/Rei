@@ -287,16 +287,14 @@ public class SourceFilesUtility
     {
         text = RemoveComments(text);
         var result = new Dictionary<string, SerializableObjectInfo.SerializedPropertyData>();
-        var serializedIndexes = text.AllIndexesOf(SourceFileMacrosConstants.SERIALIZE);
+        var declarationIndex = 0;
 
-        foreach (var serializedIndex in serializedIndexes)
+        foreach (var annotation in SerializedPropertyAnnotationParser.Parse(text))
         {
-            var lineStartIdx = text.LastIndexOf('\n', serializedIndex);
-            lineStartIdx = lineStartIdx == -1 ? 0 : lineStartIdx + 1;
-            var endIdx = text.IndexOf(';', serializedIndex);
+            var serializedIndex = annotation.Index;
+            var endIdx = annotation.EndIndex;
             var substring = text.Substring(serializedIndex, endIdx - serializedIndex);
-            var lineSubstring = text.Substring(lineStartIdx, endIdx - lineStartIdx);
-            var hideInEditor = lineSubstring.Contains(SourceFileMacrosConstants.HIDE_IN_EDITOR);
+            var hideInEditor = annotation.HideInEditor;
             var words = substring.Split().ToList();
             words.RemoveAll(string.IsNullOrWhiteSpace);
 
@@ -310,7 +308,7 @@ public class SourceFilesUtility
 
                 var variableName = words[equalsIdx - 1];
                 var defaultValue = words[equalsIdx + 1];
-                result.Add(variableName, CreateSerializedPropertyData(variableType, defaultValue, hideInEditor));
+                result.Add(variableName, CreateSerializedPropertyData(variableType, defaultValue, hideInEditor, annotation.Header, declarationIndex++));
             }
             else
             {
@@ -319,7 +317,7 @@ public class SourceFilesUtility
                 if (serializedType == SerializedTypeEnum.Invalid) continue;
 
                 var variableName = words[^1];
-                result.Add(variableName, CreateSerializedPropertyData(variableType, null, hideInEditor));
+                result.Add(variableName, CreateSerializedPropertyData(variableType, null, hideInEditor, annotation.Header, declarationIndex++));
             }
         }
 
@@ -344,7 +342,7 @@ public class SourceFilesUtility
         return result;
     }
 
-    private SerializableObjectInfo.SerializedPropertyData CreateSerializedPropertyData(string variableType, string? defaultValue, bool hideInEditor)
+    private SerializableObjectInfo.SerializedPropertyData CreateSerializedPropertyData(string variableType, string? defaultValue, bool hideInEditor, string? headerBefore, int declarationIndex)
     {
         var sourceType = SerializedTypeNameParser.NormalizeSourceType(variableType);
         var templateTypeName = GetTemplateTypeName(sourceType);
@@ -369,7 +367,9 @@ public class SourceFilesUtility
             itemSourceType,
             itemTemplateTypeName,
             defaultValue,
-            hideInEditor);
+            hideInEditor,
+            headerBefore,
+            declarationIndex);
     }
 
     private SerializedTypeEnum GetSerializedTypeForVariableType(string type)
@@ -402,11 +402,7 @@ public class SourceFilesUtility
 
     private static string RemoveComments(string original)
     {
-        const string TOKEN_PATTERN =
-            @"R""(?<delimiter>[^()\s\\]{0,16})\([\s\S]*?\)\k<delimiter>""" +
-            @"|""(?:\\[\s\S]|[^""\\])*""" +
-            @"|\b[0-9](?:[\w.]|'(?=\w))*" +
-            @"|(?:u8|u|U|L)?'(?:\\[\s\S]|[^'\\])*'" +
+        const string TOKEN_PATTERN = SerializedPropertyAnnotationParser.LITERAL_PATTERN +
             @"|//[^\r\n]*|/\*[\s\S]*?(?:\*/|\z)";
 
         return Regex.Replace(original, TOKEN_PATTERN, match =>

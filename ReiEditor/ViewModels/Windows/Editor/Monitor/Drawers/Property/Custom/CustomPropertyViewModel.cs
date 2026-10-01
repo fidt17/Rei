@@ -103,15 +103,19 @@ public class CustomPropertyViewModel : BaseViewModel
         
         if (value is Dictionary<string, SerializedProperty> subProperties)
         {
-            if (_displayedProperties.SequenceEqual(subProperties.Values)) return;
+            var registry = _serializableObjectsRegistry;
+            var schema = registry?.GetObject(_property.SourceType)?.SerializedProperties;
+            var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(subProperties.Values, schema).ToList();
+            if (_displayedProperties.SequenceEqual(visibleProperties)) return;
 
             Value.ClearAndDispose();
             _displayedProperties.Clear();
             
-            foreach (var subProperty in subProperties)
+            _displayedProperties.AddRange(visibleProperties);
+            foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, property =>
+                         PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry)))
             {
-                _displayedProperties.Add(subProperty.Value);
-                Value.Add(PropertyViewUtils.CreatePropertyViewModel(subProperty.Value, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry));
+                Value.Add(row);
             }
         }
         else

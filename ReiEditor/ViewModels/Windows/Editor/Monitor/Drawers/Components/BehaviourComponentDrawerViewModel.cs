@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
@@ -141,15 +142,20 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
             Properties.Add(property);
         }
 
-        foreach (var (propertyName, propertyType) in _behaviourRegistry.Behaviours[BehaviourComponent.Id].SerializedProperties)
+        var schema = _behaviourRegistry.Behaviours[BehaviourComponent.Id].SerializedProperties;
+        foreach (var (propertyName, propertyType) in schema)
         {
-            if (propertyType.HideInEditor) continue;
-            if (_rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, propertyName)) continue;
+            if (propertyType.HideInEditor || _rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, propertyName)) continue;
             if (!BehaviourComponent.HasProperty(propertyName))
                 throw new Exception($"Behaviour does not have property with name {propertyName} of {propertyType}");
+        }
 
-            var property = BehaviourComponent.GetProperty(propertyName);
-            Properties.Add(PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry));
+        var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(BehaviourComponent.Properties.Values.Where(property => schema.ContainsKey(property.Name)), schema)
+            .Where(property => !_rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, property.Name));
+        foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, property =>
+                     PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry)))
+        {
+            Properties.Add(row);
         }
     }
 }

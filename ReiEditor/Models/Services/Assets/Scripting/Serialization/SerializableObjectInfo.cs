@@ -16,6 +16,8 @@ public class SerializableObjectInfo
         public string? ItemTemplateTypeName { get; }
         public string? DefaultValue { get; }
         public bool HideInEditor { get; }
+        public string? HeaderBefore { get; }
+        public int DeclarationIndex { get; }
 
         public SerializedPropertyData(
             SerializedTypeEnum type,
@@ -25,7 +27,9 @@ public class SerializableObjectInfo
             string? itemSourceType,
             string? itemTemplateTypeName,
             string? defaultValue,
-            bool hideInEditor)
+            bool hideInEditor,
+            string? headerBefore = null,
+            int declarationIndex = 0)
         {
             Type = type;
             SourceType = sourceType;
@@ -35,6 +39,8 @@ public class SerializableObjectInfo
             ItemTemplateTypeName = itemTemplateTypeName;
             DefaultValue = defaultValue;
             HideInEditor = hideInEditor;
+            HeaderBefore = headerBefore;
+            DeclarationIndex = declarationIndex;
         }
     }
     

@@ -16,6 +16,12 @@
         ItemsSource="{Binding Value, RelativeSource={RelativeSource AncestorType=property1:PropertiesDisplayControl}}"
         Padding="10">
         <ItemsControl.DataTemplates>
+            <DataTemplate DataType="property:PropertyHeaderViewModel">
+                <StackPanel Margin="1,12,1,6" Spacing="5">
+                    <TextBlock Text="{Binding Text}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource Gray_2}" TextWrapping="Wrap" />
+                    <Border Height="1" Background="{StaticResource Dark_4}" />
+                </StackPanel>
+            </DataTemplate>
             <DataTemplate DataType="property:StringPropertyViewModel">
                 <property1:StringPropertyView Margin="1" />
             </DataTemplate>
