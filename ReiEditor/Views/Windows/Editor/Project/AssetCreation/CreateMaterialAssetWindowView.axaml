@@ -12,7 +12,6 @@
         x:Class="ReiEditor.Views.Windows.Editor.Project.AssetCreation.CreateMaterialAssetWindowView"
         x:DataType="vm:CreateMaterialAssetWindowViewModel"
         Title="Create Material"
-        Icon="/Assets/Images/Rei Icon.png"
         Background="{StaticResource Dark_0}"
         CanResize="False"
         WindowStartupLocation="CenterOwner">

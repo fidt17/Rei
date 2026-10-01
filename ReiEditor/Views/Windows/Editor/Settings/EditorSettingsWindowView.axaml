@@ -9,7 +9,6 @@
         x:Class="ReiEditor.Views.Windows.Editor.Settings.EditorSettingsWindowView"
         x:DataType="settings:EditorSettingsWindowViewModel"
         Title="Settings"
-        Icon="/Assets/Images/Rei Icon.png"
         Background="{StaticResource Dark_0}"
         WindowStartupLocation="CenterScreen">
 

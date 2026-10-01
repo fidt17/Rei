@@ -7,8 +7,7 @@
         x:Class="ReiEditor.Views.Windows.ProjectManagement.ProjectManagementWindow"
         x:DataType="projectManagement:ProjectManagementWindowViewModel"
         WindowStartupLocation="CenterScreen"
-        Width="550" Height="450"
-        Icon="/Assets/Images/Rei Icon.png">
+        Width="550" Height="450">
 
     <Design.DataContext>
         <projectManagement:ProjectManagementWindowViewModel />

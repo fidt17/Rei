@@ -16,7 +16,6 @@
         Width="960" Height="540"
         Background="{StaticResource Dark_0}"
         Title="Rei Engine"
-        Icon="/Assets/Images/Rei Icon.png"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
         Focusable="True">

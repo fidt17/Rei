@@ -9,7 +9,6 @@
         Width="700"
         Height="460"
         Title="Build Project"
-        Icon="/Assets/Images/Rei Icon.png"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         Background="{StaticResource Dark_0}">

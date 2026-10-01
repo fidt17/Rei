@@ -83,6 +83,10 @@
         
     </Styles.Resources>
 
+    <Style Selector=":is(Window)">
+        <Setter Property="Icon" Value="/Assets/Branding/Icons/rei-mark-black.ico" />
+    </Style>
+
     <!-- Button Styles -->
     <Style Selector="Button">
         <Setter Property="Cursor" Value="Hand" />

@@ -1,0 +1,29 @@
+Rei Engine branding: selected A2 circle and Manrope wordmark.
+
+Circle masters: rei-mark-black.svg and rei-mark-white.svg.
+Both SVGs use the same vector outline with 10% safe padding.
+Matching transparent PNGs are 1024x1024.
+Icons/ contains PNGs at 16, 20, 24, 32, 40, 48, 64, 128, 256 and 512 px.
+Each ICO contains 16, 20, 24, 32, 40, 48, 64, 128 and 256 px frames.
+Black and white name the mark color, not the background color.
+
+Editor windows share the black ICO through Views/Resources/Styles.axaml.
+The executable uses the same ICO through ReiEditor.csproj ApplicationIcon.
+This matches App.axaml's current Light theme. White assets are available
+for dark backgrounds; an ICO does not change its color automatically.
+
+Vertical wordmarks: docs/images/rei-vertical-black.svg and
+docs/images/rei-vertical-white.svg, with 2048x1800 PNG exports.
+README uses the white PNG for dark mode and black PNG for light mode.
+Horizontal compositions are intentionally not included.
+
+Lettering: Manrope 4.505 from Google Fonts, REI weight 600 and ENGINE 400.
+Letters are converted to vector outlines; no font installation required.
+The font file is not redistributed in this repository.
+Font source: https://github.com/google/fonts/tree/main/ofl/manrope
+Font license: https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt
+SIL OFL 1.1 permits logo artwork; it does not apply its font license to
+graphics created using the font. https://openfontlicense.org/ofl-faq/
+
+Use SVG masters for new exports. Preserve transparent backgrounds and
+matching alpha between black and white variants.
