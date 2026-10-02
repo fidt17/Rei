@@ -131,6 +131,9 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         EnsureAlive();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var result = await _client!.CallToolAsync(tool, arguments, cancellationToken: timeout.Token);
+        // Preserve native framebuffer pixels alongside metadata for visual regression checks.
+        foreach (var image in result.Content.OfType<ImageContentBlock>().Where(image => image.MimeType == "image/png"))
+            await File.WriteAllBytesAsync(Path.Combine(RunDirectory, $"frame-{Guid.NewGuid():N}.png"), image.DecodedData.ToArray());
         var text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text));
         await AppendDiagnosticAsync("mcp.jsonl",
             JsonSerializer.Serialize(new { tool, arguments, result = text, isError = result.IsError }));

@@ -7,10 +7,10 @@ Icons/ contains PNGs at 16, 20, 24, 32, 40, 48, 64, 128, 256 and 512 px.
 Each ICO contains 16, 20, 24, 32, 40, 48, 64, 128 and 256 px frames.
 Black and white name the mark color, not the background color.
 
-Editor windows share the black ICO through Views/Resources/Styles.axaml.
-The executable uses the same ICO through ReiEditor.csproj ApplicationIcon.
-This matches App.axaml's current Light theme. White assets are available
-for dark backgrounds; an ICO does not change its color automatically.
+Editor windows share the white ICO through Views/Resources/Styles.axaml.
+The executable uses the same white ICO through ReiEditor.csproj ApplicationIcon.
+The white mark is used in window headers and the Windows taskbar.
+An ICO does not change its color automatically.
 
 Vertical wordmarks: docs/images/rei-vertical-black.svg and
 docs/images/rei-vertical-white.svg, with 2048x1800 PNG exports.

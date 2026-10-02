@@ -29,7 +29,8 @@ namespace rei::profiling::markers
     inline constexpr auto PROPERTY_WRITES = MakeCounter("Rei.Material.PropertyWrites");
     inline constexpr auto UNIFORMS = MakeCounter("Rei.Shader.UniformUploads");
     inline constexpr auto TEXTURES = MakeCounter("Rei.Texture.Bindings");
-    inline constexpr auto GLYPHS = MakeCounter("Rei.UI.GlyphDraws");
+    inline constexpr auto GLYPHS = MakeCounter("Rei.UI.Glyphs");
+    inline constexpr auto UI_TEXT_DRAWS = MakeCounter("Rei.UI.TextDraws");
     inline constexpr auto UI_ITEMS = MakeCounter("Rei.UI.Items");
     inline constexpr auto PICK_CANDIDATES = MakeCounter("Rei.Picking.Candidates");
     inline constexpr auto TASK_COUNT = MakeCounter("Rei.Tasks.Count");
@@ -37,5 +38,5 @@ namespace rei::profiling::markers
     inline constexpr std::array ALL = {WINDOW, UPDATE, BEHAVIOURS, APP, DIAGNOSTICS, PICK_3D, PICK_UI, TASKS,
         RENDER, PREPARE, SCENE, UI, UI_COLLECT, UI_IMAGE, UI_TEXT, MATERIAL, OVERLAY, CAPTURE, SWAP,
         DRAW_CALLS, VERTICES, TRIANGLES, MATERIAL_BINDS, PROPERTY_WRITES, UNIFORMS, TEXTURES, GLYPHS,
-        UI_ITEMS, PICK_CANDIDATES, TASK_COUNT};
+        UI_TEXT_DRAWS, UI_ITEMS, PICK_CANDIDATES, TASK_COUNT};
 }

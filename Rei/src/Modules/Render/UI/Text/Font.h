@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Common/Primitives.h"
+#include "Common/Math/Vector2.h"
+
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -17,7 +20,10 @@ namespace rei::render
 
     struct FontGlyph
     {
+        // Borrowed atlas handle; zero for glyphs without a bitmap. Font owns the texture.
         u32 TextureId = 0;
+        math::Vector2 UvMin{};
+        math::Vector2 UvMax{};
         i32 Width = 0;
         i32 Height = 0;
         i32 BearingX = 0;
@@ -44,6 +50,7 @@ namespace rei::render
 
         REI_API const std::string& GetFamilyName() const;
         REI_API i32 GetPixelHeight() const;
+        REI_API u32 GetAtlasTextureId() const;
         REI_API const FontGlyph& GetGlyph(u8 character) const;
         REI_API bool HasGlyph(u8 character) const;
 
@@ -52,9 +59,10 @@ namespace rei::render
         i32 _pixelHeight = REI_DEFAULT_FONT_PIXEL_HEIGHT;
         std::vector<u8> _fontData{};
         std::unordered_map<u8, FontGlyph> _glyphs{};
+        u32 _atlasTexture = 0;
 
         void LoadAsciiFromMemory();
-        void UploadGlyphTextures();
-        void DeleteGlyphTextures();
+        void UploadAtlas();
+        void DeleteAtlas();
     };
 }

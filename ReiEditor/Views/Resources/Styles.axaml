@@ -84,7 +84,7 @@
     </Styles.Resources>
 
     <Style Selector=":is(Window)">
-        <Setter Property="Icon" Value="/Assets/Branding/Icons/rei-mark-black.ico" />
+        <Setter Property="Icon" Value="/Assets/Branding/Icons/rei-mark-white.ico" />
     </Style>
 
     <!-- Button Styles -->

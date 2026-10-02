@@ -712,6 +712,8 @@
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\UI\Text\Font.h" />
+    <ClInclude Include="src\Modules\Render\UI\Text\TextGeometry.h" />
+    <ClInclude Include="src\Modules\Render\UI\UiHierarchy.h" />
     <ClInclude Include="src\Modules\Render\UI\UIUtility.h" />
     <ClInclude Include="src\Modules\Render\Textures\Texture.h" />
     <ClInclude Include="src\Modules\Resources\AssetBuilder.h" />
@@ -890,6 +892,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\UiRenderTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\MaterialTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>

@@ -345,6 +345,7 @@ excludes ImGui and project GL calls outside Rei helpers. SubmittedVertices count
 multiplied by instances, not unique vertices or shader invocations. Triangles counts submitted topology;
 clipping/discard does not reduce these counters. Material property writes, bindings, uniform uploads,
 Texture::Use asset-binding calls, UI items/glyphs, picking candidates and queued tasks have separate counters.
+Rei.UI.Glyphs counts submitted glyph quads; Rei.UI.TextDraws counts batched text submissions (one per rendered text component containing bitmap glyphs). The former Rei.UI.GlyphDraws counter is replaced by these two counters.
 Property-write counters count setter attempts; uniform-upload counters count actual glUniform calls.
 Inactive uniform locations are skipped by Shader setters. Texture counters exclude direct GL bindings in framebuffer/font/postprocess paths.
 No GPU queries, timeline, frame p95, asset attribution or optimization is included.

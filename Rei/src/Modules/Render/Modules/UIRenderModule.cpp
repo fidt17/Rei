@@ -4,7 +4,9 @@
 #include "UIRenderModule.h"
 
 #include <algorithm>
-#include <array>
+#include <cstring>
+#include "Modules/Render/UI/Text/TextGeometry.h"
+#include "Modules/Components/EntityInfo.h"
 
 #include "Api/EditorApi.h"
 #include "glm/ext/matrix_clip_space.hpp"
@@ -70,6 +72,18 @@ namespace rei::render
             canvases.push_back(canvasEntity);
         }
 
+        if (canvases.empty()) return {};
+
+        UiHierarchy hierarchy;
+        const auto& entityFilter = FILTER(EntityInfo);
+        FOR(entity, entityFilter)
+        {
+            if (IS_DEAD(entity) || !HAS(entity, rei::Transform)) continue;
+            const auto& transform = GET(entity, rei::Transform);
+            hierarchy.AddChild(entity, transform.GetParent(), transform.GetChildOrder());
+        }
+        hierarchy.Sort();
+
         std::ranges::sort(canvases, [](const ecs::Entity a, const ecs::Entity b)
         {
             return ui_render_utility::BuildHierarchySortKey(a) < ui_render_utility::BuildHierarchySortKey(b);
@@ -78,13 +92,13 @@ namespace rei::render
         std::vector<UiRenderItem> renderItems;
         for (const auto canvasEntity : canvases)
         {
-            CollectUiRenderItems(canvasEntity, renderItems);
+            CollectUiRenderItems(canvasEntity, hierarchy, renderItems);
         }
 
         return renderItems;
     }
 
-    void UIRenderModule::CollectUiRenderItems(const ecs::Entity entity, std::vector<UiRenderItem>& renderItems) const
+    void UIRenderModule::CollectUiRenderItems(const ecs::Entity entity, const UiHierarchy& hierarchy, std::vector<UiRenderItem>& renderItems) const
     {
         ECS_WORLD(rei::GetInternalWorld())
 
@@ -103,10 +117,9 @@ namespace rei::render
             }
         }
 
-        const auto children = GET(entity, rei::Transform).GetChildren();
-        for (const auto child : children)
+        for (const auto& child : hierarchy.GetChildren(entity))
         {
-            CollectUiRenderItems(child, renderItems);
+            CollectUiRenderItems(child.Entity, hierarchy, renderItems);
         }
     }
 
@@ -209,6 +222,9 @@ namespace rei::render
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(_textVao);
 
+        _textVertices.clear();
+        _textVertices.resize(text.GetValue().size() * 48);
+        std::size_t writtenFloats = 0;
         const f32 renderSize = text.GetRenderSize(pixelRect);
         const f32 fontScale = renderSize / static_cast<f32>(font->GetPixelHeight());
         const f32 lineHeight = text.GetLineHeight(renderSize);
@@ -235,10 +251,26 @@ namespace rei::render
                 const f32 glyphY = y - static_cast<f32>(glyph.Height - glyph.BearingY) * fontScale;
                 const f32 glyphWidth = static_cast<f32>(glyph.Width) * fontScale;
                 const f32 glyphHeight = static_cast<f32>(glyph.Height) * fontScale;
-                DrawGlyphQuad(glyphX, glyphY, glyphWidth, glyphHeight, glyph.TextureId);
+                const auto vertices = text_geometry::MakeGlyphQuad(glyphX, glyphY, glyphWidth, glyphHeight, glyph);
+                std::memcpy(_textVertices.data() + writtenFloats, vertices.data(), sizeof(vertices));
+                writtenFloats += vertices.size();
             }
 
             x += glyph.GetAdvancePixels() * fontScale;
+        }
+
+        _textVertices.resize(writtenFloats);
+        if (!_textVertices.empty())
+        {
+            glBindTexture(GL_TEXTURE_2D, font->GetAtlasTextureId());
+            glBindBuffer(GL_ARRAY_BUFFER, _textVbo);
+            // Orphan the previous label's storage instead of overwriting in-flight vertices.
+            glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(_textVertices.size() * sizeof(f32)), _textVertices.data(), GL_STREAM_DRAW);
+            const i32 vertexCount = static_cast<i32>(_textVertices.size() / 8);
+            profiling::Count(profiling::markers::GLYPHS.Id, vertexCount / 6);
+            profiling::Count(profiling::markers::UI_TEXT_DRAWS.Id);
+            profiling::RecordDraw(vertexCount, vertexCount / 3);
+            glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         }
 
         glBindVertexArray(0);
@@ -292,22 +324,4 @@ namespace rei::render
         }
     }
 
-    void UIRenderModule::DrawGlyphQuad(const f32 x, const f32 y, const f32 width, const f32 height, const u32 textureId) const
-    {
-        const std::array<f32, 48> vertices = {
-            x, y + height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            x, y, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-            x + width, y, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-            x, y + height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            x + width, y, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-            x + width, y + height, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-        };
-
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glBindBuffer(GL_ARRAY_BUFFER, _textVbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices.data());
-        profiling::Count(profiling::markers::GLYPHS.Id);
-        profiling::RecordDraw(6, 2);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
 }

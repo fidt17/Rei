@@ -2,6 +2,7 @@
 #include "Font.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "Modules/Resources/Serialization/BinaryReader.h"
 #include "glad/glad.h"
@@ -88,7 +89,8 @@ rei::render::Font::Font(Font&& other) noexcept
     : _familyName(std::move(other._familyName)),
       _pixelHeight(other._pixelHeight),
       _fontData(std::move(other._fontData)),
-      _glyphs(std::move(other._glyphs))
+      _glyphs(std::move(other._glyphs)),
+      _atlasTexture(std::exchange(other._atlasTexture, 0))
 {
     other._glyphs.clear();
 }
@@ -97,11 +99,12 @@ rei::render::Font& rei::render::Font::operator=(Font&& other) noexcept
 {
     if (this == &other) return *this;
 
-    DeleteGlyphTextures();
+    DeleteAtlas();
     _familyName = std::move(other._familyName);
     _pixelHeight = other._pixelHeight;
     _fontData = std::move(other._fontData);
     _glyphs = std::move(other._glyphs);
+    _atlasTexture = std::exchange(other._atlasTexture, 0);
     other._glyphs.clear();
 
     return *this;
@@ -109,7 +112,7 @@ rei::render::Font& rei::render::Font::operator=(Font&& other) noexcept
 
 rei::render::Font::~Font()
 {
-    DeleteGlyphTextures();
+    DeleteAtlas();
 }
 
 rei::render::Font rei::render::Font::LoadAscii(const std::filesystem::path& fontPath, const i32 pixelHeight)
@@ -153,8 +156,9 @@ rei::render::Font rei::render::Font::LoadAscii(const std::filesystem::path& font
 
 void rei::render::Font::PostLoad()
 {
+    DeleteAtlas();
     LoadAsciiFromMemory();
-    UploadGlyphTextures();
+    UploadAtlas();
 }
 
 const std::string& rei::render::Font::GetFamilyName() const
@@ -165,6 +169,11 @@ const std::string& rei::render::Font::GetFamilyName() const
 i32 rei::render::Font::GetPixelHeight() const
 {
     return _pixelHeight;
+}
+
+u32 rei::render::Font::GetAtlasTextureId() const
+{
+    return _atlasTexture;
 }
 
 const rei::render::FontGlyph& rei::render::Font::GetGlyph(const u8 character) const
@@ -213,47 +222,67 @@ void rei::render::Font::LoadAsciiFromMemory()
     FT_Done_FreeType(library);
 }
 
-void rei::render::Font::UploadGlyphTextures()
+void rei::render::Font::UploadAtlas()
 {
+    constexpr i32 columns = 16;
+    constexpr i32 rows = 8;
+    constexpr i32 padding = 2;
+    i32 maxWidth = 0;
+    i32 maxHeight = 0;
+    for (const auto& [_, glyph] : _glyphs)
+    {
+        maxWidth = (std::max)(maxWidth, glyph.Width);
+        maxHeight = (std::max)(maxHeight, glyph.Height);
+    }
+    if (maxWidth <= 0 || maxHeight <= 0) return;
+
+    const i32 cellWidth = maxWidth + padding * 2;
+    const i32 cellHeight = maxHeight + padding * 2;
+    const i32 atlasWidth = columns * cellWidth;
+    const i32 atlasHeight = rows * cellHeight;
+    std::vector<u8> pixels(static_cast<std::size_t>(atlasWidth) * atlasHeight, 0);
+    for (auto& [character, glyph] : _glyphs)
+    {
+        if (glyph.Width <= 0 || glyph.Height <= 0 || glyph.Bitmap.empty()) continue;
+        const i32 x = (character % columns) * cellWidth + padding;
+        const i32 y = (character / columns) * cellHeight + padding;
+        // Extruded edges preserve the old per-glyph CLAMP_TO_EDGE filtering.
+        for (i32 row = -padding; row < glyph.Height + padding; ++row)
+        {
+            const i32 sourceRow = std::clamp(row, 0, glyph.Height - 1);
+            for (i32 col = -padding; col < glyph.Width + padding; ++col)
+            {
+                const i32 sourceCol = std::clamp(col, 0, glyph.Width - 1);
+                pixels[(y + row) * atlasWidth + x + col] = glyph.Bitmap[sourceRow * glyph.Width + sourceCol];
+            }
+        }
+        glyph.UvMin = {static_cast<f32>(x) / atlasWidth, static_cast<f32>(y) / atlasHeight};
+        glyph.UvMax = {static_cast<f32>(x + glyph.Width) / atlasWidth, static_cast<f32>(y + glyph.Height) / atlasHeight};
+    }
+
+    i32 unpackAlignment = 0;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glGenTextures(1, &_atlasTexture);
+    glBindTexture(GL_TEXTURE_2D, _atlasTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, atlasWidth, atlasHeight, 0, GL_RED, GL_UNSIGNED_BYTE, pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
 
     for (auto& [_, glyph] : _glyphs)
     {
-        if (glyph.TextureId != 0) continue;
-        if (glyph.Width <= 0 || glyph.Height <= 0 || glyph.Bitmap.empty()) continue;
-
-        glGenTextures(1, &glyph.TextureId);
-        glBindTexture(GL_TEXTURE_2D, glyph.TextureId);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RED,
-            glyph.Width,
-            glyph.Height,
-            0,
-            GL_RED,
-            GL_UNSIGNED_BYTE,
-            glyph.Bitmap.data());
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
+        if (glyph.Width > 0 && glyph.Height > 0 && !glyph.Bitmap.empty()) glyph.TextureId = _atlasTexture;
         glyph.Bitmap.clear();
         glyph.Bitmap.shrink_to_fit();
     }
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
 
-void rei::render::Font::DeleteGlyphTextures()
+void rei::render::Font::DeleteAtlas()
 {
-    for (auto& [_, glyph] : _glyphs)
-    {
-        if (glyph.TextureId == 0) continue;
-
-        glDeleteTextures(1, &glyph.TextureId);
-        glyph.TextureId = 0;
-    }
+    if (_atlasTexture != 0) glDeleteTextures(1, &_atlasTexture);
+    _atlasTexture = 0;
+    for (auto& [_, glyph] : _glyphs) glyph.TextureId = 0;
 }

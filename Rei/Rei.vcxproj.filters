@@ -671,6 +671,8 @@
     <ClInclude Include="src\Modules\Render\Shaders\ShaderUtility.h" />
     <ClInclude Include="src\Modules\Render\UI\UIUtility.h" />
     <ClInclude Include="src\Modules\Render\UI\Text\Font.h" />
+    <ClInclude Include="src\Modules\Render\UI\Text\TextGeometry.h" />
+    <ClInclude Include="src\Modules\Render\UI\UiHierarchy.h" />
     <ClInclude Include="src\Modules\Render\Systems\AssignMainCameraSystem.h" />
     <ClInclude Include="src\Modules\Render\Systems\FlyCameraSystem.h" />
     <ClInclude Include="src\Modules\Window\MainWindowHandler.h" />
@@ -799,6 +801,7 @@
   <ItemGroup>
     <ClCompile Include="src\Common\Time\TimeService.cpp"><Filter>src\Common\Time</Filter></ClCompile>
     <ClInclude Include="src\Common\Time\TimeService.h"><Filter>src\Common\Time</Filter></ClInclude>
+    <ClCompile Include="tests\UiRenderTests.cpp" />
     <ClCompile Include="tests\MaterialTests.cpp" />
     <ClCompile Include="tests\TimeServiceTests.cpp" />
   </ItemGroup>
