@@ -11,6 +11,7 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class EngineIntegrationHarness : IAsyncDisposable
 {
     private readonly string _fixtureName;
+    private readonly bool _keepBuildOutputs;
     private bool _prepared;
     private readonly SemaphoreSlim _diagnosticWriteLock = new(1, 1);
     public int LaunchCount { get; private set; }
@@ -23,11 +24,12 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
     public string RunDirectory { get; } = Path.Combine(Path.GetTempPath(), "Rei-engine-tests", Guid.NewGuid().ToString("N"));
     public string ProjectDirectory => Path.Combine(RunDirectory, "project");
 
-    public EngineIntegrationHarness(string fixtureName = "DataAssets")
+    public EngineIntegrationHarness(string fixtureName = "DataAssets", bool? keepBuildOutputs = null)
     {
         if (string.IsNullOrWhiteSpace(fixtureName) || Path.GetFileName(fixtureName) != fixtureName || fixtureName is "." or "..")
             throw new ArgumentException("Fixture name must be a single directory name.", nameof(fixtureName));
         _fixtureName = fixtureName;
+        _keepBuildOutputs = keepBuildOutputs ?? string.Equals(Environment.GetEnvironmentVariable("REI_TEST_KEEP_BUILD_OUTPUTS"), "true", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task StartAsync()
@@ -243,7 +245,49 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         return logs;
     }
 
-    public ValueTask DisposeAsync() => new(StopAsync());
+    public async ValueTask DisposeAsync()
+    {
+        await StopAsync();
+        if (_keepBuildOutputs) return;
+        try { TrimBuildOutputs(RunDirectory); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Preserve evidence and report cleanup failure without hiding the original test failure.
+            await File.WriteAllTextAsync(Path.Combine(RunDirectory, "cleanup-error.txt"), error.ToString());
+        }
+    }
+
+    internal static void TrimBuildOutputs(string runDirectory)
+    {
+        var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Rei-engine-tests")).TrimEnd(Path.DirectorySeparatorChar);
+        var run = Path.GetFullPath(runDirectory).TrimEnd(Path.DirectorySeparatorChar);
+        if (!Guid.TryParseExact(Path.GetFileName(run), "N", out _) ||
+            !string.Equals(Path.GetDirectoryName(run), root, StringComparison.OrdinalIgnoreCase))
+            throw new IOException("Cleanup only accepts immediate GUID directories under Rei-engine-tests.");
+        if (!Directory.Exists(run)) return;
+        var outputs = Path.GetFullPath(Path.Combine(run, "project", "bin"));
+        foreach (var parent in new[] { root, run, Path.Combine(run, "project") })
+            if (Directory.Exists(parent)) RejectLink(parent);
+        if (!Directory.Exists(outputs)) return;
+        ValidateTree(outputs);
+        Directory.Delete(outputs, recursive: true);
+    }
+
+    private static void RejectLink(string path)
+    {
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            throw new IOException($"Refusing cleanup through a link: {path}");
+    }
+
+    private static void ValidateTree(string directory)
+    {
+        RejectLink(directory);
+        foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+        {
+            RejectLink(entry);
+            if (Directory.Exists(entry)) ValidateTree(entry);
+        }
+    }
 
     private async Task StopAsync()
     {
