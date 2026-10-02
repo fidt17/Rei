@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -13,8 +14,6 @@ namespace ReiEditor.Models.Services.Build.Solution;
 
 public class MsBuildSolutionBuilder : ISolutionBuilder
 {
-    private bool _didCleanBuild;
-    
     private readonly IResourceService _resourceService;
     private readonly IEditorPreferencesService _editorPreferencesService;
     private readonly IActiveProjectService _activeProjectService;
@@ -39,16 +38,14 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
         var msBuildPath = _editorPreferencesService.GetMsBuildPath();
         if (!File.Exists(msBuildPath)) throw new Exception("Invalid MsBuild path");
 
-        var msBuildProcess = new Process();
+        using var msBuildProcess = new Process();
         msBuildProcess.StartInfo.FileName = msBuildPath;
-        var buildTarget = _didCleanBuild && !cleanBuild ? "Build" : "Clean;Build";
-        if (!_didCleanBuild || cleanBuild)
-        {
-            _didCleanBuild = true;
-        }
+        var buildTarget = cleanBuild ? "Clean;Build" : "Build";
 
         msBuildProcess.StartInfo.Arguments = MsBuildArgumentsBuilder.Build(_resourceService.GetRootPath(), configuration, buildTarget, outputDirectory);
+        msBuildProcess.StartInfo.UseShellExecute = false;
         msBuildProcess.StartInfo.CreateNoWindow = true;
+        msBuildProcess.StartInfo.RedirectStandardError = true;
         msBuildProcess.StartInfo.RedirectStandardOutput = true;
 			
         msBuildProcess.Start();
@@ -66,6 +63,7 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
                 // ignored
             }
         });
+        var errorOutput = msBuildProcess.StandardError.ReadToEndAsync();
         string output = await msBuildProcess.StandardOutput.ReadToEndAsync();
         await msBuildProcess.WaitForExitAsync();
 
@@ -73,7 +71,8 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
         
         _logger.Log($"Solution build finished");
 
-        ParseMsBuildOutput(output);
+        ParseMsBuildOutput(output + Environment.NewLine + await errorOutput);
+        if (msBuildProcess.ExitCode != 0) throw new Exception($"MSBuild failed with exit code {msBuildProcess.ExitCode}.");
     }
 
     private void ParseMsBuildOutput(string output)
@@ -88,11 +87,11 @@ public class MsBuildSolutionBuilder : ISolutionBuilder
         {
             string cleanUpString(string str) => str.Replace(projectDirPath, "").Replace($"[{project.ProjectName}.vcxproj]", "");
 			
-            if (line.Contains("warning"))
+            if (Regex.IsMatch(line, @"\bwarning\s+[A-Z]+\d+\s*:", RegexOptions.IgnoreCase))
             {
                 warnings.Add(cleanUpString(line));
             }
-            else if (line.Contains("error"))
+            else if (Regex.IsMatch(line, @"\berror\s+[A-Z]+\d+\s*:", RegexOptions.IgnoreCase))
             {
                 errors.Add(cleanUpString(line));
             }

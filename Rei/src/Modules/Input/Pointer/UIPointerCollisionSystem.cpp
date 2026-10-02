@@ -68,7 +68,8 @@ namespace rei::input
             ECS_WORLD(GetInternalWorld())
             
             const auto& text = GET(entity, ui::Text);
-            const bool blocksByRaycastTarget = ShouldUseRaycastTarget() && !text.IsRaycastTarget();
+            if (!text.IsEnabled()) return false;
+            if (ShouldUseRaycastTarget() && !text.IsRaycastTarget()) return false;
             const auto logicalRect = CalculateLogicalRect(entity, width, height);
             const auto canvasEntity = ui_utility::FindCanvasEntity(entity);
             f32 scaleFactor = 1.0f;
@@ -82,7 +83,7 @@ namespace rei::input
                 logicalRect.Max * scaleFactor
             };
             const auto textRect = text.CalculateRenderRect(pixelRect);
-            return text.IsEnabled() && !blocksByRaycastTarget && render::ui_render_utility::IsPointInsideRect(screenPoint, textRect);
+            return render::ui_render_utility::IsPointInsideRect(screenPoint, textRect);
         }
 
         bool IsUiHit(const ecs::Entity entity, const math::Vector2& screenPoint, const i32 width, const i32 height)

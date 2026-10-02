@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
@@ -25,6 +27,9 @@ public class AssetImporter : IAssetImporter
     public event Action? ImportedAssetsEvent;
 
     public Utils.Common.IObservable<bool> IsImporting => _isImporting;
+
+    private string? _importedFingerprint;
+    private bool _importFailed;
 
     private readonly Observable<bool> _isImporting = new(false);
 
@@ -75,10 +80,43 @@ public class AssetImporter : IAssetImporter
         _editorProceduresService = editorProceduresService;
     }
 
+    public async Task<List<AssetInfo>> EnsureImported()
+    {
+        if (_importedFingerprint != null && _importedFingerprint == await GetImportFingerprint())
+        {
+            _logger.Log("Asset import inputs are unchanged. Reusing imported registries.");
+            return _assetRegistry.GetAllAssets().ToList();
+        }
+        var assets = await ReimportAll();
+        if (_importedFingerprint == null) throw new InvalidOperationException("Asset import did not complete successfully.");
+        return assets;
+    }
+
+    private async Task<string> GetImportFingerprint()
+    {
+        var projectPath = _resourceService.GetProjectPath();
+        var paths = Directory.EnumerateFiles(projectPath, "*", SearchOption.AllDirectories)
+            .Concat(_sourceFilesUtility.GetSourceRoots().Where(Directory.Exists)
+                .SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                .Where(path => FileExtensions.HasAnyExtension(path, ProjectSourceFiles.HEADER_EXTENSIONS)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var path in paths)
+        {
+            hash.AppendData(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant() + "\0"));
+            await using var stream = File.OpenRead(path);
+            hash.AppendData(await SHA256.HashDataAsync(stream));
+        }
+        return Convert.ToHexString(hash.GetHashAndReset());
+    }
+
     public async Task<List<AssetInfo>> ReimportAll()
     {
         var procedure = TryBeginImportProcedure();
         if (procedure == null) return new List<AssetInfo>();
+        _importedFingerprint = null;
+        _importFailed = false;
 
         var assets = new List<AssetInfo>();
         
@@ -92,9 +130,11 @@ public class AssetImporter : IAssetImporter
             await _behaviourRegistry.RefreshBehaviours();
             await _shaderRegistry.RefreshShaders();
             await ImportScenes();
+            if (!_importFailed && _sourceFilesUtility.AreSourceFilesValid) _importedFingerprint = await GetImportFingerprint();
         }
         catch (Exception e)
         {
+            _importFailed = true;
             _logger.LogError($"Caught exception during import: {e.Message}");
         }
         
@@ -110,6 +150,8 @@ public class AssetImporter : IAssetImporter
 
         var procedure = TryBeginImportProcedure();
         if (procedure == null) return new List<AssetInfo>();
+        _importedFingerprint = null;
+        _importFailed = false;
         
         var importedAssets = new List<AssetInfo>();
 
@@ -149,6 +191,7 @@ public class AssetImporter : IAssetImporter
                 }
                 catch (Exception e)
                 {
+                    _importFailed = true;
                     _logger.LogException(e);
                 }
             }
@@ -186,6 +229,7 @@ public class AssetImporter : IAssetImporter
         }
         catch (Exception e)
         {
+            _importFailed = true;
             _logger.LogError($"Caught exception during import: {e.Message}");
         }
         
@@ -253,6 +297,7 @@ public class AssetImporter : IAssetImporter
             }
             catch (Exception e)
             {
+                _importFailed = true;
                 _logger.LogException(e);
             }
         }
@@ -293,6 +338,7 @@ public class AssetImporter : IAssetImporter
             
             if (scene == null)
             {
+                _importFailed = true;
                 _logger.LogWarning($"Could not load Scene asset from {sceneFilePath}");
                 continue;
             }
@@ -303,7 +349,7 @@ public class AssetImporter : IAssetImporter
             }
 
             var data = _serializer.Serialize(scene);
-            await _resourceService.Write(data, sceneFilePath);
+            if (!await _resourceService.Write(data, sceneFilePath)) _importFailed = true;
         }
     }
 }

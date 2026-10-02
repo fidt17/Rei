@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Serialization;
 
@@ -84,9 +85,7 @@ public class ResourceService : IResourceService
     {
         try
         {
-            var directoryPath = Path.GetDirectoryName(Path.GetFullPath(fullPath))!;
-            Directory.CreateDirectory(directoryPath);
-            await File.WriteAllTextAsync(fullPath, data);
+            await FileContentUtility.WriteIfChanged(fullPath, data);
             return true;
         }
         catch (Exception e)

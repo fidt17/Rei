@@ -10,6 +10,7 @@ public interface IAssetImporter
 
     Utils.Common.IObservable<bool> IsImporting { get; }
     
+    Task<List<AssetInfo>> EnsureImported() => ReimportAll();
     Task<List<AssetInfo>> ReimportAll();
     Task<List<AssetInfo>> ReimportPaths(IEnumerable<string> paths);
 }

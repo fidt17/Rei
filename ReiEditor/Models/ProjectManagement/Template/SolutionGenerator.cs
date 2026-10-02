@@ -41,8 +41,8 @@ public class SolutionGenerator : ISolutionGenerator
         var projectGuid = Guid.NewGuid();
 			
         var solutionFilePath = await CreateSolutionFile(config.ProjectName, solutionDirPath, solutionGuid, projectGuid);
-        var projectFilePath = await CreateProjectFile(config.ProjectName, projectDirPath, projectGuid);
         await CreateSourceFiles(projectDirPath);
+        var projectFilePath = await CreateProjectFile(config.ProjectName, projectDirPath, projectGuid);
 
         return new SolutionGenerationResult
         {
@@ -69,7 +69,10 @@ public class SolutionGenerator : ISolutionGenerator
             _engineSettingsProvider.GetEngineReleaseIncludeDir(), 
             _engineSettingsProvider.GetEngineSourceIncludes());
 		
-        await File.WriteAllTextAsync(projectFilePath, filledTemplate);
+        var scriptsPath = Path.GetDirectoryName(projectFilePath)!;
+        await EnsurePchSource(scriptsPath, filledTemplate);
+        filledTemplate = FillSourceFiles(filledTemplate, ProjectSourceFiles.Enumerate(scriptsPath));
+        await FileContentUtility.WriteIfChanged(projectFilePath, filledTemplate);
     }
 
     public async Task AddSourceFiles(string projectFilePath, IEnumerable<string> includes)
@@ -77,11 +80,24 @@ public class SolutionGenerator : ISolutionGenerator
         var projectFile = await File.ReadAllTextAsync(projectFilePath);
         if (projectFile == null) throw new Exception($"Missing project file. Path: {projectFilePath}");
         
+        projectFile = FillSourceFiles(projectFile, includes);
+        await FileContentUtility.WriteIfChanged(projectFilePath, projectFile);
+    }
+
+    private static string FillSourceFiles(string projectFile, IEnumerable<string> includes)
+    {
+        var usesPch = projectFile.Contains("<PrecompiledHeader>Use</PrecompiledHeader>", StringComparison.Ordinal);
         var includesList = includes
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => NormalizeIncludePath(x!))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        if (usesPch && !includesList.Contains(ProjectSourceFiles.PCH_SOURCE_PATH, StringComparer.OrdinalIgnoreCase))
+        {
+            includesList.Add(ProjectSourceFiles.PCH_SOURCE_PATH);
+        }
+        includesList.Sort(StringComparer.OrdinalIgnoreCase);
 
         var compileStr = new StringBuilder();
         var includeStr = new StringBuilder();
@@ -90,7 +106,9 @@ public class SolutionGenerator : ISolutionGenerator
             var extension = Path.GetExtension(includePath);
             if (string.Equals(extension, FileExtensions.CPP, StringComparison.OrdinalIgnoreCase))
             {
-                compileStr.AppendLine(CreateProjectItem("ClCompile", includePath));
+                compileStr.AppendLine(usesPch && string.Equals(includePath, ProjectSourceFiles.PCH_SOURCE_PATH, StringComparison.OrdinalIgnoreCase)
+                    ? CreatePchProjectItem(includePath)
+                    : CreateProjectItem("ClCompile", includePath));
             }
             else if (string.Equals(extension, FileExtensions.H, StringComparison.OrdinalIgnoreCase))
             {
@@ -101,7 +119,19 @@ public class SolutionGenerator : ISolutionGenerator
         projectFile = ReplaceItemGroupContents(projectFile, "ClCompile", compileStr.ToString());
         projectFile = ReplaceItemGroupContents(projectFile, "ClInclude", includeStr.ToString());
         
-        await File.WriteAllTextAsync(projectFilePath, projectFile);
+        return projectFile;
+    }
+
+    private static Task EnsurePchSource(string scriptsPath, string projectFile)
+    {
+        if (!projectFile.Contains("<PrecompiledHeader>Use</PrecompiledHeader>", StringComparison.Ordinal)) return Task.CompletedTask;
+        return FileContentUtility.WriteIfChanged(Path.Combine(scriptsPath, ProjectSourceFiles.PCH_SOURCE_PATH), "#include <Rei.h>\r\n");
+    }
+
+    private static string CreatePchProjectItem(string includePath)
+    {
+        var includeAttribute = new XAttribute("Include", includePath);
+        return $"   <ClCompile {includeAttribute}><PrecompiledHeader>Create</PrecompiledHeader><MultiProcessorCompilation>false</MultiProcessorCompilation><AdditionalOptions>/FS /bigobj</AdditionalOptions></ClCompile>";
     }
 
     private static string NormalizeIncludePath(string includePath)
@@ -148,7 +178,7 @@ public class SolutionGenerator : ISolutionGenerator
 		
         var filePath = Path.Combine(solutionFolderPath, $"{projectName}{FileExtensions.VS_SOLUTION}");
 		
-        await File.WriteAllTextAsync(filePath, filledTemplate);
+        await FileContentUtility.WriteIfChanged(filePath, filledTemplate);
 
         return filePath;
     }
@@ -165,9 +195,12 @@ public class SolutionGenerator : ISolutionGenerator
             _engineSettingsProvider.GetEngineReleaseIncludeDir(), 
             _engineSettingsProvider.GetEngineSourceIncludes());
 		
+        await EnsurePchSource(projectFolderPath, filledTemplate);
+        filledTemplate = FillSourceFiles(filledTemplate, ProjectSourceFiles.Enumerate(projectFolderPath));
+
         var filePath = Path.Combine(projectFolderPath, $"{projectName}{FileExtensions.VS_PROJECT}");
 		
-        await File.WriteAllTextAsync(filePath, filledTemplate);
+        await FileContentUtility.WriteIfChanged(filePath, filledTemplate);
 
         return filePath;
     }
@@ -179,7 +212,7 @@ public class SolutionGenerator : ISolutionGenerator
         var template = await _templateProvider.GetMainFileTemplate();
 
         var filePath = Path.Combine(projectFolderPath, GetMainFileName());
-        await File.WriteAllTextAsync(filePath, template);
+        await FileContentUtility.WriteIfChanged(filePath, template);
     }
 
     private static string GetMainFileName() => "ReiApp.cpp";

@@ -11,6 +11,22 @@ namespace ReiEditor.Tests.Models.Resources;
 [Trait("Area", "Resources")]
 public sealed class ResourceServiceTests
 {
+    [Fact]
+    public async Task UnchangedWritePreservesTimestampAndChangedWritePersistsContent()
+    {
+        using var fixture = new TemporaryProjectFixture();
+        var path = fixture.Resources.GetScriptsPath("Internal", "Registry.cpp");
+        Assert.True(await fixture.Resources.Write("// файл\r\n", path));
+        var timestamp = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(path, timestamp);
+
+        Assert.True(await fixture.Resources.Write("// файл\r\n", path));
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
+        Assert.True(await fixture.Resources.Write("// changed\r\n", path));
+        Assert.Equal("// changed\r\n", await File.ReadAllTextAsync(path));
+        Assert.NotEqual(timestamp, File.GetLastWriteTimeUtc(path));
+    }
+
     /// <summary>
     /// Writing a resource creates missing parent directories and preserves JSON data for subsequent loading.
     /// </summary>

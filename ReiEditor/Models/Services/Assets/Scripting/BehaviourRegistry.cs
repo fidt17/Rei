@@ -219,15 +219,7 @@ public class BehaviourRegistry : IBehaviourRegistry
 
     private async Task UpdateSolutionFile()
     {
-        var scriptsPath = _resourceService.GetScriptsPath();
-        var compileIncludes = new List<string>();
-        
-        foreach (var file in Directory.EnumerateFiles(scriptsPath, "*.*", SearchOption.AllDirectories))
-        {
-            if (!file.EndsWith(".h") && !file.EndsWith(".cpp")) continue;
-            compileIncludes.Add(file.Replace(scriptsPath, ""));
-        }
-
-        await _solutionGenerator.AddSourceFiles(_activeProjectService.GetActiveProject().ProjectVisualStudioProjectPath, compileIncludes);
+        await _solutionGenerator.AddSourceFiles(_activeProjectService.GetActiveProject().ProjectVisualStudioProjectPath,
+            ProjectSourceFiles.Enumerate(_resourceService.GetScriptsPath()));
     }
 }

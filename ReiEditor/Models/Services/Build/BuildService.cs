@@ -103,7 +103,7 @@ public class BuildService : IBuildService, IAsyncDisposable
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await _assetImporter.ReimportAll();
+            await _assetImporter.EnsureImported();
             cancellationToken.ThrowIfCancellationRequested();
             if (!_sourceFilesUtility.AreSourceFilesValid) throw new Exception("Cannot build project with source files validation errors");
 

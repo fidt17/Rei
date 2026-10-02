@@ -39,14 +39,15 @@ public class SourceFilesUtility
         _logger = logger;
     }
 
+    public IEnumerable<string> GetSourceRoots() => new[] { _resourceService.GetScriptsPath() }
+        .Concat(ProjectSourceFiles.IncludeRoots(_engineSettings.GetEngineSourceIncludes()))
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
     public ProcessedFilesResult ProcessFiles()
     {
         _processedFiles = new();
         
-        var paths = new[] { _resourceService.GetScriptsPath() }
-            .Concat(_engineSettings.GetEngineSourceIncludes().Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Select(Path.GetFullPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+        var paths = GetSourceRoots();
         
         AreSourceFilesValid = true;
 

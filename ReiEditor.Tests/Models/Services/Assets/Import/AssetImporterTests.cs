@@ -21,6 +21,66 @@ namespace ReiEditor.Tests.Models.Services.Assets.Import;
 [Trait("Area", "AssetImport")]
 public sealed class AssetImporterTests
 {
+    private sealed class TestEngineSettings : ReiEditor.Models.Services.Engine.Settings.IEngineSettingsProvider
+    {
+        public string Includes { get; set; } = "";
+        public Task InitializeAsync() => Task.CompletedTask;
+        public string GetEngineSourceIncludes() => Includes;
+        public string GetEnginePath() => throw new NotSupportedException();
+        public string GetEngineDebugIncludeDir() => throw new NotSupportedException();
+        public string GetEngineReleaseIncludeDir() => throw new NotSupportedException();
+        public string GetEngineResourcesDir() => throw new NotSupportedException();
+        public string GetEngineBehavioursDir() => throw new NotSupportedException();
+        public string GetEngineVersion() => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task EnsureImportedReusesSuccessfulImportAndInvalidatesOnContentAdditionDeletionAndEngineHeaders()
+    {
+        using var context = new TestContext();
+        var file = await context.File("Assets/image.png", "AAAA");
+        await context.Importer.ReimportAll();
+        await context.Importer.EnsureImported();
+        Assert.Equal(1, context.Behaviours.RefreshCount);
+        var timestamp = File.GetLastWriteTimeUtc(file);
+        await File.WriteAllTextAsync(file, "BBBB");
+        File.SetLastWriteTimeUtc(file, timestamp);
+        await context.Importer.EnsureImported();
+        Assert.Equal(2, context.Behaviours.RefreshCount);
+        var added = await context.File("Scripts/New.h", "#pragma once");
+        await context.Importer.EnsureImported();
+        Assert.Equal(3, context.Behaviours.RefreshCount);
+        File.Delete(added);
+        await context.Importer.EnsureImported();
+        Assert.Equal(4, context.Behaviours.RefreshCount);
+        var engineRoot = context.Project.Directory.GetPath("EngineHeaders");
+        Directory.CreateDirectory(engineRoot);
+        context.Engine.Includes = engineRoot;
+        var header = Path.Combine(engineRoot, "Rei.h");
+        await File.WriteAllTextAsync(header, "// engine A");
+        await context.Importer.EnsureImported();
+        await File.WriteAllTextAsync(header, "// engine B");
+        await context.Importer.EnsureImported();
+        Assert.Equal(6, context.Behaviours.RefreshCount);
+    }
+
+    [Fact]
+    public async Task FailedImportIsRetriedAndPartialImportInvalidatesFullImportSnapshot()
+    {
+        using var context = new TestContext();
+        var file = await context.File("Assets/image.png");
+        context.Shaders.OnRefresh = () => throw new InvalidOperationException("failed refresh");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => context.Importer.EnsureImported());
+        context.Shaders.OnRefresh = () => Task.CompletedTask;
+        await context.Importer.EnsureImported();
+        Assert.Equal(2, context.Behaviours.RefreshCount);
+        await context.Importer.EnsureImported();
+        Assert.Equal(2, context.Behaviours.RefreshCount);
+        await context.Importer.ReimportPaths(new[] { file });
+        await context.Importer.EnsureImported();
+        Assert.Equal(3, context.Behaviours.RefreshCount);
+    }
+
     private sealed class TestBehaviours : IBehaviourRegistry
     {
         public Func<Task> OnRefresh { get; set; } = () => Task.CompletedTask;
@@ -80,6 +140,7 @@ public sealed class AssetImporterTests
         public TestAssets Assets { get; } = new();
         public TestBehaviourComponentsService Components { get; } = new();
         public EditorProceduresService Procedures { get; } = new();
+        public TestEngineSettings Engine { get; } = new();
         public AssetImporter Importer { get; }
 
         public TestContext()
@@ -89,7 +150,10 @@ public sealed class AssetImporterTests
             var serializer = new JsonSerializer();
             var meta = new MetaFilesService(Resources, serializer, new TestLogger<MetaFilesService>());
             var creator = new AssetCreator(Resources, serializer, new TestLogger<AssetCreator>(), Registry, meta);
-            Importer = new(Logger, Resources, creator, meta, Behaviours, Shaders, Registry, Components, BehaviourFiles, new SourceFilesUtility(Resources, null!, new TestLogger<SourceFilesUtility>()), serializer, Migrations, Assets, Procedures);
+            Directory.CreateDirectory(Resources.GetScriptsPath());
+            var sources = new SourceFilesUtility(Resources, Engine, new TestLogger<SourceFilesUtility>());
+            Behaviours.OnRefresh = () => { sources.ProcessFiles(); return Task.CompletedTask; };
+            Importer = new(Logger, Resources, creator, meta, Behaviours, Shaders, Registry, Components, BehaviourFiles, sources, serializer, Migrations, Assets, Procedures);
         }
 
         public async Task<string> File(string name, string data = "asset")

@@ -217,3 +217,62 @@ TEST_CASE("Atlas text retains selectable bounds outside its UI rectangle", "[ui-
     REQUIRE(bounds.Min.y < rect.Min.y);
     REQUIRE(text.IsRaycastTarget());
 }
+
+TEST_CASE("Font lookup distinguishes missing glyphs from whitespace", "[ui-render]")
+{
+    Font empty;
+    REQUIRE(empty.FindGlyph('A') == nullptr);
+    REQUIRE_FALSE(empty.HasGlyph('A'));
+    REQUIRE_THROWS_AS(empty.GetGlyph('A'), std::runtime_error);
+
+    const auto font = Font::LoadAscii(TestFontPath(), 48);
+    REQUIRE(font.FindGlyph(255) == nullptr);
+    REQUIRE_THROWS_AS(font.GetGlyph(255), std::runtime_error);
+    const auto* letter = font.FindGlyph('A');
+    REQUIRE(letter != nullptr);
+    REQUIRE(letter == &font.GetGlyph('A'));
+    const auto* space = font.FindGlyph(' ');
+    REQUIRE(space != nullptr);
+    REQUIRE(space->Bitmap.empty());
+    REQUIRE(space->GetAdvancePixels() > 0);
+}
+
+TEST_CASE("Text metrics follow font replacement, whitespace and resizing", "[ui-render]")
+{
+    rei::assets::AssetRef<Font> font("test-font");
+    font.Record = std::make_shared<rei::assets::AssetRecord>();
+    font.Record->Id = font.Id;
+    font.Record->State = rei::assets::AssetState::Loaded;
+    font.Record->Value = std::make_shared<Font>(Font::LoadAscii(TestFontPath(), 48));
+    rei::ui::Text text;
+    text.SetFont(font);
+    text.SetSize(48);
+    text.SetValue("AA ");
+    const rei::math::Rect rect{{10, 10}, {20, 20}};
+    const auto* loaded = font.Get();
+    const f32 advance = 2 * loaded->GetGlyph('A').GetAdvancePixels() + loaded->GetGlyph(' ').GetAdvancePixels();
+    const auto initial = text.CalculateRenderRect(rect);
+    REQUIRE(initial.Max.x == rect.Min.x + advance);
+    REQUIRE(initial.Min.y == rect.Max.y - 48);
+    REQUIRE(initial.Max.y == rect.Max.y);
+    text.SetValue(std::string("AA ") + static_cast<char>(255));
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().x == initial.GetSize().x);
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().y == initial.GetSize().y);
+    text.SetAutoSize(true);
+    const f32 expected = (std::max)(1.0f, 48 * (std::min)(10 / advance, 10 / 48.0f));
+    REQUIRE(text.GetRenderSize(rect) == expected);
+    REQUIRE(text.GetRenderSize({{0, 0}, {1000, 1000}}) == 48);
+    text.SetAutoSize(false);
+    text.SetSize(24);
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().x == initial.GetSize().x * 0.5f);
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().y == initial.GetSize().y * 0.5f);
+    font.Record->Value = std::make_shared<Font>(Font::LoadAscii(TestFontPath(), 24));
+    const auto replaced = text.CalculateRenderRect(rect);
+    loaded = font.Get();
+    REQUIRE(replaced.Max.x == rect.Min.x + 2 * loaded->GetGlyph('A').GetAdvancePixels() + loaded->GetGlyph(' ').GetAdvancePixels());
+    text.SetValue(" ");
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().x == loaded->GetGlyph(' ').GetAdvancePixels());
+    font.Record->State = rei::assets::AssetState::Unloaded;
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().x == 0);
+    REQUIRE(text.CalculateRenderRect(rect).GetSize().y == 0);
+}

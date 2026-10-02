@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Build.Assets;
+using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Engine.Playmode;
 
 namespace ReiEditor.Models.Services.Build;
@@ -10,6 +11,7 @@ namespace ReiEditor.Models.Services.Build;
 public class StagedEditorBuildService : IStagedEditorBuildService
 {
     private readonly IBuildService _buildService;
+    private readonly IAssetImporter _assetImporter;
     private readonly IProjectBuildStateService _projectBuildStateService;
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineBuildGate _engineBuildGate;
@@ -20,9 +22,11 @@ public class StagedEditorBuildService : IStagedEditorBuildService
         IProjectBuildStateService projectBuildStateService,
         IEngineRunner engineRunner,
         IEngineBuildGate engineBuildGate,
-        IEditorBuildOutputService editorBuildOutputService)
+        IEditorBuildOutputService editorBuildOutputService,
+        IAssetImporter assetImporter)
     {
         _buildService = buildService;
+        _assetImporter = assetImporter;
         _projectBuildStateService = projectBuildStateService;
         _engineRunner = engineRunner;
         _engineBuildGate = engineBuildGate;
@@ -47,6 +51,9 @@ public class StagedEditorBuildService : IStagedEditorBuildService
         Action<AssetBuildProgressInfo>? onAssetBuilding,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        await _assetImporter.EnsureImported();
+        cancellationToken.ThrowIfCancellationRequested();
         var liveOutput = _editorBuildOutputService.GetLiveOutput();
         var liveContext = new BuildExecutionContext(
             liveOutput.BinDirectoryPath,

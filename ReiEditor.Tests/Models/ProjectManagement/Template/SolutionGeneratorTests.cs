@@ -57,6 +57,56 @@ public sealed class SolutionGeneratorTests : IDisposable
 
     private readonly TemporaryDirectory _directory = new();
 
+    [Fact]
+    public async Task ProjectRefreshPreservesSourceItemsAndUnchangedFileTimestamps()
+    {
+        var projectPath = await WriteProjectFile("Stable.vcxproj");
+        await File.WriteAllTextAsync(_directory.GetPath("Player.cpp"), "void player() {}");
+        await File.WriteAllTextAsync(_directory.GetPath("Player.h"), "#pragma once");
+        var generator = CreateGenerator();
+        await generator.UpdateProjectFile(projectPath);
+        var original = await File.ReadAllTextAsync(projectPath);
+        var timestamp = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(projectPath, timestamp);
+
+        await generator.UpdateProjectFile(projectPath);
+        await generator.AddSourceFiles(projectPath, new[] { "Player.h", "Player.cpp" });
+
+        Assert.Equal(original, await File.ReadAllTextAsync(projectPath));
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(projectPath));
+        Assert.Contains("Player.cpp", original);
+        Assert.Contains("Player.h", original);
+        File.Delete(_directory.GetPath("Player.h"));
+        await generator.UpdateProjectFile(projectPath);
+        Assert.DoesNotContain("Player.h", await File.ReadAllTextAsync(projectPath));
+    }
+
+    [Fact]
+    public async Task PchSourceHasCreateMetadataAndSurvivesRepeatedRefresh()
+    {
+        var templates = new TestProjectTemplateProvider
+        {
+            ProjectTemplate = PROJECT_TEMPLATE.Replace("<Project>", "<Project><ItemDefinitionGroup><ClCompile><PrecompiledHeader>Use</PrecompiledHeader><AdditionalOptions>/MP4</AdditionalOptions></ClCompile></ItemDefinitionGroup>")
+        };
+        var generator = new SolutionGenerator(new TestLogger<SolutionGenerator>(), templates, new TestEngineSettingsProvider());
+        var result = await generator.GenerateSolution(CreateConfiguration("PchGame"));
+        var source = Path.Combine(Path.GetDirectoryName(result.ProjectPath)!, @"Internal\ReiProjectPch.cpp");
+        Assert.Equal("#include <Rei.h>\r\n", await File.ReadAllTextAsync(source));
+        var document = XDocument.Parse(await File.ReadAllTextAsync(result.ProjectPath));
+        var item = Assert.Single(document.Descendants("ClCompile"), node => node.Attribute("Include")?.Value == @"Internal\ReiProjectPch.cpp");
+        Assert.Equal("Create", item.Element("PrecompiledHeader")!.Value);
+        Assert.Equal("false", item.Element("MultiProcessorCompilation")!.Value);
+        Assert.DoesNotContain("/MP", item.Element("AdditionalOptions")!.Value);
+        var timestamp = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(source, timestamp);
+        File.SetLastWriteTimeUtc(result.ProjectPath, timestamp);
+        await generator.UpdateProjectFile(result.ProjectPath);
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(source));
+        Assert.Equal(timestamp, File.GetLastWriteTimeUtc(result.ProjectPath));
+    }
+
+
+
     /// <summary>Generation writes linked solution and project GUIDs plus main source file and engine values.</summary>
     [Fact]
     public async Task TestGeneratesLinkedSolutionProjectAndMainSource()

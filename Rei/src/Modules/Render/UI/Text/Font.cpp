@@ -176,15 +176,22 @@ u32 rei::render::Font::GetAtlasTextureId() const
     return _atlasTexture;
 }
 
+const rei::render::FontGlyph* rei::render::Font::FindGlyph(const u8 character) const
+{
+    const auto found = _glyphs.find(character);
+    return found == _glyphs.end() ? nullptr : &found->second;
+}
+
 const rei::render::FontGlyph& rei::render::Font::GetGlyph(const u8 character) const
 {
-    REI_THROW_IF(!_glyphs.contains(character), "Missing font glyph: " + STRING(character))
-    return _glyphs.at(character);
+    const auto* glyph = FindGlyph(character);
+    REI_THROW_IF(glyph == nullptr, "Missing font glyph: " + STRING(character))
+    return *glyph;
 }
 
 bool rei::render::Font::HasGlyph(const u8 character) const
 {
-    return _glyphs.contains(character);
+    return FindGlyph(character) != nullptr;
 }
 
 void rei::render::Font::LoadAsciiFromMemory()

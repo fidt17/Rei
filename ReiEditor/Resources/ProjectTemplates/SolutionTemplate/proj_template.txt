@@ -102,8 +102,11 @@
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Rei.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)ReiProject.pch</PrecompiledHeaderOutputFile>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP4 /FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,8 +137,11 @@
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Rei.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)ReiProject.pch</PrecompiledHeaderOutputFile>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP4 /FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -165,8 +171,11 @@
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Rei.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)ReiProject.pch</PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP4 /FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -198,8 +207,11 @@
       <AdditionalIncludeDirectories>{4}</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>Rei.h</ForcedIncludeFiles>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Rei.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)ReiProject.pch</PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/FS /bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP4 /FS /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

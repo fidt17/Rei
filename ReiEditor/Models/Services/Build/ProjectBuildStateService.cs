@@ -11,6 +11,7 @@ using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Engine.Settings;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.Services.Build;
@@ -19,7 +20,7 @@ public class ProjectBuildStateService : IProjectBuildStateService
 {
     private sealed class ProjectBuildState
     {
-        public string FormatVersion { get; set; } = "2";
+        public string FormatVersion { get; set; } = "3";
         public string Status { get; set; } = BuildStateStatus.READY;
         public BuildConfigurationEnum Configuration { get; set; }
         public string EngineVersion { get; set; } = "";
@@ -57,7 +58,12 @@ public class ProjectBuildStateService : IProjectBuildStateService
         "*.cpp",
         "*.h",
         "*.sln",
-        "*.vcxproj"
+        "*.vcxproj",
+        "*.hpp",
+        "*.inl",
+        "*.props",
+        "*.targets",
+        "*.vcxitems"
     };
 
     private const string STATE_DIRECTORY_NAME = ".rei_build_state";
@@ -105,7 +111,7 @@ public class ProjectBuildStateService : IProjectBuildStateService
             return new Build.ProjectBuildState(buildSolution, buildAssets, $"Persisted build state is '{state.Status}'.");
         }
 
-        if (!string.Equals(state.FormatVersion, "2", StringComparison.Ordinal))
+        if (!string.Equals(state.FormatVersion, "3", StringComparison.Ordinal))
         {
             return new Build.ProjectBuildState(buildSolution, buildAssets, $"Persisted build state format '{state.FormatVersion}' is outdated.");
         }
@@ -363,6 +369,17 @@ public class ProjectBuildStateService : IProjectBuildStateService
             }
 
             trackedFiles.Add(await CreateTrackedFileState(engineIncludeDir, filePath));
+        }
+
+        var headerPaths = ProjectSourceFiles.IncludeRoots(_engineSettingsProvider.GetEngineSourceIncludes())
+            .Where(Directory.Exists)
+            .SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            .Where(path => FileExtensions.HasAnyExtension(path, ProjectSourceFiles.HEADER_EXTENSIONS))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+        foreach (var path in headerPaths)
+        {
+            trackedFiles.Add(await CreateTrackedFileState(engineIncludeDir, path));
         }
 
         return trackedFiles;

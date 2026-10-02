@@ -194,23 +194,76 @@ namespace rei::render
         if (!HAS(entity, rei::ui::RectTransform)) return;
         if (!HAS(entity, rei::Transform)) return;
 
-        const auto& font = text.GetFont();
-        if (!font.IsLoaded()) return;
+        const auto* font = text.GetFont().Get();
+        if (font == nullptr) return;
 
-        const auto canvasEntity = ui_utility::FindCanvasEntity(entity);
-        if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, rei::ui::Canvas)) return;
+        math::Rect pixelRect;
+        {
+            REI_PROFILE_SCOPE(profiling::markers::UI_TEXT_LAYOUT.Id);
+            const auto canvasEntity = ui_utility::FindCanvasEntity(entity);
+            if (IS_DEAD(canvasEntity) || !HAS(canvasEntity, rei::ui::Canvas)) return;
 
-        const auto& canvas = GET(canvasEntity, rei::ui::Canvas);
-        const auto logicalRect = ui_utility::CalculateRect(entity, canvasEntity, *_cameraModule);
-        const f32 scaleFactor = ui_utility::CalculateCanvasScaleFactor(canvas, *_cameraModule);
-        const auto pixelRect = math::Rect {
-            logicalRect.Min * scaleFactor,
-            logicalRect.Max * scaleFactor
-        };
+            const auto& canvas = GET(canvasEntity, rei::ui::Canvas);
+            const auto logicalRect = ui_utility::CalculateRect(entity, canvasEntity, *_cameraModule);
+            const f32 scaleFactor = ui_utility::CalculateCanvasScaleFactor(canvas, *_cameraModule);
+            pixelRect = math::Rect {
+                logicalRect.Min * scaleFactor,
+                logicalRect.Max * scaleFactor
+            };
 
-        const math::Vector2 pixelSize = pixelRect.GetSize();
-        if (pixelSize.x <= 0.0f || pixelSize.y <= 0.0f) return;
+            const math::Vector2 pixelSize = pixelRect.GetSize();
+            if (pixelSize.x <= 0.0f || pixelSize.y <= 0.0f) return;
+        }
 
+        f32 renderSize;
+        {
+            REI_PROFILE_SCOPE(profiling::markers::UI_TEXT_MEASURE.Id);
+            renderSize = text.GetRenderSize(pixelRect);
+        }
+
+        {
+            REI_PROFILE_SCOPE(profiling::markers::UI_TEXT_GEOMETRY.Id);
+            _textVertices.clear();
+            _textVertices.resize(text.GetValue().size() * 48);
+            std::size_t writtenFloats = 0;
+            const f32 fontScale = renderSize / static_cast<f32>(font->GetPixelHeight());
+            const f32 lineHeight = text.GetLineHeight(renderSize);
+            const f32 startX = pixelRect.Min.x;
+            f32 x = startX;
+            f32 y = pixelRect.Max.y - renderSize;
+
+            for (const char character : text.GetValue())
+            {
+                if (character == '\n')
+                {
+                    x = startX;
+                    y -= lineHeight;
+                    continue;
+                }
+
+                const auto glyphKey = static_cast<u8>(character);
+                const auto* foundGlyph = font->FindGlyph(glyphKey);
+                if (foundGlyph == nullptr) continue;
+
+                const auto& glyph = *foundGlyph;
+                if (glyph.TextureId != 0)
+                {
+                    const f32 glyphX = x + static_cast<f32>(glyph.BearingX) * fontScale;
+                    const f32 glyphY = y - static_cast<f32>(glyph.Height - glyph.BearingY) * fontScale;
+                    const f32 glyphWidth = static_cast<f32>(glyph.Width) * fontScale;
+                    const f32 glyphHeight = static_cast<f32>(glyph.Height) * fontScale;
+                    const auto vertices = text_geometry::MakeGlyphQuad(glyphX, glyphY, glyphWidth, glyphHeight, glyph);
+                    std::memcpy(_textVertices.data() + writtenFloats, vertices.data(), sizeof(vertices));
+                    writtenFloats += vertices.size();
+                }
+
+                x += glyph.GetAdvancePixels() * fontScale;
+            }
+
+            _textVertices.resize(writtenFloats);
+        }
+
+        REI_PROFILE_SCOPE(profiling::markers::UI_TEXT_SUBMIT.Id);
         shader.SetViewMatrices(projection, view, model);
         shader.SetInt("_MainTex", 0);
         shader.SetColor("_Color", text.GetColor());
@@ -222,44 +275,6 @@ namespace rei::render
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(_textVao);
 
-        _textVertices.clear();
-        _textVertices.resize(text.GetValue().size() * 48);
-        std::size_t writtenFloats = 0;
-        const f32 renderSize = text.GetRenderSize(pixelRect);
-        const f32 fontScale = renderSize / static_cast<f32>(font->GetPixelHeight());
-        const f32 lineHeight = text.GetLineHeight(renderSize);
-        const f32 startX = pixelRect.Min.x;
-        f32 x = startX;
-        f32 y = pixelRect.Max.y - renderSize;
-
-        for (const char character : text.GetValue())
-        {
-            if (character == '\n')
-            {
-                x = startX;
-                y -= lineHeight;
-                continue;
-            }
-
-            const auto glyphKey = static_cast<u8>(character);
-            if (!font->HasGlyph(glyphKey)) continue;
-
-            const auto& glyph = font->GetGlyph(glyphKey);
-            if (glyph.TextureId != 0)
-            {
-                const f32 glyphX = x + static_cast<f32>(glyph.BearingX) * fontScale;
-                const f32 glyphY = y - static_cast<f32>(glyph.Height - glyph.BearingY) * fontScale;
-                const f32 glyphWidth = static_cast<f32>(glyph.Width) * fontScale;
-                const f32 glyphHeight = static_cast<f32>(glyph.Height) * fontScale;
-                const auto vertices = text_geometry::MakeGlyphQuad(glyphX, glyphY, glyphWidth, glyphHeight, glyph);
-                std::memcpy(_textVertices.data() + writtenFloats, vertices.data(), sizeof(vertices));
-                writtenFloats += vertices.size();
-            }
-
-            x += glyph.GetAdvancePixels() * fontScale;
-        }
-
-        _textVertices.resize(writtenFloats);
         if (!_textVertices.empty())
         {
             glBindTexture(GL_TEXTURE_2D, font->GetAtlasTextureId());

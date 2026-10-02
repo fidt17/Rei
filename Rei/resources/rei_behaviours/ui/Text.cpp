@@ -110,9 +110,10 @@ namespace rei::ui
 
     math::Rect Text::CalculateRenderRect(const math::Rect& pixelRect, const f32 size) const
     {
-        if (!_font.IsLoaded()) return {};
+        const auto* font = _font.Get();
+        if (font == nullptr) return {};
 
-        const f32 fontScale = size / static_cast<f32>(_font->GetPixelHeight());
+        const f32 fontScale = size / static_cast<f32>(font->GetPixelHeight());
         const f32 lineHeight = GetLineHeight(size);
         const f32 startX = pixelRect.Min.x;
         f32 x = startX;
@@ -137,9 +138,10 @@ namespace rei::ui
             }
 
             const auto glyphKey = static_cast<u8>(character);
-            if (!_font->HasGlyph(glyphKey)) continue;
+            const auto* foundGlyph = font->FindGlyph(glyphKey);
+            if (foundGlyph == nullptr) continue;
 
-            const auto& glyph = _font->GetGlyph(glyphKey);
+            const auto& glyph = *foundGlyph;
             const f32 glyphX = x + static_cast<f32>(glyph.BearingX) * fontScale;
             const f32 glyphY = y - static_cast<f32>(glyph.Height - glyph.BearingY) * fontScale;
             const f32 glyphWidth = static_cast<f32>(glyph.Width) * fontScale;

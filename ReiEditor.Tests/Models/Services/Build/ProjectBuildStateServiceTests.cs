@@ -19,14 +19,49 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
     private sealed class TestEngineSettingsProvider(string debugDirectory, string releaseDirectory) : IEngineSettingsProvider
     {
         public string Version { get; set; } = "engine-1";
+        public string Includes { get; set; } = "";
         public Task InitializeAsync() => Task.CompletedTask;
         public string GetEnginePath() => Path.GetDirectoryName(debugDirectory)!;
         public string GetEngineDebugIncludeDir() => debugDirectory;
         public string GetEngineReleaseIncludeDir() => releaseDirectory;
-        public string GetEngineSourceIncludes() => "";
+        public string GetEngineSourceIncludes() => Includes;
         public string GetEngineResourcesDir() => "";
         public string GetEngineBehavioursDir() => "";
         public string GetEngineVersion() => Version;
+    }
+
+    [Theory]
+    [InlineData(".h")]
+    [InlineData(".hpp")]
+    [InlineData(".inl")]
+    public async Task EngineHeaderContentChangeInvalidatesSnapshot(string extension)
+    {
+        await PrepareCompleteBuildFiles();
+        _engine.Includes = _project.Directory.GetPath("Headers");
+        Directory.CreateDirectory(_engine.Includes);
+        var header = Path.Combine(_engine.Includes, "Engine" + extension);
+        await File.WriteAllTextAsync(header, "AAAA");
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        var timestamp = File.GetLastWriteTimeUtc(header);
+        await File.WriteAllTextAsync(header, "BBBB");
+        File.SetLastWriteTimeUtc(header, timestamp);
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        Assert.True(state.ShouldBuildSolution);
+        Assert.Contains("Engine input", state.Reason);
+    }
+
+    [Theory]
+    [InlineData(".props")]
+    [InlineData(".targets")]
+    public async Task BuildPropertyFileChangeInvalidatesSnapshot(string extension)
+    {
+        await PrepareCompleteBuildFiles();
+        var path = _project.Resources.GetScriptsPath("Extra" + extension);
+        await File.WriteAllTextAsync(path, "AAAA");
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        await File.WriteAllTextAsync(path, "BBBB");
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        Assert.True(state.ShouldBuildSolution);
     }
 
     private readonly TemporaryProjectFixture _project = new();

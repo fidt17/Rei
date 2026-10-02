@@ -66,6 +66,79 @@ Each harness owns a unique directory under %TEMP%/Rei-engine-tests, a copied fix
 
 Teardown terminates only the owned Editor process and children. Existing user Editors are untouched. Run directories remain for diagnostics: stdout-N.log and stderr-N.log per process launch, mcp.jsonl, timings.jsonl, project files and native build outputs. Test output includes artifact paths and shared Editor PID. timings.jsonl records startup, operations, and smoke-case durations with process/launch identifiers. Remove old directories manually when no longer needed. Do not rebuild shared engine binaries while integration tests run.
 
+## Temporary artifacts and cleanup
+
+`EngineIntegrationHarness` creates a new `%TEMP%\Rei-engine-tests\<32-digit GUID>` directory per harness. It copies a fixture into `project`, builds the native project there, and stores isolated Editor preferences in `storage`. Smoke cases share one harness; lifecycle cases and separate test/helper invocations create additional directories. `RestartAsync` reuses the current harness directory. `DisposeAsync` stops owned processes but does **not** delete files. There is no automatic retention limit, cleanup on success, or cleanup on failure.
+
+Most disk space comes from native build intermediates (`project\bin\int`: `.obj`, `.idb`, `.tlog`), incremental linker files (`.ilk`), symbols (`.pdb`), copied engine/project DLLs, imported resource caches and standalone packages. A Symbols run built in both EditorDebug and Debug can exceed 1 GiB. Logs and framebuffer PNGs are much smaller. Enabling `--no-build --no-restore` only skips the managed runner build; it does not reuse a previous harness's native project or remove its outputs.
+
+### Before cleanup
+
+1. Finish/stop test runners and diagnostic helpers, including their isolated Editors, standalone processes and native builds. Do not start another integration run during cleanup. Age alone does not prove that a directory is inactive. Do not kill unrelated user Editors or MSBuild processes to make cleanup possible.
+2. Copy needed evidence to a durable location outside this temp root: `stdout-*.log`, `stderr-*.log`, `mcp.jsonl`, `timings.jsonl`, profiling JSON and `frame-*.png`. Preserve the changed fixture/source assets and symbols too when needed to reproduce a failure or debug a crash. Symbols performance reports belong in `C:\Repos\Symbols\output\profiling`.
+3. Preview the exact directories. Delete only immediate GUID-named children of this specific root. Never delete `%TEMP%` itself, a source checkout, or directories containing junctions/symlinks.
+
+### Inspect sizes and last activity
+
+Run in PowerShell. This example uses the current Windows user's temp path; on Vladimir's machine it is `C:\Users\Vladimir Korzh\AppData\Local\Temp\Rei-engine-tests`. The scan is read-only. Read errors stop it; links are rejected. `LastActivityUtc` includes creation time and descendant timestamps because the top directory's `LastWriteTime` does not reflect every nested write.
+
+```powershell
+$testRunsRoot = [IO.Path]::GetFullPath((Join-Path ([IO.Path]::GetTempPath()) 'Rei-engine-tests')).TrimEnd('\')
+$rootInfo = Get-Item -LiteralPath $testRunsRoot -Force -ErrorAction Stop
+if (!$rootInfo.PSIsContainer -or ($rootInfo.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+    throw 'Expected an ordinary Rei-engine-tests directory.'
+}
+
+$runs = @(Get-ChildItem -LiteralPath $testRunsRoot -Directory -Force -ErrorAction Stop |
+    Where-Object { $_.Name -match '^[0-9a-fA-F]{32}$' } |
+    ForEach-Object {
+        $run = $_
+        if ($run.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "Refusing linked run directory: $($run.FullName)"
+        }
+        $entries = @(Get-ChildItem -LiteralPath $run.FullName -Recurse -Force -ErrorAction Stop)
+        if ($entries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+            throw "Refusing run containing links: $($run.FullName)"
+        }
+        $bytes = ($entries | Where-Object { !$_.PSIsContainer } | Measure-Object Length -Sum).Sum
+        $timestamps = @($run.CreationTimeUtc, $run.LastWriteTimeUtc) + @($entries | ForEach-Object { $_.LastWriteTimeUtc })
+        [PSCustomObject]@{
+            Path = $run.FullName
+            GiB = [Math]::Round($bytes / 1GB, 3)
+            LastActivityUtc = ($timestamps | Sort-Object -Descending | Select-Object -First 1)
+        }
+    })
+$runs | Sort-Object GiB -Descending | Format-Table -AutoSize
+```
+
+### Remove selected completed runs
+
+After meeting the preconditions above, select old runs (seven days is an example retention period, not an automatic policy). For one known completed run, replace `$selectedPaths` with its exact `Path` copied from the inventory above. Use the same path spelling throughout; do not mix Windows 8.3 aliases (such as `VLADIM~1`) with expanded directory names. For all completed runs, use `@($runs.Path)` only after reviewing and archiving everything needed. The preview below does not remove files. Review it first; then remove **only** `-WhatIf` from `Remove-Item` and rerun the block to perform deletion.
+
+```powershell
+$cutoffUtc = [DateTime]::UtcNow.AddDays(-7)
+$selectedPaths = @($runs | Where-Object { $_.LastActivityUtc -lt $cutoffUtc } | Select-Object -ExpandProperty Path)
+
+foreach ($selectedPath in $selectedPaths) {
+    $resolvedRun = Get-Item -LiteralPath ([IO.Path]::GetFullPath($selectedPath)) -Force -ErrorAction Stop
+    if (!$resolvedRun.PSIsContainer -or
+        $resolvedRun.Name -notmatch '^[0-9a-fA-F]{32}$' -or
+        $resolvedRun.Parent.FullName.TrimEnd('\') -ine $testRunsRoot -or
+        ($resolvedRun.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "Refusing path outside the intended run directories: $selectedPath"
+    }
+    $entries = @(Get-ChildItem -LiteralPath $resolvedRun.FullName -Recurse -Force -ErrorAction Stop)
+    if ($entries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+        throw "Refusing run containing links: $selectedPath"
+    }
+    Remove-Item -LiteralPath $resolvedRun.FullName -Recurse -WhatIf -ErrorAction Stop
+}
+```
+
+If a run is locked, stop its owner or wait for teardown and retry. Do not bypass errors or force-close unrelated processes. Failed or interrupted runs use the same cleanup procedure; retain their diagnostics until the failure has been investigated. Unit-only harness tests may leave small/empty GUID directories; these can also be removed when finished.
+
+To preserve a completed test project for investigation while reducing space, its `project\bin\int` directory can be removed separately after verifying the exact path stays inside that run and contains no links. This discards native incremental-build state; the next build of that copy must regenerate it. Keep `.pdb` files if native debugging is needed. No source repository `bin`, `.meta` IDs or SDK outputs need to be changed to clean this temp root. New test runs recreate their own fixtures and outputs.
+
 ## Coverage
 
 - Smoke / DataAssets: Project/Monitor selection through normal selection services; invalid asset/source requests.

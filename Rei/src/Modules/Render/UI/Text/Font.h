@@ -51,6 +51,8 @@ namespace rei::render
         REI_API const std::string& GetFamilyName() const;
         REI_API i32 GetPixelHeight() const;
         REI_API u32 GetAtlasTextureId() const;
+        // Borrowed until the font is reloaded, moved or destroyed.
+        REI_API const FontGlyph* FindGlyph(u8 character) const;
         REI_API const FontGlyph& GetGlyph(u8 character) const;
         REI_API bool HasGlyph(u8 character) const;
 

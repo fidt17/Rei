@@ -1,4 +1,5 @@
 using ReiEditor.Models.Services.Build;
+using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Tests.Infrastructure.Fixtures;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
@@ -71,6 +72,7 @@ public sealed class StagedEditorBuildServiceTests
         public TemporaryDirectory Directory { get; } = new();
         public List<string> Calls { get; } = new();
         public TestBuildService Build { get; } = new();
+        public TestAssetImporter Importer { get; } = new();
         public TestEngineRunner Runner { get; } = new();
         public TestBuildStateService State { get; }
         public TestEngineBuildGate Gate { get; }
@@ -82,10 +84,43 @@ public sealed class StagedEditorBuildServiceTests
             State = new(Calls);
             Gate = new(Calls);
             Output = new(Directory, Calls);
-            Service = new(Build, State, Runner, Gate, Output);
+            Importer.OnImport = () => { Calls.Add("import"); return Task.FromResult(new List<AssetInfo>()); };
+            Service = new(Build, State, Runner, Gate, Output, Importer);
         }
 
         public void Dispose() => Directory.Dispose();
+    }
+
+    [Fact]
+    public async Task NewlyImportedAssetIsVisibleBeforeSkipDecision()
+    {
+        using var context = new TestContext();
+        context.State.State = new(false, false, "old registry");
+        context.Importer.OnImport = () =>
+        {
+            context.Calls.Add("import");
+            context.State.State = new(false, true, "new asset");
+            return Task.FromResult(new List<AssetInfo>());
+        };
+        context.Build.OnBuild = request =>
+        {
+            Assert.False(request.BuildSolution);
+            Assert.True(request.BuildAssets);
+            return Task.FromResult(true);
+        };
+        Assert.True(await context.Service.BuildAndPromote(BuildConfigurationEnum.EditorDebug, false, false, false, true, true, null, CancellationToken.None));
+        Assert.Single(context.Build.Requests);
+    }
+
+    [Fact]
+    public async Task ImportFailureDoesNotPrepareOrPromoteStaging()
+    {
+        using var context = new TestContext();
+        context.Importer.OnImport = () => throw new IOException("import failure");
+        await Assert.ThrowsAsync<IOException>(() => context.Service.BuildAndPromote(
+            BuildConfigurationEnum.EditorDebug, false, false, false, true, true, null, CancellationToken.None));
+        Assert.Empty(context.Build.Requests);
+        Assert.Empty(context.Calls);
     }
 
     /// <summary>Only an active non-playmode editor debug build without a custom context uses staging.</summary>
@@ -115,7 +150,7 @@ public sealed class StagedEditorBuildServiceTests
         var result = await context.Service.BuildAndPromote(BuildConfigurationEnum.EditorDebug, false, false, false, true, true, null, CancellationToken.None);
 
         Assert.True(result);
-        Assert.Equal(new[] { "live", "calculate" }, context.Calls);
+        Assert.Equal(new[] { "import", "live", "calculate" }, context.Calls);
         Assert.Empty(context.Build.Requests);
     }
 
@@ -137,7 +172,7 @@ public sealed class StagedEditorBuildServiceTests
         var result = await context.Service.BuildAndPromote(BuildConfigurationEnum.EditorDebug, false, true, false, true, true, p => forwarded = p, CancellationToken.None);
 
         Assert.True(result);
-        Assert.Equal(new[] { "live", "calculate", "prepare", "seed", "started", "build", "stop", "promote", "save", "cleanup" }, context.Calls);
+        Assert.Equal(new[] { "import", "live", "calculate", "prepare", "seed", "started", "build", "stop", "promote", "save", "cleanup" }, context.Calls);
         var request = Assert.Single(context.Build.Requests);
         Assert.True(request.ForceSolution);
         Assert.True(request.CleanSolution);
@@ -163,7 +198,7 @@ public sealed class StagedEditorBuildServiceTests
         var result = await context.Service.BuildAndPromote(BuildConfigurationEnum.EditorDebug, false, false, false, true, true, null, CancellationToken.None);
 
         Assert.False(result);
-        Assert.Equal(new[] { "live", "calculate", "prepare", "started", "build", "failed", "cleanup" }, context.Calls);
+        Assert.Equal(new[] { "import", "live", "calculate", "prepare", "started", "build", "failed", "cleanup" }, context.Calls);
         Assert.Empty(context.State.Saves);
     }
 
@@ -178,7 +213,7 @@ public sealed class StagedEditorBuildServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => context.Service.BuildAndPromote(
             BuildConfigurationEnum.EditorDebug, false, false, false, true, true, null, CancellationToken.None));
 
-        Assert.Equal(new[] { "live", "calculate", "prepare", "started", "build", "stop", "failed", "cleanup" }, context.Calls);
+        Assert.Equal(new[] { "import", "live", "calculate", "prepare", "started", "build", "stop", "failed", "cleanup" }, context.Calls);
         Assert.Empty(context.State.Saves);
     }
 
@@ -198,8 +233,8 @@ public sealed class StagedEditorBuildServiceTests
             BuildConfigurationEnum.EditorDebug, true, false, true, true, true, null, CancellationToken.None)));
 
         var expected = stage == "promote"
-            ? new[] { "live", "calculate", "prepare", "started", "build", "stop", "promote", "failed", "cleanup" }
-            : new[] { "live", "calculate", "prepare", "started", "build", "stop", "promote", "save", "failed", "cleanup" };
+            ? new[] { "import", "live", "calculate", "prepare", "started", "build", "stop", "promote", "failed", "cleanup" }
+            : new[] { "import", "live", "calculate", "prepare", "started", "build", "stop", "promote", "save", "failed", "cleanup" };
         Assert.Equal(expected, context.Calls);
     }
 }
