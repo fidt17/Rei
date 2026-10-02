@@ -74,8 +74,8 @@ public class Vector3PropertyViewModel : BaseCustomPropertyViewModel
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
-        SetField(ref _x, Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0));
-        SetField(ref _y, Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0));
-        SetField(ref _z, Convert.ToSingle(GetNestedProperty("z")?.Value ?? 0));
+        SetField(ref _x, Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0), nameof(X));
+        SetField(ref _y, Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0), nameof(Y));
+        SetField(ref _z, Convert.ToSingle(GetNestedProperty("z")?.Value ?? 0), nameof(Z));
     }
 }

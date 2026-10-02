@@ -187,6 +187,25 @@ public sealed class RectTransformPropertyViewModelTests
         Assert.Equal(0, notifications);
     }
 
+    [Fact]
+    public void ReplacementVectorChildrenAreReadAndEditedWithoutReselection()
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        var pivot = fixture.Component.GetProperty(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT);
+        var original = Assert.IsType<Dictionary<string, SerializedProperty>>(pivot.Value);
+        pivot.Value = new Dictionary<string, SerializedProperty>
+        {
+            ["x"] = new("x", ReiEditor.Models.Services.Assets.Scripting.Serialization.Types.SerializedTypeEnum.Float, 0.25f, "float", pivot),
+            ["y"] = new("y", ReiEditor.Models.Services.Assets.Scripting.Serialization.Types.SerializedTypeEnum.Float, 0.75f, "float", pivot)
+        };
+        Assert.Equal(0.25f, vm.PivotX);
+        Assert.Equal(0.75f, vm.PivotY);
+        vm.PivotX = 0.4f;
+        Assert.Equal(0.4f, Assert.IsType<Dictionary<string, SerializedProperty>>(pivot.Value)["x"].Value);
+        Assert.Equal(0.5f, original["x"].Value);
+    }
+
     private static TestFixture TestCreateFixture()
     {
         var entity = new GameEntity(7, "UI");

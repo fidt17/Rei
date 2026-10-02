@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using Avalonia.Threading;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
@@ -9,7 +8,6 @@ using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
-using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Controls.Assets;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
@@ -62,12 +60,6 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         }
         AssetPicker.AssetActivatedEvent += HandleAssetActivatedEvent;
 
-        var idProperty = GetNestedProperty("Id");
-        if (idProperty != null)
-        {
-            idProperty.ValueChangedEvent += HandleIdValueChangedEvent;
-        }
-
         _isInitialized = true;
         AssetPicker.SyncSelectedAsset(GetAssetId());
     }
@@ -81,23 +73,12 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         }
 
         AssetPicker?.Dispose();
-        var idProperty = GetNestedProperty("Id");
-        if (idProperty != null)
-        {
-            idProperty.ValueChangedEvent -= HandleIdValueChangedEvent;
-        }
     }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
         if (!_isInitialized) return;
         AssetPicker?.SyncSelectedAsset(GetAssetId());
-    }
-
-    private void HandleIdValueChangedEvent(object? value)
-    {
-        if (!_isInitialized) return;
-        Dispatcher.UIThread.Execute(() => AssetPicker?.SyncSelectedAsset(ConvertToString(value)));
     }
 
     private string? GetAssetId()

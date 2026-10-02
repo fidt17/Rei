@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.DataAssets;
@@ -13,6 +14,7 @@ using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Utils;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Utils;
 
@@ -33,6 +35,7 @@ public class CollectionPropertyViewModel : BaseViewModel
         private set => SetField(ref _count, value);
     }
 
+    private bool _disposed;
     private readonly SerializedProperty _property;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
     private readonly IDataAssetTypeRegistry? _dataAssetTypeRegistry;
@@ -87,6 +90,8 @@ public class CollectionPropertyViewModel : BaseViewModel
 
     public override void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         base.Dispose();
 
         _property.ValueChangedEvent -= HandlePropertyValueChangedEvent;
@@ -105,6 +110,14 @@ public class CollectionPropertyViewModel : BaseViewModel
     }
 
     private void HandlePropertyValueChangedEvent(object? value)
+    {
+        Dispatcher.UIThread.Execute(() =>
+        {
+            if (!_disposed) UpdateItems(_property.Value);
+        });
+    }
+
+    private void UpdateItems(object? value)
     {
         if (value is not List<SerializedProperty> items)
         {

@@ -9,34 +9,32 @@ internal sealed class Vector2PropertyBinding
     public event Action? Changed;
 
     private readonly SerializedProperty _property;
-    private readonly SerializedProperty _x;
-    private readonly SerializedProperty _y;
 
     public Vector2PropertyBinding(SerializedProperty property)
     {
         _property = property;
-        _x = GetNestedProperty(property, "x");
-        _y = GetNestedProperty(property, "y");
+        GetNestedProperty(property, "x");
+        GetNestedProperty(property, "y");
 
         _property.ValueChangedEvent += HandleValueChanged;
     }
 
     public float X
     {
-        get => Convert.ToSingle(_x.Value ?? 0f);
-        set => _x.Value = value;
+        get => Convert.ToSingle(GetNestedProperty(_property, "x").Value ?? 0f);
+        set => GetNestedProperty(_property, "x").Value = value;
     }
 
     public float Y
     {
-        get => Convert.ToSingle(_y.Value ?? 0f);
-        set => _y.Value = value;
+        get => Convert.ToSingle(GetNestedProperty(_property, "y").Value ?? 0f);
+        set => GetNestedProperty(_property, "y").Value = value;
     }
 
     public void SetSilently(float x, float y)
     {
-        _x.SetValueWithoutTriggeringChangedEvent(x);
-        _y.SetValueWithoutTriggeringChangedEvent(y);
+        GetNestedProperty(_property, "x").SetValueWithoutTriggeringChangedEvent(x);
+        GetNestedProperty(_property, "y").SetValueWithoutTriggeringChangedEvent(y);
     }
 
     public void Dispose()

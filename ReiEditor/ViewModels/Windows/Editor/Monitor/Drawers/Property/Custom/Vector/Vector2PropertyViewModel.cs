@@ -53,7 +53,7 @@ public class Vector2PropertyViewModel : BaseCustomPropertyViewModel
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
-        SetField(ref _x, Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0));
-        SetField(ref _y, Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0));
+        SetField(ref _x, Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0), nameof(X));
+        SetField(ref _y, Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0), nameof(Y));
     }
 }

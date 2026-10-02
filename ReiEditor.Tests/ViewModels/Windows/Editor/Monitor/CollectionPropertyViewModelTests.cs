@@ -1,3 +1,6 @@
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
@@ -8,13 +11,15 @@ namespace ReiEditor.Tests.ViewModels.Windows.Editor.Monitor;
 /// <summary>
 /// Verifies collection editor structure changes, identity reuse, and disposal.
 /// </summary>
+[Collection(HeadlessCollection.NAME)]
+[Trait("Category", "Headless")]
 [Trait("Area", "PropertyEditors")]
 public sealed class CollectionPropertyViewModelTests
 {
     /// <summary>
     /// Adding and removing collection items updates count, names, parent links, and serialized list.
     /// </summary>
-    [Fact]
+    [AvaloniaFact]
     public void AddAndRemoveUpdateCollectionStructure()
     {
         var property = TestCollection(10, 20);
@@ -38,7 +43,7 @@ public sealed class CollectionPropertyViewModelTests
     /// <summary>
     /// Structure notification with unchanged item references preserves wrapper and child editor instances.
     /// </summary>
-    [Fact]
+    [AvaloniaFact]
     public void UnchangedItemsKeepExistingEditors()
     {
         var property = TestCollection(4);
@@ -55,7 +60,7 @@ public sealed class CollectionPropertyViewModelTests
     /// <summary>
     /// Replacing collection items disposes old child editors before rebuilding wrappers.
     /// </summary>
-    [Fact]
+    [AvaloniaFact]
     public void ReplacementDisposesOldChildEditor()
     {
         var property = TestCollection(4);
@@ -76,12 +81,42 @@ public sealed class CollectionPropertyViewModelTests
     /// <summary>
     /// Collection editor rejects scalar properties at construction.
     /// </summary>
-    [Fact]
+    [AvaloniaFact]
     public void ConstructorRejectsNonCollectionProperty()
     {
         var property = new SerializedProperty("value", SerializedTypeEnum.Integer, 1, "int", null);
 
         Assert.Throws<Exception>(() => TestCreateViewModel(property));
+    }
+
+    [AvaloniaFact]
+    public async Task BackgroundReplacementUpdatesCollectionOnUiThread()
+    {
+        var property = TestCollection(4);
+        using var vm = TestCreateViewModel(property);
+        var notificationThreads = new List<bool>();
+        vm.Value.CollectionChanged += (_, _) => notificationThreads.Add(Dispatcher.UIThread.CheckAccess());
+        await Task.Run(() => property.Value = new List<SerializedProperty> { new("[0]", SerializedTypeEnum.Integer, 8, "int", property) });
+        Dispatcher.UIThread.RunJobs();
+        Assert.NotEmpty(notificationThreads);
+        Assert.All(notificationThreads, isUiThread => Assert.True(isUiThread));
+        Assert.Equal(8, Assert.IsType<IntegerPropertyViewModel>(Assert.Single(Assert.Single(vm.Value).Value)).Value);
+    }
+
+    [AvaloniaFact]
+    public void QueuedCollectionUpdateIsIgnoredAfterDispose()
+    {
+        var property = TestCollection(4);
+        var vm = TestCreateViewModel(property);
+        using (Dispatcher.UIThread.DisableProcessing())
+        {
+            var worker = new Thread(() => property.Value = new List<SerializedProperty> { new("[0]", SerializedTypeEnum.Integer, 8, "int", property) });
+            worker.Start();
+            Assert.True(worker.Join(TimeSpan.FromSeconds(5)));
+            vm.Dispose();
+        }
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(vm.Value);
     }
 
     private static CollectionPropertyViewModel TestCreateViewModel(SerializedProperty property)

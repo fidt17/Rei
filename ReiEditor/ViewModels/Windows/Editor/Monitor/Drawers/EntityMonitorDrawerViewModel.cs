@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using DynamicData;
+using Avalonia.Threading;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Utils;
 using ReiEditor.Utils.Factory;
+using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Controls;
 using ReiEditor.ViewModels.Utils;
@@ -37,6 +39,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
     public SearchFieldViewModel SearchField { get; } = new();
     public ObservableCollection<BehaviourSelectionData> BehaviourSelection { get; } = new();
 
+    private bool _disposed;
     private readonly GameEntity _entity;
     private readonly IFactory<BehaviourComponentDrawerViewModel> _behaviourComponentDrawerFactory;
     private readonly IEntityManagementService _entityManagementService;
@@ -75,6 +78,8 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     public override void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         base.Dispose();
         
         Elements.ClearAndDispose();
@@ -95,6 +100,16 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void HandleEntityBehaviourAddedEvent(GameEntity e, BehaviourComponent component)
     {
+        Dispatcher.UIThread.Execute(() =>
+        {
+            if (_disposed || !e.HasBehaviour(component)) return;
+            ApplyBehaviourAdded(e, component);
+        });
+    }
+
+    private void ApplyBehaviourAdded(GameEntity e, BehaviourComponent component)
+    {
+        if (Elements.OfType<BehaviourComponentDrawerViewModel>().Any(drawer => drawer.BehaviourComponent == component)) return;
         if (IsRectTransform(component))
         {
             RemoveBehaviourDrawer(EngineBehavioursConstants.TRANSFORM);
@@ -108,6 +123,15 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
     }
 
     private void HandleEntityBehaviourDeletedEvent(GameEntity e, BehaviourComponent component)
+    {
+        Dispatcher.UIThread.Execute(() =>
+        {
+            if (_disposed || e.HasBehaviour(component)) return;
+            ApplyBehaviourDeleted(component);
+        });
+    }
+
+    private void ApplyBehaviourDeleted(BehaviourComponent component)
     {
         var target = Elements
             .OfType<BehaviourComponentDrawerViewModel>()
@@ -202,6 +226,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 
         var transform = _entity.GetBehaviour(transformId.Value);
         if (transform == null || ShouldHideBehaviour(transform)) return;
+        if (Elements.OfType<BehaviourComponentDrawerViewModel>().Any(drawer => drawer.BehaviourComponent == transform)) return;
 
         Elements.Insert(1, _behaviourComponentDrawerFactory.CreateInstance(_entity, transform));
     }

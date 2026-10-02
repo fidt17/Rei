@@ -217,6 +217,38 @@ public sealed class ReferencePropertyViewModelTests
         Assert.Same(rebuilt, viewModel.Picker);
     }
 
+    [AvaloniaFact]
+    public void AssetReferenceReplacementIgnoresDetachedId()
+    {
+        var property = TestAssetReference("first");
+        var originalId = TestChildren(property)["Id"];
+        using var vm = new AssetPropertyViewModel(property, new TestAssetSearchService(), new AssetRegistry(new TestLogger<AssetRegistry>()), new TestAssetTypeMapper(), new TestProjectAssetFocusService());
+        property.Value = new Dictionary<string, SerializedProperty> { ["Id"] = new("Id", SerializedTypeEnum.String, "second", "string", property) };
+        Assert.Equal("second", vm.AssetPicker!.SelectedAssetId);
+        originalId.Value = "detached";
+        Assert.Equal("second", vm.AssetPicker.SelectedAssetId);
+        TestChildren(property)["Id"].Value = "third";
+        Assert.Equal("third", vm.AssetPicker.SelectedAssetId);
+    }
+
+    [AvaloniaFact]
+    public void AssetReferenceQueuedUpdateIsIgnoredAfterDispose()
+    {
+        var property = TestAssetReference("first");
+        var vm = new AssetPropertyViewModel(property, new TestAssetSearchService(), new AssetRegistry(new TestLogger<AssetRegistry>()), new TestAssetTypeMapper(), new TestProjectAssetFocusService());
+        var picker = vm.AssetPicker!;
+        // Post callbacks while the UI thread remains occupied, then close Monitor.
+        using (Avalonia.Threading.Dispatcher.UIThread.DisableProcessing())
+        {
+            var worker = new Thread(() => TestChildren(property)["Id"].Value = "later");
+            worker.Start();
+            Assert.True(worker.Join(TimeSpan.FromSeconds(5)));
+            vm.Dispose();
+        }
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal("first", picker.SelectedAssetId);
+    }
+
     private static SerializedProperty TestAssetReference(string id)
     {
         var property = new SerializedProperty("texture", SerializedTypeEnum.Custom, null, "AssetRef<Texture>", null, "Texture");
