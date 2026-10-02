@@ -1,0 +1,190 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ReiEditor.Views.Windows.Editor.Diagnostics"
+        xmlns:vm="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Diagnostics"
+        x:Class="ReiEditor.Views.Windows.Editor.Diagnostics.DiagnosticsWindowView"
+        x:DataType="vm:DiagnosticsWindowViewModel"
+        Title="ReiEditor — Diagnostics" Width="1120" Height="800" MinWidth="1040" MinHeight="560"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource Dark_0}">
+    <Window.Styles>
+        <Style Selector="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="Background" Value="{StaticResource Dark_3}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_0}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="Background" Value="{StaticResource Dark_4}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_4}" />
+        </Style>
+        <Style Selector="ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="Background" Value="{StaticResource Gray_0}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gray_2}" />
+        </Style>
+        <Style Selector="ToggleButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource White}" />
+            <Setter Property="Background" Value="{StaticResource Dark_2}" />
+        </Style>
+        <Style Selector="Button.sort">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Right" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0,10" />
+        </Style>
+        <Style Selector="Button.sort:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{StaticResource Dark_4}" />
+        </Style>
+        <Style Selector="Button.sort:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{StaticResource Dark_2}" />
+        </Style>
+        <Style Selector="Button.sort:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="TextBlock.caption">
+            <Setter Property="Foreground" Value="{StaticResource Gray_4}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.value">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="Margin" Value="0,5,0,0" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="{StaticResource Dark_1}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBoxItem:nth-child(2n)">
+            <Setter Property="Background" Value="{StaticResource Dark_3}" />
+        </Style>
+        <Style Selector="ListBoxItem:nth-child(2n+1)">
+            <Setter Property="Background" Value="{StaticResource Dark_1}" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover">
+            <Setter Property="Background" Value="{StaticResource Gray_0}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{StaticResource Gray_1}" />
+        </Style>
+    </Window.Styles>
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <Border Name="SummaryPanel" Background="{StaticResource Dark_2}" BorderBrush="{StaticResource Gray_0}" BorderThickness="1" CornerRadius="3" Padding="14,10">
+            <Grid ColumnDefinitions="*,*,*,*">
+                <StackPanel><TextBlock Classes="caption" Text="FPS" /><TextBlock Name="FpsValue" Classes="value" Text="{Binding Fps}" Foreground="{Binding FrameColor}" /></StackPanel>
+                <StackPanel Grid.Column="1"><TextBlock Classes="caption" Text="Frame avg" /><TextBlock Classes="value" Text="{Binding FrameAverage}" Foreground="{Binding FrameColor}" /></StackPanel>
+                <StackPanel Grid.Column="2"><TextBlock Classes="caption" Text="Frame max" /><TextBlock Classes="value" Text="{Binding FrameMaximum}" Foreground="{Binding MaximumColor}" /></StackPanel>
+                <StackPanel Grid.Column="3" ToolTip.Tip="Rei submissions per valid frame. Excludes ImGui and direct project OpenGL calls."><TextBlock Classes="caption" Text="Draws / frame" /><TextBlock Classes="value" Text="{Binding Draws}" /></StackPanel>
+            </Grid>
+        </Border>
+        <Border Grid.Row="1" Margin="0,10,0,0" Background="{StaticResource Dark_1}" BorderBrush="{StaticResource Gray_0}" BorderThickness="1" Padding="8,6">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                <ToggleButton Name="TrendToggle" Content="{Binding TrendCaption}" IsChecked="{Binding ShowTrend}" FontSize="12" Padding="6,4"
+                              ToolTip.Tip="Collapse/expand the 20-second history of published native averages. Samples are read at 2 Hz; this is not a per-frame trace. Freeze retains this history." />
+                <TextBlock Grid.Column="2" Classes="caption" Text="{Binding FrameBudget}" VerticalAlignment="Center" Margin="10,0" ToolTip.Tip="Dashed line: selected frame budget. Chart colors use the same budget as the summary and table." />
+                <TextBlock Grid.Column="3" Classes="caption" Text="Target FPS" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox Grid.Column="4" ItemsSource="{Binding TargetFpsOptions}" SelectedItem="{Binding TargetFps}" Width="74"
+                          ToolTip.Tip="Frame color: green within 5% of budget, amber up to 1.5×, red above. Scope color: exclusive cost below 5%, 5–20%, or at least 20% of budget." />
+                <local:FrameTimeChart Name="TrendChart" Grid.Row="1" Grid.ColumnSpan="5" Samples="{Binding TrendSamples}" TargetFps="{Binding TargetFps}" Height="104" Margin="0,8,0,0" IsVisible="{Binding ShowTrend}" />
+            </Grid>
+        </Border>
+        <Grid Grid.Row="2" Name="RecordingToolbar" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,10,0,10">
+            <StackPanel Orientation="Horizontal" Margin="0,0,8,0" VerticalAlignment="Center">
+                <Button Name="StartLiveButton" Classes="EditorIconButton" Command="{Binding StartLiveCommand}" IsVisible="{Binding !IsLive}"
+                        ToolTip.Tip="Start Live diagnostics">
+                    <Button.Styles>
+                        <Style Selector="Button"><Setter Property="AutomationProperties.Name" Value="Start Live diagnostics" /></Style>
+                    </Button.Styles>
+                    <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/play.png" />
+                </Button>
+                <Button Name="StopLiveButton" Classes="EditorIconButton" Command="{Binding StopLiveCommand}" IsVisible="{Binding IsLive}"
+                        ToolTip.Tip="Stop Live diagnostics">
+                    <Button.Styles>
+                        <Style Selector="Button"><Setter Property="AutomationProperties.Name" Value="Stop Live diagnostics" /></Style>
+                    </Button.Styles>
+                    <Image Classes="EditorIcon" RenderOptions.BitmapInterpolationMode="HighQuality" Source="/Assets/Icons/Lucide/square.png" />
+                </Button>
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Content="Freeze" IsChecked="{Binding IsFrozen}" VerticalAlignment="Center" Margin="0,0,8,0"
+                          ToolTip.Tip="Freeze displayed samples and trend, not engine execution. Sort once using this sample." />
+            <TextBlock Grid.Column="2" Text="{Binding Connection}" Classes="caption" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="8,0" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Connection}" />
+            <Button Grid.Column="3" Name="ExportButton" Content="Export JSON" Click="ExportClicked" IsEnabled="{Binding HasData}" VerticalAlignment="Center" />
+        </Grid>
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <ToggleButton Content="CPU scopes" IsChecked="{Binding ShowScopes, Mode=OneWay}" Command="{Binding ShowScopesCommand}" />
+                <ToggleButton Content="Counters" IsChecked="{Binding ShowCounters, Mode=OneWay}" Command="{Binding ShowCountersCommand}" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Classes="caption" Text="{Binding SampleLabel}" Margin="10,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SampleLabel}" />
+            <TextBox Grid.Column="2" Name="ScopeSearch" Text="{Binding Search}" Watermark="Search scopes…" Width="158" Margin="0,0,8,0" />
+            <ComboBox Grid.Column="3" ItemsSource="{Binding FilterOptions}" SelectedItem="{Binding Filter}" Width="120" />
+        </Grid>
+        <Border Grid.Row="4" Margin="0,10,0,0" Background="{StaticResource Dark_1}" BorderBrush="{StaticResource Gray_0}" BorderThickness="1">
+            <Grid RowDefinitions="Auto,*">
+                <Border Padding="10,8" Background="{StaticResource Dark_3}" IsVisible="{Binding HasMessage}">
+                    <TextBlock Text="{Binding Message}" Foreground="{StaticResource Gray_4}" TextWrapping="Wrap" />
+                </Border>
+                <Grid Grid.Row="1" RowDefinitions="Auto,*" IsVisible="{Binding ShowScopes}">
+                    <Border Name="ScopeHeader" Background="{StaticResource Gray_0}" BorderBrush="{StaticResource Gray_2}" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="*,220,180,170,145" Margin="8,0">
+                            <Button Classes="sort" Content="{Binding NameHeading}" Command="{Binding SortNameCommand}" HorizontalContentAlignment="Left" FontWeight="SemiBold" />
+                            <Button Grid.Column="1" Classes="sort" Content="{Binding ExclusiveHeading}" Command="{Binding SortExclusiveCommand}" FontWeight="SemiBold" ToolTip.Tip="Per valid frame, excluding children. Colors and bars use target frame budget." />
+                            <Button Grid.Column="2" Classes="sort" Content="{Binding InclusiveHeading}" Command="{Binding SortInclusiveCommand}" FontWeight="SemiBold" ToolTip.Tip="Per valid frame, including children. Inclusive totals overlap." />
+                            <Button Grid.Column="3" Classes="sort" Content="{Binding MaximumHeading}" Command="{Binding SortMaximumCommand}" FontWeight="SemiBold" ToolTip.Tip="Largest inclusive cost within one valid frame." />
+                            <Button Grid.Column="4" Classes="sort" Content="{Binding CallsHeading}" Command="{Binding SortCallsCommand}" FontWeight="SemiBold" />
+                        </Grid>
+                    </Border>
+                    <ListBox Name="ScopeList" Grid.Row="1" ItemsSource="{Binding Scopes}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProfilingRow">
+                                <Border Background="{Binding $parent[ListBoxItem].Background}" BorderBrush="{StaticResource Dark_2}" BorderThickness="0,0,0,1" Padding="8,7">
+                                    <Grid ColumnDefinitions="*,220,180,170,145">
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                                        <Grid Grid.Column="1" ColumnDefinitions="*,68" ToolTip.Tip="{Binding CostHint}">
+                                            <Border Width="{Binding CostBarWidth}" HorizontalAlignment="Left" Background="{Binding CostColor}" Opacity="0.35" Margin="8,3,0,3" />
+                                            <TextBlock Grid.Column="1" Text="{Binding ExclusiveText}" HorizontalAlignment="Right" Foreground="{Binding CostColor}" />
+                                        </Grid>
+                                        <TextBlock Grid.Column="2" Text="{Binding InclusiveText}" HorizontalAlignment="Right" ToolTip.Tip="{Binding InclusiveHint}" />
+                                        <TextBlock Grid.Column="3" Text="{Binding MaximumText}" HorizontalAlignment="Right" ToolTip.Tip="{Binding MaximumHint}" />
+                                        <TextBlock Grid.Column="4" Text="{Binding CallsText}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+                <Grid Grid.Row="1" RowDefinitions="Auto,*" IsVisible="{Binding ShowCounters}">
+                    <Border Background="{StaticResource Gray_0}" BorderBrush="{StaticResource Gray_2}" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="*,180,170,145" Margin="8,0">
+                            <TextBlock Text="Counter" Margin="0,10" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Average / frame" Margin="0,10" HorizontalAlignment="Right" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Text="Max / frame" Margin="0,10" HorizontalAlignment="Right" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="3" Text="Total" Margin="0,10" HorizontalAlignment="Right" FontWeight="SemiBold" />
+                        </Grid>
+                    </Border>
+                    <ListBox Name="CounterList" Grid.Row="1" ItemsSource="{Binding Counters}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProfilingRow">
+                                <Border Background="{Binding $parent[ListBoxItem].Background}" BorderBrush="{StaticResource Dark_2}" BorderThickness="0,0,0,1" Padding="8,7">
+                                    <Grid ColumnDefinitions="*,180,170,145">
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding AverageValueText}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="2" Text="{Binding MaximumValueText}" HorizontalAlignment="Right" />
+                                        <TextBlock Grid.Column="3" Text="{Binding TotalText}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

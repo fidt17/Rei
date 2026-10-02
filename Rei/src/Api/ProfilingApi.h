@@ -44,3 +44,22 @@ REI_EXTERN_API inline i32 StartProfilingCapture(i32 frameCount, char* buffer, i3
     }
     catch (...) { return 0; }
 }
+
+// Explicit Editor Live control. Session guard prevents a closing old window from
+// changing a replacement engine after Play/Stop or project DLL reload.
+REI_EXTERN_API inline i32 SetProfilingEnabled(i32 enabled, const char* expectedSessionId, char* buffer, i32 bufferSize)
+{
+    try
+    {
+        if (!rei::GetEngine().IsRunning()) return rei::api::WriteProfilingResponse("{\"source\":\"runtime\",\"status\":\"engine_unavailable\"}", buffer, bufferSize);
+        if (enabled != 0 && enabled != 1) return 0;
+        auto& profiler = rei::GetProfiler();
+        auto snapshot = profiler.CopySnapshot();
+        if (expectedSessionId && *expectedSessionId && std::to_string(snapshot.SessionId) != expectedSessionId)
+            return rei::api::WriteProfilingResponse(rei::profiling::ProfilingService::ToJson(snapshot, "session_changed"), buffer, bufferSize);
+        profiler.SetEnabled(enabled != 0);
+        snapshot = profiler.CopySnapshot();
+        return rei::api::WriteProfilingResponse(rei::profiling::ProfilingService::ToJson(snapshot, "ok"), buffer, bufferSize);
+    }
+    catch (...) { return 0; }
+}

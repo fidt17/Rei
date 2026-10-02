@@ -61,6 +61,7 @@
                     <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 Spacing="6">
+                        <Button Name="DiagnosticsButton" Command="{Binding OpenDiagnosticsCommand}" Content="Diagnostics" />
                         <Button Command="{Binding OpenBuildProjectWindowCommand}">
                             Release
                         </Button>

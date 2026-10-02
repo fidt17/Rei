@@ -88,6 +88,24 @@ public sealed class EngineProfilingServiceTests
         Assert.Equal("read_failed", service.Read("runtime", "recent", null, 256).GetProperty("status").GetString());
     }
 
+    [Fact]
+    public void ContinuousControlUsesSessionGuardAndUnsupportedNeverMutatesNative()
+    {
+        var api = new Api();
+        var access = new Access(api);
+        var service = new EngineProfilingService(access);
+        service.SetContinuous(true, "123");
+        Assert.Equal("SetProfilingEnabled", api.Method);
+        Assert.Equal(1, api.Arguments![0]);
+        Assert.Equal("123", api.Arguments[1]);
+        service.SetContinuous(false, "123");
+        Assert.Equal(0, api.Arguments![0]);
+        Assert.Throws<ReiMcpOperationException>(() => service.SetContinuous(true, "not a session"));
+        Assert.Equal(2, access.Calls);
+        api.Supported = false;
+        Assert.Equal("unsupported", service.SetContinuous(true, "123").GetProperty("status").GetString());
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(3601)]

@@ -13,6 +13,7 @@ public sealed class EngineProfilingService(IEngineNativeAccess nativeAccess) : I
 {
     private delegate int ReadDelegate(string view, string expectedSessionId, int limit, [Out] byte[] buffer, int bufferSize);
     private delegate int CaptureDelegate(int frameCount, [Out] byte[] buffer, int bufferSize);
+    private delegate int ContinuousDelegate(int enabled, string expectedSessionId, [Out] byte[] buffer, int bufferSize);
     private const int BUFFER_SIZE = 256 * 1024;
     private const int MAX_METRICS = 256;
     private const int MAX_CAPTURE_FRAMES = 3600;
@@ -22,8 +23,7 @@ public sealed class EngineProfilingService(IEngineNativeAccess nativeAccess) : I
         if (source != "runtime") throw new ReiMcpOperationException("invalid_source", "Profiling source must be runtime.");
         if (view is not ("recent" or "last_capture")) throw new ReiMcpOperationException("invalid_view", "View must be recent or last_capture.");
         if (limit < 1 || limit > MAX_METRICS) throw new ReiMcpOperationException("invalid_limit", "Limit must be between 1 and 256.");
-        if (expectedSessionId != null && !ulong.TryParse(expectedSessionId, NumberStyles.None, CultureInfo.InvariantCulture, out _))
-            throw new ReiMcpOperationException("invalid_session_id", "Session id must be an unsigned decimal string.");
+        ValidateSessionId(expectedSessionId);
         return Invoke("GetProfilingSnapshot", api =>
         {
             var buffer = new byte[BUFFER_SIZE];
@@ -44,6 +44,17 @@ public sealed class EngineProfilingService(IEngineNativeAccess nativeAccess) : I
         });
     }
 
+    public JsonElement SetContinuous(bool enabled, string? expectedSessionId)
+    {
+        ValidateSessionId(expectedSessionId);
+        return Invoke("SetProfilingEnabled", api =>
+        {
+            var buffer = new byte[BUFFER_SIZE];
+            var size = api.Invoke<int>(typeof(ContinuousDelegate), "SetProfilingEnabled", enabled ? 1 : 0, expectedSessionId ?? "", buffer, buffer.Length);
+            return Decode(buffer, size);
+        });
+    }
+
     private JsonElement Invoke(string export, Func<IEngineApi, JsonElement> call)
     {
         var result = Status("engine_unavailable");
@@ -58,6 +69,12 @@ public sealed class EngineProfilingService(IEngineNativeAccess nativeAccess) : I
             catch (Exception) { result = Status("read_failed"); }
         });
         return result;
+    }
+
+    private static void ValidateSessionId(string? sessionId)
+    {
+        if (sessionId != null && !ulong.TryParse(sessionId, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+            throw new ReiMcpOperationException("invalid_session_id", "Session id must be an unsigned decimal string.");
     }
 
     private static JsonElement Decode(byte[] buffer, int size)

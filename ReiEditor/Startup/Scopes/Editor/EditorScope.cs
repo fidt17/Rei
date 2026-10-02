@@ -60,6 +60,7 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterModule<SettingsModule>();
         b.RegisterModule<BuildModule>();
         b.RegisterModule<StatusBarModule>();
+        b.RegisterModule<DiagnosticsModule>();
 
         b.RegisterSingleton<McpEditorOperationCoordinator>().As<IMcpEditorOperationCoordinator>();
         b.RegisterSingleton<McpEditorAutomationService>().As<IMcpEditorAutomationService>();
