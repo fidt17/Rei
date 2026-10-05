@@ -2,6 +2,7 @@
 #include "support/NativeTestSupport.h"
 #include "Modules/Resources/Serialization/BinaryReader.h"
 #include "Modules/Resources/Serialization/BinaryWriter.h"
+#include <limits>
 #include <new>
 #include <stdexcept>
 
@@ -20,6 +21,37 @@ namespace
         catch (const std::length_error&) { FAIL_CHECK("Container size exception is not input validation"); }
         catch (const std::exception&) { rejected = true; }
         CHECK(rejected);
+    }
+
+    std::vector<u8> LengthHeader(const i32 length)
+    {
+        const u32 packed = static_cast<u32>(length);
+        return {static_cast<u8>(packed), static_cast<u8>(packed >> 8), static_cast<u8>(packed >> 16), static_cast<u8>(packed >> 24)};
+    }
+
+    void CheckLengthRejected(const std::filesystem::path& path)
+    {
+        BinaryReader reader(path.string());
+        CHECK_THROWS_AS(reader.GetVector<i32>(), std::runtime_error);
+        CHECK(reader.GetPosition() == 4);
+        CHECK(reader.GetU8() == 0xAB);
+        BinaryReader wideReader(path.string());
+        CHECK_THROWS_AS(wideReader.GetVector<u64>(), std::runtime_error);
+        CHECK(wideReader.GetPosition() == 4);
+        CHECK(wideReader.GetU8() == 0xAB);
+        BinaryReader byteVectorReader(path.string());
+        CHECK_THROWS_AS(byteVectorReader.GetVector<u8>(), std::runtime_error);
+        CHECK(byteVectorReader.GetPosition() == 4);
+        CHECK(byteVectorReader.GetU8() == 0xAB);
+        BinaryReader stringReader(path.string());
+        CHECK_THROWS_AS(stringReader.GetStr(), std::runtime_error);
+        CHECK(stringReader.GetPosition() == 4);
+        CHECK(stringReader.GetU8() == 0xAB);
+        BinaryReader bytesReader(path.string());
+        i32 count = 0;
+        CHECK_THROWS_AS(std::unique_ptr<u8[]>(bytesReader.GetBytes(count)), std::runtime_error);
+        CHECK(bytesReader.GetPosition() == 4);
+        CHECK(bytesReader.GetU8() == 0xAB);
     }
 
     const std::vector<u8> SCALAR_BYTES{
@@ -127,6 +159,14 @@ TEST_CASE("BIN-01 Reader vectors consume only their packed record", "[native][bi
     REQUIRE(reader.GetVector<i32>().empty());
     REQUIRE(reader.GetU8() == 0xAB);
     REQUIRE(reader.GetPosition() == 21);
+
+    BinaryReader wideReader(directory.Write("wide-vector.bin", {1, 0, 0, 0, 0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01, 0xAB}).string());
+    REQUIRE(wideReader.GetVector<u64>() == std::vector<u64>{0x0123456789ABCDEF});
+    REQUIRE(wideReader.GetPosition() == 12);
+    CHECK(wideReader.GetU8() == 0xAB);
+    BinaryReader byteReader(directory.Write("byte-vector.bin", {1, 0, 0, 0, 0xAB}).string());
+    REQUIRE(byteReader.GetVector<u8>() == std::vector<u8>{0xAB});
+    REQUIRE(byteReader.GetPosition() == 5);
 }
 
 TEST_CASE("BIN-01 Packed seek overwrites only requested bytes", "[native][binary][coverage]")
@@ -221,17 +261,11 @@ TEST_CASE("BIN-03 Negative lengths are rejected in an isolated process", "[nativ
     Isolated([]
     {
         TemporaryDirectory directory;
-        const auto path = directory.Write("negative.bin", {0xFF, 0xFF, 0xFF, 0xFF});
-        BinaryReader reader(path.string());
-        CheckRejectedWithoutAllocatorException("GetVector<i32>", [&] { static_cast<void>(reader.GetVector<i32>()); });
-        BinaryReader stringReader(path.string());
-        CheckRejectedWithoutAllocatorException("GetStr", [&] { static_cast<void>(stringReader.GetStr()); });
-        BinaryReader bytesReader(path.string());
-        CheckRejectedWithoutAllocatorException("GetBytes", [&]
-        {
-            i32 count = 0;
-            const std::unique_ptr<u8[]> bytes(bytesReader.GetBytes(count));
-        });
+        const i32 declaredLength = GENERATE(i32{-1}, i32{-2}, std::numeric_limits<i32>::min());
+        CAPTURE(declaredLength);
+        auto data = LengthHeader(declaredLength);
+        data.push_back(0xAB);
+        CheckLengthRejected(directory.Write("negative.bin", data));
     });
 }
 
@@ -240,17 +274,13 @@ TEST_CASE("BIN-03 Declared payload larger than file fails before huge allocation
     Isolated([]
     {
         TemporaryDirectory directory;
-        const auto path = directory.Write("oversized.bin", {0, 0, 0, 0x40});
-        BinaryReader reader(path.string());
-        CheckRejectedWithoutAllocatorException("GetVector<i32>", [&] { static_cast<void>(reader.GetVector<i32>()); });
-        BinaryReader stringReader(path.string());
-        CheckRejectedWithoutAllocatorException("GetStr", [&] { static_cast<void>(stringReader.GetStr()); });
-        BinaryReader bytesReader(path.string());
-        CheckRejectedWithoutAllocatorException("GetBytes", [&]
-        {
-            i32 count = 0;
-            const std::unique_ptr<u8[]> bytes(bytesReader.GetBytes(count));
-        });
+        const i32 declaredLength = GENERATE(i32{3}, i32{0x40000000}, std::numeric_limits<i32>::max());
+        CAPTURE(declaredLength);
+        auto data = LengthHeader(declaredLength);
+        data.push_back(0xAB);
+        // The shared child Job caps memory at 256 MiB. GiB allocations must
+        // yield validation errors, never allocator exceptions or a timeout.
+        CheckLengthRejected(directory.Write("oversized.bin", data));
     });
 }
 
@@ -315,11 +345,16 @@ TEST_CASE("BIN-02 Proposed negative reader seek rejects without poisoning valid 
         TemporaryDirectory directory;
         BinaryReader reader(directory.Write("reader-seek.bin", {0xAB, 0xCD}).string());
         REQUIRE(reader.GetU8() == 0xAB);
-        // Proposed seek error policy: explicit rejection leaves previous cursor
-        // usable. Native API currently declares no atomic seek-failure policy.
-        CheckRejectedWithoutAllocatorException("BinaryReader::SetPosition(-1)", [&] { reader.SetPosition(-1); });
+        const i64 position = GENERATE(i64{-1}, i64{-17}, std::numeric_limits<i64>::min());
+        CAPTURE(position);
+        CHECK_THROWS_AS(reader.SetPosition(position), std::runtime_error);
         CHECK(reader.GetPosition() == 1);
         CHECK(reader.GetU8() == 0xCD);
+        CHECK_NOTHROW(reader.SetPosition(3)); // A nonnegative seek beyond EOF remains valid.
+        CHECK(reader.GetPosition() == 3);
+        CHECK_THROWS_AS(reader.GetU8(), std::runtime_error);
+        reader.Close();
+        CHECK_THROWS_AS(reader.SetPosition(0), std::runtime_error);
     });
 }
 
@@ -330,11 +365,22 @@ TEST_CASE("BIN-02 Proposed negative writer seek rejects without poisoning valid 
         TemporaryDirectory directory;
         const auto path = directory.Write("writer-seek.bin", {0x11, 0x22, 0x33});
         BinaryWriter writer(path.string(), 1);
-        CheckRejectedWithoutAllocatorException("BinaryWriter::SetPosition(-1)", [&] { writer.SetPosition(-1); });
+        const i64 position = GENERATE(i64{-1}, i64{-17}, std::numeric_limits<i64>::min());
+        CAPTURE(position);
+        CHECK_THROWS_AS(writer.SetPosition(position), std::runtime_error);
         CHECK(writer.GetPosition() == 1);
         writer.WriteU8(0xAB);
         writer.Close();
         CHECK(ReadBytes(path) == std::vector<u8>{0x11, 0xAB, 0x33});
+        CHECK_THROWS_AS(writer.SetPosition(0), std::runtime_error);
+
+        const auto extendedPath = directory.Write("extended.bin", {0x11});
+        BinaryWriter extendingWriter(extendedPath.string(), 0);
+        CHECK_NOTHROW(extendingWriter.SetPosition(3));
+        CHECK(extendingWriter.GetPosition() == 3);
+        extendingWriter.WriteU8(0xAB);
+        extendingWriter.Close();
+        CHECK(ReadBytes(extendedPath) == std::vector<u8>{0x11, 0, 0, 0xAB});
     });
 }
 
@@ -344,8 +390,10 @@ TEST_CASE("BIN-02 Proposed negative constructor offsets reject before accepting 
     {
         TemporaryDirectory directory;
         const auto path = directory.Write("negative-position.bin", {0x11});
-        CheckRejectedWithoutAllocatorException("BinaryReader negative constructor offset", [&] { BinaryReader reader(path.string(), -1); });
-        CheckRejectedWithoutAllocatorException("BinaryWriter negative constructor offset", [&] { BinaryWriter writer(path.string(), -1); });
+        const i64 position = GENERATE(i64{-1}, i64{-17}, std::numeric_limits<i64>::min());
+        CAPTURE(position);
+        CHECK_THROWS_AS(BinaryReader(path.string(), position), std::runtime_error);
+        CHECK_THROWS_AS(BinaryWriter(path.string(), position), std::runtime_error);
         CHECK(ReadBytes(path) == std::vector<u8>{0x11});
     });
 }

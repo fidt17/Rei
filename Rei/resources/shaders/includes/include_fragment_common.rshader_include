@@ -15,8 +15,8 @@ vec4 REI_CalculateAmbientLight()
 
 vec4 REI_CalculatePointLight(float shininess)
 {
-    vec4 total;
-    for (int i = 0; i < NR_POINT_LIGHTS; i++)
+    vec4 total = vec4(0.0);
+    for (int i = 0; i < min(_PointLightsCount, NR_POINT_LIGHTS); i++)
     {
         PointLight light = _PointLights[i];
         vec3 lightPosition = _PointLightPositions[i];

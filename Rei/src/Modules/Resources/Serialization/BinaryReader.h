@@ -32,6 +32,7 @@ namespace rei::resources
         REI_API std::vector<T> GetVector()
         {
             const i32 count = GetI32();
+            ValidateLength(count, sizeof(T));
             std::vector<T> vec;
             vec.reserve(count);
 
@@ -59,6 +60,7 @@ namespace rei::resources
 
     private:
         REI_API void ReadData(char* bytes, i64 length);
+        REI_API void ValidateLength(i32 count, u64 elementSize);
 
         std::ifstream _stream;
     };

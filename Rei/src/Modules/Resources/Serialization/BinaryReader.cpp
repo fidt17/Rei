@@ -13,7 +13,10 @@ namespace rei::resources
 
     void BinaryReader::SetPosition(const i64 position)
     {
+        REI_THROW_IF(position < 0, "Negative binary stream position")
+        REI_THROW_IF(!_stream.is_open() || _stream.fail(), "Binary stream is not readable")
         _stream.seekg(position);
+        REI_THROW_IF(_stream.fail(), "Could not seek binary stream")
     }
 
     i64 BinaryReader::GetPosition()
@@ -29,6 +32,7 @@ namespace rei::resources
     u8* BinaryReader::GetBytes(i32& length)
     {
         length = GetI32();
+        ValidateLength(length, sizeof(u8));
         std::unique_ptr<u8[]> bytes(new u8[length]);
         ReadData(reinterpret_cast<char*>(bytes.get()), length);
 
@@ -40,6 +44,22 @@ namespace rei::resources
         REI_THROW_IF(!_stream.is_open() || _stream.fail(), "Binary stream is not readable")
         _stream.read(bytes, length);
         REI_THROW_IF(_stream.fail(), "Could not read complete binary data")
+    }
+
+    void BinaryReader::ValidateLength(const i32 count, const u64 elementSize)
+    {
+        REI_THROW_IF(count < 0, "Negative binary payload length")
+        if (count == 0) return;
+
+        const auto position = _stream.tellg();
+        REI_THROW_IF(position == std::streampos(-1), "Could not read binary stream position")
+        _stream.seekg(0, std::ios::end);
+        const auto end = _stream.tellg();
+        const bool endFailed = _stream.fail();
+        _stream.clear();
+        _stream.seekg(position);
+        REI_THROW_IF(endFailed || _stream.fail() || end < position, "Could not inspect binary stream length")
+        REI_THROW_IF(static_cast<u64>(count) > static_cast<u64>(end - position) / elementSize, "Binary payload exceeds remaining data")
     }
 
     u8 BinaryReader::GetU8() { return GetByType<u8>(); } 
@@ -63,6 +83,7 @@ namespace rei::resources
     std::string BinaryReader::GetStr()
     {
         const i32 len = GetI32();
+        ValidateLength(len, sizeof(char));
         std::string str;
         str.resize(len);
         ReadData(str.data(), len);

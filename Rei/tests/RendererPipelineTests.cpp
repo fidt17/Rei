@@ -1,9 +1,70 @@
 #include "pch.h"
 #include "catch_amalgamated.hpp"
 #include "support/NativeRenderPipelineFixture.h"
+#include "rei_behaviours/render/light/AmbientLight.h"
 
 using namespace rei;
 using namespace rei::tests;
+
+namespace
+{
+    struct LightingState
+    {
+        i32 PointCount = -1;
+        std::array<f32, REI_MAX_POINT_LIGHTS_COUNT> PointStrengths{};
+        f32 AmbientStrength = -1;
+    };
+
+    LightingState ReadLightingState(NativeEngineFixture& engine)
+    {
+        LightingState state;
+        engine.OnEngineThread([&]
+        {
+            const auto shader = GetAssetManager().GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+            shader->Use();
+            i32 program = 0;
+            glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+            const auto location = [&](const std::string& name)
+            {
+                const auto value = shader->GetLocation(name);
+                if (value < 0) throw std::runtime_error("Lighting uniform missing: " + name);
+                return value;
+            };
+            glGetUniformiv(program, location("_PointLightsCount"), &state.PointCount);
+            glGetUniformfv(program, location("_AmbientLight.Strength"), &state.AmbientStrength);
+            for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+                glGetUniformfv(program, location("_PointLights[" + std::to_string(i) + "].Strength"), &state.PointStrengths[i]);
+            if (glGetError() != GL_NO_ERROR) throw std::runtime_error("Lighting readback encountered GL error");
+        });
+        return state;
+    }
+
+    void VerifyLightingFrame(NativeEngineFixture& engine, const i32 pointCount, const f32 ambientStrength = 0)
+    {
+        const auto frame = Capture(engine);
+        // Same independent lighting equation as PIPE10: shininess 0, light (3,0,1), quad z=2.
+        const auto brightness = ambientStrength + pointCount * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
+        const auto expected = static_cast<u8>(std::lround(255.0f * brightness));
+        RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
+        const auto state = ReadLightingState(engine);
+        REQUIRE(state.PointCount == pointCount);
+        REQUIRE(state.AmbientStrength == ambientStrength);
+        for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+            REQUIRE(state.PointStrengths[i] == (i < pointCount ? 0.05f : 0));
+        const auto repeated = Capture(engine);
+        REQUIRE(repeated->Width == frame->Width);
+        REQUIRE(repeated->Height == frame->Height);
+        REQUIRE(repeated->Pixels == frame->Pixels);
+    }
+
+    ecs::Entity CreateAmbientLight(const f32 strength)
+    {
+        const auto entity = CreateEntity("pipeline ambient");
+        GetEntityManager().AddBehaviour(entity, 7307, nlohmann::json(), false);
+        GetInternalWorld()->GetRegistry()->Get<render::AmbientLight>(entity).REI_SET(SerializedField("_strength", strength));
+        return entity;
+    }
+}
 
 TEST_CASE("PIPE01 real engine shaded renderer depth-occludes far mesh", "[native][coverage][coverage-remaining][gl][engine-integration][renderer][isolated]")
 {
@@ -259,6 +320,71 @@ TEST_CASE("PIPE11 real engine fifth point light stays outside four-slot shader c
         const auto frame = Capture(engine);
         const auto expected = static_cast<u8>(std::lround(255.0f * 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f))));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
+        engine.Stop();
+    }, 30000, 1024);
+}
+
+TEST_CASE("PIPE15 real engine point light lifecycle agrees with shader uniforms and pixels", "[native][gl][engine-integration][renderer][lighting][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture engine(internal::engine::PlayMode, "lighting-point", PrepareRenderResources);
+        engine.Start();
+        engine.OnEngineThread([] { CreateLitMeshWithLights(0); });
+        VerifyLightingFrame(engine, 0);
+        std::vector<ecs::Entity> lights(5, ecs::NULL_ENTITY);
+        for (i32 i = 0; i < 5; ++i)
+        {
+            engine.OnEngineThread([&] { lights[i] = CreatePointLight(); });
+            VerifyLightingFrame(engine, std::min(i + 1, 4));
+        }
+        engine.OnEngineThread([&] { GetEntityManager().DeleteBehaviour(lights[4], 7306); });
+        VerifyLightingFrame(engine, 4);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::PointLight>(lights[0]).Disable(); });
+        VerifyLightingFrame(engine, 3);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::PointLight>(lights[0]).Enable(); });
+        VerifyLightingFrame(engine, 4);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Del<ActiveTag>(lights[0]); });
+        VerifyLightingFrame(engine, 3);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<ActiveTag>(lights[0]); });
+        VerifyLightingFrame(engine, 4);
+        engine.OnEngineThread([&]
+        {
+            for (i32 i = 0; i < 3; ++i) GetEntityManager().Destroy(lights[i]);
+        });
+        VerifyLightingFrame(engine, 1);
+        engine.OnEngineThread([&] { GetEntityManager().Destroy(lights[3]); });
+        VerifyLightingFrame(engine, 0);
+        engine.Stop();
+    }, 30000, 1024);
+}
+
+TEST_CASE("PIPE16 real engine ambient lifecycle agrees with shader uniforms and pixels", "[native][gl][engine-integration][renderer][lighting][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture engine(internal::engine::PlayMode, "lighting-ambient", PrepareRenderResources);
+        engine.Start();
+        ecs::Entity first = ecs::NULL_ENTITY, second = ecs::NULL_ENTITY;
+        engine.OnEngineThread([&]
+        {
+            CreateLitMeshWithLights(0);
+            first = CreateAmbientLight(0.25f);
+            second = CreateAmbientLight(0.1f);
+        });
+        VerifyLightingFrame(engine, 0, 0.25f);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::AmbientLight>(first).Disable(); });
+        VerifyLightingFrame(engine, 0, 0.1f);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Del<ActiveTag>(second); });
+        VerifyLightingFrame(engine, 0);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::AmbientLight>(first).Enable(); });
+        VerifyLightingFrame(engine, 0, 0.25f);
+        engine.OnEngineThread([&] { GetEntityManager().DeleteBehaviour(first, 7307); });
+        VerifyLightingFrame(engine, 0);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<ActiveTag>(second); });
+        VerifyLightingFrame(engine, 0, 0.1f);
+        engine.OnEngineThread([&] { GetEntityManager().Destroy(second); });
+        VerifyLightingFrame(engine, 0);
         engine.Stop();
     }, 30000, 1024);
 }

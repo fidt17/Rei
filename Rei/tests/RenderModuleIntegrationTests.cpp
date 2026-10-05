@@ -75,6 +75,40 @@ namespace
         glGetUniformfv(program, location, &value);
         return value;
     }
+
+    i32 ReadPointLightCount(const render::Shader& shader)
+    {
+        shader.Use();
+        i32 program = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        const auto location = shader.GetLocation("_PointLightsCount");
+        REQUIRE(location >= 0);
+        i32 value = -1;
+        glGetUniformiv(program, location, &value);
+        return value;
+    }
+
+    void RequireEmptyLightSlots(const render::Shader& shader, const i32 start)
+    {
+        shader.Use();
+        i32 program = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        for (i32 i = start; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+        {
+            const auto slot = "_PointLights[" + std::to_string(i) + "]";
+            REQUIRE(ReadFloatUniform(shader, slot + ".Strength") == 0);
+            std::array<f32, 3> position{};
+            std::array<f32, 4> color{};
+            const auto positionLocation = shader.GetLocation(slot + ".Position");
+            const auto colorLocation = shader.GetLocation(slot + ".Color");
+            REQUIRE(positionLocation >= 0);
+            REQUIRE(colorLocation >= 0);
+            glGetUniformfv(program, positionLocation, position.data());
+            glGetUniformfv(program, colorLocation, color.data());
+            REQUIRE(position == std::array<f32, 3>{0, 0, 0});
+            REQUIRE(color == std::array<f32, 4>{0, 0, 0, 1});
+        }
+    }
 }
 
 TEST_CASE("RENDER01 UI module renders Image color through actual material and shader", "[native][coverage][coverage-remaining][gl][ui-render][isolated]")
@@ -228,6 +262,7 @@ TEST_CASE("RENDER07 removed point lights reset stale shader strengths on next re
         render::LightingRenderModule lighting(camera);
         const auto entity = fixture.Scene.Entity(101);
         fixture.Scene.Add(entity, 7306, false);
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
         fixture.Scene.Registry->Get<render::PointLight>(entity).SetStrength(0.75f);
         fixture.Scene.World->Refresh();
         lighting.OnBeforeRender();
@@ -253,6 +288,7 @@ TEST_CASE("RENDER08 all four point-light shader slots receive distinct native st
         {
             const auto entity = fixture.Scene.Entity(101 + i);
             fixture.Scene.Add(entity, 7306, false);
+            fixture.Scene.Registry->Get<ActiveTag>(entity);
             fixture.Scene.Registry->Get<render::PointLight>(entity).SetStrength(0.1f * static_cast<f32>(i + 1));
         }
         fixture.Scene.World->Refresh();
@@ -274,6 +310,7 @@ TEST_CASE("RENDER12 removed ambient light resets native shader strength", "[nati
         render::LightingRenderModule lighting(camera);
         const auto entity = fixture.Scene.Entity(101);
         fixture.Scene.Add(entity, 7307, false);
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
         fixture.Scene.Registry->Get<render::AmbientLight>(entity).REI_SET(SerializedField("_strength", 0.5f));
         fixture.Scene.World->Refresh();
         lighting.OnBeforeRender();
@@ -287,7 +324,7 @@ TEST_CASE("RENDER12 removed ambient light resets native shader strength", "[nati
     });
 }
 
-TEST_CASE("RENDER13 disabled point light contributes zero native shader strength", "[native][coverage][coverage-remaining][gl][lighting][isolated][proposed-policy]")
+TEST_CASE("RENDER13 disabled point light contributes zero native shader strength", "[native][coverage][coverage-remaining][gl][lighting][isolated]")
 {
     IsolatedGl([]
     {
@@ -297,12 +334,121 @@ TEST_CASE("RENDER13 disabled point light contributes zero native shader strength
         render::LightingRenderModule lighting(camera);
         const auto entity = fixture.Scene.Entity(101);
         fixture.Scene.Add(entity, 7306, false);
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
         fixture.Scene.Registry->Get<render::PointLight>(entity).SetStrength(0.75f);
         fixture.Scene.Registry->Get<render::PointLight>(entity).Disable();
         fixture.Scene.World->Refresh();
         lighting.OnBeforeRender();
         lighting.SetLightValues(*shader.Get());
         REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 0.0f);
+    });
+}
+
+TEST_CASE("RENDER14 point light count caps at four and clears every unused native slot", "[native][gl][lighting][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::LightingRenderModule lighting(MakeCamera(fixture));
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        std::vector<ecs::Entity> lights(5, ecs::NULL_ENTITY);
+        const auto verify = [&](const i32 expected)
+        {
+            fixture.Scene.World->Refresh();
+            lighting.OnBeforeRender();
+            lighting.SetLightValues(*shader.Get());
+            REQUIRE(ReadPointLightCount(*shader.Get()) == expected);
+            RequireEmptyLightSlots(*shader.Get(), expected);
+            REQUIRE(glGetError() == GL_NO_ERROR);
+        };
+        verify(0);
+        for (i32 i = 0; i < 5; ++i)
+        {
+            lights[i] = fixture.Scene.Entity(101 + i);
+            fixture.Scene.Add(lights[i], 7306, false);
+            fixture.Scene.Registry->Get<ActiveTag>(lights[i]);
+            fixture.Scene.Registry->Get<Transform>(lights[i]).GetLocalPosition() = {1, 2, 3};
+            auto& light = fixture.Scene.Registry->Get<render::PointLight>(lights[i]);
+            light.SetStrength(0.25f);
+            light.SetColor(render::Color::Red());
+            verify(std::min(i + 1, 4));
+        }
+        REQUIRE(shader->GetLocation("_PointLights[4].Strength") == -1);
+        for (i32 i = 4; i >= 0; --i)
+        {
+            fixture.Scene.Registry->Del<render::PointLight>(lights[i]);
+            verify(std::min(i, 4));
+        }
+    });
+}
+
+TEST_CASE("RENDER15 point light component and object activity clear and restore native values", "[native][gl][lighting][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::LightingRenderModule lighting(MakeCamera(fixture));
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        const auto entity = fixture.Scene.Entity(101);
+        fixture.Scene.Add(entity, 7306, false);
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
+        auto& light = fixture.Scene.Registry->Get<render::PointLight>(entity);
+        light.SetStrength(0.75f);
+        const auto verify = [&](const i32 count)
+        {
+            fixture.Scene.World->Refresh();
+            lighting.OnBeforeRender();
+            lighting.SetLightValues(*shader.Get());
+            REQUIRE(ReadPointLightCount(*shader.Get()) == count);
+            if (count == 0) RequireEmptyLightSlots(*shader.Get(), 0);
+            else REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 0.75f);
+        };
+        verify(1);
+        light.Disable();
+        verify(0);
+        light.Enable();
+        verify(1);
+        fixture.Scene.Registry->Del<ActiveTag>(entity);
+        verify(0);
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
+        verify(1);
+    });
+}
+
+TEST_CASE("RENDER16 ambient selects first enabled active source and clears previous selection", "[native][gl][lighting][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::LightingRenderModule lighting(MakeCamera(fixture));
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        const auto first = fixture.Scene.Entity(101);
+        const auto second = fixture.Scene.Entity(102);
+        fixture.Scene.Add(first, 7307, false);
+        fixture.Scene.Add(second, 7307, false);
+        fixture.Scene.Registry->Get<ActiveTag>(first);
+        fixture.Scene.Registry->Get<ActiveTag>(second);
+        auto& firstLight = fixture.Scene.Registry->Get<render::AmbientLight>(first);
+        auto& secondLight = fixture.Scene.Registry->Get<render::AmbientLight>(second);
+        firstLight.REI_SET(SerializedField("_strength", 0.75f));
+        secondLight.REI_SET(SerializedField("_strength", 0.25f));
+        const auto verify = [&](const f32 strength)
+        {
+            fixture.Scene.World->Refresh();
+            lighting.OnBeforeRender();
+            lighting.SetLightValues(*shader.Get());
+            REQUIRE(ReadFloatUniform(*shader.Get(), "_AmbientLight.Strength") == strength);
+        };
+        firstLight.Disable();
+        verify(0.25f);
+        firstLight.Enable();
+        verify(0.75f);
+        fixture.Scene.Registry->Del<ActiveTag>(first);
+        verify(0.25f);
+        secondLight.Disable();
+        verify(0);
+        fixture.Scene.Registry->Del<render::AmbientLight>(second);
+        verify(0);
     });
 }
 

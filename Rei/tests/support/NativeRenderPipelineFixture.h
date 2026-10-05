@@ -98,6 +98,18 @@ namespace rei::tests
         return entity;
     }
 
+    inline ecs::Entity CreatePointLight()
+    {
+        const auto entity = CreateEntity("pipeline light");
+        auto registry = GetInternalWorld()->GetRegistry();
+        registry->Get<Transform>(entity).GetLocalPosition() = {3, 0, 1}; // Keep marker cubes outside sampled center pixel.
+        GetEntityManager().AddBehaviour(entity, 7306, nlohmann::json(), false);
+        auto& light = registry->Get<render::PointLight>(entity);
+        light.SetColor(render::Color::White());
+        light.SetStrength(0.05f);
+        return entity;
+    }
+
     inline void CreateLitMeshWithLights(const i32 count)
     {
         CreateCamera();
@@ -106,16 +118,7 @@ namespace rei::tests
         material->SetColor("_Color", render::Color::White());
         material->SetFloat("_Shininess", 0);
         GetInternalWorld()->GetRegistry()->Get<render::MeshRenderer>(meshEntity).SetMaterial(material);
-        for (i32 i = 0; i < count; ++i)
-        {
-            const auto lightEntity = CreateEntity("pipeline light");
-            auto registry = GetInternalWorld()->GetRegistry();
-            registry->Get<Transform>(lightEntity).GetLocalPosition() = {3, 0, 1}; // Native light-marker cubes must not occlude sampled center pixel.
-            GetEntityManager().AddBehaviour(lightEntity, 7306, nlohmann::json(), false);
-            auto& light = registry->Get<render::PointLight>(lightEntity);
-            light.SetColor(render::Color::White());
-            light.SetStrength(0.05f);
-        }
+        for (i32 i = 0; i < count; ++i) CreatePointLight();
     }
 
     inline ecs::Entity CreateImage(const ecs::Entity canvas, const render::Color& color, const math::Vector2& size, const math::Vector2& position)

@@ -1,7 +1,24 @@
 #include "pch.h"
 #include "LightingRenderModule.h"
 
+#include "Modules/Components/ActiveTag.h"
 #include "rei_behaviours/transformation/Transform.h"
+
+namespace
+{
+    template <typename TLight, typename TVisitor>
+    void VisitEnabledLights(TVisitor visitor)
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto lights = FILTER(TLight, rei::ActiveTag);
+        FOR(entity, lights)
+        {
+            const auto light = GET_REF(entity, TLight);
+            if (!light.Get().IsEnabled()) continue;
+            if (!visitor(light)) break;
+        }
+    }
+}
 
 rei::render::LightingRenderModule::LightingRenderModule(const std::shared_ptr<CameraModule>& cameraModule): _cameraModule(cameraModule)
 {
@@ -31,25 +48,22 @@ void rei::render::LightingRenderModule::SetLightValues(const Shader& shader) con
 
 void rei::render::LightingRenderModule::FindAmbientLights()
 {
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto ambientLights = FILTER(AmbientLight);
-    GetInternalWorld()->RefreshAll();
-
-    if (ambientLights->GetEntitiesCount() == 0) return;
-    _ambientLight = GET_REF(*ambientLights->begin(), rei::render::AmbientLight);
+    _ambientLight = {};
+    VisitEnabledLights<AmbientLight>([this](const auto& light)
+    {
+        _ambientLight = light;
+        return false;
+    });
 }
 
 void rei::render::LightingRenderModule::FindPointLights()
 {
-    ECS_WORLD(rei::GetInternalWorld());
-    const auto pointLights = FILTER(PointLight);
-    GetInternalWorld()->RefreshAll();
-
     _pointLights.clear();
-    FOR(e, pointLights)
+    VisitEnabledLights<PointLight>([this](const auto& light)
     {
-        _pointLights.emplace_back(GET_REF(e, rei::render::PointLight));
-    }
+        _pointLights.emplace_back(light);
+        return true;
+    });
 }
 
 void rei::render::LightingRenderModule::SetAmbientLight(const Shader& shader) const
@@ -69,16 +83,27 @@ void rei::render::LightingRenderModule::SetAmbientLight(const Shader& shader) co
 
 void rei::render::LightingRenderModule::SetPointLights(const Shader& shader) const
 {
-    for (i32 i = 0; i < _pointLights.size(); i++)
+    // TODO: Select lights affecting each rendered object; currently the point-light cap applies to the entire scene.
+    i32 count = 0;
+    for (const auto& light : _pointLights)
     {
-        if (i > REI_MAX_POINT_LIGHTS_COUNT) break;
-
-        const auto& light = _pointLights[i];
+        if (count == REI_MAX_POINT_LIGHTS_COUNT) break;
         if (light.IsNull()) continue;
 
-        shader.SetVector3("_PointLights[" + std::to_string(i) + "].Position", light.Get().GetTransform().GetWorldPosition());
-        shader.SetFloat("_PointLights[" + std::to_string(i) + "].Strength", light.Get().GetStrength());
-        shader.SetColor("_PointLights[" + std::to_string(i) + "].Color", light.Get().GetColor());
+        const auto slot = "_PointLights[" + std::to_string(count) + "]";
+        shader.SetVector3(slot + ".Position", light.Get().GetTransform().GetWorldPosition());
+        shader.SetFloat(slot + ".Strength", light.Get().GetStrength());
+        shader.SetColor(slot + ".Color", light.Get().GetColor());
+        ++count;
+    }
+    shader.SetInt("_PointLightsCount", count);
+
+    for (i32 i = count; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+    {
+        const auto slot = "_PointLights[" + std::to_string(i) + "]";
+        shader.SetVector3(slot + ".Position", {0, 0, 0});
+        shader.SetFloat(slot + ".Strength", 0);
+        shader.SetColor(slot + ".Color", Color(0, 0, 0, 1));
     }
 }
 

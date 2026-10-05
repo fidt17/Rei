@@ -35,7 +35,10 @@ namespace rei::resources
 
     void BinaryWriter::SetPosition(const i64 position)
     {
+        REI_THROW_IF(position < 0, "Negative binary stream position")
+        REI_THROW_IF(!_stream.is_open() || _stream.fail(), "Binary stream is not writable")
         _stream.seekp(position);
+        REI_THROW_IF(_stream.fail(), "Could not seek binary stream")
     }
 
     i64 BinaryWriter::GetPosition()
