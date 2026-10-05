@@ -9,9 +9,9 @@ namespace rei::ecs
         return _entitiesList;
     }
 
-    void Filter::OnEntityChange(const Entity e, const BitMask& entityMask)
+    void Filter::OnEntityChange(const Entity e, const BitMask& entityMask, const bool isAlive)
     {
-        const bool isValid = IsValid(entityMask);
+        const bool isValid = isAlive && IsValid(entityMask);
         const bool exists = _entitiesSet.count(e);
 
         if (isValid && !exists)

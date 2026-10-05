@@ -23,6 +23,16 @@ namespace
     };
     struct OwnedComponent { std::unique_ptr<Token> Resource; };
 
+    void CheckEntities(const std::shared_ptr<Filter>& filter, const std::initializer_list<Entity> expected)
+    {
+        const auto& actual = filter->Entities();
+        CHECK(actual.size() == expected.size());
+        for (const auto entity : expected)
+        {
+            CHECK(std::find(actual.begin(), actual.end(), entity) != actual.end());
+        }
+    }
+
     std::unique_ptr<Token> MakeToken(const std::shared_ptr<std::vector<i32>>& released, const i32 id)
     {
         return std::unique_ptr<Token>(new Token{released, id});
@@ -41,7 +51,27 @@ TEST_CASE("ECS-01 Dead slots cannot be used as live entities", "[native][ecs][co
     REQUIRE(deadSlot.Generation == 0);
     CHECK_FALSE(registry->IsAlive(entity));
     CHECK_FALSE(registry->IsAlive(deadSlot));
-    CHECK_THROWS(registry->Get<ValueComponent>(deadSlot));
+    CHECK(registry->IsDead(deadSlot));
+    CHECK_THROWS_AS(registry->Get<ValueComponent>(deadSlot), std::runtime_error);
+    CHECK_THROWS_AS(registry->Has<ValueComponent>(deadSlot), std::runtime_error);
+    CHECK_THROWS_AS(registry->Del<ValueComponent>(deadSlot), std::runtime_error);
+    CHECK_THROWS_AS(registry->GetEntityMask(deadSlot), std::runtime_error);
+    CHECK_THROWS_AS(registry->DestroyEntity(deadSlot), std::runtime_error);
+    const auto setCount = registry->GetComponentSets().size();
+    CHECK_THROWS_AS(registry->Get<OwnedComponent>(deadSlot), std::runtime_error);
+    CHECK(registry->GetComponentSets().size() == setCount);
+
+    const auto replacement = registry->NewEntity();
+    REQUIRE(replacement.Id == entity.Id);
+    REQUIRE(replacement.Generation != 0);
+    CHECK(replacement.Generation != entity.Generation);
+    REQUIRE(registry->IsAlive(replacement));
+    CHECK_FALSE(registry->IsAlive(entity));
+    CHECK_FALSE(registry->IsAlive(deadSlot));
+    CHECK_FALSE(registry->Has<ValueComponent>(replacement));
+    registry->Get<ValueComponent>(replacement).Value = 19;
+    world.Refresh();
+    CHECK(registry->Get<ValueComponent>(replacement).Value == 19);
 }
 
 TEST_CASE("ECS-02 Empty include filters discard destroyed handles", "[native][ecs][coverage]")
@@ -52,11 +82,26 @@ TEST_CASE("ECS-02 Empty include filters discard destroyed handles", "[native][ec
     const auto entity = registry->NewEntity();
     world.Refresh();
     REQUIRE(filter->Entities() == std::vector<Entity>{entity});
+
+    const auto inactive = registry->NewEntity();
+    registry->Del<rei::ActiveTag>(inactive);
+    world.Refresh();
+    CheckEntities(filter, {entity, inactive});
     registry->DestroyEntity(entity);
     world.Refresh();
-    CHECK(filter->Entities().empty());
+    CheckEntities(filter, {inactive});
+    CHECK(registry->IsAlive(inactive));
     world.RefreshAll();
-    CHECK(filter->Entities().empty());
+    CheckEntities(filter, {inactive});
+
+    const auto replacement = registry->NewEntity();
+    REQUIRE(replacement.Id == entity.Id);
+    REQUIRE(replacement.Generation != entity.Generation);
+    world.Refresh();
+    CheckEntities(filter, {inactive, replacement});
+    world.RefreshAll();
+    world.RefreshAll();
+    CheckEntities(filter, {inactive, replacement});
 }
 
 TEST_CASE("ECS-02 Exclude-only filters discard destroyed handles", "[native][ecs][coverage]")
@@ -67,9 +112,27 @@ TEST_CASE("ECS-02 Exclude-only filters discard destroyed handles", "[native][ecs
     const auto entity = registry->NewEntity();
     world.Refresh();
     REQUIRE(filter->Entities() == std::vector<Entity>{entity});
+
+    const auto excluded = registry->NewEntity();
+    registry->Get<ExcludedComponent>(excluded);
+    const auto inactive = registry->NewEntity();
+    registry->Del<rei::ActiveTag>(inactive);
+    world.Refresh();
+    CheckEntities(filter, {entity, inactive});
     registry->DestroyEntity(entity);
     world.Refresh();
-    CHECK(filter->Entities().empty());
+    CheckEntities(filter, {inactive});
+
+    registry->Del<ExcludedComponent>(excluded);
+    world.Refresh();
+    CheckEntities(filter, {inactive, excluded});
+    registry->DestroyEntity(excluded);
+    world.RefreshAll();
+    CheckEntities(filter, {inactive});
+    CHECK(registry->IsAlive(excluded)); // Destruction completes only in Refresh.
+    world.Refresh();
+    CHECK_FALSE(registry->IsAlive(excluded));
+    CheckEntities(filter, {inactive});
 }
 
 TEST_CASE("ECS-02 New filters skip existing dead slots", "[native][ecs][coverage]")
@@ -78,10 +141,33 @@ TEST_CASE("ECS-02 New filters skip existing dead slots", "[native][ecs][coverage
     const auto registry = world.GetRegistry();
     const auto dead = registry->NewEntity();
     const auto survivor = registry->NewEntity();
+    registry->Get<ValueComponent>(survivor).Value = 13;
     registry->DestroyEntity(dead);
     world.Refresh();
-    const auto filter = world.GetFiltersRegistry()->Get<>();
-    CHECK(filter->Entities() == std::vector<Entity>{survivor});
+    const auto filters = world.GetFiltersRegistry();
+    const auto empty = filters->Get<>();
+    const auto included = filters->Get<ValueComponent>();
+    const auto excluded = filters->Get<>(Exclude<ExcludedComponent>());
+    CheckEntities(empty, {survivor});
+    CheckEntities(included, {survivor});
+    CheckEntities(excluded, {survivor});
+
+    const auto pending = registry->NewEntity();
+    registry->DestroyEntity(pending);
+    const auto inactive = filters->Get<>(Exclude<rei::ActiveTag>());
+    CheckEntities(inactive, {});
+    CheckEntities(empty, {survivor});
+    CHECK(registry->IsAlive(pending));
+    registry->Del<rei::ActiveTag>(survivor);
+    world.Refresh();
+    CHECK_FALSE(registry->IsAlive(pending));
+    CheckEntities(inactive, {survivor});
+    world.RefreshAll();
+    CheckEntities(empty, {survivor});
+    CheckEntities(included, {survivor});
+    CheckEntities(excluded, {survivor});
+    CheckEntities(inactive, {survivor});
+    CHECK(registry->Get<ValueComponent>(survivor).Value == 13);
 }
 
 TEST_CASE("ECS-03 Generation reuse does not revive original handles", "[native][ecs][coverage]")

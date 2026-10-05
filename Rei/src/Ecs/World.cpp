@@ -32,14 +32,14 @@ namespace rei::ecs
 
     void World::Refresh() const
     {
+        const auto& destroyedEntities = _ecsRegistry->GetDestroyedEntities();
         auto& dirtyEntities = _ecsRegistry->GetDirtyEntities();
         for (const auto& e : dirtyEntities)
         {
-            _filterRegistry->HandleEntityChange(e, _ecsRegistry->GetEntityMask(e));
+            _filterRegistry->HandleEntityChange(e, _ecsRegistry->GetEntityMask(e), destroyedEntities.count(e) == 0);
         }
         _ecsRegistry->ClearDirtyEntities();
 
-        auto& destroyedEntities = _ecsRegistry->GetDestroyedEntities();
         auto& sets = _ecsRegistry->GetComponentSets();
         for (auto e : destroyedEntities)
         {
@@ -55,10 +55,13 @@ namespace rei::ecs
 
     void World::RefreshAll() const
     {
+        const auto& destroyedEntities = _ecsRegistry->GetDestroyedEntities();
         for (const auto& e : _ecsRegistry->GetAllEntities())
         {
+            if (_ecsRegistry->IsDead(e)) continue;
+
             const auto mask = _ecsRegistry->GetEntityMask(e);
-            _filterRegistry->HandleEntityChange(e, mask);
+            _filterRegistry->HandleEntityChange(e, mask, destroyedEntities.count(e) == 0);
         }
     }
 

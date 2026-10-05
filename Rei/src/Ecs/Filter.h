@@ -10,7 +10,7 @@ namespace rei::ecs
     {
     public:
         const std::vector<Entity>& Entities() const;
-        void OnEntityChange(Entity e, const BitMask& entityMask);
+        void OnEntityChange(Entity e, const BitMask& entityMask, bool isAlive = true);
 
         void ResizeMask(u64 size);
 

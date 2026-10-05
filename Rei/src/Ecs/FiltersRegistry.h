@@ -45,7 +45,7 @@ namespace rei::ecs
         
         REI_API u32 GetFiltersCount() const;
         
-        void HandleEntityChange(Entity e, const BitMask& mask) const;
+        void HandleEntityChange(Entity e, const BitMask& mask, bool isAlive = true) const;
         void ResizeMasks(size_t size) const;
 
         REI_API std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;

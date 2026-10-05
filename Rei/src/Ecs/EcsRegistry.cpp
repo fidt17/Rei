@@ -31,7 +31,7 @@ namespace rei::ecs
 
     bool EcsRegistry::IsAlive(const Entity e) const
     {
-        if (e == NULL_ENTITY) return false;
+        if (e == NULL_ENTITY || e.Generation == 0) return false;
         
         return _entities[e.Id].Generation == e.Generation;
     }

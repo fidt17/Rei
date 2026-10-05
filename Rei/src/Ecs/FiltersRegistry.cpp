@@ -3,11 +3,11 @@
 
 namespace rei::ecs
 {
-    void FiltersRegistry::HandleEntityChange(const Entity e, const BitMask& mask) const
+    void FiltersRegistry::HandleEntityChange(const Entity e, const BitMask& mask, const bool isAlive) const
     {
         for (const auto& filter : _filters)
         {
-            filter->OnEntityChange(e, mask);
+            filter->OnEntityChange(e, mask, isAlive);
         }
     }
 
