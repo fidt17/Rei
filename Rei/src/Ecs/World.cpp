@@ -11,7 +11,11 @@ namespace rei::ecs
                     _filterRegistry(std::make_shared<FiltersRegistry>())
     {
         _ecsRegistry->MaxComponentIdChangedEvent.append([this](const size_t s) { UpdateBitMasks(s); });
-        _filterRegistry->NewFilterCreatedEvent.append([this] { RefreshAll(); });
+        _filterRegistry->NewFilterCreatedEvent.append([this]
+        {
+            UpdateBitMasks(_filterRegistry->GetMaxMaskBitIndex());
+            RefreshAll();
+        });
     }
 
     void World::AddSystem(const std::function<void()>& fn)

@@ -47,10 +47,12 @@ namespace rei::ecs
         
         void HandleEntityChange(Entity e, const BitMask& mask, bool isAlive = true) const;
         void ResizeMasks(size_t size) const;
+        size_t GetMaxMaskBitIndex() const { return _maxMaskBitIndex; }
 
         REI_API std::shared_ptr<Filter> GetFilter(const BitMask& includeMask, const BitMask& excludeMask) override;
         
     private:
         std::vector<std::shared_ptr<Filter>> _filters;
+        mutable size_t _maxMaskBitIndex = 0;
     };
 }

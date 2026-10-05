@@ -32,6 +32,7 @@ TEST_CASE("ECS-04 Bitmask word boundaries preserve independent bits", "[native][
     {
         BitMask mask;
         mask.Resize(129);
+        CHECK(mask.Size() == 3); // Highest bit 129 fits in three 64-bit words.
         std::set<u64> expected;
         for (const auto bit : std::array<u64, 6>{0, 63, 64, 65, 127, 128})
         {
@@ -55,6 +56,7 @@ TEST_CASE("ECS-04 Bitmask growth and clear preserve bit semantics", "[native][ec
         BitMask mask;
         mask.Set(63);
         mask.Resize(129);
+        CHECK(mask.Size() == 3); // Highest bit 129 fits in three 64-bit words.
         CheckIndices(mask, {63});
         mask.Set(128);
         CheckIndices(mask, {63, 128});

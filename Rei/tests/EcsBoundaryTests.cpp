@@ -15,6 +15,33 @@ namespace
     struct SurvivingRegistryComponent { i32 Value = 0; };
     struct SurvivingFilterComponent {};
 
+    void CheckInvalidEntityId(const std::shared_ptr<EcsRegistry>& registry, const EntityId id, const Entity live)
+    {
+        const auto entityCount = registry->GetAllEntities().size();
+        const auto setCount = registry->GetComponentSets().size();
+        const auto value = registry->Get<BoundaryComponent<0>>(live).Value;
+        for (const EntityGen generation : {EntityGen{0}, EntityGen{1}, EntityGen{255}})
+        {
+            CAPTURE(id, generation);
+            const Entity invalid{id, generation};
+            CHECK_FALSE(registry->IsAlive(invalid));
+            CHECK(registry->IsDead(invalid));
+            CHECK_THROWS_AS(registry->GetEntityById(id), std::runtime_error);
+            CHECK_THROWS_AS(registry->GetEntityMask(invalid), std::runtime_error);
+            CHECK_THROWS_AS(registry->Get<BoundaryComponent<0>>(invalid), std::runtime_error);
+            CHECK_THROWS_AS(registry->Get<BoundaryComponent<69>>(invalid), std::runtime_error);
+            CHECK_THROWS_AS(registry->Has<BoundaryComponent<0>>(invalid), std::runtime_error);
+            CHECK_THROWS_AS(registry->Del<BoundaryComponent<0>>(invalid), std::runtime_error);
+            CHECK_THROWS_AS(registry->DestroyEntity(invalid), std::runtime_error);
+            CHECK(registry->GetAllEntities().size() == entityCount);
+            CHECK(registry->GetComponentSets().size() == setCount);
+            CHECK(registry->GetDestroyedEntities().empty());
+            REQUIRE(registry->IsAlive(live));
+            CHECK(registry->GetEntityById(live.Id) == live);
+            CHECK(registry->Get<BoundaryComponent<0>>(live).Value == value);
+        }
+    }
+
     template <size_t... INDICES>
     void PrimeDistinctTypes(std::index_sequence<INDICES...>)
     {
@@ -102,24 +129,53 @@ TEST_CASE("ECS-05 Late high component type updates old entity masks and existing
     {
         World world;
         const auto registry = world.GetRegistry();
+        const auto filters = world.GetFiltersRegistry();
         const auto original = registry->NewEntity();
         registry->Get<BoundaryComponent<0>>(original).Value = 7;
-        const auto originalFilter = world.GetFiltersRegistry()->Get<BoundaryComponent<0>>();
+        const auto originalFilter = filters->Get<BoundaryComponent<0>>();
         world.Refresh();
         REQUIRE(originalFilter->Entities() == std::vector<Entity>{original});
+
+        PrimeDistinctTypes(std::make_index_sequence<70>{});
+        const auto highFilter = filters->Get<BoundaryComponent<0>, BoundaryComponent<69>>();
+        CHECK(highFilter->Entities().empty());
+        CHECK(originalFilter->Entities() == std::vector<Entity>{original});
         const auto other = registry->NewEntity();
+        world.Refresh(); // New entity must use capacity already requested by filter.
+        CHECK(highFilter->Entities().empty());
         AddDistinct(registry, other, std::make_index_sequence<70>{});
         registry->Get<BoundaryComponent<69>>(original).Value = 42;
         world.Refresh();
-        const auto highFilter = world.GetFiltersRegistry()->Get<BoundaryComponent<0>, BoundaryComponent<69>>();
+        CheckDistinct(registry, other, std::make_index_sequence<70>{});
         CHECK(highFilter->Entities().size() == 2);
         CHECK(registry->Get<BoundaryComponent<0>>(original).Value == 7);
         CHECK(registry->Get<BoundaryComponent<69>>(original).Value == 42);
         CHECK(originalFilter->Entities().size() == 2);
+
+        const auto excluded = filters->Get<>(Exclude<BoundaryComponent<63>>());
+        CHECK(excluded->Entities() == std::vector<Entity>{original});
+        const auto filterCount = filters->GetFiltersCount();
+        CHECK(filters->Get<BoundaryComponent<0>>() == originalFilter);
+        CHECK((filters->Get<BoundaryComponent<0>, BoundaryComponent<69>>() == highFilter));
+        auto paddedInclude = Include<BoundaryComponent<0>>();
+        paddedInclude.Resize(TypeId::Get<BoundaryComponent<69>>() + 64);
+        CHECK(filters->GetFilter(paddedInclude, BitMask()) == originalFilter);
+        CHECK(filters->GetFiltersCount() == filterCount);
+        world.RefreshAll();
+
         registry->Del<BoundaryComponent<69>>(other);
         world.Refresh();
         CHECK(highFilter->Entities() == std::vector<Entity>{original});
         CHECK(originalFilter->Entities().size() == 2);
+        registry->DestroyEntity(other);
+        world.Refresh();
+        const auto replacement = registry->NewEntity();
+        REQUIRE(replacement.Id == other.Id);
+        CHECK_FALSE(registry->Has<BoundaryComponent<69>>(replacement));
+        world.Refresh();
+        CHECK(highFilter->Entities() == std::vector<Entity>{original});
+        CHECK(originalFilter->Entities() == std::vector<Entity>{original});
+        CHECK(excluded->Entities().size() == 2);
     });
 }
 
@@ -152,15 +208,16 @@ TEST_CASE("ECS-09 Negative IDs reject without out-of-range storage access", "[na
 {
     Isolated([]
     {
+        const EntityId id = GENERATE(-1, -2, (std::numeric_limits<EntityId>::min)());
         World world;
         const auto registry = world.GetRegistry();
         const auto live = registry->NewEntity();
-        const Entity invalid{-2, 1};
-        CHECK_FALSE(registry->IsAlive(invalid));
-        CHECK_THROWS(registry->GetEntityById(invalid.Id));
-        CHECK_THROWS(registry->Get<BoundaryComponent<0>>(invalid));
-        CHECK(registry->IsAlive(live));
-        CHECK_FALSE(registry->Has<BoundaryComponent<0>>(live));
+        registry->Get<BoundaryComponent<0>>(live).Value = 71;
+        CheckInvalidEntityId(registry, id, live);
+        world.Refresh();
+        const auto filter = world.GetFiltersRegistry()->Get<BoundaryComponent<0>>();
+        CHECK(filter->Entities() == std::vector<Entity>{live});
+        CHECK(registry->Get<BoundaryComponent<0>>(live).Value == 71);
     });
 }
 
@@ -168,17 +225,16 @@ TEST_CASE("ECS-09 End and huge IDs reject without corrupting live entity", "[nat
 {
     Isolated([]
     {
-        const i32 id = GENERATE(1, (std::numeric_limits<i32>::max)());
+        const EntityId id = GENERATE(1, (std::numeric_limits<EntityId>::max)());
         World world;
         const auto registry = world.GetRegistry();
         const auto live = registry->NewEntity();
-        const Entity invalid{id, 1};
-        CAPTURE(id);
-        CHECK_FALSE(registry->IsAlive(invalid));
-        CHECK_THROWS(registry->GetEntityById(id));
-        CHECK_THROWS(registry->GetEntityMask(invalid));
-        CHECK_THROWS(registry->DestroyEntity(invalid));
-        CHECK(registry->IsAlive(live));
+        registry->Get<BoundaryComponent<0>>(live).Value = 83;
+        CheckInvalidEntityId(registry, id, live);
+        world.Refresh();
+        const auto filter = world.GetFiltersRegistry()->Get<BoundaryComponent<0>>();
+        CHECK(filter->Entities() == std::vector<Entity>{live});
+        CHECK(registry->Get<BoundaryComponent<0>>(live).Value == 83);
     });
 }
 

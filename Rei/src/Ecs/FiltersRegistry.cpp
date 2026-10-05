@@ -13,9 +13,10 @@ namespace rei::ecs
 
     void FiltersRegistry::ResizeMasks(const size_t size) const
     {
+        _maxMaskBitIndex = std::max(_maxMaskBitIndex, size);
         for (auto& filter : _filters)
         {
-            filter->ResizeMask(size);
+            filter->ResizeMask(_maxMaskBitIndex);
         }
     }
 
@@ -26,18 +27,30 @@ namespace rei::ecs
 
     std::shared_ptr<Filter> FiltersRegistry::GetFilter(const BitMask& includeMask, const BitMask& excludeMask)
     {
+        constexpr size_t BITS_PER_WORD = sizeof(BitMask::mask) * 8;
+        const auto maskSize = std::max({includeMask.Size(), excludeMask.Size(), _maxMaskBitIndex / BITS_PER_WORD + 1});
+        const auto maxBitIndex = maskSize * BITS_PER_WORD - 1;
+        auto normalizedInclude = includeMask;
+        auto normalizedExclude = excludeMask;
+        normalizedInclude.Resize(maxBitIndex);
+        normalizedExclude.Resize(maxBitIndex);
+
         for (auto f : _filters)
         {
-            if (f->GetIncludeMask() == includeMask && f->GetExcludeMask() == excludeMask)
+            auto existingInclude = f->GetIncludeMask();
+            auto existingExclude = f->GetExcludeMask();
+            existingInclude.Resize(maxBitIndex);
+            existingExclude.Resize(maxBitIndex);
+            if (existingInclude == normalizedInclude && existingExclude == normalizedExclude)
             {
                 return f;
             }
         }
 
+        ResizeMasks(maxBitIndex);
         auto f = std::make_shared<Filter>();
-        f->Include(includeMask);
-        f->Exclude(excludeMask);
-        ResizeMasks(std::max(includeMask.Size(), excludeMask.Size()));
+        f->Include(normalizedInclude);
+        f->Exclude(normalizedExclude);
             
         _filters.push_back(std::move(f));
         NewFilterCreatedEvent();

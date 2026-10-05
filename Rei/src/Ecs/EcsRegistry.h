@@ -135,6 +135,8 @@ namespace rei::ecs
             return set;
         }
 
+        bool IsValidEntityId(EntityId id) const;
+
         Entity AllocateNewEntity();
         Entity GetFromPool();
     };

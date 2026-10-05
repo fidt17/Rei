@@ -31,9 +31,14 @@ namespace rei::ecs
 
     bool EcsRegistry::IsAlive(const Entity e) const
     {
-        if (e == NULL_ENTITY || e.Generation == 0) return false;
+        if (e.Generation == 0 || !IsValidEntityId(e.Id)) return false;
         
         return _entities[e.Id].Generation == e.Generation;
+    }
+
+    bool EcsRegistry::IsValidEntityId(const EntityId id) const
+    {
+        return id >= 0 && static_cast<size_t>(id) < _entities.size();
     }
 
     bool EcsRegistry::IsDead(const Entity e) const
@@ -56,6 +61,8 @@ namespace rei::ecs
 
     Entity EcsRegistry::GetEntityById(const EntityId id) const
     {
+        REI_THROW_IF(!IsValidEntityId(id), "Entity ID is out of range");
+
         return _entities[id];
     }
 
@@ -91,6 +98,7 @@ namespace rei::ecs
 
     void EcsRegistry::ResizeMasks(const size_t size)
     {
+        _maxComponentId = std::max(_maxComponentId, size);
         for (auto& entityMask : _entityMasks)
         {
             entityMask.Resize(size);

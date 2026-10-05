@@ -12,7 +12,7 @@ namespace rei::ecs
         REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(), std::format("FlagIdx is too large. Idx: {}. mask size: {}", flagIdx, _flags.size()))
 
         const auto layerIdx = GetLayerIdx(flagIdx);
-        _flags.at(layerIdx) |= static_cast<mask>(1) << flagIdx;
+        _flags.at(layerIdx) |= static_cast<mask>(1) << (flagIdx % (sizeof(mask) * 8));
     }
 
     void BitMask::Remove(const mask flagIdx)
@@ -20,7 +20,7 @@ namespace rei::ecs
         REI_ASSERT(flagIdx < sizeof(mask) * 8 * _flags.size(), std::format("FlagIdx is too large. Idx: {}. Mask size: {}", flagIdx, _flags.size()))
 
         const auto layerIdx = GetLayerIdx(flagIdx);
-        _flags.at(layerIdx) &= ~(static_cast<mask>(1) << flagIdx);
+        _flags.at(layerIdx) &= ~(static_cast<mask>(1) << (flagIdx % (sizeof(mask) * 8)));
     }
 
     bool BitMask::All(const BitMask& other) const
@@ -59,8 +59,9 @@ namespace rei::ecs
 
     void BitMask::Resize(const size_t size)
     {
-        if (_flags.size() * (sizeof(mask) * 8) > size) return;
-        _flags.resize(size);
+        const auto requiredWords = size / (sizeof(mask) * 8) + 1;
+        if (_flags.size() >= requiredWords) return;
+        _flags.resize(requiredWords);
     }
 
     void BitMask::Clear()
