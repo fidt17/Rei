@@ -52,12 +52,14 @@ namespace rei::resources
         template <typename T>
         REI_API T GetByType()
         {
-            T value;
-            _stream.read(reinterpret_cast<char*>(&value), sizeof value);
+            T value{};
+            ReadData(reinterpret_cast<char*>(&value), sizeof value);
             return value;
         }
 
     private:
+        REI_API void ReadData(char* bytes, i64 length);
+
         std::ifstream _stream;
     };
 }

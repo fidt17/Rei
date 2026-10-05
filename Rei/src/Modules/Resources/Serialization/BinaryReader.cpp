@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "BinaryReader.h"
+#include <memory>
 
 namespace rei::resources
 {
@@ -28,10 +29,17 @@ namespace rei::resources
     u8* BinaryReader::GetBytes(i32& length)
     {
         length = GetI32();
-        const auto bytes = new u8[length];
-        _stream.read(reinterpret_cast<char*>(bytes), length);
+        std::unique_ptr<u8[]> bytes(new u8[length]);
+        ReadData(reinterpret_cast<char*>(bytes.get()), length);
 
-        return bytes;
+        return bytes.release();
+    }
+
+    void BinaryReader::ReadData(char* bytes, const i64 length)
+    {
+        REI_THROW_IF(!_stream.is_open() || _stream.fail(), "Binary stream is not readable")
+        _stream.read(bytes, length);
+        REI_THROW_IF(_stream.fail(), "Could not read complete binary data")
     }
 
     u8 BinaryReader::GetU8() { return GetByType<u8>(); } 
@@ -57,7 +65,7 @@ namespace rei::resources
         const i32 len = GetI32();
         std::string str;
         str.resize(len);
-        _stream.read(str.data(), len);
+        ReadData(str.data(), len);
         return str;
     } 
 }

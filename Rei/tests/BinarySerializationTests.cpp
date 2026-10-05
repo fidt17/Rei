@@ -101,13 +101,17 @@ TEST_CASE("BIN-01 Length-prefixed raw bytes keep payload and ownership", "[nativ
     writer.Close();
     REQUIRE(ReadBytes(path) == std::vector<u8>{4, 0, 0, 0, 0, 0xFF, 0x80, 7});
 
-    const auto independent = directory.Write("independent.bin", {4, 0, 0, 0, 0, 0xFF, 0x80, 7});
+    const auto independent = directory.Write("independent.bin", {4, 0, 0, 0, 0, 0xFF, 0x80, 7, 0, 0, 0, 0, 0xAB});
     BinaryReader reader(independent.string());
     i32 count = -1;
     const std::unique_ptr<u8[]> bytes(reader.GetBytes(count));
     REQUIRE(count == 4);
     CHECK(std::vector<u8>(bytes.get(), bytes.get() + count) == payload);
     CHECK(reader.GetPosition() == 8);
+    const std::unique_ptr<u8[]> emptyBytes(reader.GetBytes(count));
+    CHECK(count == 0);
+    CHECK(reader.GetPosition() == 12);
+    CHECK(reader.GetU8() == 0xAB);
 }
 
 TEST_CASE("BIN-01 Reader vectors consume only their packed record", "[native][binary][coverage]")
@@ -159,9 +163,12 @@ TEST_CASE("BIN-02 Writer rejects an unavailable destination", "[native][binary][
 TEST_CASE("BIN-02 Reader rejects a truncated string payload", "[native][binary][coverage]")
 {
     TemporaryDirectory directory;
-    const auto path = directory.Write("truncated.bin", {4, 0, 0, 0, 'a'});
-    BinaryReader reader(path.string());
-    CHECK_THROWS(reader.GetStr());
+    const u32 payloadBytes = GENERATE(0u, 1u, 2u, 3u);
+    CAPTURE(payloadBytes);
+    std::vector<u8> bytes{4, 0, 0, 0};
+    bytes.insert(bytes.end(), payloadBytes, 'a');
+    BinaryReader reader(directory.Write("truncated.bin", bytes).string());
+    CHECK_THROWS_AS(reader.GetStr(), std::runtime_error);
 }
 
 TEST_CASE("BIN-02 Reader rejects a truncated scalar", "[native][binary][coverage][isolated]")
@@ -169,9 +176,29 @@ TEST_CASE("BIN-02 Reader rejects a truncated scalar", "[native][binary][coverage
     Isolated([]
     {
         TemporaryDirectory directory;
-        const auto path = directory.Write("truncated.bin", {0x42});
-        BinaryReader reader(path.string());
-        CHECK_THROWS(reader.GetU32());
+        const auto checkTruncated = [&](auto value)
+        {
+            using T = decltype(value);
+            for (u32 availableBytes = 0; availableBytes < sizeof(T); ++availableBytes)
+            {
+                CAPTURE(sizeof(T), availableBytes);
+                BinaryReader reader(directory.Write("truncated.bin", std::vector<u8>(availableBytes, 0x42)).string());
+                CHECK_THROWS_AS(reader.GetByType<T>(), std::runtime_error);
+            }
+        };
+        checkTruncated(u8{});
+        checkTruncated(u16{});
+        checkTruncated(u32{});
+        checkTruncated(u64{});
+        checkTruncated(i8{});
+        checkTruncated(i16{});
+        checkTruncated(i32{});
+        checkTruncated(i64{});
+        checkTruncated(f32{});
+
+        BinaryReader closedReader(directory.Write("closed-reader.bin", {0x42}).string());
+        closedReader.Close();
+        CHECK_THROWS_AS(closedReader.GetU8(), std::runtime_error);
     });
 }
 
@@ -180,9 +207,12 @@ TEST_CASE("BIN-02 Reader rejects a truncated vector payload", "[native][binary][
     Isolated([]
     {
         TemporaryDirectory directory;
-        const auto path = directory.Write("truncated.bin", {3, 0, 0, 0, 7, 0, 0, 0});
-        BinaryReader reader(path.string());
-        CHECK_THROWS(reader.GetVector<i32>());
+        const u32 payloadBytes = GENERATE(0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u);
+        CAPTURE(payloadBytes);
+        std::vector<u8> bytes{3, 0, 0, 0};
+        bytes.insert(bytes.end(), payloadBytes, 0x42);
+        BinaryReader reader(directory.Write("truncated.bin", bytes).string());
+        CHECK_THROWS_AS(reader.GetVector<i32>(), std::runtime_error);
     });
 }
 
@@ -248,6 +278,7 @@ TEST_CASE("BIN-02 Truncated length headers reject every length-prefixed reader",
         const auto path = directory.Write("partial-length.bin", std::vector<u8>(headerBytes, 0));
         BinaryReader stringReader(path.string());
         CheckRejectedWithoutAllocatorException("GetStr", [&] { static_cast<void>(stringReader.GetStr()); });
+        CHECK_THROWS_AS(stringReader.GetU8(), std::runtime_error); // Failed header cannot return a later scalar.
         BinaryReader vectorReader(path.string());
         CheckRejectedWithoutAllocatorException("GetVector<i32>", [&] { static_cast<void>(vectorReader.GetVector<i32>()); });
         BinaryReader bytesReader(path.string());
@@ -264,7 +295,11 @@ TEST_CASE("BIN-02 Truncated raw byte payload rejects incomplete data", "[native]
     Isolated([]
     {
         TemporaryDirectory directory;
-        BinaryReader reader(directory.Write("partial-bytes.bin", {4, 0, 0, 0, 0xAB}).string());
+        const u32 payloadBytes = GENERATE(0u, 1u, 2u, 3u);
+        CAPTURE(payloadBytes);
+        std::vector<u8> bytes{4, 0, 0, 0};
+        bytes.insert(bytes.end(), payloadBytes, 0xAB);
+        BinaryReader reader(directory.Write("partial-bytes.bin", bytes).string());
         CheckRejectedWithoutAllocatorException("GetBytes", [&]
         {
             i32 count = 0;
