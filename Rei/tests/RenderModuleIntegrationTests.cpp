@@ -97,6 +97,7 @@ namespace
         {
             const auto slot = "_PointLights[" + std::to_string(i) + "]";
             REQUIRE(ReadFloatUniform(shader, slot + ".Strength") == 0);
+            REQUIRE(ReadFloatUniform(shader, slot + ".Range") == 0);
             std::array<f32, 3> position{};
             std::array<f32, 4> color{};
             const auto positionLocation = shader.GetLocation(slot + ".Position");
@@ -394,6 +395,7 @@ TEST_CASE("RENDER15 point light component and object activity clear and restore 
         fixture.Scene.Registry->Get<ActiveTag>(entity);
         auto& light = fixture.Scene.Registry->Get<render::PointLight>(entity);
         light.SetStrength(0.75f);
+        light.SetRange(7.5f);
         const auto verify = [&](const i32 count)
         {
             fixture.Scene.World->Refresh();
@@ -401,8 +403,14 @@ TEST_CASE("RENDER15 point light component and object activity clear and restore 
             lighting.SetLightValues(*shader.Get());
             REQUIRE(ReadPointLightCount(*shader.Get()) == count);
             if (count == 0) RequireEmptyLightSlots(*shader.Get(), 0);
-            else REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 0.75f);
+            else
+            {
+                REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 0.75f);
+                REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Range") == light.GetRange());
+            }
         };
+        verify(1);
+        light.SetRange(3.25f);
         verify(1);
         light.Disable();
         verify(0);
@@ -449,6 +457,125 @@ TEST_CASE("RENDER16 ambient selects first enabled active source and clears previ
         verify(0);
         fixture.Scene.Registry->Del<render::AmbientLight>(second);
         verify(0);
+    });
+}
+
+TEST_CASE("Point light range persists with legacy default and rejects invalid distances", "[native][lighting][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto entity = fixture.Entity();
+        fixture.Add(entity, 7306, false);
+        auto& light = fixture.Registry->Get<render::PointLight>(entity);
+        CHECK(light.GetRange() == 10);
+        light.REI_SET(SerializedField("_strength", 0.5f));
+        CHECK(light.GetRange() == 10);
+        light.SetRange(12.5f);
+        const auto saved = light.REI_GET();
+        CHECK(saved.at("_range") == 12.5f);
+        light.SetRange(1);
+        light.REI_SET(SerializedField("_range", saved.at("_range").get<f32>()));
+        CHECK(light.GetRange() == 12.5f);
+        for (const f32 range : {0.0f, -1.0f, std::numeric_limits<f32>::infinity(), std::numeric_limits<f32>::quiet_NaN()})
+        {
+            light.SetRange(range);
+            CHECK(light.GetRange() == 0);
+        }
+        light.SetRange(0.001f);
+        CHECK(light.GetRange() == 0.01f);
+        light.REI_SET(SerializedField("_range", -2.0f));
+        CHECK(light.GetRange() == 0);
+    });
+}
+
+TEST_CASE("RENDER17 point light pixels attenuate smoothly and retain material alpha", "[native][gl][lighting][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::FrameBuffer target(32, 32);
+        target.EnableBuffer(32, 32);
+        // Float target reads linear light directly, without sRGB encoding or LDR clipping.
+        glBindTexture(GL_TEXTURE_2D, target.GetColorTexture());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 32, 32, 0, GL_RGBA, GL_FLOAT, nullptr);
+        REQUIRE(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+        glViewport(0, 0, 32, 32);
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        const auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        auto material = fixture.Scene.Assets->CreateAsset<render::Material>(shader);
+        material->SetColor("_Color", render::Color(1, 1, 1, 0.4f));
+        material->SetFloat("_Shininess", 100000);
+        material->SetTexture("_MainTex", fixture.Scene.Assets->GetById<render::Texture>(REI_WHITE_FALLBACK_TEXTURE_ID));
+        material->SetDepth(false);
+        render::Mesh quad("point light attenuation oracle", {
+            {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
+            {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
+        }, {0, 1, 2, 0, 2, 3}, {});
+        quad.PostLoad();
+        const auto pixel = [&](const f32 distance, const f32 range)
+        {
+            material->Use();
+            shader->SetViewMatrices(glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 10.0f), glm::mat4(1), glm::translate(glm::mat4(1), glm::vec3(0, 0, -2)));
+            shader->SetInt("_PointLightsCount", 1);
+            shader->SetFloat("_AmbientLight.Strength", 0);
+            shader->SetColor("_AmbientLight.Color", render::Color::White());
+            // The center sample is at (1/32, 1/32, -2): constant incidence angle.
+            shader->SetVector3("_PointLights[0].Position", {1.0f / 32, 1.0f / 32, -2 + distance});
+            shader->SetFloat("_PointLights[0].Strength", 0.25f);
+            shader->SetFloat("_PointLights[0].Range", range);
+            shader->SetColor("_PointLights[0].Color", render::Color(1, 1, 1, 0));
+            glClear(GL_COLOR_BUFFER_BIT);
+            quad.Render();
+            std::array<f32, 4> value{};
+            glReadPixels(16, 16, 1, 1, GL_RGBA, GL_FLOAT, value.data());
+            for (const auto channel : value) REQUIRE(std::isfinite(channel));
+            REQUIRE(value[3] == Catch::Approx(0.4f).margin(1e-6f));
+            return value[0];
+        };
+        const f32 oneUnit = pixel(1, 1000);
+        REQUIRE(oneUnit == Catch::Approx(0.25f).margin(1e-5f));
+        CHECK(pixel(2, 1000) / oneUnit == Catch::Approx(0.25f).margin(1e-5f));
+        CHECK(pixel(4, 1000) / oneUnit == Catch::Approx(0.0625f).margin(1e-5f));
+        CHECK(pixel(2, 4) == Catch::Approx(0.054931640625f).margin(1e-5f));
+        CHECK(pixel(3.99f, 4) < 1e-5f);
+        CHECK(pixel(4, 4) == 0);
+        CHECK(pixel(5, 4) == 0);
+        CHECK(pixel(1, 0) == 0);
+        CHECK(pixel(1, -1) == 0);
+        CHECK(pixel(0, 4) == 0);
+        CHECK(pixel(0.00001f, 4) >= 0);
+        quad.Dispose();
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("RENDER18 light source material stays visible without scene illumination", "[native][gl][lighting][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::FrameBuffer target(32, 32);
+        target.EnableBuffer(32, 32);
+        glViewport(0, 0, 32, 32);
+        glDisable(GL_BLEND);
+        const auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_LIGHT_SOURCE_ASSET_ID);
+        auto material = fixture.Scene.Assets->CreateAsset<render::Material>(shader);
+        material->SetColor("_Color", render::Color(1, 0.5f, 0, 1));
+        material->SetFloat("_Strength", 1);
+        material->SetDepth(false);
+        render::Mesh quad("light source material oracle", {
+            {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
+            {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
+        }, {0, 1, 2, 0, 2, 3}, {});
+        quad.PostLoad();
+        material->Use();
+        shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
+        quad.Render();
+        RequirePixel(ReadPixel(), {255, 128, 0, 255});
+        quad.Dispose();
+        REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }
 

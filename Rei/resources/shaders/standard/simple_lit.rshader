@@ -14,9 +14,10 @@
     void main()
     {
         vec4 ambient = REI_CalculateAmbientLight();
-        vec4 pointLight = REI_CalculatePointLight(_Shininess);
+        vec3 pointLight = REI_CalculatePointLight(_Shininess);
         vec4 texColor = REI_Sample(_MainTex);
 
-        FragColor = texColor * _Color * (ambient + pointLight);
+        vec4 baseColor = texColor * _Color;
+        FragColor = vec4(baseColor.rgb * (ambient.rgb + pointLight), baseColor.a);
     }
 #endif

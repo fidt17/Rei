@@ -80,7 +80,7 @@ AddEngineBehaviour("rei::ui", "Text", 7305, "ui/Text.h", new()
 }, ["RectTransform"]);
 AddEngineBehaviour("rei::render", "PointLight", 7306, "render/light/PointLight.h", new()
 {
-    ["_strength"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_color"] = Custom("rei::render::Color")
+    ["_strength"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_range"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_color"] = Custom("rei::render::Color")
 });
 AddEngineBehaviour("rei::render", "AmbientLight", 7307, "render/light/AmbientLight.h", new()
 {

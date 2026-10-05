@@ -13,34 +13,41 @@ vec4 REI_CalculateAmbientLight()
     return ambient;
 } 
 
-vec4 REI_CalculatePointLight(float shininess)
+float REI_CalculatePointLightAttenuation(float distanceSquared, float range)
 {
-    vec4 total = vec4(0.0);
+    if (range <= 0.0) return 0.0;
+    float factor = distanceSquared / (range * range);
+    float smoothFactor = max(1.0 - factor * factor, 0.0);
+    // A finite source radius avoids a singularity when a surface touches the light.
+    return (smoothFactor * smoothFactor) / max(distanceSquared, 0.0001);
+}
+
+vec3 REI_CalculatePointLight(float shininess)
+{
+    vec3 total = vec3(0.0);
     for (int i = 0; i < min(_PointLightsCount, NR_POINT_LIGHTS); i++)
     {
         PointLight light = _PointLights[i];
-        vec3 lightPosition = _PointLightPositions[i];
-        
-        // diffuse 
+        vec3 offset = _PointLightPositions[i] - _FragPos;
+        float distanceSquared = dot(offset, offset);
+        float attenuation = REI_CalculatePointLightAttenuation(distanceSquared, light.Range);
+        if (attenuation <= 0.0) continue;
+
         vec3 norm = normalize(_Normal);
-        vec3 lightDir = normalize(lightPosition - _FragPos);
+        vec3 lightDir = offset * inversesqrt(max(distanceSquared, 0.0001));
         float diff = max(dot(norm, lightDir), 0.0);
-        vec4 diffuse = diff * light.Color;
-        
-        // specular
+        vec3 diffuse = diff * light.Color.rgb;
+
         vec3 viewDir = normalize(-_FragPos);
-        vec3 reflectDir = reflect(-lightDir, norm);  
+        vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-        vec4 specular = spec * light.Color; 
+        vec3 specular = spec * light.Color.rgb;
 
-        vec4 result = diffuse + specular;
-        result.a = 1;
-
-        total += result * light.Strength;
+        total += (diffuse + specular) * (light.Strength * attenuation);
     }
-    
+
     return total;
-} 
+}
 
 vec4 REI_Sample(sampler2D sampler)
 {

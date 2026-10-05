@@ -93,6 +93,7 @@ void rei::render::LightingRenderModule::SetPointLights(const Shader& shader) con
         const auto slot = "_PointLights[" + std::to_string(count) + "]";
         shader.SetVector3(slot + ".Position", light.Get().GetTransform().GetWorldPosition());
         shader.SetFloat(slot + ".Strength", light.Get().GetStrength());
+        shader.SetFloat(slot + ".Range", light.Get().GetRange());
         shader.SetColor(slot + ".Color", light.Get().GetColor());
         ++count;
     }
@@ -103,6 +104,7 @@ void rei::render::LightingRenderModule::SetPointLights(const Shader& shader) con
         const auto slot = "_PointLights[" + std::to_string(i) + "]";
         shader.SetVector3(slot + ".Position", {0, 0, 0});
         shader.SetFloat(slot + ".Strength", 0);
+        shader.SetFloat(slot + ".Range", 0);
         shader.SetColor(slot + ".Color", Color(0, 0, 0, 1));
     }
 }
