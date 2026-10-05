@@ -28,6 +28,7 @@ namespace rei::internal::engine
         REI_EVENT(i32) ShutdownEvent;
 
         REI_API explicit Engine(std::shared_ptr<App> app, EngineMode mode, bool isEditor);
+        REI_API ~Engine();
         Engine(const Engine& e) = delete;
 
         REI_API void Start();

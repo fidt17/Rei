@@ -5,6 +5,7 @@ namespace rei::window
 {
     Window::Window(const WindowCreationSettings& settings)
     {
+        glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
         settings.HideOnCreation ? glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE) : glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
         GLFWmonitor* monitor = nullptr;
         i32 width = settings.Width;

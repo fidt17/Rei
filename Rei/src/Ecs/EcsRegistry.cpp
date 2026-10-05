@@ -27,6 +27,11 @@ namespace rei::ecs
     {
         REI_THROW_IF(IsDead(e), "Cannot get mask of dead entity");
             
+        // A retained registry must keep mask capacity without World callbacks.
+        if (_entityMasks[e.Id].Size() <= _maxComponentId / (sizeof(BitMask::mask) * 8))
+        {
+            ResizeMasks(_maxComponentId);
+        }
         return _entityMasks[e.Id];
     }
 

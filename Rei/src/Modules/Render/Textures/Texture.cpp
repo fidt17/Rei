@@ -10,6 +10,8 @@ rei::render::Texture::Texture(resources::BinaryReader& reader)
     _width = reader.GetI32();
     _height = reader.GetI32();
     _format = reader.GetI32();
+    // Sized RGB/RGBA formats explicitly mark linear data; legacy RGB/RGBA packs contain sRGB colors.
+    if (_format == GL_RGB8 || _format == GL_RGBA8) _colorSpace = TextureColorSpace::Linear;
 
     i32 length = 0;
     u8* data = reader.GetBytes(length);
@@ -17,10 +19,11 @@ rei::render::Texture::Texture(resources::BinaryReader& reader)
     delete[] data;
 }
 
-rei::render::Texture::Texture(const i32 width, const i32 height, const i32 format, std::vector<u8> rawData)
+rei::render::Texture::Texture(const i32 width, const i32 height, const i32 format, std::vector<u8> rawData, const TextureColorSpace colorSpace)
     : _width(width),
       _height(height),
       _format(format),
+      _colorSpace(colorSpace),
       _rawData(std::move(rawData))
 {
 }
@@ -35,7 +38,14 @@ void rei::render::Texture::PostLoad()
     glGenTextures(1, &_id);
     glBindTexture(GL_TEXTURE_2D, _id);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, _format, _width, _height, 0, _format, GL_UNSIGNED_BYTE, _rawData.data());
+    const auto format = _format == GL_RGB8 ? GL_RGB : _format == GL_RGBA8 ? GL_RGBA : _format;
+    const auto internalFormat = format == GL_RGB ? (_colorSpace == TextureColorSpace::Srgb ? GL_SRGB8 : GL_RGB8)
+        : format == GL_RGBA ? (_colorSpace == TextureColorSpace::Srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8) : format;
+    i32 unpackAlignment = 0;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, _width, _height, 0, format, GL_UNSIGNED_BYTE, _rawData.data());
+    glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

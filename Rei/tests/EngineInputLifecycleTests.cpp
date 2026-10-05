@@ -279,14 +279,68 @@ TEST_CASE("LIFE02 native Engine destruction releases runtime World before fixtur
 {
     Isolated([]
     {
-        NativeEngineFixture fixture;
-        fixture.Start();
-        std::weak_ptr<ecs::World> runtimeWorld;
-        fixture.OnEngineThread([&] { runtimeWorld = GetInternalWorld(); });
-        fixture.Stop();
-        fixture.Engine.reset();
-        // No test-owned strong pointer to runtime World. Test resource fixture
-        // owns a different CPU World and its destructor has not run here.
-        CHECK(runtimeWorld.expired());
+        for (const auto mode : {PlayMode, EditorMode})
+        {
+            CAPTURE(mode);
+            NativeEngineFixture fixture(mode);
+            const auto destroyed = std::make_shared<std::atomic<i32>>(0);
+            fixture.Start();
+            std::weak_ptr<ecs::World> runtimeWorld;
+            std::weak_ptr<ecs::EcsRegistry> runtimeRegistry;
+            fixture.OnEngineThread([&]
+            {
+                const auto world = GetInternalWorld();
+                runtimeWorld = world;
+                const auto registry = world->GetRegistry();
+                runtimeRegistry = registry;
+                const auto entity = registry->NewEntity();
+                registry->Get<OwnedRuntimeComponent>(entity).Lease = std::make_shared<DestructionLease>(destroyed);
+                // Same-registry references model ownership held by behaviours.
+                registry->Get<ecs::ComponentRef<OwnedRuntimeComponent>>(entity) = ecs::ComponentRef<OwnedRuntimeComponent>(registry, entity);
+            });
+            fixture.Stop();
+            CHECK_FALSE(runtimeWorld.expired()); // Engine still owns stopped World.
+            CHECK(destroyed->load() == 0);
+            fixture.Engine.reset();
+            // No fixture cleanup or test-owned strong pointer to runtime World.
+            CHECK(runtimeWorld.expired());
+            CHECK(runtimeRegistry.expired());
+            CHECK(destroyed->load() == 1);
+            CHECK(GetInternalWorld() == nullptr);
+            CHECK(fixture.Resources.Registry->IsAlive(fixture.Resources.Registry->NewEntity()));
+        }
     }, 25000, 1024);
+}
+
+TEST_CASE("LIFE02 Destroying previous engine preserves replacement engine services", "[native][coverage][engine-integration][lifecycle][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture first;
+        first.Start();
+        first.Stop();
+        NativeEngineFixture second;
+        second.Start();
+        std::weak_ptr<ecs::World> replacementWorld;
+        const auto destroyed = std::make_shared<std::atomic<i32>>(0);
+        second.OnEngineThread([&]
+        {
+            const auto world = GetInternalWorld();
+            replacementWorld = world;
+            world->GetRegistry()->Get<OwnedRuntimeComponent>(world->GetRegistry()->NewEntity()).Lease = std::make_shared<DestructionLease>(destroyed);
+        });
+        first.Engine.reset();
+        second.OnEngineThread([&]
+        {
+            CHECK(GetInternalWorld() == replacementWorld.lock());
+            CHECK(&GetEngine() == second.Engine.get());
+        });
+        CHECK_FALSE(replacementWorld.expired());
+        CHECK(destroyed->load() == 0);
+        second.Stop();
+        second.Engine.reset();
+        CHECK(replacementWorld.expired());
+        CHECK(destroyed->load() == 1);
+        CHECK(GetInternalWorld() == nullptr);
+    }, 35000, 1536);
 }

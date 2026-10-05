@@ -24,6 +24,14 @@ namespace
     };
     struct OwnedComponent { std::unique_ptr<Token> Resource; };
 
+    class WorldAccessSystem final : public System
+    {
+    public:
+        explicit WorldAccessSystem(const std::shared_ptr<World>& world) : System(world) {}
+        std::shared_ptr<World> ShareWorld() const { return _ecsWorld; }
+        void OnUpdate() override { _ecsWorld->RefreshAll(); }
+    };
+
     void CheckEntities(const std::shared_ptr<Filter>& filter, const std::initializer_list<Entity> expected)
     {
         const auto& actual = filter->Entities();
@@ -327,11 +335,33 @@ TEST_CASE("ECS-10 World with a system releases its component storage", "[native]
             weakWorld = world;
             const auto registry = world->GetRegistry();
             registry->Get<OwnedComponent>(registry->NewEntity()).Resource = MakeToken(released, 9);
-            world->AddSystem(std::function<void()>{[] {}});
+            u32 updates = 0;
+            world->AddSystem(std::function<void()>{[&] { ++updates; }});
+            world->Run();
+            CHECK(updates == 1);
+            CHECK(registry->Get<OwnedComponent>(registry->GetAllEntities().front()).Resource != nullptr);
         }
         CHECK(weakWorld.expired());
         CHECK(*released == std::vector<i32>{9});
     });
+}
+
+TEST_CASE("ECS-10 Retained system cannot acquire destroyed World and releases retained storage", "[native][ecs][coverage]")
+{
+    const auto released = std::make_shared<std::vector<i32>>();
+    auto world = std::make_shared<World>();
+    std::weak_ptr<World> weakWorld = world;
+    world->GetRegistry()->Get<OwnedComponent>(world->GetRegistry()->NewEntity()).Resource = MakeToken(released, 19);
+    auto system = std::make_shared<WorldAccessSystem>(world);
+    CHECK(system->ShareWorld() == world);
+    REQUIRE_NOTHROW(system->OnUpdate());
+    world.reset();
+    REQUIRE(weakWorld.expired());
+    CHECK(released->empty()); // Retained system still legitimately owns its registry.
+    CHECK_THROWS_AS(system->ShareWorld(), std::runtime_error);
+    CHECK_THROWS_AS(system->OnUpdate(), std::runtime_error);
+    system.reset();
+    CHECK(*released == std::vector<i32>{19});
 }
 
 TEST_CASE("ECS-08 Reused entities do not inherit destroyed components", "[native][ecs][coverage]")

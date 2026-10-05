@@ -6,7 +6,7 @@
 
 using namespace rei::ecs;
 
-#define ECS_WORLD_LOCAL(w) auto _ecs = (w).GetRegistry(); auto _ecsWorld = w;
+#define ECS_WORLD_LOCAL(w) auto _ecs = (w).GetRegistry(); auto& _ecsWorld = w;
 
 struct C1
 {

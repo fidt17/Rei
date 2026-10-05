@@ -415,8 +415,13 @@ TEST_CASE("Actual UI text glyph pixels preserve independent FreeType coverage an
                     if (expected) ++coverage;
                 }
                 const auto offset = (static_cast<size_t>(y) * TextRenderFixture::WIDTH + x) * 4;
-                equal &= std::abs(static_cast<i32>(pixels[offset]) - expected) <= 1;
+                // FreeType coverage remains linear alpha. Red over black blends in linear light, then encodes to sRGB.
+                const f32 alpha = expected / 255.0f;
+                const i32 encodedRed = static_cast<i32>(std::lround(255.0f * (alpha <= 0.0031308f ? 12.92f * alpha : 1.055f * std::pow(alpha, 1.0f / 2.4f) - 0.055f)));
+                const i32 blendedAlpha = static_cast<i32>(std::lround(255.0f * (alpha * alpha + 1.0f - alpha)));
+                equal &= std::abs(static_cast<i32>(pixels[offset]) - encodedRed) <= 1;
                 equal &= pixels[offset + 1] == 0 && pixels[offset + 2] == 0;
+                equal &= std::abs(static_cast<i32>(pixels[offset + 3]) - blendedAlpha) <= 1;
             }
         REQUIRE(coverage > 0);
         CHECK(equal);

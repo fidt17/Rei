@@ -209,3 +209,26 @@ TEST_CASE("Camera constant scale grows with perspective distance and stays fixed
         fixture.Registry->Del<Camera>(entity);
     });
 }
+
+TEST_CASE("sRGB color decoding keeps authoring values and alpha unchanged", "[native][color][srgb]")
+{
+    const Color authoring(128.0f / 255.0f, 0.04045f, 1.0f, 0.37f);
+    const auto linear = authoring.ToLinear();
+    CheckColor(linear, 0.2158605f, 0.003130805f, 1.0f, 0.37f);
+    CheckColor(authoring, 128.0f / 255.0f, 0.04045f, 1.0f, 0.37f);
+    CheckColor(Color::Black().ToLinear(), 0, 0, 0, 1);
+}
+
+TEST_CASE("sRGB decoding handles near-black ramp and extended color range", "[native][color][srgb]")
+{
+    CheckColor(Color(0.02f, 0.04046f, 2.0f, 0).ToLinear(), 0.001547988f, 0.003131594f, 4.9538458f, 0);
+    f32 previous = -1;
+    for (i32 code = 0; code <= 255; ++code)
+    {
+        const auto value = Color(static_cast<f32>(code) / 255.0f, 0, 0).ToLinear().r;
+        CHECK(value > previous);
+        const auto encoded = value <= 0.0031308f ? 12.92f * value : 1.055f * std::pow(value, 1.0f / 2.4f) - 0.055f;
+        CHECK(std::lround(encoded * 255.0f) == code);
+        previous = value;
+    }
+}

@@ -85,6 +85,7 @@ namespace rei::tests
             Services::GetInstance()->SetEditorEventsRelay(Relay);
             Services::GetInstance()->SetDiagnostics(Diagnostics);
             render::ShaderGenerator::GetInstance().Initialize();
+            glEnable(GL_FRAMEBUFFER_SRGB);
         }
 
         ~NativeRenderFixture()

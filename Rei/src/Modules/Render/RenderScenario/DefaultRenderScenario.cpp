@@ -52,6 +52,8 @@ bool rei::render::DefaultRenderScenario::RequestFrameCapture(const FrameCaptureC
 
 void rei::render::DefaultRenderScenario::Setup()
 {
+    // Shaders output linear RGB. sRGB attachments encode writes and blend in linear space.
+    glEnable(GL_FRAMEBUFFER_SRGB);
     glEnable(GL_DEPTH_TEST);
 
     glEnable(GL_STENCIL_TEST);
@@ -114,7 +116,10 @@ void rei::render::DefaultRenderScenario::Render()
     renderStopwatch.Stop();
     GetDiagnostics().SetRenderCpuTime(renderStopwatch.ElapsedMs());
 
+    // Dear ImGui's stock shader outputs display-encoded colors.
+    glDisable(GL_FRAMEBUFFER_SRGB);
     _debugOverlayModule->Render();
+    glEnable(GL_FRAMEBUFFER_SRGB);
     CaptureFrame(GL_BACK);
 
     time::Stopwatch presentStopwatch;
@@ -236,6 +241,7 @@ void rei::render::DefaultRenderScenario::Dispose()
 
     if (callback) callback(nullptr, 0, 0);
     _debugOverlayModule->Dispose();
+    Services::GetInstance()->ReleaseGizmos(_gizmos);
 }
 
 void rei::render::DefaultRenderScenario::CaptureFrame(const i32 readBuffer)
@@ -274,7 +280,8 @@ void rei::render::DefaultRenderScenario::CaptureFrame(const i32 readBuffer)
 
 void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) const
 {
-    glClearColor(color.r, color.g, color.b, color.a);
+    const auto linear = color.ToLinear();
+    glClearColor(linear.r, linear.g, linear.b, linear.a);
 }
 
 void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortingOrder, const i32 maxSortingOrder) const

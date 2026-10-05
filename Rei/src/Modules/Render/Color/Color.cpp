@@ -45,6 +45,15 @@ rei::render::Color rei::render::Color::Blue()
     return Color(0,0,1,1);
 }
 
+rei::render::Color rei::render::Color::ToLinear() const
+{
+    const auto decode = [](const f32 value)
+    {
+        return value <= 0.04045f ? value / 12.92f : std::pow((value + 0.055f) / 1.055f, 2.4f);
+    };
+    return Color(decode(r), decode(g), decode(b), a);
+}
+
 rei::render::Color rei::render::Color::FromHex(const std::string& hex)
 {
     std::string cleanHex = hex;

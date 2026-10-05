@@ -492,3 +492,42 @@ TEST_CASE("IMP-02 Invalid FBX fails explicitly within bounded child", "[native][
         CHECK(writer.GetPosition() == 0);
     });
 }
+
+TEST_CASE("sRGB linear import preserves RGB data encoding and RG channel bytes", "[native][importers][srgb][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        for (const auto channels : {2u, 3u, 4u})
+        {
+            const std::vector<u8> pixels(4 * channels, 128);
+            const auto source = files.Write("data.png", PngBytes(channels, pixels));
+            const auto target = files.Write("data.texture", {});
+            resources::BinaryWriter writer(target.string(), 0);
+            resources::TextureBuilder().BuildTextureAsset(source, writer, render::TextureColorSpace::Linear);
+            writer.Close();
+            resources::BinaryReader reader(target.string());
+            CHECK(reader.GetI32() == 2);
+            CHECK(reader.GetI32() == 2);
+            CHECK(reader.GetI32() == (channels == 2 ? GL_RG : channels == 3 ? GL_RGB8 : GL_RGBA8));
+            i32 length = 0;
+            const std::unique_ptr<u8[]> data(reader.GetBytes(length));
+            REQUIRE(length == static_cast<i32>(pixels.size()));
+            CHECK(std::vector<u8>(data.get(), data.get() + length) == pixels);
+        }
+    });
+}
+
+TEST_CASE("sRGB importer rejects undecodable input without publishing texture bytes", "[native][importers][srgb][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        const auto source = files.Write("invalid.png", {1, 2, 3});
+        const auto target = files.Write("invalid.texture", {});
+        resources::BinaryWriter writer(target.string(), 0);
+        CHECK_THROWS_AS(resources::TextureBuilder().BuildTextureAsset(source, writer), std::runtime_error);
+        writer.Close();
+        CHECK(std::filesystem::file_size(target) == 0);
+    });
+}

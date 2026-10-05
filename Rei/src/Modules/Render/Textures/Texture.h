@@ -4,6 +4,12 @@
 
 namespace rei::render
 {
+    enum class TextureColorSpace
+    {
+        Srgb,
+        Linear
+    };
+
     enum TextureType
     {
         Diffuse,
@@ -16,7 +22,7 @@ namespace rei::render
     {
     public:
         REI_API explicit Texture(resources::BinaryReader& reader);
-        REI_API Texture(i32 width, i32 height, i32 format, std::vector<u8> rawData);
+        REI_API Texture(i32 width, i32 height, i32 format, std::vector<u8> rawData, TextureColorSpace colorSpace = TextureColorSpace::Srgb);
         REI_API void PostLoad();
 
         REI_API void Use(i32 idx = 0) const;
@@ -35,6 +41,7 @@ namespace rei::render
         i32 _width = 0;
         i32 _height = 0;
         i32 _format = 0;
+        TextureColorSpace _colorSpace = TextureColorSpace::Srgb;
         std::vector<u8> _rawData{};
         std::string _textureTag;
         TextureType _type = Diffuse;

@@ -44,7 +44,7 @@ namespace
         const auto frame = Capture(engine);
         // Same independent lighting equation as PIPE10: shininess 0, light (3,0,1), quad z=2.
         const auto brightness = ambientStrength + pointCount * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
-        const auto expected = static_cast<u8>(std::lround(255.0f * brightness));
+        const auto expected = static_cast<u8>(std::lround(255.0f * (brightness <= 0.0031308f ? 12.92f * brightness : 1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         const auto state = ReadLightingState(engine);
         REQUIRE(state.PointCount == pointCount);
@@ -200,10 +200,10 @@ TEST_CASE("PIPE05 builtin depth shader reciprocal-w pixels and material restorat
         RequirePixel(Pixel(*depth, depth->Width / 2, depth->Height / 2), {255, 255, 255, 255});
         engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::Camera>(cameraEntity).SetPerspective(render::Perspective); });
         depth = Capture(engine);
-        RequirePixel(Pixel(*depth, depth->Width / 2, depth->Height / 2), {128, 128, 128, 255});
+        RequirePixel(Pixel(*depth, depth->Width / 2, depth->Height / 2), {188, 188, 188, 255});
         engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<Transform>(meshEntity).GetLocalPosition().z = 2; });
         depth = Capture(engine);
-        RequirePixel(Pixel(*depth, depth->Width / 2, depth->Height / 2), {64, 64, 64, 255});
+        RequirePixel(Pixel(*depth, depth->Width / 2, depth->Height / 2), {137, 137, 137, 255});
         engine.OnEngineThread([&]
         {
             if (GetInternalWorld()->GetRegistry()->Get<render::MeshRenderer>(meshEntity).GetMaterial().Id != materialId) throw std::runtime_error("Depth pass replaced original mesh material");
@@ -304,7 +304,8 @@ TEST_CASE("PIPE10 real engine four point lights produce independently computed d
         const auto frame = Capture(engine);
         // Orthographic center pixel: world x/y = +/-1/6; light at (3,0,1), mesh z=2.
         // Four strengths .05; shininess 0 makes specular 1. Diffuse = 6/sqrt(326).
-        const auto expected = static_cast<u8>(std::lround(255.0f * 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f))));
+        const auto brightness = 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
+        const auto expected = static_cast<u8>(std::lround(255.0f * (1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         engine.Stop();
     }, 30000, 1024);
@@ -318,7 +319,8 @@ TEST_CASE("PIPE11 real engine fifth point light stays outside four-slot shader c
         engine.Start();
         engine.OnEngineThread([] { CreateLitMeshWithLights(5); Refresh(); });
         const auto frame = Capture(engine);
-        const auto expected = static_cast<u8>(std::lround(255.0f * 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f))));
+        const auto brightness = 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
+        const auto expected = static_cast<u8>(std::lround(255.0f * (1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         engine.Stop();
     }, 30000, 1024);
@@ -385,6 +387,25 @@ TEST_CASE("PIPE16 real engine ambient lifecycle agrees with shader uniforms and 
         VerifyLightingFrame(engine, 0, 0.1f);
         engine.OnEngineThread([&] { GetEntityManager().Destroy(second); });
         VerifyLightingFrame(engine, 0);
+        engine.Stop();
+    }, 30000, 1024);
+}
+
+TEST_CASE("sRGB real engine presents authoring gray through scene and postprocessing once", "[native][gl][engine-integration][renderer][srgb][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture engine(internal::engine::PlayMode, "renderer", PrepareRenderResources);
+        engine.Start();
+        engine.OnEngineThread([]
+        {
+            CreateCamera();
+            CreateMesh(1, render::Color(128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1));
+            Refresh();
+            CHECK(glIsEnabled(GL_FRAMEBUFFER_SRGB) == GL_TRUE);
+        });
+        const auto frame = Capture(engine);
+        RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {128, 128, 128, 255});
         engine.Stop();
     }, 30000, 1024);
 }

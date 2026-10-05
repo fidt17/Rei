@@ -168,8 +168,8 @@ TEST_CASE("RENDER03 nested Canvas Image alpha contributes once to framebuffer", 
         PrepareUiDraw(fixture, target);
         module.Render();
         const auto pixel = ReadPixel();
-        INFO("Duplicate canvas traversal gives red 191; one image gives red 128");
-        REQUIRE(std::abs(static_cast<i32>(pixel[0]) - 128) <= 1);
+        INFO("Linear alpha blending: duplicate canvas traversal gives sRGB red 225; one image gives 188");
+        REQUIRE(std::abs(static_cast<i32>(pixel[0]) - 188) <= 1);
         REQUIRE(pixel[1] == 0);
         REQUIRE(pixel[2] == 0);
     });
@@ -466,7 +466,7 @@ TEST_CASE("RENDER09 overlay postprocessing preserves flat input color", "[native
         render::FrameBuffer target(32, 32);
         glDisable(GL_DEPTH_TEST);
         module.Render(source);
-        RequirePixel(ReadPixel(), {64, 128, 191, 255});
+        RequirePixel(ReadPixel(), {137, 188, 225, 255});
     });
 }
 
@@ -485,7 +485,7 @@ TEST_CASE("RENDER10 grayscale postprocessing outputs weighted luminance", "[nati
         render::FrameBuffer target(32, 32);
         glDisable(GL_DEPTH_TEST);
         module.Render(source);
-        RequirePixel(ReadPixel(), {54, 54, 54, 255});
+        RequirePixel(ReadPixel(), {127, 127, 127, 255});
     });
 }
 
@@ -504,7 +504,7 @@ TEST_CASE("RENDER11 inversion postprocessing outputs component complements", "[n
         render::FrameBuffer target(32, 32);
         glDisable(GL_DEPTH_TEST);
         module.Render(source);
-        RequirePixel(ReadPixel(), {0, 191, 255, 255});
+        RequirePixel(ReadPixel(), {0, 225, 255, 255});
     });
 }
 

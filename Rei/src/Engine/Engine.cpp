@@ -46,6 +46,26 @@ namespace rei::internal::engine
         _mainRenderer = std::make_shared<render::Renderer>(_app->CreateCustomRenderModules());
     }
 
+    Engine::~Engine()
+    {
+        // ComponentRef fields can keep the registry alive after World expires.
+        // Finalize this engine's entities without touching a replacement World.
+        {
+            const auto world = _internalWorld->GetWorld();
+            const auto registry = world->GetRegistry();
+            for (const auto entity : registry->GetAllEntities())
+            {
+                if (registry->IsAlive(entity)) registry->DestroyEntity(entity);
+            }
+            world->Refresh();
+        }
+        _mainRenderer.reset();
+        _sceneManager.reset();
+        _entityManager.reset();
+        _internalWorld.reset();
+        Services::GetInstance()->ReleaseEngineServices(this);
+    }
+
     std::shared_ptr<window::Window> Engine::CreateMainWindow(const WindowCreationSettings& settings)
     {
         auto mainWindow = _mainWindowHandler->CreateMainWindow(*_windowManager, settings);

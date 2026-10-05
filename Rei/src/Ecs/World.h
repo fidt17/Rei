@@ -12,6 +12,9 @@ namespace rei::ecs
     {
     public:
         REI_API World();
+        REI_API ~World();
+        World(const World&) = delete;
+        World& operator=(const World&) = delete;
         
         template<typename T>
         REI_API void AddSystem(){
@@ -43,6 +46,8 @@ namespace rei::ecs
         std::shared_ptr<EcsRegistry> _ecsRegistry;
         std::shared_ptr<FiltersRegistry> _filterRegistry;
         std::vector<std::shared_ptr<System>> _systems;
+        eventpp::CallbackList<void(size_t)>::Handle _componentIdChangedHandle;
+        eventpp::CallbackList<void()>::Handle _newFilterCreatedHandle;
 
         void UpdateBitMasks(size_t size) const;
     };

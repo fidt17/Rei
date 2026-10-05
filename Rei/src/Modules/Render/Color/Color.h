@@ -30,6 +30,9 @@ namespace rei::render
         static Color Green();
         static Color Blue();
 
+        // Serialized and authoring colors are sRGB; shader RGB values are linear. Alpha is unchanged.
+        Color ToLinear() const;
+
         static Color FromHex(const std::string& hex);
     };
 }

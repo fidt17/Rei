@@ -40,6 +40,7 @@ namespace rei
         void operator=(const Services&) = delete;
 
         void SetEngine(internal::engine::Engine* value) { _engine = value; }
+        REI_API void ReleaseEngineServices(const internal::engine::Engine* engine);
         REI_API internal::engine::Engine& GetEngine() const { return *_engine; }
 
         void SetTime(const std::shared_ptr<time::TimeService>& value) { _time = value; }
@@ -67,6 +68,7 @@ namespace rei
         REI_API common::diagnostics::DiagnosticsService& GetDiagnostics() const { return *_diagnostics; }
         
         void SetGizmos(const std::shared_ptr<render::Gizmos>& gizmos) { _gizmos = gizmos; }
+        REI_API void ReleaseGizmos(const std::shared_ptr<render::Gizmos>& gizmos);
         REI_API render::Gizmos& GetGizmos() const { return *_gizmos; }
 
         REI_API static Services* GetInstance();
@@ -75,7 +77,7 @@ namespace rei
         Services() = default;
         static Services* _instance;
 
-        internal::engine::Engine* _engine;
+        internal::engine::Engine* _engine = nullptr;
         std::shared_ptr<time::TimeService> _time;
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<EntityManager> _entityManager;

@@ -246,9 +246,17 @@ TEST_CASE("ECS-10 Surviving registry does not call destroyed World when type cou
         ProtectedWorld owner;
         const auto registry = owner.Get().GetRegistry();
         const auto entity = registry->NewEntity();
+        u32 notifications = 0;
+        registry->MaxComponentIdChangedEvent.append([&](const size_t) { ++notifications; });
         owner.Destroy();
+        PrimeDistinctTypes(std::make_index_sequence<140>{});
+        REQUIRE(TypeId::Get<SurvivingRegistryComponent>() >= 128);
         REQUIRE_NOTHROW(registry->Get<SurvivingRegistryComponent>(entity).Value = 19);
         CHECK(registry->Get<SurvivingRegistryComponent>(entity).Value == 19);
+        CHECK(notifications == 1); // Remove only World's callback, not external listeners.
+        const auto fresh = registry->NewEntity();
+        CHECK(registry->IsAlive(fresh));
+        CHECK(registry->GetEntityMask(fresh).Size() == registry->GetEntityMask(entity).Size());
     });
 }
 
@@ -258,11 +266,19 @@ TEST_CASE("ECS-10 Surviving filter registry does not refresh destroyed World", "
     {
         ProtectedWorld owner;
         const auto filters = owner.Get().GetFiltersRegistry();
+        u32 notifications = 0;
+        filters->NewFilterCreatedEvent.append([&] { ++notifications; });
+        const auto existing = filters->Get<>();
+        REQUIRE(notifications == 1);
         owner.Destroy();
         std::shared_ptr<Filter> filter;
         REQUIRE_NOTHROW(filter = filters->Get<SurvivingFilterComponent>());
         REQUIRE(filter != nullptr);
         CHECK(filter->Entities().empty());
+        CHECK(notifications == 2);
+        CHECK(filters->Get<SurvivingFilterComponent>() == filter);
+        CHECK(filters->Get<>() == existing);
+        CHECK(notifications == 2);
     });
 }
 

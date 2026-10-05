@@ -120,7 +120,8 @@ namespace rei::render
         if (location < 0) return;
         Use();
         profiling::Count(profiling::markers::UNIFORMS.Id);
-        glUniform4f(location, value.r, value.g, value.b, value.a);
+        const auto linear = value.ToLinear();
+        glUniform4f(location, linear.r, linear.g, linear.b, linear.a);
     }
 
     void Shader::SetMatrix4f(const std::string& name, glm::mat4 value) const

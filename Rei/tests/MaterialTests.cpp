@@ -212,7 +212,12 @@ TEST_CASE("Material cached bindings apply final writes, type changes and alterna
     REQUIRE(GlBindingSpy::LocationQueries == 1);
     first.SetColor("value", rei::render::Color(0.2f, 0.4f, 0.6f, 0.8f));
     first.Use();
-    REQUIRE(GlBindingSpy::Values.at(location) == std::array<f32, 4>{0.2f, 0.4f, 0.6f, 0.8f});
+    const auto linearColor = GlBindingSpy::Values.at(location);
+    REQUIRE(std::abs(linearColor[0] - 0.03310477f) < 1e-6f);
+    REQUIRE(std::abs(linearColor[1] - 0.13286832f) < 1e-6f);
+    REQUIRE(std::abs(linearColor[2] - 0.31854678f) < 1e-6f);
+    REQUIRE(linearColor[3] == 0.8f);
+    REQUIRE(first.REI_GET().at("Properties").at("value") == nlohmann::json({{"r", 0.2f}, {"g", 0.4f}, {"b", 0.6f}, {"a", 0.8f}}));
     first.SetInt("value", 4);
     first.Use();
     REQUIRE(GlBindingSpy::Values.at(location)[0] == 4);

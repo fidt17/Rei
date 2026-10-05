@@ -150,3 +150,144 @@ TEST_CASE("GL34 text label batches six visible glyphs into one actual atlas draw
         CHECK(glGetError() == GL_NO_ERROR);
     });
 }
+
+TEST_CASE("sRGB imported and legacy color textures decode while explicit data stays linear", "[native][gl][srgb][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        TemporaryDirectory files;
+        render::FrameBuffer target(32, 32);
+        target.EnableBuffer(32, 32);
+        // Independent linear target measures sampler output, without output encoding.
+        glBindTexture(GL_TEXTURE_2D, target.GetColorTexture());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glViewport(0, 0, 32, 32);
+        glDisable(GL_BLEND);
+        const auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_IMAGE_ASSET_ID);
+        auto material = fixture.Scene.Assets->CreateAsset<render::Material>(shader);
+        material->SetColor("_Color", render::Color::White());
+        material->SetDepth(false);
+        render::Mesh quad("sampler oracle", {
+            {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
+            {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
+        }, {0, 1, 2, 0, 2, 3}, {});
+        quad.PostLoad();
+        const std::vector<u8> pixels(16, 128);
+        for (const auto space : {render::TextureColorSpace::Srgb, render::TextureColorSpace::Linear})
+        {
+            const auto source = files.Write(space == render::TextureColorSpace::Srgb ? "color.png" : "data.png", PngBytes(4, pixels));
+            const auto package = files.Write("sample.texture", {});
+            resources::BinaryWriter writer(package.string(), 0);
+            resources::TextureBuilder().BuildTextureAsset(source, writer, space);
+            writer.Close();
+            resources::BinaryReader reader(package.string());
+            const auto texture = fixture.Scene.Assets->CreateAsset<render::Texture>(reader);
+            material->SetTexture("_MainTex", texture);
+            material->Use();
+            shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
+            quad.Render();
+            const u8 rgb = space == render::TextureColorSpace::Srgb ? 55 : 128;
+            RequirePixel(ReadPixel(), {rgb, rgb, rgb, 128});
+        }
+        quad.Dispose();
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("sRGB roundtrip keeps unlit gray but half illumination encodes to 92", "[native][gl][srgb][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::FrameBuffer target(32, 32);
+        target.EnableBuffer(32, 32);
+        glViewport(0, 0, 32, 32);
+        glDisable(GL_BLEND);
+        REQUIRE(glIsEnabled(GL_FRAMEBUFFER_SRGB) == GL_TRUE);
+        i32 encoding = 0;
+        glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, &encoding);
+        REQUIRE(encoding == GL_SRGB);
+        const auto texture = fixture.Scene.Assets->CreateAsset<render::Texture>(1, 1, GL_RGBA, std::vector<u8>{128, 128, 128, 255});
+        const auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        auto material = fixture.Scene.Assets->CreateAsset<render::Material>(shader);
+        material->SetColor("_Color", render::Color::White());
+        material->SetFloat("_Shininess", 64);
+        material->SetTexture("_MainTex", texture);
+        material->SetDepth(false);
+        render::Mesh quad("lit sampler oracle", {
+            {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
+            {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
+        }, {0, 1, 2, 0, 2, 3}, {});
+        quad.PostLoad();
+        material->Use();
+        shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
+        shader->SetInt("_PointLightsCount", 0);
+        shader->SetColor("_AmbientLight.Color", render::Color::White());
+        for (const auto strength : {1.0f, 0.5f})
+        {
+            shader->SetFloat("_AmbientLight.Strength", strength);
+            quad.Render();
+            const u8 expected = strength == 1 ? 128 : 92;
+            RequirePixel(ReadPixel(), {expected, expected, expected, 255});
+        }
+        // Resize must retain output encoding.
+        target.EnableBuffer(16, 16);
+        glViewport(0, 0, 16, 16);
+        material->Use();
+        quad.Render();
+        RequirePixel(ReadPixel(8, 8), {92, 92, 92, 255});
+        quad.Dispose();
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("sRGB blending mixes light linearly and leaves alpha arithmetic unchanged", "[native][gl][srgb][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::FrameBuffer target(32, 32);
+        target.EnableBuffer(32, 32);
+        glViewport(0, 0, 32, 32);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        const auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_COLOR_ASSET_ID);
+        auto material = fixture.Scene.Assets->CreateAsset<render::Material>(shader);
+        material->SetColor("_Color", render::Color(1, 1, 1, 0.5f));
+        material->SetDepth(false);
+        render::Mesh quad("blend oracle", {
+            {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
+            {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
+        }, {0, 1, 2, 0, 2, 3}, {});
+        quad.PostLoad();
+        material->Use();
+        shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
+        quad.Render();
+        RequirePixel(ReadPixel(), {188, 188, 188, 191});
+        quad.Dispose();
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("sRGB RGB upload uses packed rows and restores caller unpack alignment", "[native][gl][srgb][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        const std::vector<u8> pixels{32, 64, 128, 192, 16, 255, 0, 80, 160, 240, 48, 96};
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
+        const auto texture = fixture.Scene.Assets->CreateAsset<render::Texture>(2, 2, GL_RGB, pixels, render::TextureColorSpace::Linear);
+        i32 alignment = 0;
+        glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
+        CHECK(alignment == 8);
+        texture->Use();
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        std::vector<u8> actual(pixels.size());
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, actual.data());
+        CHECK(actual == pixels);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
