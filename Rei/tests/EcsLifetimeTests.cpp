@@ -5,6 +5,7 @@
 #include "Modules/Components/ActiveTag.h"
 #include <algorithm>
 #include <map>
+#include <limits>
 #include <random>
 #include <set>
 
@@ -174,16 +175,75 @@ TEST_CASE("ECS-03 Generation reuse does not revive original handles", "[native][
 {
     World world;
     const auto registry = world.GetRegistry();
+    const auto filter = world.GetFiltersRegistry()->Get<>();
     const auto original = registry->NewEntity();
     auto current = original;
     for (u32 reuse = 1; reuse <= 260; ++reuse)
     {
         registry->DestroyEntity(current);
         world.Refresh();
+        CheckEntities(filter, {});
         current = registry->NewEntity();
-        CAPTURE(reuse, current.Generation);
+        CAPTURE(reuse, current.Id, current.Generation);
+        REQUIRE(current.Generation != 0);
+        REQUIRE(registry->IsAlive(current));
         CHECK_FALSE(registry->IsAlive(original));
+        CHECK_FALSE(registry->Has<ValueComponent>(current));
+        registry->Get<ValueComponent>(current).Value = static_cast<i32>(reuse);
+        world.Refresh();
+        CheckEntities(filter, {current});
+        CHECK(registry->Get<ValueComponent>(current).Value == static_cast<i32>(reuse));
     }
+}
+
+TEST_CASE("ECS-03 Exhausted generation retires slot while healthy slots remain reusable", "[native][ecs][coverage]")
+{
+    constexpr EntityGen MAX_GENERATION = (std::numeric_limits<EntityGen>::max)();
+    const auto released = std::make_shared<std::vector<i32>>();
+    World world;
+    const auto registry = world.GetRegistry();
+    const auto original = registry->NewEntity();
+    auto exhausted = original;
+    for (u32 generation = 2; generation <= MAX_GENERATION; ++generation)
+    {
+        registry->DestroyEntity(exhausted);
+        world.Refresh();
+        exhausted = registry->NewEntity();
+        REQUIRE(exhausted.Id == original.Id);
+        REQUIRE(exhausted.Generation == generation);
+    }
+    REQUIRE(registry->IsAlive(exhausted));
+    registry->Get<OwnedComponent>(exhausted).Resource = MakeToken(released, 43);
+    const auto healthy = registry->NewEntity();
+    registry->Get<ValueComponent>(healthy).Value = 91;
+    const auto filter = world.GetFiltersRegistry()->Get<>();
+    CheckEntities(filter, {exhausted, healthy});
+    registry->DestroyEntity(exhausted);
+    registry->DestroyEntity(healthy);
+    REQUIRE(released->empty());
+    world.Refresh();
+    CHECK(*released == std::vector<i32>{43});
+    CheckEntities(filter, {});
+    CHECK(registry->GetEntityById(exhausted.Id).Generation == 0);
+    CHECK_FALSE(registry->IsAlive(original));
+    CHECK_FALSE(registry->IsAlive(exhausted));
+    CHECK_THROWS_AS(registry->Get<OwnedComponent>(exhausted), std::runtime_error);
+
+    const auto reused = registry->NewEntity();
+    REQUIRE(reused.Id == healthy.Id);
+    REQUIRE(reused.Generation == healthy.Generation + 1);
+    CHECK_FALSE(registry->Has<ValueComponent>(reused));
+    CHECK_FALSE(registry->IsAlive(healthy));
+    registry->Get<ValueComponent>(reused).Value = 95;
+    const auto fresh = registry->NewEntity();
+    CHECK(fresh.Id != exhausted.Id);
+    CHECK(fresh.Id != reused.Id);
+    CHECK(fresh.Generation == 1);
+    world.Refresh();
+    CheckEntities(filter, {reused, fresh});
+    CHECK(registry->Get<ValueComponent>(reused).Value == 95);
+    CHECK_FALSE(registry->IsAlive(exhausted));
+    CHECK(*released == std::vector<i32>{43});
 }
 
 TEST_CASE("ECS-06 Dense deletion preserves surviving entity values", "[native][ecs][coverage]")

@@ -294,11 +294,14 @@ TEST_CASE("ECS-03 Proposed repeated reuse keeps every historical handle stale pa
         };
         for (u32 reuse = 1; reuse <= REUSES; ++reuse)
         {
-            history.push_back(current); // Retain every generation, including zero.
+            history.push_back(current); // Retain every handle from each retired or reused slot.
             registry->DestroyEntity(current);
             world.Refresh();
             inspectHistory(reuse); // Dead slots must not validate any old handle.
             current = registry->NewEntity();
+            REQUIRE(current.Generation != 0);
+            REQUIRE(registry->IsAlive(current));
+            CHECK_FALSE(registry->Has<BoundaryComponent<0>>(current));
             registry->Get<BoundaryComponent<0>>(current).Value = static_cast<i32>(reuse);
             world.Refresh();
             inspectHistory(reuse); // Newly live entity must not revive old handles.

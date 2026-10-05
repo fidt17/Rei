@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "EcsRegistry.h"
+#include <limits>
 
 #include "Modules/Components/ActiveTag.h"
 
@@ -55,7 +56,11 @@ namespace rei::ecs
 
     void EcsRegistry::HandleDeadEntity(const Entity e)
     {
-        _deadEntitiesPool.push(e);
+        // Reusing the maximum generation would wrap and revive old handles.
+        if (e.Generation < (std::numeric_limits<EntityGen>::max)())
+        {
+            _deadEntitiesPool.push(e);
+        }
         _entities[e.Id].Generation = 0;
     }
 
