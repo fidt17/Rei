@@ -38,16 +38,14 @@ namespace rei::ecs
 
         T& Get() const
         {
-            REI_ASSERT(!IsNull(), std::format("Null component reference {} on {}", typeid(T).name(), std::string(_entity)))
+            REI_THROW_IF(IsNull(), std::format("Null component reference {} on {}", typeid(T).name(), std::string(_entity)))
 
             return _ecs->Get<T>(_entity);
         }
 
-        constexpr operator T&() const noexcept
+        operator T&() const
         {
-            REI_ASSERT(!IsNull(), std::format("Null component reference {} on {}", typeid(T).name(), std::string(_entity)))
-
-            return _ecs->Get<T>(_entity);
+            return Get();
         }
 
         bool IsNull() const

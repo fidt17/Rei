@@ -76,8 +76,11 @@ TEST_CASE("CREF-01 Null Get rejects without recreating removed component", "[nat
         ComponentRef<RefValue> ref(registry, entity);
         registry->Del<RefValue>(entity);
         REQUIRE(ref.IsNull());
-        CHECK_THROWS(ref.Get());
+        const auto mask = registry->GetEntityMask(entity);
+        CHECK_THROWS_AS(ref.Get(), std::runtime_error);
         CHECK_FALSE(registry->Has<RefValue>(entity));
+        CHECK(registry->GetEntityMask(entity) == mask);
+        CHECK(ref.IsNull());
     });
 }
 
@@ -104,7 +107,11 @@ TEST_CASE("CREF-01 Default Get reports failure without process crash", "[native]
     {
         ComponentRef<RefValue> ref;
         REQUIRE(ref.IsNull());
-        CHECK_THROWS(ref.Get());
+        CHECK_THROWS_AS(ref.Get(), std::runtime_error);
+        const auto convert = [&]() -> RefValue& { return ref; };
+        CHECK_THROWS_AS(convert(), std::runtime_error);
+        CHECK(ref.IsNull());
+        CHECK(ref.SceneEntityId == 0);
     });
 }
 
@@ -122,7 +129,51 @@ TEST_CASE("CREF-01 Stale implicit conversion reports failure without termination
         world.Refresh();
         REQUIRE(ref.IsNull());
         const auto convert = [&]() -> RefValue& { return ref; };
-        CHECK_THROWS(convert());
+        CHECK_THROWS_AS(convert(), std::runtime_error);
+        const auto replacement = registry->NewEntity();
+        REQUIRE(replacement.Id == entity.Id);
+        registry->Get<RefValue>(replacement).Value = 99;
+        CHECK_THROWS_AS(convert(), std::runtime_error);
+        CHECK_THROWS_AS(ref.Get(), std::runtime_error);
+        CHECK(ref.IsNull());
+        CHECK(registry->Get<RefValue>(replacement).Value == 99);
+    });
+}
+
+TEST_CASE("CREF-01 Removed implicit conversion rejects until explicit component readdition", "[native][ecs][component-ref][coverage][isolated]")
+{
+    Isolated([]
+    {
+        _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+        World world;
+        const auto registry = world.GetRegistry();
+        const auto entity = registry->NewEntity();
+        registry->Get<EntityInfo>(entity).Id = 42;
+        const ComponentRef<RefValue> ref(registry, entity);
+        const auto copy = ref;
+        ref.Get().Value = 91;
+        registry->Del<RefValue>(entity);
+        const auto mask = registry->GetEntityMask(entity);
+        const auto convert = [&]() -> RefValue& { return copy; };
+        REQUIRE(ref.IsNull());
+        REQUIRE(copy.IsNull());
+        CHECK_THROWS_AS(convert(), std::runtime_error);
+        CHECK_FALSE(registry->Has<RefValue>(entity));
+        CHECK(registry->GetEntityMask(entity) == mask);
+        CHECK(ref.SceneEntityId == 42);
+        CHECK(copy.SceneEntityId == 42);
+
+        auto& readded = registry->Get<RefValue>(entity);
+        REQUIRE(readded.Value == 7);
+        readded.Value = 95;
+        REQUIRE_FALSE(ref.IsNull());
+        REQUIRE_FALSE(copy.IsNull());
+        RefValue& converted = copy;
+        CHECK(&converted == &readded);
+        CHECK(&ref.Get() == &readded);
+        CHECK(converted.Value == 95);
+        converted.Value = 97;
+        CHECK(registry->Get<RefValue>(entity).Value == 97);
     });
 }
 
