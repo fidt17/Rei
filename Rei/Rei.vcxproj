@@ -743,6 +743,18 @@
     <ClInclude Include="src\Rei.h" />
     <ClInclude Include="src\Startup\App.h" />
     <ClInclude Include="src\Startup\AppEntryPoint.h" />
+    <ClInclude Include="tests\support\NativeTestSupport.h" />
+    <ClInclude Include="tests\support\GeometryTestSupport.h" />
+    <ClInclude Include="tests\support\BehaviourTestProbes.h" />
+    <ClInclude Include="tests\support\BehaviourTestFixture.h" />
+    <ClInclude Include="tests\support\AssetTestSupport.h" />
+    <ClInclude Include="tests\support\InputTestFixture.h" />
+    <ClInclude Include="tests\support\NativeEngineFixture.h" />
+    <ClInclude Include="tests\support\NativeGlFixture.h" />
+    <ClInclude Include="tests\support\NativeRenderFixture.h" />
+    <ClInclude Include="tests\support\NativeImageTestSupport.h" />
+    <ClInclude Include="tests\support\NativeRenderPipelineFixture.h" />
+    <ClInclude Include="tests\support\RealGlCallTrace.h" />
     <ClInclude Include="tests\catch_amalgamated.hpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -908,6 +920,133 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\NativeTestSupportTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EcsLifetimeTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\BitMaskBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\BinarySerializationTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\AssetRegistryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\TaskExecutorTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\MathGeometryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\MeshBvhTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ColliderTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ComponentRefTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\TransformTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\AssetManagerTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\AssetPostLoadTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ScenePreloadTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EntitySceneTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\BehaviourLifecycleTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\GeneratedSerializationTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories>$(IntDir)native-tests;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="tests\AssetRefTransitionTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ColorCameraTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EcsBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\InputTransitionTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\NativeEngineIntegrationTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\OpenGlTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\SerializedMeshColliderTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\TransformBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\UiLayoutInteractionTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\CpuAssetImporterTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\CrashReportTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\LoggingBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\PointerInputTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ProfilingBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ProjectDllTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\RenderModuleIntegrationTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\RendererPipelineTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\SceneEngineLifecycleTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\NativeHarnessCleanupTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\PhysicsBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\RemainingInputTextTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\RemainingGlPipelineTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EngineInputLifecycleTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\NativeEngineFixtureTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\ShaderCleanupTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\catch_amalgamated.cpp" />
     <ClCompile Include="tests\EcsTests.cpp">
@@ -1098,6 +1237,9 @@ xcopy /y /d "$(TargetDir)..\Rei\assimp-vc143-mt.dll" "$(TargetDir)..\ReiSandbox\
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="GenerateNativeTestRegistry" BeforeTargets="ClCompile" Condition="'$(Configuration)|$(Platform)'=='Tests|x64'">
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)tests\Generator\NativeTestGenerator.csproj&quot; --configuration Release -- &quot;$(ProjectDir).&quot; &quot;$(IntDir)native-tests&quot;" />
+  </Target>
 </Project>
 
 

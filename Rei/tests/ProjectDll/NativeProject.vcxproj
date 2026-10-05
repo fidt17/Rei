@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <ItemGroup Label="ProjectConfigurations">
+        <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    </ItemGroup>
+    <PropertyGroup Label="Globals">
+        <ProjectGuid>{59127D7B-7486-480D-8B10-F297D2474AA6}</ProjectGuid>
+        <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+        <ReiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\'))</ReiRoot>
+        <NativeProjectVersion Condition="'$(NativeProjectVersion)'==''">1</NativeProjectVersion>
+    </PropertyGroup>
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+    <PropertyGroup Label="Configuration">
+        <ConfigurationType>DynamicLibrary</ConfigurationType><UseDebugLibraries>true</UseDebugLibraries><PlatformToolset>v145</PlatformToolset><CharacterSet>Unicode</CharacterSet>
+    </PropertyGroup>
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+    <PropertyGroup>
+        <OutDir>$(ReiRoot)bin\x64Tests\NativeProjectDll\</OutDir>
+        <IntDir>$(ReiRoot)bin\int\x64Tests\NativeProjectDll\v$(NativeProjectVersion)\</IntDir>
+        <TargetName>NativeProjectV$(NativeProjectVersion)</TargetName>
+    </PropertyGroup>
+    <ItemDefinitionGroup>
+        <ClCompile>
+            <LanguageStandard>stdcpp20</LanguageStandard><ConformanceMode>true</ConformanceMode><ExceptionHandling>Sync</ExceptionHandling>
+            <PrecompiledHeader>NotUsing</PrecompiledHeader><RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+            <PreprocessorDefinitions>DEBUG;NATIVE_PROJECT_VERSION=$(NativeProjectVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+            <ForcedIncludeFiles>pch.h;Rei.h</ForcedIncludeFiles>
+            <AdditionalIncludeDirectories>$(ReiRoot)Rei\src;$(ReiRoot)Rei\external;$(ReiRoot)Rei\resources;$(ReiRoot)Rei\tests;$(ReiRoot)Rei\external\imgui;$(ReiRoot)bin\int\x64Tests\Rei\native-tests</AdditionalIncludeDirectories>
+        </ClCompile>
+        <Link>
+            <AdditionalLibraryDirectories>$(ReiRoot)bin\x64Debug\Rei;$(ReiRoot)Rei\external\glfw\lib-vc2022;$(ReiRoot)Rei\external\freetype\lib-vc2022</AdditionalLibraryDirectories>
+            <AdditionalDependencies>Rei.lib;glfw3.lib;opengl32.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+        </Link>
+    </ItemDefinitionGroup>
+    <ItemGroup>
+        <ClInclude Include="NativeProjectJournal.h" />
+        <ClCompile Include="NativeProject.cpp" />
+        <ClCompile Include="$(ReiRoot)bin\int\x64Tests\Rei\native-tests\BehaviourRegistry.cpp" />
+    </ItemGroup>
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+    <Target Name="CopyNativeEngineDependencies" AfterTargets="Build">
+        <Copy SourceFiles="$(ReiRoot)bin\x64Debug\Rei\Rei.dll;$(ReiRoot)bin\x64Debug\Rei\assimp-vc143-mt.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    </Target>
+</Project>

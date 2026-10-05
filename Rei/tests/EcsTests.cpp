@@ -23,7 +23,7 @@ struct C3
     int Value;
 };
 
-TEST_CASE("Add Single Component")
+TEST_CASE("Add Single Component", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w)
@@ -36,7 +36,7 @@ TEST_CASE("Add Single Component")
     REQUIRE(GET(e, C1).Value == 7);
 }
 
-TEST_CASE("Add Multiple Components")
+TEST_CASE("Add Multiple Components", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -48,7 +48,7 @@ TEST_CASE("Add Multiple Components")
     REQUIRE(GET(e, C2).Value == 14);
 }
 
-TEST_CASE("Delete One Component")
+TEST_CASE("Delete One Component", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -60,7 +60,7 @@ TEST_CASE("Delete One Component")
     REQUIRE(!HAS(e, C1));
 }
 
-TEST_CASE("Delete Multiple Components")
+TEST_CASE("Delete Multiple Components", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -81,7 +81,7 @@ TEST_CASE("Delete Multiple Components")
     REQUIRE(!HAS(e, C2));
 }
 
-TEST_CASE("Single Include Filter")
+TEST_CASE("Single Include Filter", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -96,7 +96,7 @@ TEST_CASE("Single Include Filter")
     REQUIRE(f->Entities().size() == 1);
 }
 
-TEST_CASE("Multiple Include Filter")
+TEST_CASE("Multiple Include Filter", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -121,7 +121,7 @@ TEST_CASE("Multiple Include Filter")
     REQUIRE(f->Entities().size() == 1);
 }
 
-TEST_CASE("Multiple Include & Exclude Filter")
+TEST_CASE("Multiple Include & Exclude Filter", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -146,7 +146,7 @@ TEST_CASE("Multiple Include & Exclude Filter")
     REQUIRE(f->Entities().empty());
 }
 
-TEST_CASE("Filters with same mask are the same")
+TEST_CASE("Filters with same mask are the same", "[native][ecs]")
 {
     World w;
     const auto f1 = w.GetFiltersRegistry()->Get<C1, C2, C3>();
@@ -165,7 +165,7 @@ TEST_CASE("Filters with same mask are the same")
     REQUIRE(f3.get() == f4.get());
 }
 
-TEST_CASE("Destroyed entity gets removed from filters")
+TEST_CASE("Destroyed entity gets removed from filters", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -184,7 +184,7 @@ TEST_CASE("Destroyed entity gets removed from filters")
     REQUIRE(f->Entities().empty());
 }
 
-TEST_CASE("Destroyed entity Id is reserved for future entities")
+TEST_CASE("Destroyed entity Id is reserved for future entities", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -209,7 +209,7 @@ TEST_CASE("Destroyed entity Id is reserved for future entities")
     REQUIRE((e3.Id == 2 && e3.Generation == 1));
 }
 
-TEST_CASE("Destroyed entity is marked as dead")
+TEST_CASE("Destroyed entity is marked as dead", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -223,7 +223,7 @@ TEST_CASE("Destroyed entity is marked as dead")
     REQUIRE(IS_DEAD(e));
 }
 
-TEST_CASE("Cannot get component on dead entity")
+TEST_CASE("Cannot get component on dead entity", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -237,7 +237,7 @@ TEST_CASE("Cannot get component on dead entity")
     LOGGER_ENABLE()
 }
 
-TEST_CASE("Cannot delete component on dead entity")
+TEST_CASE("Cannot delete component on dead entity", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -250,7 +250,7 @@ TEST_CASE("Cannot delete component on dead entity")
     LOGGER_ENABLE()
 }
 
-TEST_CASE("Cannot check if dead entity has component")
+TEST_CASE("Cannot check if dead entity has component", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -263,7 +263,7 @@ TEST_CASE("Cannot check if dead entity has component")
     LOGGER_ENABLE()
 }
 
-TEST_CASE("Cannot get mask of dead entity")
+TEST_CASE("Cannot get mask of dead entity", "[native][ecs]")
 {
     World w;
     ECS_WORLD_LOCAL(w);
@@ -278,7 +278,7 @@ TEST_CASE("Cannot get mask of dead entity")
     LOGGER_ENABLE()
 }
 
-TEST_CASE("Counter system")
+TEST_CASE("Counter system", "[native][ecs]")
 {
     struct Counter
     {
@@ -325,7 +325,7 @@ TEST_CASE("Counter system")
     REQUIRE(GET(e, Counter).Value == 200);
 }
 
-TEST_CASE("Entity Creation Destruction Systems")
+TEST_CASE("Entity Creation Destruction Systems", "[native][ecs]")
 {
     struct Counter
     {

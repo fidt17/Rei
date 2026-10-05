@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/BehaviourRegistrySourceGenerator.cs" Link="Production/BehaviourRegistrySourceGenerator.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/BehaviourAssetInfo.cs" Link="Production/BehaviourAssetInfo.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/SerializableObjectInfo.cs" Link="Production/SerializableObjectInfo.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/SerializableEnum.cs" Link="Production/SerializableEnum.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/ISerializableObjectsRegistry.cs" Link="Production/ISerializableObjectsRegistry.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/Types/SerializedTypeEnum.cs" Link="Production/SerializedTypeEnum.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/Types/SerializedTypeNameParser.cs" Link="Production/SerializedTypeNameParser.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/DataAssets/DataAssetTypeInfo.cs" Link="Production/DataAssetTypeInfo.cs" />
+        <Compile Include="../../../ReiEditor/Models/Resources/Client/IResourceService.cs" Link="Production/IResourceService.cs" />
+        <Compile Include="../../../ReiEditor/Models/Resources/ObjectFile.cs" Link="Production/ObjectFile.cs" />
+    </ItemGroup>
+</Project>

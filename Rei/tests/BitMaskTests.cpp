@@ -4,7 +4,7 @@
 
 using namespace rei::ecs;
 
-TEST_CASE("Bitmask All / Any")
+TEST_CASE("Bitmask All / Any", "[native][ecs][bitmask]")
 {
     BitMask mask1;
     BitMask mask2;
