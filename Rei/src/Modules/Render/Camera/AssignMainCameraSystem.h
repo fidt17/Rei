@@ -16,7 +16,7 @@ namespace rei::render
         void OnUpdate() override;
 
     private:
-        std::shared_ptr<ecs::Filter> _cameraFilter;
         std::shared_ptr<Renderer> _renderer;
+        ecs::Entity _taggedCamera = ecs::NULL_ENTITY;
     };
 }

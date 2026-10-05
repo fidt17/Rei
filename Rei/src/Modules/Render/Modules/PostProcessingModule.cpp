@@ -19,16 +19,7 @@ void rei::render::PostProcessingModule::Render(const FrameBuffer& frameBuffer) c
 {
     const auto renderMode = _cameraModule->GetCamera().Get().GetRenderMode();
 
-    auto material = _overlayMaterial;
-
-    if (renderMode == Grayscale)
-    {
-        material = _grayscaleMaterial;
-    }
-    else if (renderMode == Inversion)
-    {
-        material = _inversionMaterial;
-    }
+    const auto& material = renderMode == Grayscale ? _grayscaleMaterial : renderMode == Inversion ? _inversionMaterial : _overlayMaterial;
 
     material->GetShader().Use();
 

@@ -25,7 +25,7 @@ namespace rei::render
             _renderScenario->SetCamera(_camera);
         }
 
-        if (_target)
+        if (_target && !camera.IsNull())
         {
             i32 windowWidth;
             i32 windowHeight;

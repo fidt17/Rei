@@ -12,7 +12,6 @@ namespace rei::editor
 {
     FlyCameraSystem::FlyCameraSystem(const std::shared_ptr<ecs::World>& world) : System(world)
     {
-        _cameraFilter = FILTER(Transform, render::Camera);
     }
 
     f32 lastX = -1, lastY = -1;
@@ -102,27 +101,15 @@ namespace rei::editor
             didSetCursorPos = false;
         }
 
-        FOR(e, _cameraFilter)
-        {
-            auto& transform = GET(e, Transform);
-
-            f32 cameraSpeed = 3.0f * static_cast<f32>(GetTime().GetDeltaSeconds());
-
-            if (Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT))
-            {
-                cameraSpeed *= 3;
-            }
-
-            if (Input::IsKeyReleased(GLFW_KEY_P))
-            {
-                auto& camera = GET(e, render::Camera);
-                camera.SetPerspective(camera.GetPerspective() == render::Perspective ? render::Orthographic : render::Perspective);
-            }
-
-            if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) return;
-
-            MoveCamera(transform, cameraSpeed);
-            RotateCamera(transform);
-        }
+        const auto selected = render::Camera::GetMainCamera();
+        if (selected.IsNull()) return;
+        auto& camera = selected.Get();
+        auto& transform = camera.GetTransform();
+        f32 cameraSpeed = 3.0f * static_cast<f32>(GetTime().GetDeltaSeconds());
+        if (Input::IsKeyDown(GLFW_KEY_LEFT_SHIFT)) cameraSpeed *= 3;
+        if (Input::IsKeyReleased(GLFW_KEY_P)) camera.SetPerspective(camera.GetPerspective() == render::Perspective ? render::Orthographic : render::Perspective);
+        if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) return;
+        MoveCamera(transform, cameraSpeed);
+        RotateCamera(transform);
     }
 }

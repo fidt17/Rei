@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "glm/ext/matrix_clip_space.hpp"
+#include "Modules/Components/ActiveTag.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 namespace rei::render
@@ -146,10 +147,12 @@ namespace rei::render
     ecs::ComponentRef<Camera> Camera::GetMainCamera()
     {
         ECS_WORLD(GetInternalWorld());
-        const auto mainCameraFilter = FILTER(Camera);
+        const auto mainCameraFilter = FILTER(Camera, ActiveTag);
 
         FOR(e, mainCameraFilter)
         {
+            const auto& camera = GET(e, Camera);
+            if (!camera.IsEnabled()) continue;
             return GET_REF(e, Camera);
         }
 

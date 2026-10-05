@@ -54,7 +54,7 @@ void AddEngineBehaviour(string ns, string name, int id, string relativeHeader, D
 }
 AddEngineBehaviour("rei::render", "Camera", 7301, "render/camera/Camera.h", new()
 {
-    ["_active"] = Scalar(SerializedTypeEnum.Boolean, "bool"), ["_fov"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_orthographicSize"] = Scalar(SerializedTypeEnum.Float, "f32"),
+    ["_fov"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_orthographicSize"] = Scalar(SerializedTypeEnum.Float, "f32"),
     ["_nearClipPlane"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["_farClipPlane"] = Scalar(SerializedTypeEnum.Integer, "i32"),
     ["_backgroundColor"] = Custom("rei::render::Color"), ["_perspective"] = Scalar(SerializedTypeEnum.Enum, "rei::render::CameraPerspectiveEnum")
 });

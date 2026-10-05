@@ -9,18 +9,19 @@ namespace rei::render
         System(world),
         _renderer(renderer)
     {
-        _cameraFilter = FILTER(Camera);
     }
 
     void AssignMainCameraSystem::OnUpdate()
     {
-        if (!_renderer->GetCamera().IsNull()) return;
+        const auto next = Camera::GetMainCamera();
+        const auto entity = next.IsNull() ? ecs::NULL_ENTITY : next.Get().GetEntity();
+        const auto current = _renderer->GetCamera();
+        const bool matchesRenderer = next.IsNull() ? current.IsNull() : !current.IsNull() && current.Get().GetEntity() == entity;
+        if (_taggedCamera == entity && matchesRenderer) return;
 
-        FOR(e, _cameraFilter)
-        {
-            _renderer->SetCamera(GET_REF(e, Camera));
-            GET(e, MainCameraTag);
-            return;
-        }
+        if (_taggedCamera != ecs::NULL_ENTITY && !_ecs->IsDead(_taggedCamera)) _ecs->Del<MainCameraTag>(_taggedCamera);
+        _renderer->SetCamera(next);
+        _taggedCamera = entity;
+        if (!next.IsNull()) _ecs->Get<MainCameraTag>(entity);
     }
 }

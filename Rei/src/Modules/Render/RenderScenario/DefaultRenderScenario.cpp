@@ -129,6 +129,7 @@ void rei::render::DefaultRenderScenario::Render()
 
 void rei::render::DefaultRenderScenario::RenderWithoutCamera()
 {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     Clear();
     CaptureFrame(GL_FRONT);
 }
@@ -171,7 +172,7 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
     }
 
     RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
-    _lighting->Render();
+    if (GetEngine().IsEditor()) _lighting->Render();
 
     const RenderContext context {
         _cameraModule->GetWidth(),

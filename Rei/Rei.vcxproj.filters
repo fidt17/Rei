@@ -17,6 +17,7 @@
     <ClCompile Include="tests\MeshBvhTests.cpp" />
     <ClCompile Include="tests\ColliderTests.cpp" />
     <ClCompile Include="tests\ComponentRefTests.cpp" />
+    <ClCompile Include="tests\CameraSelectionTests.cpp" />
     <ClCompile Include="tests\TransformTests.cpp" />
     <ClCompile Include="tests\AssetManagerTests.cpp" />
     <ClCompile Include="tests\AssetPostLoadTests.cpp" />

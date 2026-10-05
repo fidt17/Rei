@@ -11,8 +11,5 @@ namespace rei::editor
         void MoveCamera(Transform& transform, f32 cameraSpeed) const;
         void RotateCamera(Transform& transform) const;
         void OnUpdate() override;
-
-    private:
-        std::shared_ptr<ecs::Filter> _cameraFilter;
     };
 }
