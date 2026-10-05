@@ -147,13 +147,13 @@ TEST_CASE("BIN-01 Packed seek overwrites only requested bytes", "[native][binary
 TEST_CASE("BIN-02 Reader rejects a nonexistent file", "[native][binary][coverage]")
 {
     TemporaryDirectory directory;
-    CHECK_THROWS(BinaryReader(directory.File("missing.bin").string()));
+    CHECK_THROWS_AS(BinaryReader(directory.File("missing.bin").string()), std::runtime_error);
 }
 
 TEST_CASE("BIN-02 Writer rejects an unavailable destination", "[native][binary][coverage]")
 {
     TemporaryDirectory directory;
-    CHECK_THROWS(BinaryWriter((directory.File("missing") / "file.bin").string(), 0));
+    CHECK_THROWS_AS(BinaryWriter((directory.File("missing") / "file.bin").string(), 0), std::runtime_error);
 }
 
 TEST_CASE("BIN-02 Reader rejects a truncated string payload", "[native][binary][coverage]")
@@ -230,7 +230,11 @@ TEST_CASE("BIN-02 Writer rejects writes after close", "[native][binary][coverage
     const auto path = directory.Write("closed.bin", {});
     BinaryWriter writer(path.string(), 0);
     writer.Close();
-    CHECK_THROWS(writer.WriteU32(7));
+    CHECK_NOTHROW(writer.Close());
+    CHECK_THROWS_AS(writer.WriteU32(7), std::runtime_error);
+    CHECK_THROWS_AS(writer.WriteStr("payload"), std::runtime_error);
+    const std::vector<u8> payload{1, 2, 3};
+    CHECK_THROWS_AS(writer.WriteBytes(payload.data(), static_cast<i32>(payload.size())), std::runtime_error);
     CHECK(ReadBytes(path).empty());
 }
 
@@ -317,6 +321,8 @@ TEST_CASE("BIN-02 Writer reports byte range lock failure after successful open",
     {
         TemporaryDirectory directory;
         const auto path = directory.Write("locked-output.bin", {0x11, 0x22, 0x33});
+        const u32 payloadSize = GENERATE(1u, 128u * 1024u);
+        CAPTURE(payloadSize);
         BinaryWriter writer(path.string(), 0);
         REQUIRE(writer.GetPosition() == 0); // Open succeeded before lock injection.
         WinHandle locker(CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -332,7 +338,7 @@ TEST_CASE("BIN-02 Writer reports byte range lock failure after successful open",
         const auto probeError = probeSucceeded ? ERROR_SUCCESS : GetLastError();
         REQUIRE_FALSE(probeSucceeded);
         REQUIRE(probeError == ERROR_LOCK_VIOLATION); // Proves real OS write failure.
-        const std::vector<u8> payload(128 * 1024, 0xAA); // Larger than stream buffer.
+        const std::vector<u8> payload(payloadSize, 0xAA); // Exercise buffered and large writes.
         CheckRejectedWithoutAllocatorException("WriteBytes or Close after OS write failure", [&]
         {
             writer.WriteBytes(payload.data(), static_cast<i32>(payload.size()));
@@ -342,6 +348,8 @@ TEST_CASE("BIN-02 Writer reports byte range lock failure after successful open",
         // flush buffered data later after the fault condition has been removed.
         try { writer.Close(); }
         catch (const std::exception&) {}
+        CHECK_NOTHROW(writer.Close()); // Failed flush still closed the file.
+        CHECK_THROWS_AS(writer.WriteU8(0xFF), std::runtime_error);
         REQUIRE(UnlockFileEx(locker.Get(), 0, LOCK_BYTES, 0, &lock));
         CHECK(ReadBytes(path) == std::vector<u8>{0x11, 0x22, 0x33});
     });

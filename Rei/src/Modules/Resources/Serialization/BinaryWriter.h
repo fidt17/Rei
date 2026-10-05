@@ -32,10 +32,12 @@ namespace rei::resources
         template <typename T>
         void Write(T value)
         {
-            _stream.write(reinterpret_cast<char*>(&value), sizeof value);
+            WriteData(reinterpret_cast<const char*>(&value), sizeof value);
         }
         
     private:
+        REI_API void WriteData(const char* bytes, i64 length);
+
         std::ofstream _stream;
     };
 }

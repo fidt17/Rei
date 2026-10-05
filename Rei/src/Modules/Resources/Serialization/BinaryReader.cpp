@@ -6,7 +6,7 @@ namespace rei::resources
     BinaryReader::BinaryReader(const std::string& path, const i64 pos)
     {
         _stream.open(path, std::ios::in | std::ios::binary);
-        REI_THROW_IF(_stream.bad(), "Could not open stream for " + path)
+        REI_THROW_IF(_stream.fail(), "Could not open stream for " + path)
         SetPosition(pos);
     }
 

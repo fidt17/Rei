@@ -6,20 +6,31 @@ namespace rei::resources
     BinaryWriter::BinaryWriter(const std::string& path, const i64 pos)
     {
         _stream.open(path, std::fstream::in | std::fstream::out | std::fstream::binary);
-        REI_THROW_IF(_stream.bad(), "Could not open stream for " + path)
+        REI_THROW_IF(_stream.fail(), "Could not open stream for " + path)
         SetPosition(pos);
     }
 
     void BinaryWriter::Close()
     {
+        if (!_stream.is_open()) return;
+
         _stream.flush();
+        const bool flushFailed = _stream.fail();
         _stream.close();
+        REI_THROW_IF(flushFailed || _stream.fail(), "Could not flush or close binary stream")
     }
 
     void BinaryWriter::WriteBytes(const u8* bytes, const i32 length)
     {
         WriteI32(length);
-        _stream.write(reinterpret_cast<const char*>(bytes), length);
+        WriteData(reinterpret_cast<const char*>(bytes), length);
+    }
+
+    void BinaryWriter::WriteData(const char* bytes, const i64 length)
+    {
+        REI_THROW_IF(!_stream.is_open() || _stream.fail(), "Binary stream is not writable")
+        _stream.write(bytes, length);
+        REI_THROW_IF(_stream.fail(), "Could not write to binary stream")
     }
 
     void BinaryWriter::SetPosition(const i64 position)
@@ -54,6 +65,6 @@ namespace rei::resources
     {
         const i32 size = static_cast<i32>(value.length());
         WriteI32(size);
-        _stream.write(value.data(), size);
+        WriteData(value.data(), size);
     }
 }
