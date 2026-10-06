@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "support/NativeEngineFixture.h"
+#include "support/NativeRenderPipelineFixture.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Api/AssetApi.h"
 
@@ -124,4 +124,38 @@ TEST_CASE("ABI-03 Read request after engine Stop rejects without unbounded task 
         char output[128] = "guard";
         CHECK(GetLoadedAssetState("absent", output, 128) == 0);
     }, 15000, 1024);
+}
+
+TEST_CASE("SCENE-03 Shutdown destroys orphan runtime asset consumers before unloading assets", "[native][engine-integration][scene][regression][isolated]")
+{
+    const auto mode = GENERATE(EditorMode, PlayMode);
+    Isolated([mode]
+    {
+        NativeEngineFixture fixture(mode);
+        fixture.Start();
+        std::shared_ptr<ecs::EcsRegistry> registry;
+        std::vector<ecs::Entity> consumers;
+        fixture.OnEngineThread([&]
+        {
+            registry = GetInternalWorld()->GetRegistry();
+            for (i32 i = 0; i < 2; ++i)
+            {
+                const auto entity = CreateMesh(2, render::Color::White());
+                // Internal runtime entities need not belong to EntityManager's scene roots.
+                registry->Del<EntityInfo>(entity);
+                consumers.push_back(entity);
+            }
+            GetInternalWorld()->Refresh();
+        });
+        fixture.Stop();
+        for (const auto entity : consumers) CHECK_FALSE(registry->IsAlive(entity));
+        CHECK(GetAssetManager().GetLoadedAssetCount() == 0);
+        fixture.Engine.reset();
+        const auto logs = common::logging::GetRecentLogEntriesSnapshot();
+        CHECK(std::none_of(logs.begin(), logs.end(), [](const std::string& entry)
+        {
+            return entry.find("Missing asset with id: runtime_asset_") != std::string::npos ||
+                entry.find("Failed to load asset name=runtime_asset_") != std::string::npos;
+        }));
+    }, 20000, 1024);
 }

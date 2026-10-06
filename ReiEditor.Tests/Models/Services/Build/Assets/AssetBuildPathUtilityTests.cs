@@ -8,6 +8,15 @@ namespace ReiEditor.Tests.Models.Services.Build.Assets;
 [Trait("Area", "Build")]
 public sealed class AssetBuildPathUtilityTests
 {
+    [Theory]
+    [InlineData("model.obj", true)]
+    [InlineData("model.fbx", true)]
+    [InlineData("model.OBJ", false)]
+    [InlineData("model.FBX", false)]
+    [InlineData("texture.png", false)]
+    [InlineData("material.mat", false)]
+    public void TestModelPathsMatchNativeDispatch(string path, bool expected) => Assert.Equal(expected, AssetBuildPathUtility.IsModelPath(path));
+
     /// <summary>Runtime asset extensions are accepted while source and project metadata are excluded.</summary>
     [Theory]
     [InlineData("texture.png", true)]

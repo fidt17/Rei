@@ -48,22 +48,24 @@ namespace rei::internal::engine
 
     Engine::~Engine()
     {
-        // ComponentRef fields can keep the registry alive after World expires.
-        // Finalize this engine's entities without touching a replacement World.
-        {
-            const auto world = _internalWorld->GetWorld();
-            const auto registry = world->GetRegistry();
-            for (const auto entity : registry->GetAllEntities())
-            {
-                if (registry->IsAlive(entity)) registry->DestroyEntity(entity);
-            }
-            world->Refresh();
-        }
+        DestroyEntities();
         _mainRenderer.reset();
         _sceneManager.reset();
         _entityManager.reset();
         _internalWorld.reset();
         Services::GetInstance()->ReleaseEngineServices(this);
+    }
+
+    void Engine::DestroyEntities() const
+    {
+        // Internal entities need not belong to scene roots. Use this engine's own World.
+        const auto world = _internalWorld->GetWorld();
+        const auto registry = world->GetRegistry();
+        for (const auto entity : registry->GetAllEntities())
+        {
+            if (registry->IsAlive(entity)) registry->DestroyEntity(entity);
+        }
+        world->Refresh();
     }
 
     std::shared_ptr<window::Window> Engine::CreateMainWindow(const WindowCreationSettings& settings)
@@ -158,6 +160,7 @@ namespace rei::internal::engine
         _profiler->Shutdown();
         _app->OnShutdown();
         _sceneManager->Shutdown();
+        DestroyEntities();
         _mainRenderer->Dispose();
         _assetManager->UnloadAllAssets();
         _assetManager->DeleteTmpFiles();

@@ -128,56 +128,40 @@ public class ProjectBuildStateService : IProjectBuildStateService
             return new Build.ProjectBuildState(buildSolution, buildAssets, "Client dll output path changed.");
         }
 
-        if (buildSolution && !File.Exists(expectedClientDllPath))
+        var solutionReason = buildSolution ? await GetSolutionRebuildReason(configuration, buildContext, state) : null;
+        var assetsReason = buildAssets ? await GetAssetsRebuildReason(buildContext, state) : null;
+        var reason = string.Join(" ", new[] { solutionReason, assetsReason }.Where(value => value != null));
+        return new Build.ProjectBuildState(solutionReason != null, assetsReason != null,
+            reason.Length == 0 ? "Persisted build outputs are up to date." : reason);
+    }
+
+    private async Task<string?> GetSolutionRebuildReason(BuildConfigurationEnum configuration, BuildExecutionContext buildContext, ProjectBuildState state)
+    {
+        if (!File.Exists(ResolveClientDllPath(buildContext))) return "Client dll is missing.";
+
+        var engineInputFiles = await GetTrackedEngineInputFiles(configuration);
+        if (!TrackedFileListsMatch(engineInputFiles, state.EngineInputFiles)) return "Engine input artifacts changed.";
+
+        var engineOutputFiles = await GetTrackedEngineOutputFiles(buildContext);
+        if (!TrackedFileListsMatch(engineOutputFiles, state.EngineOutputFiles)) return "Live engine artifacts changed or are stale.";
+
+        var sourceFiles = await GetTrackedSourceFiles();
+        if (!TrackedFileListsMatch(sourceFiles, state.SourceFiles)) return "Tracked source files changed.";
+
+        return null;
+    }
+
+    private async Task<string?> GetAssetsRebuildReason(BuildExecutionContext buildContext, ProjectBuildState state)
+    {
+        foreach (var outputFile in GetAssetOutputFiles(buildContext))
         {
-            return new Build.ProjectBuildState(true, buildAssets, "Client dll is missing.");
+            if (!File.Exists(outputFile)) return $"Asset output is missing: {outputFile}";
         }
 
-        if (buildSolution)
-        {
-            var engineInputFiles = await GetTrackedEngineInputFiles(configuration);
-            if (!TrackedFileListsMatch(engineInputFiles, state.EngineInputFiles))
-            {
-                _logger.Log("Engine input artifacts changed. Forcing solution rebuild.");
-                return new Build.ProjectBuildState(true, buildAssets, "Engine input artifacts changed.");
-            }
+        var assetFiles = await GetTrackedAssetFiles();
+        if (!TrackedFileListsMatch(assetFiles, state.AssetFiles)) return "Tracked asset files changed.";
 
-            var engineOutputFiles = await GetTrackedEngineOutputFiles(buildContext);
-            if (!TrackedFileListsMatch(engineOutputFiles, state.EngineOutputFiles))
-            {
-                _logger.Log("Live engine artifacts changed or are stale. Forcing solution rebuild.");
-                return new Build.ProjectBuildState(true, buildAssets, "Live engine artifacts changed or are stale.");
-            }
-        }
-
-        if (buildAssets)
-        {
-            foreach (var outputFile in GetAssetOutputFiles(buildContext))
-            {
-                if (File.Exists(outputFile)) continue;
-                return new Build.ProjectBuildState(buildSolution, true, $"Asset output is missing: {outputFile}");
-            }
-        }
-
-        if (buildSolution)
-        {
-            var sourceFiles = await GetTrackedSourceFiles();
-            if (!TrackedFileListsMatch(sourceFiles, state.SourceFiles))
-            {
-                return new Build.ProjectBuildState(true, buildAssets, "Tracked source files changed.");
-            }
-        }
-
-        if (buildAssets)
-        {
-            var assetFiles = await GetTrackedAssetFiles();
-            if (!TrackedFileListsMatch(assetFiles, state.AssetFiles))
-            {
-                return new Build.ProjectBuildState(buildSolution && !File.Exists(expectedClientDllPath), true, "Tracked asset files changed.");
-            }
-        }
-
-        return new Build.ProjectBuildState(false, false, "Persisted build outputs are up to date.");
+        return null;
     }
 
     public void MarkBuildStarted(BuildConfigurationEnum configuration, BuildExecutionContext buildContext)

@@ -209,6 +209,18 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         await StartAsync();
     }
 
+    public async Task<string> CloseEditorAsync()
+    {
+        var editor = _editor ?? throw new InvalidOperationException("Editor is not running.");
+        editor.Refresh();
+        if (!editor.CloseMainWindow()) throw new InvalidOperationException("Editor window refused close request.");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await editor.WaitForExitAsync(timeout.Token);
+        await Task.WhenAll(_stdout!, _stderr!);
+        Assert.Equal(1, editor.ExitCode); // Editor's normal window-close exit code.
+        return await File.ReadAllTextAsync(Path.Combine(RunDirectory, $"stdout-{LaunchCount}.log"));
+    }
+
     public Task RecordTimingAsync(string phase, TimeSpan elapsed) =>
         AppendDiagnosticAsync("timings.jsonl",
             JsonSerializer.Serialize(new { phase, milliseconds = elapsed.TotalMilliseconds, launch = LaunchCount, processId = ProcessId }));

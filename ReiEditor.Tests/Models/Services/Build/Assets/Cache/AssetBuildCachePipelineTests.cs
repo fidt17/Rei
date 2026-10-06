@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Build.Assets.Cache;
@@ -33,18 +34,22 @@ public sealed class AssetBuildCachePipelineTests
     private sealed class TestEngineApi : IEngineApi
     {
         public Dictionary<string, byte[]> Outputs { get; } = new(StringComparer.Ordinal);
-        public List<(string AssetPath, string DestinationPath, long Offset)> Calls { get; } = new();
+        public ConcurrentQueue<(string AssetPath, string DestinationPath, long Offset)> Calls { get; } = new();
         public Exception? ExceptionToThrow { get; set; }
+        public Action<string>? BeforeBuild { get; set; }
+        public Action<string>? AfterBuild { get; set; }
         public bool SkipOutput { get; set; }
         public bool IsEngineRunning => false;
 
         public long BuildAsset(string assetPath, string destinationFile, long offset)
         {
-            Calls.Add((assetPath, destinationFile, offset));
+            Calls.Enqueue((assetPath, destinationFile, offset));
+            BeforeBuild?.Invoke(assetPath);
             if (ExceptionToThrow != null) throw ExceptionToThrow;
             if (SkipOutput) return 0;
             var bytes = Outputs[assetPath];
             File.WriteAllBytes(destinationFile, bytes);
+            AfterBuild?.Invoke(assetPath);
             return bytes.Length;
         }
 
@@ -104,6 +109,204 @@ public sealed class AssetBuildCachePipelineTests
         Assert.Equal(2, engine.Calls.Count);
     }
 
+    /// <summary>Cached bytes and newly converted files are packed only after every conversion has finished.</summary>
+    [Fact]
+    public async Task TestBuildAssetsPreparesAllFilesBeforePacking()
+    {
+        using var directory = new TemporaryDirectory();
+        var first = await CreateAsset(directory, "first", "first.mat", new byte[] { 10 });
+        var second = await CreateAsset(directory, "second", "second.mat", new byte[] { 20 });
+        var third = await CreateAsset(directory, "third", "third.mat", new byte[] { 30 });
+        var engine = new TestEngineApi();
+        engine.Outputs[first.FullPath] = new byte[] { 1, 2 };
+        engine.Outputs[second.FullPath] = new byte[] { 3, 4, 5 };
+        engine.Outputs[third.FullPath] = new byte[] { 6 };
+        var pipeline = CreatePipeline("engine");
+        var cache = directory.GetPath("cache");
+        RunBuild(directory, pipeline, engine, first, cache, "seed.bin");
+        engine.Calls.Clear();
+        var archive = directory.GetPath("assets.bin");
+        var previousBytes = new byte[] { 99, 99 };
+        await File.WriteAllBytesAsync(archive, previousBytes);
+        engine.BeforeBuild = _ => Assert.Equal(previousBytes, File.ReadAllBytes(archive));
+
+        var result = pipeline.BuildAssets(engine, new[] { first, second, third }, cache, archive);
+
+        Assert.Equal(new[] { second.FullPath, third.FullPath }, engine.Calls.Select(call => call.AssetPath));
+        Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6 }, await File.ReadAllBytesAsync(archive));
+        Assert.Equal(new[] { "first", "second", "third" }, result.Map.Assets.Select(asset => asset.Id));
+        Assert.Equal(new long[] { 0, 2, 5 }, result.Map.Assets.Select(asset => asset.Offset));
+        Assert.Equal((3, 1, 2, 6L), (result.Report.TotalAssets, result.Report.CacheHits, result.Report.CacheMisses, result.Report.TotalBytes));
+    }
+
+    /// <summary>A later conversion failure prevents packing already prepared files into the destination.</summary>
+    [Fact]
+    public async Task TestBuildAssetsDoesNotStartPackingWhenConversionFails()
+    {
+        using var directory = new TemporaryDirectory();
+        var first = await CreateAsset(directory, "first", "first.mat", new byte[] { 10 });
+        var second = await CreateAsset(directory, "second", "second.mat", new byte[] { 20 });
+        var expected = new InvalidOperationException("second conversion failed");
+        var engine = new TestEngineApi();
+        engine.Outputs[first.FullPath] = new byte[] { 1, 2 };
+        engine.BeforeBuild = path => { if (path == second.FullPath) throw expected; };
+        var archive = directory.GetPath("assets.bin");
+        var cache = directory.GetPath("cache");
+        var previousBytes = new byte[] { 99, 99 };
+        await File.WriteAllBytesAsync(archive, previousBytes);
+
+        var actual = Assert.Throws<InvalidOperationException>(() => CreatePipeline("engine").BuildAssets(engine, new[] { first, second }, cache, archive));
+
+        Assert.Same(expected, actual);
+        Assert.Equal(2, engine.Calls.Count);
+        Assert.Equal(previousBytes, await File.ReadAllBytesAsync(archive));
+        Assert.False(File.Exists(Path.Combine(cache, "asset-cache.json")));
+    }
+
+    /// <summary>Four model workers overlap while other converters, progress, reports and archive order stay coordinated.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TestModelsConvertInParallelWithoutChangingPackOrder(bool forceRebuild)
+    {
+        using var directory = new TemporaryDirectory();
+        var assets = new[]
+        {
+            await CreateAsset(directory, "first", "first.obj", new byte[] { 10 }),
+            await CreateAsset(directory, "texture", "texture.png", new byte[] { 20 }),
+            await CreateAsset(directory, "second", "second.fbx", new byte[] { 30 }),
+            await CreateAsset(directory, "third", "third.obj", new byte[] { 40 }),
+            await CreateAsset(directory, "fourth", "fourth.fbx", new byte[] { 50 }),
+            await CreateAsset(directory, "fifth", "fifth.obj", new byte[] { 60 }),
+            await CreateAsset(directory, "text", "text.OBJ", new byte[] { 70 })
+        };
+        var engine = new TestEngineApi();
+        for (var i = 0; i < assets.Length; i++) engine.Outputs[assets[i].FullPath] = new byte[] { (byte)(i + 1), (byte)(i + 100) };
+        var pipeline = CreatePipeline("engine");
+        var cache = directory.GetPath("cache");
+        RunBuild(directory, pipeline, engine, assets[3], cache, "seed.bin");
+        engine.Calls.Clear();
+        using var firstStarted = new ManualResetEventSlim();
+        using var secondFinished = new ManualResetEventSlim();
+        var modelPaths = new HashSet<string> { assets[0].FullPath, assets[2].FullPath, assets[3].FullPath, assets[4].FullPath, assets[5].FullPath };
+        var firstBatchPaths = (forceRebuild ? new[] { 0, 2, 3, 4 } : new[] { 0, 2, 4, 5 }).Select(index => assets[index].FullPath).ToHashSet();
+        using var firstBatchStarted = new CountdownEvent(4);
+        var completionOrder = new ConcurrentQueue<string>();
+        var sync = new object();
+        var active = 0;
+        var peak = 0;
+        var coordinatorThread = Environment.CurrentManagedThreadId;
+        engine.BeforeBuild = path =>
+        {
+            if (!modelPaths.Contains(path))
+            {
+                Assert.Equal(coordinatorThread, Environment.CurrentManagedThreadId);
+                lock (sync) Assert.Equal(0, active);
+                return;
+            }
+            lock (sync) { active++; peak = Math.Max(peak, active); Assert.InRange(active, 1, 4); }
+            if (firstBatchPaths.Contains(path))
+            {
+                firstBatchStarted.Signal();
+                Assert.True(firstBatchStarted.Wait(TimeSpan.FromSeconds(5)), "Four models must be allowed to run concurrently.");
+            }
+            if (path == assets[0].FullPath)
+            {
+                firstStarted.Set();
+                Assert.True(secondFinished.Wait(TimeSpan.FromSeconds(5)), "Second model must complete while first is still running.");
+            }
+            if (path == assets[2].FullPath) Assert.True(firstStarted.Wait(TimeSpan.FromSeconds(5)));
+        };
+        engine.AfterBuild = path =>
+        {
+            if (!modelPaths.Contains(path)) return;
+            lock (sync) active--;
+            completionOrder.Enqueue(path);
+            if (path == assets[2].FullPath) secondFinished.Set();
+        };
+        var progress = new List<int>();
+        var archive = directory.GetPath("assets.bin");
+
+        var result = pipeline.BuildAssets(engine, assets, cache, archive, forceRebuild, info =>
+        {
+            Assert.Equal(coordinatorThread, Environment.CurrentManagedThreadId);
+            Assert.Equal(assets.Length, info.TotalAssets);
+            progress.Add(info.CurrentAssetIndex);
+        });
+
+        Assert.Equal(4, peak);
+        Assert.Equal(0, active);
+        var completedPaths = completionOrder.ToArray();
+        Assert.True(Array.IndexOf(completedPaths, assets[2].FullPath) < Array.IndexOf(completedPaths, assets[0].FullPath));
+        Assert.Equal(forceRebuild ? 7 : 6, engine.Calls.Count);
+        Assert.Equal(forceRebuild ? 0 : 1, result.Report.CacheHits);
+        Assert.Equal(Enumerable.Range(1, assets.Length), progress);
+        Assert.Equal(assets.SelectMany(asset => engine.Outputs[asset.FullPath]), await File.ReadAllBytesAsync(archive));
+        Assert.Equal(assets.Select(asset => asset.Meta.AssetId), result.Map.Assets.Select(asset => asset.Id));
+        Assert.Equal(new long[] { 0, 2, 4, 6, 8, 10, 12 }, result.Map.Assets.Select(asset => asset.Offset));
+        Assert.Equal(assets.Where((_, index) => forceRebuild || index != 3).Select(asset => asset.Meta.AssetId), result.Report.BuiltAssets.Select(asset => asset.AssetId));
+    }
+
+    /// <summary>Failure drains the active model batch before returning and prevents later batches and packing.</summary>
+    [Fact]
+    public async Task TestModelFailureWaitsForOtherWorkerAndStopsLaterBatches()
+    {
+        using var directory = new TemporaryDirectory();
+        var slow = await CreateAsset(directory, "slow", "slow.obj", new byte[] { 10 });
+        var failing = await CreateAsset(directory, "failing", "failing.fbx", new byte[] { 20 });
+        var third = await CreateAsset(directory, "third", "third.obj", new byte[] { 30 });
+        var fourth = await CreateAsset(directory, "fourth", "fourth.fbx", new byte[] { 40 });
+        var later = await CreateAsset(directory, "later", "later.obj", new byte[] { 50 });
+        var engine = new TestEngineApi();
+        foreach (var asset in new[] { slow, third, fourth }) engine.Outputs[asset.FullPath] = new byte[] { 1, 2 };
+        using var firstBatchStarted = new CountdownEvent(4);
+        using var slowStarted = new ManualResetEventSlim();
+        using var failureStarted = new ManualResetEventSlim();
+        using var releaseSlow = new ManualResetEventSlim();
+        var expected = new InvalidOperationException("model conversion failed");
+        engine.BeforeBuild = path =>
+        {
+            Assert.NotEqual(later.FullPath, path);
+            firstBatchStarted.Signal();
+            Assert.True(firstBatchStarted.Wait(TimeSpan.FromSeconds(5)));
+            if (path == slow.FullPath)
+            {
+                slowStarted.Set();
+                Assert.True(releaseSlow.Wait(TimeSpan.FromSeconds(5)));
+            }
+            if (path == failing.FullPath)
+            {
+                Assert.True(slowStarted.Wait(TimeSpan.FromSeconds(5)));
+                failureStarted.Set();
+                throw expected;
+            }
+        };
+        var archive = directory.GetPath("assets.bin");
+        var cache = directory.GetPath("cache");
+        var previousBytes = new byte[] { 99 };
+        await File.WriteAllBytesAsync(archive, previousBytes);
+        var build = Task.Run(() => CreatePipeline("engine").BuildAssets(engine, new[] { slow, failing, third, fourth, later }, cache, archive));
+        try
+        {
+            Assert.True(failureStarted.Wait(TimeSpan.FromSeconds(5)));
+            Assert.False(build.IsCompleted);
+        }
+        finally
+        {
+            releaseSlow.Set();
+            try { await build; } catch { }
+        }
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => build);
+
+        Assert.Same(expected, actual);
+        Assert.Equal(4, engine.Calls.Count);
+        Assert.DoesNotContain(engine.Calls, call => call.AssetPath == later.FullPath);
+        foreach (var asset in new[] { slow, third, fourth })
+            Assert.Equal(new byte[] { 1, 2 }, await File.ReadAllBytesAsync(engine.Calls.Single(call => call.AssetPath == asset.FullPath).DestinationPath));
+        Assert.Equal(previousBytes, await File.ReadAllBytesAsync(archive));
+        Assert.False(File.Exists(Path.Combine(cache, "asset-cache.json")));
+    }
+
     /// <summary>Persisted hit skips native build while force and changed content each rebuild asset.</summary>
     [Fact]
     public async Task TestBuildAssetsHonorsHitForceAndContentChange()
@@ -134,10 +337,11 @@ public sealed class AssetBuildCachePipelineTests
     {
         using var directory = new TemporaryDirectory();
         var packed = directory.GetPath("assets.bin");
-        await File.WriteAllBytesAsync(packed, Array.Empty<byte>());
+        await File.WriteAllBytesAsync(packed, new byte[] { 99 });
 
         var result = CreatePipeline("engine").BuildAssets(new TestEngineApi(), Array.Empty<AssetInfo>(), directory.GetPath("cache"), packed);
 
+        Assert.Empty(await File.ReadAllBytesAsync(packed));
         Assert.Empty(result.Map.Assets);
         Assert.Equal((0, 0, 0, 0L), (result.Report.TotalAssets, result.Report.CacheHits, result.Report.CacheMisses, result.Report.TotalBytes));
         Assert.True(File.Exists(directory.GetPath("cache", "asset-cache.json")));

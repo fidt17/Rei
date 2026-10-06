@@ -137,7 +137,7 @@ public class BuildService : IBuildService, IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             stopwatch.Stop();
 
-            await _projectBuildStateService.SaveSuccessfulBuild(configuration, executionContext, buildSolution, buildAssets);
+            await _projectBuildStateService.SaveSuccessfulBuild(configuration, executionContext, shouldBuildSolution, shouldBuildAssets);
             cancellationToken.ThrowIfCancellationRequested();
 
             if (_discardBuild)

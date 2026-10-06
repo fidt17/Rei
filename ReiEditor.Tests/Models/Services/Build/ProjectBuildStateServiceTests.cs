@@ -47,6 +47,7 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
         File.SetLastWriteTimeUtc(header, timestamp);
         var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
         Assert.True(state.ShouldBuildSolution);
+        Assert.False(state.ShouldBuildAssets);
         Assert.Contains("Engine input", state.Reason);
     }
 
@@ -62,6 +63,7 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
         await File.WriteAllTextAsync(path, "BBBB");
         var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
         Assert.True(state.ShouldBuildSolution);
+        Assert.False(state.ShouldBuildAssets);
     }
 
     private readonly TemporaryProjectFixture _project = new();
@@ -129,38 +131,27 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
         Assert.Equal(expectedHash, source.Value<string>("ContentHash"));
     }
 
-    /// <summary>Same-size source content change invalidates solution snapshot.</summary>
-    [Fact]
-    public async Task TestSameSizeSourceChangeRequestsSolutionOnly()
+    /// <summary>Source and asset changes independently select stages even when both stages are requested.</summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task TestInputChangesSelectStagesIndependently(bool changeSource, bool changeAsset)
     {
         var sourcePath = await PrepareCompleteBuildFiles();
-        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
-        await File.WriteAllTextAsync(sourcePath, "BBBB");
-
-        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, false);
-
-        Assert.True(state.ShouldBuildSolution);
-        Assert.False(state.ShouldBuildAssets);
-        Assert.Contains("source", state.Reason, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>Same-size registered asset content change invalidates assets without requesting solution.</summary>
-    [Fact]
-    public async Task TestSameSizeAssetChangeRequestsAssetsOnly()
-    {
-        await PrepareCompleteBuildFiles();
         var assetPath = _project.Resources.GetProjectPath("Textures", "tracked.png");
         Directory.CreateDirectory(Path.GetDirectoryName(assetPath)!);
         await File.WriteAllTextAsync(assetPath, "AAAA");
         _assets.RegisterNewAssets(new[] { new AssetInfo(new AssetMeta("tracked"), assetPath) });
-        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, false, true);
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
 
-        await File.WriteAllTextAsync(assetPath, "BBBB");
-        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, false, true);
+        if (changeSource) await File.WriteAllTextAsync(sourcePath, "BBBB");
+        if (changeAsset) await File.WriteAllTextAsync(assetPath, "BBBB");
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
 
-        Assert.False(state.ShouldBuildSolution);
-        Assert.True(state.ShouldBuildAssets);
-        Assert.Contains("asset", state.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(changeSource, state.ShouldBuildSolution);
+        Assert.Equal(changeAsset, state.ShouldBuildAssets);
     }
 
     /// <summary>Saving assets-only success retains prior solution snapshot and leaves source change dirty.</summary>
@@ -174,7 +165,7 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
 
         await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, false, true);
         var preservedSnapshot = JObject.Parse(await File.ReadAllTextAsync(GetStatePath()))["SourceFiles"];
-        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, false);
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
 
         Assert.True(JToken.DeepEquals(sourceSnapshot, preservedSnapshot));
         Assert.True(state.ShouldBuildSolution);
@@ -196,7 +187,7 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
 
         await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, false);
         var preservedSnapshot = JObject.Parse(await File.ReadAllTextAsync(GetStatePath()))["AssetFiles"];
-        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, false, true);
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
 
         Assert.True(JToken.DeepEquals(assetSnapshot, preservedSnapshot));
         Assert.False(state.ShouldBuildSolution);
@@ -276,13 +267,13 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
         await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
         File.Delete(_output.GetLiveOutput().ClientDllPath);
 
-        var missingClient = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, false);
+        var missingClient = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
         Assert.True(missingClient.ShouldBuildSolution);
         Assert.False(missingClient.ShouldBuildAssets);
 
         await File.WriteAllTextAsync(_output.GetLiveOutput().ClientDllPath, "client");
         File.Delete(Path.Combine(_liveContext.ResourcesDirectoryPath, "assets.bin"));
-        var missingAssets = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, false, true);
+        var missingAssets = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
         Assert.False(missingAssets.ShouldBuildSolution);
         Assert.True(missingAssets.ShouldBuildAssets);
     }

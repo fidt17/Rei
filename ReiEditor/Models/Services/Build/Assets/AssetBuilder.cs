@@ -95,8 +95,6 @@ public class AssetBuilder : IAssetBuilder
         Directory.CreateDirectory(resourcesDir);
 
         var assetsBinPath = Path.Combine(resourcesDir, "assets.bin");
-        Directory.CreateDirectory(Path.GetDirectoryName(assetsBinPath)!);
-        await using (File.Create(assetsBinPath)) { }
 
         var assets = _assetRegistry.GetAllAssets()
             .Where(ShouldBuild)

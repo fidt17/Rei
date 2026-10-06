@@ -1,4 +1,9 @@
 using System.Globalization;
+using Newtonsoft.Json;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Build.Assets.Cache;
+using ReiEditor.Models.Services.Serialization.Assets;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Build.Assets;
@@ -17,6 +22,19 @@ namespace ReiEditor.Tests.Models.Services.Build.ProjectBuild;
 [Trait("Area", "Build")]
 public sealed class ProjectBuildServiceTests
 {
+    private sealed class CountingAssetConverter : ReiEditor.Tests.Infrastructure.TestDoubles.TestEngineApi
+    {
+        public List<string> BuiltPaths { get; } = new();
+
+        public override long BuildAsset(string assetPath, string destinationFile, long offset)
+        {
+            BuiltPaths.Add(assetPath);
+            var bytes = File.ReadAllBytes(assetPath);
+            File.WriteAllBytes(destinationFile, bytes);
+            return bytes.Length;
+        }
+    }
+
     private sealed record TestBuildCall(
         BuildConfigurationEnum Configuration,
         bool ForceSolution,
@@ -146,6 +164,53 @@ public sealed class ProjectBuildServiceTests
         }
 
         public void Dispose() => Fixture.Dispose();
+    }
+
+    /// <summary>Export reconverts every asset despite a warm cache and packages freshly built bytes.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExportRebuildsAllAssetsDespiteWarmCache(bool changeAsset)
+    {
+        using var context = new TestContext();
+        context.CreateBuildArtifacts();
+        var assets = new[]
+        {
+            new AssetInfo(new AssetMeta("first"), context.Fixture.Resources.GetProjectPath("first.mat")),
+            new AssetInfo(new AssetMeta("second"), context.Fixture.Resources.GetProjectPath("second.mat"))
+        };
+        await File.WriteAllBytesAsync(assets[0].FullPath, new byte[] { 1, 2, 3 });
+        await File.WriteAllBytesAsync(assets[1].FullPath, new byte[] { 4, 5 });
+        var converter = new CountingAssetConverter();
+        var cache = new AssetBuildCacheService(new TestLogger<AssetBuildCacheService>(), new TestEngineSettingsProvider(context.EngineIncludePath));
+        var pipeline = new AssetBuildCachePipeline(new TestLogger<AssetBuildCachePipeline>(), cache);
+        var resources = context.Paths.GetResourcesDirectory();
+        var archive = Path.Combine(resources, "assets.bin");
+        var cachePath = Path.Combine(resources, "Cache");
+        File.WriteAllBytes(archive, Array.Empty<byte>());
+        pipeline.BuildAssets(converter, assets, cachePath, archive);
+        converter.BuiltPaths.Clear();
+        if (changeAsset) await File.WriteAllBytesAsync(assets[0].FullPath, new byte[] { 8, 9 });
+        context.Build.OnBuild = request =>
+        {
+            if (request.BuildAssets)
+            {
+                File.WriteAllBytes(archive, Array.Empty<byte>());
+                var result = pipeline.BuildAssets(converter, assets, cachePath, archive, request.ForceAssets, request.Progress);
+                using (var writer = new BinaryWriter(File.Create(Path.Combine(resources, "map.bin"))))
+                    new BuildAssetMapSerializer().Serialize(result.Map, writer);
+                File.WriteAllText(Path.Combine(resources, "map.json"), JsonConvert.SerializeObject(result.Map));
+            }
+            return Task.FromResult(true);
+        };
+
+        var result = await context.Service.BuildAsync(new ProjectBuildRequest(BuildConfigurationEnum.Debug, context.OutputPath, true, string.Empty), _ => { }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        Assert.Equal(assets.Select(asset => asset.FullPath), converter.BuiltPaths);
+        var expected = File.ReadAllBytes(assets[0].FullPath).Concat(File.ReadAllBytes(assets[1].FullPath)).ToArray();
+        Assert.Equal(expected, File.ReadAllBytes(Path.Combine(context.OutputPath, "Resources", "assets.bin")));
+        Assert.Equal(File.ReadAllBytes(Path.Combine(resources, "map.bin")), File.ReadAllBytes(Path.Combine(context.OutputPath, "Resources", "map.bin")));
     }
 
     /// <summary>Successful Debug packaging routes clean solution and forced asset stages, copies exact bytes, reports assets and restarts editor last.</summary>

@@ -1,3 +1,5 @@
+using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Services.Assets;
@@ -21,12 +23,12 @@ public sealed class BuildServiceTests
     {
         public string GetEnginePath() => root;
         public Task InitializeAsync() => throw new NotSupportedException();
-        public string GetEngineDebugIncludeDir() => throw new NotSupportedException();
-        public string GetEngineReleaseIncludeDir() => throw new NotSupportedException();
+        public string GetEngineDebugIncludeDir() => root;
+        public string GetEngineReleaseIncludeDir() => root;
         public string GetEngineSourceIncludes() => root;
         public string GetEngineResourcesDir() => throw new NotSupportedException();
         public string GetEngineBehavioursDir() => throw new NotSupportedException();
-        public string GetEngineVersion() => throw new NotSupportedException();
+        public string GetEngineVersion() => "test";
     }
 
     // One recorder captures ordering across the pipeline interfaces; each interface has only its test-required members enabled.
@@ -86,7 +88,7 @@ public sealed class BuildServiceTests
         public TestLogger<BuildService> Logger { get; } = new();
         public BuildService Service { get; }
 
-        public TestContext(bool validSources = true)
+        public TestContext(bool validSources = true, bool persistBuildState = false)
         {
             var engine = Project.Directory.GetPath("EngineSources");
             Directory.CreateDirectory(engine);
@@ -97,7 +99,30 @@ public sealed class BuildServiceTests
             {
                 OnImport = async () => { await Pipeline.Stage("import"); return new List<AssetInfo>(); }
             };
-            Service = new(Project.Resources, Pipeline, Pipeline, Pipeline, Pipeline, Logger, Pipeline, importer, sources, Procedures);
+            IProjectBuildStateService stateService = Pipeline;
+            if (persistBuildState)
+            {
+                var active = new ActiveProjectService(new TestLogger<ActiveProjectService>());
+                active.OpenProject(Project.Project);
+                var output = new EditorBuildOutputService(active);
+                var live = output.GetLiveOutput();
+                Directory.CreateDirectory(live.ClientOutputDirectoryPath);
+                Directory.CreateDirectory(live.ResourcesDirectoryPath);
+                File.WriteAllText(live.ClientDllPath, "client");
+                foreach (var name in new[] { "Rei.dll", "Rei.lib", "assimp-vc143-mt.dll" })
+                    File.WriteAllText(Path.Combine(engine, name), name);
+                foreach (var name in new[] { "Rei.dll", "assimp-vc143-mt.dll" })
+                    File.WriteAllText(Path.Combine(live.ClientOutputDirectoryPath, name), name);
+                foreach (var name in new[] { "assets.bin", "map.bin" })
+                    File.WriteAllText(Path.Combine(live.ResourcesDirectoryPath, name), name);
+                File.WriteAllText(Project.Resources.GetScriptsPath("State.cpp"), "AAAA");
+                var assetPath = Project.Resources.GetProjectPath("tracked.mat");
+                File.WriteAllText(assetPath, "AAAA");
+                var assets = new AssetRegistry(new TestLogger<AssetRegistry>());
+                assets.RegisterNewAssets(new[] { new AssetInfo(new AssetMeta("tracked"), assetPath) });
+                stateService = new ProjectBuildStateService(Project.Resources, assets, new TestEngineSettingsProvider(engine), output, new TestLogger<ProjectBuildStateService>());
+            }
+            Service = new(Project.Resources, Pipeline, Pipeline, Pipeline, stateService, Logger, Pipeline, importer, sources, Procedures);
         }
 
         public async ValueTask DisposeAsync()
@@ -105,6 +130,50 @@ public sealed class BuildServiceTests
             await Service.DisposeAsync();
             Project.Dispose();
         }
+    }
+
+    /// <summary>Real persisted input snapshots drive orchestration and become clean after selected stages finish.</summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task PersistedInputsSelectActualStages(bool changeSource, bool changeAsset)
+    {
+        await using var context = new TestContext(persistBuildState: true);
+        Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
+        if (changeSource) await File.WriteAllTextAsync(context.Project.Resources.GetScriptsPath("State.cpp"), "BBBB");
+        if (changeAsset) await File.WriteAllTextAsync(context.Project.Resources.GetProjectPath("tracked.mat"), "BBBB");
+        context.Pipeline.Calls.Clear();
+
+        Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
+        Assert.Equal(changeSource, context.Pipeline.Calls.Contains("solution"));
+        Assert.Equal(changeAsset, context.Pipeline.Calls.Contains("assets"));
+        context.Pipeline.Calls.Clear();
+        Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
+        Assert.DoesNotContain("solution", context.Pipeline.Calls);
+        Assert.DoesNotContain("assets", context.Pipeline.Calls);
+    }
+
+    /// <summary>A source-only build must not mark an asset edit made during compilation as already built.</summary>
+    [Fact]
+    public async Task SourceOnlyBuildPreservesPendingAssetChange()
+    {
+        await using var context = new TestContext(persistBuildState: true);
+        Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
+        await File.WriteAllTextAsync(context.Project.Resources.GetScriptsPath("State.cpp"), "BBBB");
+        context.Pipeline.OnStage = stage => stage == "solution"
+            ? File.WriteAllTextAsync(context.Project.Resources.GetProjectPath("tracked.mat"), "BBBB")
+            : Task.CompletedTask;
+        context.Pipeline.Calls.Clear();
+        Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
+        Assert.Contains("solution", context.Pipeline.Calls);
+        Assert.DoesNotContain("assets", context.Pipeline.Calls);
+
+        context.Pipeline.Calls.Clear();
+        Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
+        Assert.DoesNotContain("solution", context.Pipeline.Calls);
+        Assert.Contains("assets", context.Pipeline.Calls);
     }
 
     /// <summary>Successful build forwards context and flags, awaits each stage, persists success and resets procedure state.</summary>
@@ -156,6 +225,15 @@ public sealed class BuildServiceTests
         Assert.Equal(buildAssets, evaluation.Assets);
         Assert.Equal(Path.Combine(context.Project.Directory.RootPath, "bin"), evaluation.Context.BuildFolder);
         Assert.Equal(expectedSolution || expectedAssets, context.Pipeline.Calls.Contains("persist"));
+        if (expectedSolution || expectedAssets)
+        {
+            var saved = Assert.Single(context.Pipeline.Saves);
+            Assert.Equal((expectedSolution, expectedAssets), (saved.Solution, saved.Assets));
+        }
+        else
+        {
+            Assert.Empty(context.Pipeline.Saves);
+        }
         Assert.Empty(context.Procedures.ActiveProcedures);
     }
 

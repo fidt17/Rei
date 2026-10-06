@@ -71,5 +71,6 @@ namespace rei::internal::engine
         std::shared_ptr<profiling::ProfilingService> _profiler;
 
         void RunUpdateLoop();
+        void DestroyEntities() const;
     };
 }

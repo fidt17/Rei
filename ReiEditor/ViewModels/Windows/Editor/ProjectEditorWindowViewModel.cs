@@ -34,6 +34,7 @@ public class ProjectEditorWindowViewModel : BaseViewModel
     public ProjectWindowViewModel ProjectWindow { get; } = new();
 
     private Scene? _activeScene;
+    private volatile bool _disposed;
 
     private readonly ISceneManagementService _sceneManagementService;
 
@@ -80,6 +81,12 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 
     public override void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+        _sceneManagementService.CurrentScene.Unsubscribe(HandleCurrentSceneChangedEvent);
+        if (_activeScene != null) _activeScene.HierarchyRebuiltEvent -= HandleSceneHierarchyRebuiltEvent;
+        _activeScene = null;
+
         base.Dispose();
         PlaymodePanel.Dispose();
         Console.Dispose();
@@ -91,12 +98,12 @@ public class ProjectEditorWindowViewModel : BaseViewModel
         Hierarchy.Dispose();
         ProjectWindow.Dispose();
         ConsoleHeader.Dispose();
-
-        _sceneManagementService.CurrentScene.Unsubscribe(HandleCurrentSceneChangedEvent);
     }
 
     public void OnProjectLoaded()
     {
+        if (_disposed) return;
+
         _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChangedEvent);
 
         HandleCurrentSceneChangedEvent(_sceneManagementService.CurrentScene.Value);
@@ -104,6 +111,8 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 
     private void HandleCurrentSceneChangedEvent(Scene? scene)
     {
+        if (_disposed) return;
+
         if (_activeScene != null)
         {
             _activeScene.HierarchyRebuiltEvent -= HandleSceneHierarchyRebuiltEvent;
@@ -121,8 +130,12 @@ public class ProjectEditorWindowViewModel : BaseViewModel
 
     private void HandleSceneHierarchyRebuiltEvent()
     {
+        if (_disposed) return;
+
         Dispatcher.UIThread.Invoke(() =>
         {
+            if (_disposed) return;
+
             Hierarchy.SetHierarchy(_activeScene == null ? new Hierarchy<GameEntity>("") : _activeScene.Hierarchy);
         });
     }

@@ -13,18 +13,18 @@ public class AssetBuildEngineSessionFactory : IAssetBuildEngineSessionFactory
     private const uint LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008;
 
     private readonly IClientDllManager _dllManager;
-    private readonly IEngineApi _engineApi;
+    private readonly IEditorBuildOutputService _outputService;
     private readonly IEngineLogger _engineLogger;
     private readonly ILogger<EngineApi> _engineApiLogger;
 
     public AssetBuildEngineSessionFactory(
         IClientDllManager dllManager,
-        IEngineApi engineApi,
+        IEditorBuildOutputService outputService,
         IEngineLogger engineLogger,
         ILogger<EngineApi> engineApiLogger)
     {
         _dllManager = dllManager;
-        _engineApi = engineApi;
+        _outputService = outputService;
         _engineLogger = engineLogger;
         _engineApiLogger = engineApiLogger;
     }
@@ -38,8 +38,21 @@ public class AssetBuildEngineSessionFactory : IAssetBuildEngineSessionFactory
             disposeAction = () => _dllManager.UnloadDll();
         }
 
-        _engineLogger.SubscribeToClient();
-        return new AssetBuildEngineSession(_engineApi, disposeAction);
+        try
+        {
+            _engineLogger.SubscribeToClient();
+            var ownedSession = CreateIsolatedSession(_outputService.GetLiveOutput().ClientDllPath);
+            return new AssetBuildEngineSession(ownedSession.EngineApi, () =>
+            {
+                ownedSession.Dispose();
+                disposeAction?.Invoke();
+            });
+        }
+        catch
+        {
+            disposeAction?.Invoke();
+            throw;
+        }
     }
 
     public AssetBuildEngineSession CreateIsolatedSession(string clientDllPath)
