@@ -2,24 +2,13 @@
 #include "MeshRenderer.h"
 
 #include "Engine/Engine.h"
-#include "Modules/Editor/Components/SelectableByPointerTag.h"
-#include "Modules/Physics/ModelCollider.h"
-#include "Modules/Physics/PointerCollisionListener.h"
+#include "Modules/Editor/RendererSelectionColliderUtility.h"
 
 namespace rei::render
 {
     void MeshRenderer::ConfigureSelectionCollider() const
     {
-        if (!_model.IsLoaded()) return;
-
-        ECS_WORLD(GetInternalWorld())
-
-        const auto meshCollider = std::make_shared<physics::ModelCollider>();
-        meshCollider->SetModel(_model);
-
-        const auto e = GetEntity();
-        GET(e, physics::PointerCollisionListener).Collider = meshCollider;
-        GET(e, editor::SelectableByPointerTag);
+        editor::renderer_selection::Configure(GetEntity(), _model);
     }
 
     void MeshRenderer::AfterREI_SET()

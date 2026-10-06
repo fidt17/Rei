@@ -109,3 +109,45 @@ TEST_CASE("Pointer camera removal clears previous hit state", "[native][coverage
         CHECK(fixture.Listener().DidExit);
     });
 }
+
+TEST_CASE("Pointer transform removal emits one exit and keeps last collision point", "[native][physics-pointer][isolated]")
+{
+    Isolated([]
+    {
+        PointerFixture fixture;
+        fixture.System.OnUpdate();
+        REQUIRE(fixture.Listener().IsInside);
+        const auto lastPoint = fixture.Listener().CollisionPoint;
+        fixture.Native.Registry->Del<Transform>(fixture.Target);
+        fixture.Native.World->Refresh();
+        fixture.System.OnUpdate();
+        CHECK_FALSE(fixture.Listener().IsInside);
+        CHECK(fixture.Listener().DidExit);
+        CheckVector(fixture.Listener().CollisionPoint, lastPoint);
+        fixture.System.OnUpdate();
+        CHECK_FALSE(fixture.Listener().DidEnter);
+        CHECK_FALSE(fixture.Listener().DidExit);
+    });
+}
+
+TEST_CASE("Pointer inactive collider reactivation emits fresh enter", "[native][physics-pointer][isolated]")
+{
+    Isolated([]
+    {
+        PointerFixture fixture;
+        fixture.System.OnUpdate();
+        REQUIRE(fixture.Listener().IsInside);
+        fixture.Native.Registry->Del<ActiveTag>(fixture.Target);
+        fixture.Native.World->Refresh();
+        fixture.System.OnUpdate();
+        CHECK(fixture.Listener().DidExit);
+        fixture.System.OnUpdate();
+        CHECK_FALSE(fixture.Listener().DidExit);
+        fixture.Native.Registry->Get<ActiveTag>(fixture.Target);
+        fixture.Native.World->Refresh();
+        fixture.System.OnUpdate();
+        CHECK(fixture.Listener().IsInside);
+        CHECK(fixture.Listener().DidEnter);
+        CHECK_FALSE(fixture.Listener().DidExit);
+    });
+}

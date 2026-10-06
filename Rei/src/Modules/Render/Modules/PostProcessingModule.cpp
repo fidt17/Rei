@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "PostProcessingModule.h"
+#include "Common/Profiling/ProfileMarkers.h"
 
 #include "glad/glad.h"
 #include "Modules/Render/Material/Material.h"
@@ -31,6 +32,7 @@ void rei::render::PostProcessingModule::OnBeforeRender()
 
 void rei::render::PostProcessingModule::Render(const FrameBuffer& frameBuffer) const
 {
+    REI_PROFILE_SCOPE(profiling::markers::OUTPUT.Id);
     if (!_activeOutput || !_activeOutput->Material.IsLoaded()) return;
 
     _activeOutput->Material->GetShader().Use();

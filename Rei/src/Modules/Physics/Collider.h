@@ -12,6 +12,8 @@ namespace rei::physics
 
         virtual ColliderType GetType() const = 0;
 
+        virtual bool IsAvailable() const { return true; }
+
         virtual bool Intersect(const math::Ray& ray, const glm::mat4& modelMatrix, math::Vector3& out_intersectionPoint) const = 0;
     };
 }

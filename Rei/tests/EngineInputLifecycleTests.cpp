@@ -28,22 +28,6 @@ namespace
         render::Color ImageBaseColor;
     };
 
-    void QueueMouse(NativeEngineFixture& engine, const UINT message, const i32 x, const i32 y)
-    {
-        engine.OnEngineThread([message, x, y]
-        {
-            const auto window = glfwGetCurrentContext();
-            if (!window) throw std::runtime_error("Engine input prerequisite unavailable: current native context");
-            // Deliver through glfwPollEvents after native Input::Update. A direct
-            // callback at the engine task boundary would lose the polling edge.
-            const auto hwnd = glfwGetWin32Window(window);
-            const auto position = static_cast<LPARAM>((static_cast<u32>(y) << 16) | (static_cast<u32>(x) & 0xffff));
-            const WPARAM flags = message == WM_LBUTTONDOWN ? MK_LBUTTON : 0;
-            if (!PostMessageW(hwnd, message, flags, position)) throw std::runtime_error("Could not queue mouse event to owned hidden engine window");
-        });
-        engine.WaitForNextFrames(2);
-    }
-
     ButtonSnapshot ReadButton(NativeEngineFixture& engine, const ecs::Entity entity)
     {
         ButtonSnapshot snapshot;
@@ -106,7 +90,7 @@ TEST_CASE("UI03 real engine pointer hit drives Button material pixels and click 
             glfwSetCursorPosCallback(window, cursor);
             Refresh();
         });
-        QueueMouse(engine, WM_MOUSEMOVE, 0, 0);
+        engine.QueueMouse(WM_MOUSEMOVE, 0, 0);
         auto snapshot = ReadButton(engine, buttonEntity);
         CHECK_FALSE(snapshot.PointerInside);
         CHECK_FALSE(snapshot.ListenerInside);
@@ -114,7 +98,7 @@ TEST_CASE("UI03 real engine pointer hit drives Button material pixels and click 
         auto frame = Capture(engine);
         RequirePixel(Pixel(*frame, 16, 12), {255, 255, 255, 255});
 
-        QueueMouse(engine, WM_MOUSEMOVE, 16, 12);
+        engine.QueueMouse(WM_MOUSEMOVE, 16, 12);
         snapshot = ReadButton(engine, buttonEntity);
         CHECK(snapshot.ListenerInside);
         CHECK(snapshot.PointerInside);
@@ -124,7 +108,7 @@ TEST_CASE("UI03 real engine pointer hit drives Button material pixels and click 
         frame = Capture(engine);
         RequirePixel(Pixel(*frame, 16, 12), {230, 230, 230, 255});
 
-        QueueMouse(engine, WM_LBUTTONDOWN, 16, 12);
+        engine.QueueMouse(WM_LBUTTONDOWN, 16, 12);
         snapshot = ReadButton(engine, buttonEntity);
         CHECK(snapshot.Pressed);
         CHECK(snapshot.MaterialRed == 0.75f);
@@ -134,7 +118,7 @@ TEST_CASE("UI03 real engine pointer hit drives Button material pixels and click 
         engine.WaitForNextFrames(2);
         CHECK(counters->Pressed == 1);
 
-        QueueMouse(engine, WM_LBUTTONUP, 16, 12);
+        engine.QueueMouse(WM_LBUTTONUP, 16, 12);
         snapshot = ReadButton(engine, buttonEntity);
         CHECK_FALSE(snapshot.Pressed);
         CHECK(snapshot.MaterialRed == Catch::Approx(0.9f).margin(1e-6f));
@@ -143,7 +127,7 @@ TEST_CASE("UI03 real engine pointer hit drives Button material pixels and click 
         frame = Capture(engine);
         RequirePixel(Pixel(*frame, 16, 12), {230, 230, 230, 255});
 
-        QueueMouse(engine, WM_LBUTTONDOWN, 16, 12);
+        engine.QueueMouse(WM_LBUTTONDOWN, 16, 12);
         engine.OnEngineThread([buttonEntity] { GetInternalWorld()->GetRegistry()->Get<ui::Button>(buttonEntity).SetInteractable(false); });
         engine.WaitForNextFrames(2);
         snapshot = ReadButton(engine, buttonEntity);
@@ -151,7 +135,7 @@ TEST_CASE("UI03 real engine pointer hit drives Button material pixels and click 
         CHECK(snapshot.MaterialRed == 0.5f);
         frame = Capture(engine);
         RequirePixel(Pixel(*frame, 16, 12), {128, 128, 128, 255});
-        QueueMouse(engine, WM_LBUTTONUP, 16, 12);
+        engine.QueueMouse(WM_LBUTTONUP, 16, 12);
         CHECK(counters->Clicked == 1);
         CHECK(counters->Pressed == 2);
         engine.Stop();

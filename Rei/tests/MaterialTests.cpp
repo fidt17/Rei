@@ -2,6 +2,7 @@
 #include "catch_amalgamated.hpp"
 #include "Modules/Render/Material/Material.h"
 #include "glad/glad.h"
+#include "Common/Profiling/ProfileMarkers.h"
 #include <array>
 #include <map>
 
@@ -84,6 +85,9 @@ namespace
         inline static i32 LocationQueries = 0;
         inline static i32 ReflectionQueries = 0;
         inline static i32 UniformCount = 0;
+        inline static u32 UseCalls = 0;
+        inline static u32 ProgramSwitches = 0;
+        inline static u32 UniformCalls = 0;
         inline static std::map<std::pair<u32, std::string>, i32> Locations;
         inline static std::map<i32, std::array<f32, 4>> Values;
         inline static std::vector<u32> Deleted;
@@ -93,6 +97,7 @@ namespace
             NextProgram = 1;
             Program = 0;
             LocationQueries = ReflectionQueries = UniformCount = 0;
+            UseCalls = ProgramSwitches = UniformCalls = 0;
             Locations.clear();
             Values.clear();
             Deleted.clear();
@@ -131,10 +136,21 @@ namespace
             const auto [it, inserted] = Locations.try_emplace(key, static_cast<i32>(Locations.size()) + 1);
             return it->second;
         }};
-        GlFunctionOverride<PFNGLUSEPROGRAMPROC> UseProgram{glad_glUseProgram, +[](GLuint program) { Program = program; }};
-        GlFunctionOverride<PFNGLUNIFORM1IPROC> Uniform1i{glad_glUniform1i, +[](GLint location, GLint value) { Values[location] = {static_cast<f32>(value), 0, 0, 0}; }};
-        GlFunctionOverride<PFNGLUNIFORM1FPROC> Uniform1f{glad_glUniform1f, +[](GLint location, GLfloat value) { Values[location] = {value, 0, 0, 0}; }};
-        GlFunctionOverride<PFNGLUNIFORM4FPROC> Uniform4f{glad_glUniform4f, +[](GLint location, GLfloat r, GLfloat g, GLfloat b, GLfloat a) { Values[location] = {r, g, b, a}; }};
+        GlFunctionOverride<PFNGLUSEPROGRAMPROC> UseProgram{glad_glUseProgram, +[](GLuint program)
+        {
+            ++UseCalls;
+            if (Program != program) ++ProgramSwitches;
+            Program = program;
+        }};
+        GlFunctionOverride<PFNGLUNIFORM1IPROC> Uniform1i{glad_glUniform1i, +[](GLint location, GLint value) { ++UniformCalls; Values[location] = {static_cast<f32>(value), 0, 0, 0}; }};
+        GlFunctionOverride<PFNGLUNIFORM1FPROC> Uniform1f{glad_glUniform1f, +[](GLint location, GLfloat value) { ++UniformCalls; Values[location] = {value, 0, 0, 0}; }};
+        GlFunctionOverride<PFNGLUNIFORM4FPROC> Uniform4f{glad_glUniform4f, +[](GLint location, GLfloat r, GLfloat g, GLfloat b, GLfloat a) { ++UniformCalls; Values[location] = {r, g, b, a}; }};
+        GlFunctionOverride<PFNGLUNIFORM3FPROC> Uniform3f{glad_glUniform3f, +[](GLint location, GLfloat x, GLfloat y, GLfloat z)
+        {
+            ++UniformCalls;
+            Values[location] = {x, y, z, 0};
+        }};
+        GlFunctionOverride<PFNGLUNIFORMMATRIX4FVPROC> UniformMatrix4fv{glad_glUniformMatrix4fv, +[](GLint, GLsizei, GLboolean, const GLfloat*) { ++UniformCalls; }};
         GlFunctionOverride<PFNGLENABLEPROC> Enable{glad_glEnable, +[](GLenum) {}};
         GlFunctionOverride<PFNGLDISABLEPROC> Disable{glad_glDisable, +[](GLenum) {}};
         GlFunctionOverride<PFNGLACTIVETEXTUREPROC> ActiveTexture{glad_glActiveTexture, +[](GLenum) {}};
@@ -275,4 +291,63 @@ TEST_CASE("Material texture writes stay on CPU and keep deterministic sampler sl
     material.Use();
     REQUIRE(GlBindingSpy::Values.at(second)[0] == 0);
     REQUIRE(material.REI_GET().at("Properties").at("zTexture").at("Id") == texture.Id);
+}
+
+TEST_CASE("Shader profiling counts issued GL calls and restores upload phases", "[profiling][render-profiling][material-binding]")
+{
+    using namespace rei::profiling;
+    GlBindingSpy spy;
+    auto shader = MakeBindingShader();
+    Material material(shader);
+    material.SetFloat("value", 4);
+    ProfilingService profiler;
+    REQUIRE(profiler.Register(markers::ALL));
+    REQUIRE(std::string(profiler.RequestCapture(1).Status) == "queued");
+    profiler.BeginFrame();
+    shader->Use();
+    shader->Use(); // Calls count even when program does not change.
+    shader->SetInt("absent", 1);
+    shader->SetFloat("absent", 1);
+    shader->SetVector3("absent", {1, 2, 3});
+    shader->SetColor("absent", rei::render::Color::White());
+    shader->SetMatrix4f("absent", glm::mat4(1));
+    REQUIRE(GlBindingSpy::UseCalls == 2);
+    REQUIRE(GlBindingSpy::UniformCalls == 0);
+    shader->SetInt("value", 1);
+    shader->SetFloat("value", 2);
+    shader->SetVector3("position", {1, 2, 3});
+    shader->SetColor("color", rei::render::Color::White());
+    shader->SetMatrix4f("custom", glm::mat4(1));
+    {
+        UniformPhaseScope lighting(UniformPhase::Lighting);
+        shader->SetFloat("strength", 1);
+        shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
+        material.Use();
+        shader->SetFloat("strength", 2); // Nested camera/object/material phases must restore Lighting.
+    }
+    material.Use(); // Unchanged material still performs its actual GL writes.
+    profiler.EndFrame();
+    profiler.BeginFrame();
+    const auto snapshot = profiler.CopySnapshot(SnapshotView::LastCapture);
+    auto value = [&](const Descriptor& descriptor)
+    {
+        for (u32 index = 0; index < snapshot.MetricCount; ++index)
+            if (snapshot.Metrics[index].Id == descriptor.Id) return snapshot.Metrics[index].Value;
+        throw std::runtime_error("Expected metric is missing.");
+    };
+    CHECK(snapshot.InvalidFrames == 0);
+    CHECK(snapshot.SampleFrames == 1);
+    CHECK(GlBindingSpy::UniformCalls == 12);
+    CHECK(value(markers::UNIFORMS) == GlBindingSpy::UniformCalls);
+    CHECK(value(markers::UNIFORMS_LIGHTING) == 2);
+    CHECK(value(markers::UNIFORMS_CAMERA) == 2);
+    CHECK(value(markers::UNIFORMS_OBJECT) == 1);
+    CHECK(value(markers::UNIFORMS_MATERIAL) == 2);
+    CHECK(value(markers::UNIFORMS_OTHER) == 5);
+    CHECK(value(markers::UNIFORMS_LIGHTING) + value(markers::UNIFORMS_CAMERA) + value(markers::UNIFORMS_OBJECT) +
+        value(markers::UNIFORMS_MATERIAL) + value(markers::UNIFORMS_OTHER) == value(markers::UNIFORMS));
+    CHECK(GlBindingSpy::UseCalls == 16);
+    CHECK(value(markers::SHADER_USE_CALLS) == GlBindingSpy::UseCalls);
+    CHECK(GlBindingSpy::ProgramSwitches == 1);
+    profiler.Shutdown();
 }

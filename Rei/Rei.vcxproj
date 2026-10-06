@@ -640,6 +640,9 @@
     <ClInclude Include="src\Modules\Components\ActiveTag.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\Editor\EditorPointerInteractionState.h" />
+    <ClInclude Include="src\Modules\Editor\Components\EditorSelectionCollider.h" />
+    <ClInclude Include="src\Modules\Editor\RendererSelectionColliderUtility.h" />
+    <ClInclude Include="src\Modules\Input\Pointer\PointerCollisionStateUtility.h" />
     <ClInclude Include="src\Modules\Editor\Components\SelectableByPointerTag.h" />
     <ClInclude Include="src\Modules\Editor\Components\SelectedTag.h" />
     <ClInclude Include="src\Modules\Editor\Components\SelectionByPointerBlockerTag.h" />
@@ -1014,6 +1017,12 @@
     </ClCompile>
     <ClCompile Include="tests\LoggingBoundaryTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EditorPickingTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EditorPickingIntegrationTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\PointerInputTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>

@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Common/Profiling/ProfileMarkers.h"
 #include "UIPointerCollisionSystem.h"
+#include "PointerCollisionStateUtility.h"
 
 #include "Common/Transform/RectTransformUtility.h"
 #include "Engine/Engine.h"
@@ -101,36 +102,24 @@ namespace rei::input
             ECS_WORLD(GetInternalWorld())
 
             auto& listener = GET(entity, physics::PointerCollisionListener);
-            listener.DidEnter = false;
-            listener.DidExit = false;
-
-            if (isInside)
-            {
-                listener.DidEnter = !listener.IsInside;
-                listener.IsInside = true;
-                listener.CollisionPoint = math::Vector3(screenPoint.x, screenPoint.y, 0.0f);
-                return;
-            }
-
-            listener.DidExit = listener.IsInside;
-            listener.IsInside = false;
+            UpdatePointerCollisionState(listener, isInside);
+            if (isInside) listener.CollisionPoint = math::Vector3(screenPoint.x, screenPoint.y, 0.0f);
         }
     }
 
     UIPointerCollisionSystem::UIPointerCollisionSystem(const std::shared_ptr<ecs::World>& world) : System(world)
     {
-        _entities = FILTER(physics::PointerCollisionListener, Transform, ui::RectTransform, ActiveTag);
+        _entities = FILTER(physics::PointerCollisionListener, ui::RectTransform);
     }
 
     void UIPointerCollisionSystem::OnUpdate()
     {
         REI_PROFILE_SCOPE(profiling::markers::PICK_UI.Id);
         const auto mainCamera = render::Camera::GetMainCamera();
-        if (mainCamera.IsNull()) return;
 
         i32 width = 1;
         i32 height = 1;
-        mainCamera.Get().GetOutputSize(width, height);
+        if (!mainCamera.IsNull()) mainCamera.Get().GetOutputSize(width, height);
 
         f32 xPos = 0.0f;
         f32 yPos = 0.0f;
@@ -138,10 +127,11 @@ namespace rei::input
         const math::Vector2 screenPoint(xPos, static_cast<f32>(height) - yPos);
 
         std::unordered_set<ecs::Entity> hitEntities;
-        const bool bubbleToButton = GetEngine().IsPlaymode();
+        const bool bubbleToButton = !mainCamera.IsNull() && GetEngine().IsPlaymode();
 
         FOR(e, _entities)
         {
+            if (mainCamera.IsNull() || !HAS(e, ActiveTag) || !HAS(e, Transform)) continue;
             profiling::Count(profiling::markers::PICK_CANDIDATES.Id);
             if (!IsUiHit(e, screenPoint, width, height)) continue;
 

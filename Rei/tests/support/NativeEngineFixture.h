@@ -74,9 +74,9 @@ namespace rei::tests
         std::unique_ptr<internal::engine::Engine> Engine;
         std::function<void()> BeforeStartAction;
 
-        explicit NativeEngineFixture(const internal::engine::EngineMode mode = internal::engine::PlayMode, const std::string& marker = "first-session", const std::function<void(TemporaryDirectory&)>& prepareResources = {})
+        explicit NativeEngineFixture(const internal::engine::EngineMode mode = internal::engine::PlayMode, const std::string& marker = "first-session", const std::function<void(TemporaryDirectory&)>& prepareResources = {}, const bool isEditor = false)
             : Resources([&](TemporaryDirectory& files) { if (prepareResources) prepareResources(files); else PrepareEngineResources(files, marker); }),
-              _mode(mode)
+              _mode(mode), _isEditor(isEditor)
         {
         }
 
@@ -94,7 +94,7 @@ namespace rei::tests
             {
                 try
                 {
-                    auto engine = std::make_unique<internal::engine::Engine>(App, _mode, false);
+                    auto engine = std::make_unique<internal::engine::Engine>(App, _mode, _isEditor);
                     {
                         std::scoped_lock lock(_mutex);
                         Engine = std::move(engine);
@@ -172,6 +172,21 @@ namespace rei::tests
             finished.get();
         }
 
+        void QueueMouse(const UINT message, const i32 x, const i32 y)
+        {
+            OnEngineThread([message, x, y]
+            {
+                const auto window = glfwGetCurrentContext();
+                if (!window) throw std::runtime_error("Engine input prerequisite unavailable: current native context");
+                // Poll native events after Input::Update; direct task callbacks lose edges.
+                const auto hwnd = glfwGetWin32Window(window);
+                const auto position = static_cast<LPARAM>((static_cast<u32>(y) << 16) | (static_cast<u32>(x) & 0xffff));
+                const WPARAM flags = message == WM_LBUTTONDOWN ? MK_LBUTTON : message == WM_RBUTTONDOWN ? MK_RBUTTON : 0;
+                if (!PostMessageW(hwnd, message, flags, position)) throw std::runtime_error("Could not queue mouse event to owned hidden engine window");
+            });
+            WaitForNextFrames(2);
+        }
+
         u64 WaitForNextFrames(const u32 frameCount = 2, const u32 timeoutMs = 10000)
         {
             // Completed native frames exist in both modes; App::OnUpdate does
@@ -215,6 +230,7 @@ namespace rei::tests
 
     private:
         internal::engine::EngineMode _mode;
+        bool _isEditor;
         std::thread _thread;
         std::mutex _mutex;
         std::condition_variable _changed;

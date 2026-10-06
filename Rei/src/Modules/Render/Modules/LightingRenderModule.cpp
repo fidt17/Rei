@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "LightingRenderModule.h"
+#include "Common/Profiling/ProfileMarkers.h"
 
 #include "Modules/Components/ActiveTag.h"
 #include "rei_behaviours/transformation/Transform.h"
@@ -42,6 +43,8 @@ void rei::render::LightingRenderModule::Render() const
 
 void rei::render::LightingRenderModule::SetLightValues(const Shader& shader) const
 {
+    REI_PROFILE_SCOPE(profiling::markers::LIGHTING_APPLY.Id);
+    profiling::UniformPhaseScope phase(profiling::UniformPhase::Lighting);
     SetAmbientLight(shader);
     SetPointLights(shader);
 }

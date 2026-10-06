@@ -11,10 +11,12 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class EngineIntegrationHarness : IAsyncDisposable
 {
     private readonly string _fixtureName;
+    private readonly string? _sourceProjectDirectory;
     private readonly bool _keepBuildOutputs;
     private bool _prepared;
     private readonly SemaphoreSlim _diagnosticWriteLock = new(1, 1);
     public int LaunchCount { get; private set; }
+    public TimeSpan StartupTimeout { get; }
     public int ProcessId => _editor?.Id ?? throw new InvalidOperationException("Editor is not running.");
     private Process? _editor;
 
@@ -24,11 +26,15 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
     public string RunDirectory { get; } = Path.Combine(Path.GetTempPath(), "Rei-engine-tests", Guid.NewGuid().ToString("N"));
     public string ProjectDirectory => Path.Combine(RunDirectory, "project");
 
-    public EngineIntegrationHarness(string fixtureName = "DataAssets", bool? keepBuildOutputs = null)
+    public EngineIntegrationHarness(string fixtureName = "DataAssets", bool? keepBuildOutputs = null, string? sourceProjectDirectory = null, TimeSpan? startupTimeout = null)
     {
         if (string.IsNullOrWhiteSpace(fixtureName) || Path.GetFileName(fixtureName) != fixtureName || fixtureName is "." or "..")
             throw new ArgumentException("Fixture name must be a single directory name.", nameof(fixtureName));
         _fixtureName = fixtureName;
+        _sourceProjectDirectory = sourceProjectDirectory == null ? null : Path.GetFullPath(sourceProjectDirectory).TrimEnd(Path.DirectorySeparatorChar);
+        StartupTimeout = startupTimeout ?? TimeSpan.FromMinutes(sourceProjectDirectory == null ? 4 : 15);
+        if (StartupTimeout <= TimeSpan.Zero || StartupTimeout > TimeSpan.FromMinutes(30))
+            throw new ArgumentOutOfRangeException(nameof(startupTimeout), "Startup timeout must be positive and at most 30 minutes.");
         _keepBuildOutputs = keepBuildOutputs ?? string.Equals(Environment.GetEnvironmentVariable("REI_TEST_KEEP_BUILD_OUTPUTS"), "true", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -41,24 +47,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         var engineFile = RequireFile("REI_TEST_ENGINE_FILE");
         var msbuild = RequireFile("REI_TEST_MSBUILD");
         var storage = Path.Combine(RunDirectory, "storage");
-        if (!_prepared)
-        {
-            var fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", _fixtureName);
-            CopyTree(fixture, ProjectDirectory);
-            var projectFile = Directory.GetFiles(ProjectDirectory, "*.rei").Single();
-            var project = JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
-            project["ProjectSolutionPath"] = ResolveFixturePath(project["ProjectSolutionPath"]!.GetValue<string>());
-            project["ProjectVisualStudioProjectPath"] = ResolveFixturePath(project["ProjectVisualStudioProjectPath"]!.GetValue<string>());
-            await File.WriteAllTextAsync(projectFile, project.ToJsonString());
-            var vcxproj = project["ProjectVisualStudioProjectPath"]!.GetValue<string>();
-            await File.WriteAllTextAsync(vcxproj, (await File.ReadAllTextAsync(vcxproj)).Replace("__REI_ROOT__", Path.GetDirectoryName(engineFile)!));
-            Directory.CreateDirectory(storage);
-            await File.WriteAllTextAsync(Path.Combine(storage, "preferences.json"), JsonSerializer.Serialize(new
-            {
-                EnginePath = engineFile, MsBuildPath = msbuild, BookmarkedProjectsPaths = Array.Empty<string>()
-            }));
-            _prepared = true;
-        }
+        await PrepareProjectAsync(engineFile, msbuild);
         var startupProject = Directory.GetFiles(ProjectDirectory, "*.rei").Single();
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
@@ -81,7 +70,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         LaunchCount++;
         _stdout = CaptureOutputAsync(_editor.StandardOutput, Path.Combine(RunDirectory, $"stdout-{LaunchCount}.log"));
         _stderr = CaptureOutputAsync(_editor.StandardError, Path.Combine(RunDirectory, $"stderr-{LaunchCount}.log"));
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+        using var timeout = new CancellationTokenSource(StartupTimeout);
         var endpoint = new Uri($"http://127.0.0.1:{port}/mcp");
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         await WaitForHealthAsync(http, new Uri(endpoint, "/health"), EnsureAlive, timeout.Token);
@@ -103,12 +92,43 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
                 state.GetProperty("engine").GetProperty("status").GetString() == "running" &&
                 !state.GetProperty("automation").GetProperty("isBuilding").GetBoolean() &&
                 !state.GetProperty("automation").GetProperty("isImporting").GetBoolean();
-        }, TimeSpan.FromMinutes(4));
+        }, StartupTimeout);
         var ready = await CallAsync("rei_editor_get_state");
         Assert.Equal(Path.GetFullPath(ProjectDirectory), Path.GetFullPath(ready.GetProperty("project").GetProperty("rootPath").GetString()!));
         var errors = await CallAsync("rei_editor_get_logs", new() { ["minimumLevel"] = "error", ["limit"] = 500 });
         Assert.True(errors.GetProperty("entries").GetArrayLength() == 0, $"Startup errors: {errors}. Artifacts: {RunDirectory}");
         await RecordTimingAsync("startup", startup.Elapsed);
+    }
+
+    internal async Task PrepareProjectAsync(string engineFile, string msbuild)
+    {
+        if (_prepared) return;
+        var source = _sourceProjectDirectory ?? Path.Combine(AppContext.BaseDirectory, "Fixtures", _fixtureName);
+        ExternalProjectCopy.ValidateSource(source);
+        ExternalProjectCopy.ValidateDestination(source, ProjectDirectory);
+        Directory.CreateDirectory(RunDirectory);
+        CopyTree(source, ProjectDirectory);
+        if (_sourceProjectDirectory != null)
+            await ExternalProjectCopy.LocalizeBuildFilesAsync(source, ProjectDirectory);
+        var projectFile = Directory.GetFiles(ProjectDirectory, "*.rei").Single();
+        var project = JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
+        foreach (var field in new[] { "ProjectSolutionPath", "ProjectVisualStudioProjectPath" })
+        {
+            var path = project[field]!.GetValue<string>();
+            if (_sourceProjectDirectory != null) path = ExternalProjectCopy.RelativeProjectPath(source, path);
+            project[field] = ResolveFixturePath(path);
+            if (!File.Exists(project[field]!.GetValue<string>())) throw new FileNotFoundException($"Missing {field} in isolated project.");
+        }
+        await File.WriteAllTextAsync(projectFile, project.ToJsonString());
+        var vcxproj = project["ProjectVisualStudioProjectPath"]!.GetValue<string>();
+        await File.WriteAllTextAsync(vcxproj, (await File.ReadAllTextAsync(vcxproj)).Replace("__REI_ROOT__", Path.GetDirectoryName(engineFile)!));
+        var storage = Path.Combine(RunDirectory, "storage");
+        Directory.CreateDirectory(storage);
+        await File.WriteAllTextAsync(Path.Combine(storage, "preferences.json"), JsonSerializer.Serialize(new
+        {
+            EnginePath = engineFile, MsBuildPath = msbuild, BookmarkedProjectsPaths = Array.Empty<string>()
+        }));
+        _prepared = true;
     }
 
     internal static async Task WaitForHealthAsync(HttpClient http, Uri endpoint, Action ensureAlive, CancellationToken cancellationToken)
@@ -343,11 +363,15 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
 
     private static void CopyTree(string source, string destination)
     {
+        RejectLink(source);
         Directory.CreateDirectory(destination);
-        foreach (var file in Directory.GetFiles(source)) File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
+        foreach (var file in Directory.GetFiles(source))
+        {
+            RejectLink(file);
+            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
+        }
         foreach (var directory in Directory.GetDirectories(source))
         {
-            if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) throw new IOException("Fixture must not contain directory links.");
             CopyTree(directory, Path.Combine(destination, Path.GetFileName(directory)));
         }
     }

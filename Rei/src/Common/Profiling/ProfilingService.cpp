@@ -162,6 +162,7 @@ namespace rei::profiling
         ++_frameId;
         ++_generation;
         _depth = 0;
+        _uniformPhase = UniformPhase::Other;
         _invalid = false;
         _dropped = 0;
         if (_capture.State == CaptureState::Queued) _capture.State = CaptureState::Recording;
@@ -233,6 +234,15 @@ namespace rei::profiling
         _frame[slot].Value += amount;
     }
 
+    void ProfilingService::RecordUniformUpload() noexcept
+    {
+        if (current != this) return;
+        constexpr std::array phases = {markers::UNIFORMS_LIGHTING.Id, markers::UNIFORMS_CAMERA.Id,
+            markers::UNIFORMS_OBJECT.Id, markers::UNIFORMS_MATERIAL.Id, markers::UNIFORMS_OTHER.Id};
+        AddCounter(markers::UNIFORMS.Id);
+        AddCounter(phases[static_cast<u32>(_uniformPhase)]);
+    }
+
     void ProfilingService::MergeFrame(Snapshot& snapshot, u64 elapsed)
     {
         if (snapshot.FrameCount == 0) snapshot.FirstFrame = _frameId;
@@ -295,6 +305,25 @@ namespace rei::profiling
     Scope::~Scope() noexcept
     {
         if (_service) _service->EndScope(_depth, _generation);
+    }
+
+    UniformPhaseScope::UniformPhaseScope(UniformPhase phase) noexcept : _service(ProfilingService::Current())
+    {
+        if (!_service) return;
+        _generation = _service->_generation;
+        _previous = _service->_uniformPhase;
+        _service->_uniformPhase = phase;
+    }
+
+    UniformPhaseScope::~UniformPhaseScope() noexcept
+    {
+        if (ProfilingService::Current() != _service || !_service || _service->_generation != _generation) return;
+        _service->_uniformPhase = _previous;
+    }
+
+    void RecordUniformUpload() noexcept
+    {
+        if (auto* service = ProfilingService::Current()) service->RecordUniformUpload();
     }
 
     void Count(u64 id, u64 amount) noexcept

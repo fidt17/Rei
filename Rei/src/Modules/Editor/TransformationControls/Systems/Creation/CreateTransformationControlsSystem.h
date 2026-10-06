@@ -20,6 +20,7 @@ namespace rei::editor
     private:
         
         void CreateTransformationControl() const;
+        ecs::Entity CreateControlPart(const assets::AssetRef<render::Model>& model) const;
 
         void CreateMovementArrow(TransformationControlMovementArrow& arrow, const math::Vector3& direction) const;
         void CreateMovementPlane(TransformationControlMovementPlane& plane, const math::Vector3& firstDirection, const math::Vector3& secondDirection) const;

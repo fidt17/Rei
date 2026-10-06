@@ -16,6 +16,7 @@ namespace rei::profiling
     constexpr u32 MAX_NAME_LENGTH = 95;
 
     enum class MetricKind { Scope, Counter };
+    enum class UniformPhase { Lighting, Camera, Object, Material, Other };
     enum class CaptureState { Idle, Queued, Recording, Complete, Cancelled };
     enum class SnapshotView { Recent, LastCapture };
 
@@ -98,12 +99,14 @@ namespace rei::profiling
         REI_API void EndFrame();
         REI_API void Shutdown();
         REI_API void AddCounter(u64 id, u64 amount = 1) noexcept;
+        REI_API void RecordUniformUpload() noexcept;
         REI_API static ProfilingService* Current() noexcept;
         REI_API static u64 ReadClock();
         REI_API static std::string ToJson(const Snapshot& snapshot, const char* status, u32 limit = MAX_METRICS);
 
     private:
         friend class Scope;
+        friend class UniformPhaseScope;
         u32 BeginScope(u64 id) noexcept;
         void EndScope(u32 depth, u64 generation) noexcept;
         u32 Find(u64 id) const noexcept;
@@ -120,6 +123,7 @@ namespace rei::profiling
         std::array<Metric, MAX_METRICS> _frame = {};
         std::array<StackEntry, MAX_DEPTH> _stack = {};
         u32 _depth = 0;
+        UniformPhase _uniformPhase = UniformPhase::Other;
         u64 _generation = 0;
         u64 _frameId = 0;
         u64 _frameStart = 0;
@@ -156,6 +160,22 @@ namespace rei::profiling
         u64 _generation = 0;
     };
 
+    // Counter attribution only: no clocks, GL state tracking, or upload suppression.
+    class UniformPhaseScope final
+    {
+    public:
+        REI_API explicit UniformPhaseScope(UniformPhase phase) noexcept;
+        REI_API ~UniformPhaseScope() noexcept;
+        UniformPhaseScope(const UniformPhaseScope&) = delete;
+        UniformPhaseScope& operator=(const UniformPhaseScope&) = delete;
+
+    private:
+        ProfilingService* _service = nullptr;
+        u64 _generation = 0;
+        UniformPhase _previous = UniformPhase::Other;
+    };
+
+    REI_API void RecordUniformUpload() noexcept;
     REI_API void RecordDraw(u64 submittedVertices, u64 triangles) noexcept;
     REI_API void Count(u64 id, u64 amount = 1) noexcept;
 }

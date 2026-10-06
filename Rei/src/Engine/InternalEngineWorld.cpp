@@ -62,6 +62,8 @@ namespace rei::internal::engine
 
         _world->AddSystem<render::AssignMainCameraSystem>(renderer);
 
+        if (GetEngine().IsEditorMode()) _world->AddSystem<editor::FlyCameraSystem>();
+
         _world->AddSystem<input::PointerCollisionSystem>();
         _world->AddSystem<input::UIPointerCollisionSystem>();
 
@@ -73,7 +75,6 @@ namespace rei::internal::engine
 
         if (GetEngine().IsEditorMode())
         {
-            _world->AddSystem<editor::FlyCameraSystem>();
             _world->AddSystem<editor::PointerEntitySelectionSystem>();
 
             _world->AddModule<editor::TransformationControlsModule>();
@@ -100,7 +101,7 @@ namespace rei::internal::engine
             executionTimes.UpdateTimeMs = updateStopwatch->ElapsedMs();
             GetDiagnostics().SetExecutionTimes(executionTimes);
         });
-        
+
         LOG_DEBUG("Configured internal world")
     }
 

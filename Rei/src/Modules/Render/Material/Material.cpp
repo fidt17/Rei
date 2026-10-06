@@ -89,6 +89,7 @@ namespace rei::render
 
         profiling::Count(profiling::markers::MATERIAL_BINDS.Id);
         _shader->Use();
+        profiling::UniformPhaseScope phase(profiling::UniformPhase::Material);
         SyncShaderBindings();
 
         if (UseDepth())

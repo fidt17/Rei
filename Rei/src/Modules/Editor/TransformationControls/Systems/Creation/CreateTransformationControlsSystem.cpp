@@ -2,6 +2,7 @@
 #include "CreateTransformationControlsSystem.h"
 
 #include "Modules/Editor/Components/SelectableByPointerTag.h"
+#include "Modules/Editor/RendererSelectionColliderUtility.h"
 #include "Modules/Editor/Components/SelectionByPointerBlockerTag.h"
 #include "Modules/Editor/TransformationControls/TransformationControl.h"
 #include "Modules/EntityManagement/EntityManager.h"
@@ -71,15 +72,25 @@ namespace rei::editor
         CreateRectTransformHandle(tc.BottomRightRectHandle, math::Vector2(1, -1), true);
     }
 
+    ecs::Entity CreateTransformationControlsSystem::CreateControlPart(const assets::AssetRef<render::Model>& model) const
+    {
+        ECS_WORLD(GetInternalWorld())
+        const auto entity = NEW_ENTITY();
+        GET(entity, Transform).Reset();
+        GET(entity, SelectionByPointerBlockerTag);
+        auto& renderer = ADD_BEHAVIOUR(entity, render::MeshRenderer);
+        renderer.SetModel(model);
+        GET(entity, physics::PointerCollisionListener).Collider = renderer_selection::CreateCollider(model);
+        DEL(entity, SelectableByPointerTag);
+        return entity;
+    }
+
     void CreateTransformationControlsSystem::CreateMovementArrow(TransformationControlMovementArrow& arrow, const math::Vector3& direction) const
     {
         arrow.Direction = direction;
 
-        arrow.Entity = NEW_ENTITY();
-        GET(arrow.Entity, Transform).Reset();
-
-        auto& meshRenderer = ADD_BEHAVIOUR(arrow.Entity, render::MeshRenderer);
-        meshRenderer.SetModel(_movementArrowModel);
+        arrow.Entity = CreateControlPart(_movementArrowModel);
+        auto& meshRenderer = GET(arrow.Entity, render::MeshRenderer);
 
         auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         arrowMaterial->SetDepth(false);
@@ -87,9 +98,6 @@ namespace rei::editor
         arrowMaterial->GetShader().SetColor("_Color", render::Color::White());
         meshRenderer.SetMaterial(arrowMaterial);
 
-        GET(arrow.Entity, physics::PointerCollisionListener);
-        DEL(arrow.Entity, SelectableByPointerTag);
-        GET(arrow.Entity, SelectionByPointerBlockerTag);
     }
 
     void CreateTransformationControlsSystem::CreateMovementPlane(TransformationControlMovementPlane& plane, const math::Vector3& firstDirection, const math::Vector3& secondDirection) const
@@ -97,11 +105,8 @@ namespace rei::editor
         plane.FirstDirection = firstDirection;
         plane.SecondDirection = secondDirection;
 
-        plane.Entity = NEW_ENTITY();
-        GET(plane.Entity, Transform).Reset();
-
-        auto& meshRenderer = ADD_BEHAVIOUR(plane.Entity, render::MeshRenderer);
-        meshRenderer.SetModel(_movementPlaneModel);
+        plane.Entity = CreateControlPart(_movementPlaneModel);
+        auto& meshRenderer = GET(plane.Entity, render::MeshRenderer);
 
         auto planeMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         planeMaterial->SetDepth(false);
@@ -109,20 +114,14 @@ namespace rei::editor
         planeMaterial->GetShader().SetColor("_Color", render::Color(1.0f, 1.0f, 1.0f, 0.25f));
         meshRenderer.SetMaterial(planeMaterial);
 
-        GET(plane.Entity, physics::PointerCollisionListener);
-        DEL(plane.Entity, SelectableByPointerTag);
-        GET(plane.Entity, SelectionByPointerBlockerTag);
     }
 
     void CreateTransformationControlsSystem::CreateScaleRoot(TransformationControlScaleArrow& arrow, const math::Vector3& direction) const
     {
         arrow.Direction = direction;
 
-        arrow.Entity = NEW_ENTITY();
-        GET(arrow.Entity, Transform).Reset();
-
-        auto& meshRenderer = ADD_BEHAVIOUR(arrow.Entity, render::MeshRenderer);
-        meshRenderer.SetModel(_cubeModel);
+        arrow.Entity = CreateControlPart(_cubeModel);
+        auto& meshRenderer = GET(arrow.Entity, render::MeshRenderer);
 
         auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         arrowMaterial->SetDepth(false);
@@ -130,20 +129,14 @@ namespace rei::editor
         arrowMaterial->GetShader().SetColor("_Color", render::Color::White());
         meshRenderer.SetMaterial(arrowMaterial);
 
-        GET(arrow.Entity, physics::PointerCollisionListener);
-        DEL(arrow.Entity, SelectableByPointerTag);
-        GET(arrow.Entity, SelectionByPointerBlockerTag);
     }
 
     void CreateTransformationControlsSystem::CreateRotationRing(TransformationControlRotationRing& ring, const math::Vector3& direction) const
     {
         ring.Direction = direction;
 
-        ring.Entity = NEW_ENTITY();
-        GET(ring.Entity, Transform).Reset();
-
-        auto& meshRenderer = ADD_BEHAVIOUR(ring.Entity, render::MeshRenderer);
-        meshRenderer.SetModel(_rotationRingModel);
+        ring.Entity = CreateControlPart(_rotationRingModel);
+        auto& meshRenderer = GET(ring.Entity, render::MeshRenderer);
 
         auto ringMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         ringMaterial->SetDepth(false);
@@ -151,20 +144,14 @@ namespace rei::editor
         ringMaterial->GetShader().SetColor("_Color", render::Color::White());
         meshRenderer.SetMaterial(ringMaterial);
 
-        GET(ring.Entity, physics::PointerCollisionListener);
-        DEL(ring.Entity, SelectableByPointerTag);
-        GET(ring.Entity, SelectionByPointerBlockerTag);
     }
 
     void CreateTransformationControlsSystem::CreateScaleArrow(TransformationControlScaleArrow& arrow, const math::Vector3& direction) const
     {
         arrow.Direction = direction;
 
-        arrow.Entity = NEW_ENTITY();
-        GET(arrow.Entity, Transform).Reset();
-
-        auto& meshRenderer = ADD_BEHAVIOUR(arrow.Entity, render::MeshRenderer);
-        meshRenderer.SetModel(_scaleArrowModel);
+        arrow.Entity = CreateControlPart(_scaleArrowModel);
+        auto& meshRenderer = GET(arrow.Entity, render::MeshRenderer);
 
         auto arrowMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         arrowMaterial->SetDepth(false);
@@ -172,9 +159,6 @@ namespace rei::editor
         arrowMaterial->GetShader().SetColor("_Color", render::Color::White());
         meshRenderer.SetMaterial(arrowMaterial);
 
-        GET(arrow.Entity, physics::PointerCollisionListener);
-        DEL(arrow.Entity, SelectableByPointerTag);
-        GET(arrow.Entity, SelectionByPointerBlockerTag);
     }
 
     void CreateTransformationControlsSystem::CreateRectTransformHandle(TransformationControlRectHandle& handle, const math::Vector2& direction, const bool isCorner) const
@@ -182,11 +166,8 @@ namespace rei::editor
         handle.Direction = direction;
         handle.IsCorner = isCorner;
 
-        handle.Entity = NEW_ENTITY();
-        GET(handle.Entity, Transform).Reset();
-
-        auto& meshRenderer = ADD_BEHAVIOUR(handle.Entity, render::MeshRenderer);
-        meshRenderer.SetModel(_cubeModel);
+        handle.Entity = CreateControlPart(_cubeModel);
+        auto& meshRenderer = GET(handle.Entity, render::MeshRenderer);
 
         auto handleMaterial = render::Material::CreateInstanceFrom(*_colorMaterial.Get());
         handleMaterial->SetDepth(false);
@@ -194,8 +175,5 @@ namespace rei::editor
         handleMaterial->GetShader().SetColor("_Color", render::Color::White());
         meshRenderer.SetMaterial(handleMaterial);
 
-        GET(handle.Entity, physics::PointerCollisionListener);
-        DEL(handle.Entity, SelectableByPointerTag);
-        GET(handle.Entity, SelectionByPointerBlockerTag);
     }
 }

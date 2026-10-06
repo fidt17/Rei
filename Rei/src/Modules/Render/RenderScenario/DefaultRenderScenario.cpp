@@ -174,27 +174,35 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
 
     if (GetEngine().IsEditor())
     {
+        REI_PROFILE_SCOPE(profiling::markers::HELPERS.Id);
         _gridRenderModule->DrawGrids();
     }
 
     RenderMeshRenderers((std::numeric_limits<i32>::lowest)(), SORTING_ORDER_POST_PROCESSING - 1);
-    if (GetEngine().IsEditor()) _lighting->Render();
+    if (GetEngine().IsEditor())
+    {
+        REI_PROFILE_SCOPE(profiling::markers::HELPERS.Id);
+        _lighting->Render();
+    }
 
     const RenderContext context {
         _cameraModule->GetWidth(),
         _cameraModule->GetHeight()
     };
 
-    for (const auto& customRenderModule : _customRenderModules)
     {
-        customRenderModule->Render(context);
-    }
+        REI_PROFILE_SCOPE(profiling::markers::HELPERS.Id);
+        for (const auto& customRenderModule : _customRenderModules)
+        {
+            customRenderModule->Render(context);
+        }
 
-    _gizmos->Render();
+        _gizmos->Render();
 
-    if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
-    {
-        _bvh->Render();
+        if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
+        {
+            _bvh->Render();
+        }
     }
     // ------
 
@@ -287,6 +295,7 @@ void rei::render::DefaultRenderScenario::SetBackgroundColor(const Color& color) 
 
 void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortingOrder, const i32 maxSortingOrder) const
 {
+    REI_PROFILE_SCOPE(profiling::markers::GEOMETRY.Id);
     ECS_WORLD(rei::GetInternalWorld());
     const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
 
@@ -302,7 +311,10 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
 
         const Shader& shader = material.GetShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        }
         meshRenderer.Render();
     }
 
@@ -311,6 +323,7 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderers(const i32 minSortin
 
 void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial(const assets::AssetRef<Material>& material) const
 {
+    REI_PROFILE_SCOPE(profiling::markers::GEOMETRY.Id);
     ECS_WORLD(rei::GetInternalWorld());
     const auto meshRenderers = FILTER(MeshRenderer, ActiveTag);
 
@@ -324,7 +337,10 @@ void rei::render::DefaultRenderScenario::RenderMeshRenderersWithOverrideMaterial
 
         const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        }
         meshRenderer.Render();
 
         meshRenderer.SetMaterial(originalMaterial);
@@ -350,7 +366,10 @@ void rei::render::DefaultRenderScenario::RenderSpriteRenderers(const i32 minSort
 
         const Shader& shader = material.GetShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        }
         spriteRenderer.Render();
     }
 }
@@ -368,7 +387,10 @@ void rei::render::DefaultRenderScenario::RenderSpriteRenderersWithOverrideMateri
 
         const Shader& shader = material->GetShader();
         _lighting->SetLightValues(shader);
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        }
         material->Use();
 
         for (const auto& mesh : spriteRenderer.GetModel()->GetMeshes())

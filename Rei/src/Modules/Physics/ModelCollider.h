@@ -13,6 +13,7 @@ namespace rei::physics
 
     public:
         REI_API ColliderType GetType() const override;
+        REI_API bool IsAvailable() const override;
 
         REI_API void SetModel(const assets::AssetRef<render::Model>& model);
 

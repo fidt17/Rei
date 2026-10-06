@@ -74,6 +74,7 @@ namespace rei::render
     void Shader::Use() const
     {
         glUseProgram(_id);
+        profiling::Count(profiling::markers::SHADER_USE_CALLS.Id);
     }
 
     void Shader::Delete() const
@@ -100,8 +101,8 @@ namespace rei::render
         const auto location = GetLocation(name);
         if (location < 0) return;
         Use();
-        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform1i(location, value);
+        profiling::RecordUniformUpload();
     }
 
     void Shader::SetFloat(const std::string& name, const f32 value) const
@@ -109,8 +110,8 @@ namespace rei::render
         const auto location = GetLocation(name);
         if (location < 0) return;
         Use();
-        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform1f(location, value);
+        profiling::RecordUniformUpload();
     }
 
     void Shader::SetVector3(const std::string& name, const math::Vector3& value) const
@@ -118,8 +119,8 @@ namespace rei::render
         const auto location = GetLocation(name);
         if (location < 0) return;
         Use();
-        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniform3f(location, value.x, value.y, value.z);
+        profiling::RecordUniformUpload();
     }
 
     void Shader::SetColor(const std::string& name, const Color& value) const
@@ -127,9 +128,10 @@ namespace rei::render
         const auto location = GetLocation(name);
         if (location < 0) return;
         Use();
-        profiling::Count(profiling::markers::UNIFORMS.Id);
+
         const auto linear = value.ToLinear();
         glUniform4f(location, linear.r, linear.g, linear.b, linear.a);
+        profiling::RecordUniformUpload();
     }
 
     void Shader::SetMatrix4f(const std::string& name, glm::mat4 value) const
@@ -137,15 +139,21 @@ namespace rei::render
         const auto location = GetLocation(name);
         if (location < 0) return;
         Use();
-        profiling::Count(profiling::markers::UNIFORMS.Id);
         glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(value));
+        profiling::RecordUniformUpload();
     }
 
     void Shader::SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const
     {
-        SetMatrix4f("_Projection", projectionMatrix);
-        SetMatrix4f("_View", viewMatrix);
-        SetMatrix4f("_Model", modelMatrix);
+        {
+            profiling::UniformPhaseScope phase(profiling::UniformPhase::Camera);
+            SetMatrix4f("_Projection", projectionMatrix);
+            SetMatrix4f("_View", viewMatrix);
+        }
+        {
+            profiling::UniformPhaseScope phase(profiling::UniformPhase::Object);
+            SetMatrix4f("_Model", modelMatrix);
+        }
     }
 
     const std::vector<std::string>& Shader::GetUniformNamesByType(const u32 uniformType) const

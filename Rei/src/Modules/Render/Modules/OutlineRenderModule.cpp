@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "OutlineRenderModule.h"
+#include "Common/Profiling/ProfileMarkers.h"
 
 #include "Common/Transform/RectTransformUtility.h"
 #include "glm/ext/matrix_clip_space.hpp"
@@ -23,6 +24,7 @@ void rei::render::OutlineRenderModule::Setup()
 
 void rei::render::OutlineRenderModule::RenderPass()
 {
+    REI_PROFILE_SCOPE(profiling::markers::OUTLINE_PASS.Id);
     _outlineObjectsBuffer.EnableBuffer(_cameraModule->GetWidth(), _cameraModule->GetHeight());
     glClearColor(0,0,0,0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -32,6 +34,7 @@ void rei::render::OutlineRenderModule::RenderPass()
 
 void rei::render::OutlineRenderModule::RenderOutlineFrame() const
 {
+    REI_PROFILE_SCOPE(profiling::markers::OUTLINE_COMPOSITE.Id);
     _outlineQuadMaterial->GetShader().Use();
 
     glDisable(GL_DEPTH_TEST);
@@ -60,7 +63,10 @@ void rei::render::OutlineRenderModule::RenderMeshOutlines() const
         const auto& meshRenderer = GET(e, rei::render::MeshRenderer);
 
         const Shader& shader = meshRenderer.GetRenderMaterial().GetShader();
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), meshRenderer.GetTransform().CalculateWorldModelMatrix());
+        }
         meshRenderer.Render();
     }
 }
@@ -75,7 +81,10 @@ void rei::render::OutlineRenderModule::RenderSpriteOutlines() const
         const auto& spriteRenderer = GET(e, rei::render::SpriteRenderer);
 
         const Shader& shader = spriteRenderer.GetRenderMaterial().GetShader();
-        shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), spriteRenderer.GetTransform().CalculateWorldModelMatrix());
+        }
         spriteRenderer.Render();
     }
 }
@@ -107,11 +116,14 @@ void rei::render::OutlineRenderModule::RenderUiImageOutlines() const
         const auto pixelSize = pixelRect.GetSize();
         if (pixelSize.x <= 0.0f || pixelSize.y <= 0.0f) continue;
 
-        auto model = ui_utility::BuildModelMatrix(pixelRect, GET(e, rei::ui::RectTransform), GET(e, rei::Transform));
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+        {
+            REI_PROFILE_SCOPE(profiling::markers::OBJECT_DATA.Id);
+            auto model = ui_utility::BuildModelMatrix(pixelRect, GET(e, rei::ui::RectTransform), GET(e, rei::Transform));
+            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
 
-        const Shader& shader = image.GetRenderMaterial().GetShader();
-        shader.SetViewMatrices(projection, view, model);
+            const Shader& shader = image.GetRenderMaterial().GetShader();
+            shader.SetViewMatrices(projection, view, model);
+        }
         image.GetRenderMaterial().Use();
         _quadVertexData.Render();
     }

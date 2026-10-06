@@ -150,6 +150,12 @@ Times measure CPU wall time, including waits, not GPU time. `durationMs`, `avera
 
 Draw counters describe engine submissions, excluding ImGui and direct project GL calls outside Rei helpers. Submitted vertices count references multiplied by instances; triangles count submitted topology, not visible pixels. UI glyphs count quads; text draws count batches. Property writes count setter attempts; uniform uploads count actual calls.
 
+Render breakdown adds Outline.Pass, Geometry, Lighting.Apply, ObjectData, Mesh.Submit, Helpers, Output and Outline.Composite scopes under the existing render scopes. Geometry aggregates both sorting-order ranges (or the override-material geometry pass); ObjectData covers world/model matrix preparation and matrix uploads in scene and outline geometry. Helpers aggregates grid, light visualizers, custom modules, gizmos and BVH visualization. Mesh.Submit covers Mesh::Render, not every direct GL submission. Existing UI and Material.Bind scopes remain nested; compare exclusive times or sibling inclusive times without summing parents twice.
+
+Shader.UseCalls counts calls through Shader::Use, including repeated calls with the same program; it does not count actual program changes or direct GL calls outside Shader. UniformUploads.Lighting/Camera/Object/Material/Other partition the existing total by the active upload operation, not ownership or whether values changed. Lighting tags light application; Camera/Object tag projection/view and model in SetViewMatrices; Material tags material binding uploads; Other covers remaining Shader setters. Counters increment after the glUniform call, exclude inactive locations, and phase scopes restore the previous tag on exit. Every completed valid frame's phase sum equals UniformUploads.
+
+Picking.Selection measures the fresh Editor scene-selection query on an eligible left mouse press; its saved candidate is applied on release. Picking.SelectionCandidates counts actual selection-collider intersection checks and also contributes to Picking.Candidates. Continuous Picking.3D and Picking.UI scopes remain separate for generic listeners, UI and gizmo hover. Idle frames and held-button drags do not run the scene-selection query; fewer idle checks do not prove lower click latency.
+
 To compare captures: keep scene/camera/mode/resolution and build settings fixed, warm up, start capture, then poll `last_capture` with expected session id until complete. Validate capture id and `completeData`; avoid builds, frame captures and frequent polling during collection.
 
 ## Bridge maintenance

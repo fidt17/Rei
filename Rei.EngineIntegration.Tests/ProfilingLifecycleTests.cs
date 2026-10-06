@@ -42,6 +42,24 @@ public sealed class ProfilingLifecycleTests(ITestOutputHelper output)
             Assert.Equal(40, result.GetProperty("sampleFrames").GetInt32());
             Assert.True(result.GetProperty("completeData").GetBoolean());
             var metrics = result.GetProperty("metrics").EnumerateArray().ToArray();
+            Assert.False(result.GetProperty("truncated").GetBoolean());
+            Assert.Equal(0, result.GetProperty("invalidFrames").GetInt32());
+            Assert.Equal(0, result.GetProperty("droppedScopes").GetInt32());
+            foreach (var name in new[] { "Rei.Render.Outline.Pass", "Rei.Render.Geometry", "Rei.Render.Lighting.Apply",
+                "Rei.Render.ObjectData", "Rei.Render.Mesh.Submit", "Rei.Render.Helpers", "Rei.Render.Output", "Rei.Render.Outline.Composite" })
+                Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == name);
+            var uploads = Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == "Rei.Shader.UniformUploads")
+                .GetProperty("value").GetUInt64();
+            ulong phaseUploads = 0;
+            foreach (var phase in new[] { "Lighting", "Camera", "Object", "Material", "Other" })
+                phaseUploads += Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == $"Rei.Shader.UniformUploads.{phase}")
+                    .GetProperty("value").GetUInt64();
+            Assert.Equal(uploads, phaseUploads);
+            var useCalls = Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == "Rei.Shader.UseCalls")
+                .GetProperty("value").GetUInt64();
+            Assert.True(useCalls >= uploads);
+            var exclusiveMs = metrics.Sum(metric => metric.GetProperty("exclusiveMs").GetDouble());
+            Assert.InRange(exclusiveMs, 0, result.GetProperty("durationMs").GetDouble() + 0.001);
             var scope = Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == "Fixture.Profiling.Update");
             Assert.Equal(40, scope.GetProperty("calls").GetInt32());
             Assert.True(scope.GetProperty("inclusiveMs").GetDouble() >= scope.GetProperty("exclusiveMs").GetDouble());

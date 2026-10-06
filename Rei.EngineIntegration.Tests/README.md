@@ -60,6 +60,31 @@ Use smoke for asset/MCP synchronization changes; lifecycle for persistence, impo
 Play/Stop, or harness changes. Run both for release validation. Pure parsing/settings/conversion changes
 can normally use focused Editor unit tests first; these are selection guidelines, not automatic dependency detection.
 
+## External-project CPU benchmark
+
+The optional `sourceProjectDirectory` constructor argument copies the entire supplied project (including imported caches and binaries) into the owned GUID run. Defaults still use the checked-in fixture. Source is read only; `.rei` solution/project paths and absolute source-root references in copied build/C++ source files (including generated registry includes) are localized. Copied `bin` tracking files (`.tlog`, `.lastbuildstate`, `.FileListAbsolute.txt`) are discarded so MSBuild cannot consume original absolute output paths; imported caches/binaries remain. Links, overlapping roots, escaping project paths, and escaping or unverifiable `OutDir`/`IntDir` declarations are rejected. Use trusted projects with normal contained build commands; this harness is process isolation, not a security sandbox for arbitrary MSBuild tasks. Only the owned copy is opened, rebuilt, imported or saved. Restart keeps that copy.
+
+External benchmarking needs a second explicit opt-in. `REI_PROFILE_PROJECT` names the directory containing exactly one `.rei`, not the `.rei` file. Once enabled, missing prerequisites and invalid project paths fail rather than skip.
+
+Fixture startup keeps its four-minute budget. External-project startup defaults to 15 minutes for first import/build; set `REI_PROFILE_STARTUP_TIMEOUT_SECONDS` to override it (positive, at most 1800 seconds). `startupTimeout` provides the same constructor option. Timeout remains a failure with owned-process teardown and source-integrity checks, not a render measurement. `RestartAsync` reuses the prepared owned copy without recopying assets; disposal still trims outputs by default.
+
+```powershell
+$env:REI_RUN_ENGINE_TESTS = '1'
+$env:REI_PROFILE_PROJECT = 'D:\Projects\TheShed\ReiProject'
+dotnet test $tests --no-build --no-restore --filter 'Suite=Benchmark&Area=Profiling'
+Remove-Item Env:REI_PROFILE_PROJECT
+```
+
+Build current native engine and managed runner first. Run without other engine/build activity. Preflight rejects a Debug engine DLL older than known collider/renderer/profiler inputs. After startup, the shared harness explicitly clean-builds the owned project through the existing application build action, saves build logs, then restarts the owned Editor against that same prepared copy/cache to load the fresh DLL (clean build leaves the engine stopped). It verifies project DLL timestamps and equality of current/copy engine DLL hashes, warms up 120 native frames, then records three 120-frame EditorMode captures through existing profiling MCP tools. It uses sparse snapshot reads, performs no image capture/input replay, and checks exact sessions/captures, full metric coverage, valid frames, nested exclusive times, and phase-upload totals. Readback and idle Selection calls/candidates must be zero. Source-file SHA-256 manifests before/after teardown verify the supplied project stayed unchanged, including caches/binaries.
+
+Evidence stays in the run: `cpu-source-manifest.json`, `cpu-build-logs.json`, `cpu-benchmark-context.json`, `cpu-warmup.json`, `cpu-profile-01.json` through `03`, and `cpu-benchmark-results.json`. Context records project/scene, source/engine-input hashes, Editor/engine/project-DLL hashes, configuration, isolated preferences and Editor state; results include native workload counters. Camera matrices and native viewport dimensions are explicitly unavailable through current non-image MCP APIs. Fresh storage uses a new layout, so equivalence with an older user-layout/camera baseline is unverified. Analyze this scenario's breakdown; do not attribute differences from that baseline to optimization. CPU GL-call time includes driver waits and is not GPU timing. Enabled instrumentation overhead is not separated by this case.
+
+Fixture/copy validation tests run without an engine opt-in. To select them after building the runner:
+
+```powershell
+dotnet test $tests --no-build --no-restore --filter 'FullyQualifiedName~ExternalProjectCopyTests'
+```
+
 ## Isolation and diagnostics
 
 Each harness owns a unique directory under %TEMP%/Rei-engine-tests, a copied fixture, build outputs, separate preferences (REI_EDITOR_STORAGE), and an explicit startup project (REI_STARTUP_PROJECT). It chooses an unused loopback port. Port acquisition has a small bind race; readiness verifies the exact project path before mutations.

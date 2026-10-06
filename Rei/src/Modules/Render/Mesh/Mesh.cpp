@@ -132,6 +132,7 @@ void rei::render::Mesh::Dispose() const
 
 void rei::render::Mesh::Render() const
 {
+    REI_PROFILE_SCOPE(rei::profiling::markers::MESH_SUBMIT.Id);
     glBindVertexArray(VAO);
     rei::profiling::RecordDraw(Indices.size(), Indices.size() / 3);
     glDrawElements(GL_TRIANGLES, Indices.size(), GL_UNSIGNED_INT, 0);
