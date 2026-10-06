@@ -34,6 +34,8 @@ void rei::render::LightingRenderModule::OnBeforeRender()
 {
     FindAmbientLights();
     FindPointLights();
+    BuildSnapshot();
+    _lightLocations.clear();
 }
 
 void rei::render::LightingRenderModule::Render() const
@@ -45,8 +47,20 @@ void rei::render::LightingRenderModule::SetLightValues(const Shader& shader) con
 {
     REI_PROFILE_SCOPE(profiling::markers::LIGHTING_APPLY.Id);
     profiling::UniformPhaseScope phase(profiling::UniformPhase::Lighting);
-    SetAmbientLight(shader);
-    SetPointLights(shader);
+    const auto& locations = GetLightLocations(shader);
+    Shader::UniformBatch uniforms(shader, false);
+    shader.SetFloat(locations[0], _ambientStrength);
+    shader.SetLinearColor(locations[1], _ambientLinearColor);
+    for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+    {
+        const auto& light = _pointSnapshot[i];
+        const auto slot = 2 + i * 4;
+        shader.SetVector3(locations[slot], light.Position);
+        shader.SetFloat(locations[slot + 1], light.Strength);
+        shader.SetFloat(locations[slot + 2], light.Range);
+        shader.SetLinearColor(locations[slot + 3], light.LinearColor);
+    }
+    shader.SetInt(locations.back(), _pointCount);
 }
 
 void rei::render::LightingRenderModule::FindAmbientLights()
@@ -69,47 +83,53 @@ void rei::render::LightingRenderModule::FindPointLights()
     });
 }
 
-void rei::render::LightingRenderModule::SetAmbientLight(const Shader& shader) const
+void rei::render::LightingRenderModule::BuildSnapshot()
 {
-    if (_ambientLight.IsNull())
+    _ambientStrength = 0;
+    _ambientLinearColor = Color(0, 0, 0, 1);
+    if (!_ambientLight.IsNull())
     {
-        shader.SetFloat("_AmbientLight.Strength", 0);
-        shader.SetColor("_AmbientLight.Color", Color(0, 0, 0, 1));
-        return;
+        const auto& ambient = _ambientLight.Get();
+        _ambientStrength = ambient.GetStrength();
+        _ambientLinearColor = ambient.GetColor().ToLinear();
     }
-
-    shader.SetFloat("_AmbientLight.Strength", _ambientLight.Get().GetStrength());
-
-    const auto& c = _ambientLight.Get().GetColor();
-    shader.SetColor("_AmbientLight.Color", c);
+    _pointCount = 0;
+    _pointSnapshot.fill(PointLightSnapshot{});
+    // Preserve the current first-four scene order; object-specific selection is a separate stage.
+    for (const auto& reference : _pointLights)
+    {
+        if (_pointCount == REI_MAX_POINT_LIGHTS_COUNT) break;
+        if (reference.IsNull()) continue;
+        const auto& light = reference.Get();
+        _pointSnapshot[_pointCount++] = {light.GetTransform().GetWorldPosition(), light.GetStrength(), light.GetRange(), light.GetColor().ToLinear()};
+    }
 }
 
-void rei::render::LightingRenderModule::SetPointLights(const Shader& shader) const
+const rei::render::LightingRenderModule::LightLocations& rei::render::LightingRenderModule::GetLightLocations(const Shader& shader) const
 {
-    // TODO: Select lights affecting each rendered object; currently the point-light cap applies to the entire scene.
-    i32 count = 0;
-    for (const auto& light : _pointLights)
+    const auto revision = shader.GetProgramRevision();
+    const auto previous = _lightLocations.find(revision);
+    if (previous != _lightLocations.end()) return previous->second;
+    static const auto names = []
     {
-        if (count == REI_MAX_POINT_LIGHTS_COUNT) break;
-        if (light.IsNull()) continue;
-
-        const auto slot = "_PointLights[" + std::to_string(count) + "]";
-        shader.SetVector3(slot + ".Position", light.Get().GetTransform().GetWorldPosition());
-        shader.SetFloat(slot + ".Strength", light.Get().GetStrength());
-        shader.SetFloat(slot + ".Range", light.Get().GetRange());
-        shader.SetColor(slot + ".Color", light.Get().GetColor());
-        ++count;
-    }
-    shader.SetInt("_PointLightsCount", count);
-
-    for (i32 i = count; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
-    {
-        const auto slot = "_PointLights[" + std::to_string(i) + "]";
-        shader.SetVector3(slot + ".Position", {0, 0, 0});
-        shader.SetFloat(slot + ".Strength", 0);
-        shader.SetFloat(slot + ".Range", 0);
-        shader.SetColor(slot + ".Color", Color(0, 0, 0, 1));
-    }
+        std::array<std::string, LIGHT_UNIFORM_COUNT> values;
+        values[0] = "_AmbientLight.Strength";
+        values[1] = "_AmbientLight.Color";
+        for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+        {
+            const auto prefix = "_PointLights[" + std::to_string(i) + "]";
+            const auto slot = 2 + i * 4;
+            values[slot] = prefix + ".Position";
+            values[slot + 1] = prefix + ".Strength";
+            values[slot + 2] = prefix + ".Range";
+            values[slot + 3] = prefix + ".Color";
+        }
+        values.back() = "_PointLightsCount";
+        return values;
+    }();
+    LightLocations locations;
+    for (u32 i = 0; i < LIGHT_UNIFORM_COUNT; ++i) locations[i] = shader.GetLocation(names[i]);
+    return _lightLocations.emplace(revision, locations).first->second;
 }
 
 void rei::render::LightingRenderModule::RenderPointLights() const

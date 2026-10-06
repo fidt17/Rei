@@ -579,6 +579,108 @@ TEST_CASE("RENDER18 light source material stays visible without scene illuminati
     });
 }
 
+
+TEST_CASE("LIGHT_SNAPSHOT01 snapshot survives repeated draws and updates parent transforms next frame", "[native][gl][lighting][uniform-batch][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto camera = MakeCamera(fixture);
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        const auto parent = fixture.Scene.Entity(901);
+        const auto entity = fixture.Scene.Entity(902);
+        fixture.Scene.Add(entity, 7306, false);
+        auto& light = fixture.Scene.Registry->Get<render::PointLight>(entity);
+        light.SetStrength(3);
+        light.SetRange(7);
+        auto& transform = fixture.Scene.Registry->Get<Transform>(entity);
+        transform.SetParent(parent);
+        transform.GetLocalPosition() = {1, 2, 3};
+        fixture.Scene.Registry->Get<Transform>(parent).GetLocalPosition() = {4, 5, 6};
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
+        fixture.Scene.World->Refresh();
+        fixture.Scene.World->RefreshAll();
+        render::LightingRenderModule module(camera);
+        module.OnBeforeRender();
+        module.SetLightValues(*shader.Get());
+        light.SetStrength(8);
+        fixture.Scene.Registry->Get<Transform>(parent).GetLocalPosition() = {10, 20, 30};
+        module.SetLightValues(*shader.Get());
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 3);
+        auto readPosition = [&]
+        {
+            shader->Use();
+            i32 program = 0;
+            glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+            std::array<f32, 3> value{};
+            glGetUniformfv(program, shader->GetLocation("_PointLights[0].Position"), value.data());
+            return value;
+        };
+        REQUIRE(readPosition() == std::array<f32, 3>{5, 7, 9});
+        module.OnBeforeRender();
+        module.SetLightValues(*shader.Get());
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 8);
+        REQUIRE(readPosition() == std::array<f32, 3>{11, 22, 33});
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("LIGHT_SNAPSHOT02 snapshot restores native light values after material and raw GL writes", "[native][gl][lighting][uniform-batch][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto camera = MakeCamera(fixture);
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        render::LightingRenderModule module(camera);
+        module.OnBeforeRender();
+        module.SetLightValues(*shader.Get());
+        render::Material overrideMaterial(shader);
+        overrideMaterial.SetFloat("_AmbientLight.Strength", 9);
+        overrideMaterial.Use();
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_AmbientLight.Strength") == 9);
+        module.SetLightValues(*shader.Get());
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_AmbientLight.Strength") == 0);
+        shader->Use();
+        glUniform1f(shader->GetLocation("_AmbientLight.Strength"), 7);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_AmbientLight.Strength") == 7);
+        module.SetLightValues(*shader.Get());
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_AmbientLight.Strength") == 0);
+        shader->Delete();
+        shader->PostLoad();
+        module.SetLightValues(*shader.Get()); // Same frame, fresh program revision.
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_AmbientLight.Strength") == 0);
+        RequireEmptyLightSlots(*shader.Get(), 0);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("SHADER_CONTEXT01 shader batch rebinds shared programs when GL context changes", "[native][gl][lighting][uniform-batch][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        render::Shader::UniformBatch batch(*shader.Get());
+        shader->SetFloat("_Shininess", 3);
+        auto* second = glfwCreateWindow(32, 32, "shared uniform test", nullptr, fixture.Gl.Window());
+        REQUIRE(second != nullptr);
+        const auto other = std::unique_ptr<GLFWwindow, decltype(&glfwDestroyWindow)>(second, glfwDestroyWindow);
+        glfwMakeContextCurrent(second);
+        glUseProgram(0);
+        shader->SetFloat("_Shininess", 3);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+        glUniform1f(shader->GetLocation("_Shininess"), 9);
+        shader->SetFloat("_Shininess", 3);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_Shininess") == 3);
+        shader->SetFloat("_Shininess", 8);
+        glfwMakeContextCurrent(fixture.Gl.Window());
+        shader->SetFloat("_Shininess", 3);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_Shininess") == 3);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
 TEST_CASE("RENDER09 overlay postprocessing preserves flat input color", "[native][coverage][coverage-remaining][gl][postprocessing][isolated]")
 {
     IsolatedGl([]

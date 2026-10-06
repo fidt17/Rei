@@ -68,6 +68,8 @@ namespace rei::render
         GetDiagnostics().SetPresentTime(0);
         GetDiagnostics().SetDiagnosticsTime(0);
         if (_target == nullptr) return;
+        // Project callbacks may use raw GL between frames. Never reuse their unknown state.
+        Shader::InvalidateProgramBinding();
         if (!_renderScenario->IsCameraSet())
         {
             LOG("No active camera found...")

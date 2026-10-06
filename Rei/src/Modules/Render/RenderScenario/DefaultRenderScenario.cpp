@@ -195,6 +195,8 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
         for (const auto& customRenderModule : _customRenderModules)
         {
             customRenderModule->Render(context);
+            // Custom modules may bypass Shader setters and bind programs directly.
+            Shader::InvalidateProgramBinding();
         }
 
         _gizmos->Render();

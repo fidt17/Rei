@@ -88,7 +88,7 @@ namespace rei::render
         }
 
         profiling::Count(profiling::markers::MATERIAL_BINDS.Id);
-        _shader->Use();
+        Shader::UniformBatch uniforms(*_shader.Get());
         profiling::UniformPhaseScope phase(profiling::UniformPhase::Material);
         SyncShaderBindings();
 
@@ -149,7 +149,7 @@ namespace rei::render
     void Material::SetInt(const std::string& name, const i32 value)
     {
         profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
-        if (name.empty()) return;
+        if (name.empty() || HasPropertyValue(name, value)) return;
         _properties[name] = value;
         UpdatePropertyBinding(name, _properties.at(name));
     }
@@ -157,7 +157,7 @@ namespace rei::render
     void Material::SetFloat(const std::string& name, const f32 value)
     {
         profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
-        if (name.empty()) return;
+        if (name.empty() || HasPropertyValue(name, value)) return;
         _properties[name] = value;
         UpdatePropertyBinding(name, _properties.at(name));
     }
@@ -165,7 +165,7 @@ namespace rei::render
     void Material::SetColor(const std::string& name, const Color& value)
     {
         profiling::Count(profiling::markers::PROPERTY_WRITES.Id);
-        if (name.empty()) return;
+        if (name.empty() || HasPropertyValue(name, value)) return;
 
         _properties[name] = nlohmann::json::object({
             {"r", value.r},

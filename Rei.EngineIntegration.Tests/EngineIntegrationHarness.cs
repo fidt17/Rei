@@ -26,7 +26,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
     public string RunDirectory { get; } = Path.Combine(Path.GetTempPath(), "Rei-engine-tests", Guid.NewGuid().ToString("N"));
     public string ProjectDirectory => Path.Combine(RunDirectory, "project");
 
-    public EngineIntegrationHarness(string fixtureName = "DataAssets", bool? keepBuildOutputs = null, string? sourceProjectDirectory = null, TimeSpan? startupTimeout = null)
+    public EngineIntegrationHarness(string fixtureName = "DataAssets", bool? keepBuildOutputs = null, string? sourceProjectDirectory = null, TimeSpan? startupTimeout = null, string? preparedRunDirectory = null)
     {
         if (string.IsNullOrWhiteSpace(fixtureName) || Path.GetFileName(fixtureName) != fixtureName || fixtureName is "." or "..")
             throw new ArgumentException("Fixture name must be a single directory name.", nameof(fixtureName));
@@ -36,6 +36,25 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         if (StartupTimeout <= TimeSpan.Zero || StartupTimeout > TimeSpan.FromMinutes(30))
             throw new ArgumentOutOfRangeException(nameof(startupTimeout), "Startup timeout must be positive and at most 30 minutes.");
         _keepBuildOutputs = keepBuildOutputs ?? string.Equals(Environment.GetEnvironmentVariable("REI_TEST_KEEP_BUILD_OUTPUTS"), "true", StringComparison.OrdinalIgnoreCase);
+        if (preparedRunDirectory != null)
+        {
+            RunDirectory = ValidateOwnedRunDirectory(preparedRunDirectory);
+            ValidateTree(RunDirectory);
+            if (Directory.GetFiles(ProjectDirectory, "*.rei").Length != 1 ||
+                !File.Exists(Path.Combine(RunDirectory, "storage", "preferences.json")))
+                throw new InvalidDataException("Prepared run requires one project and existing Editor preferences.");
+            var project = JsonNode.Parse(File.ReadAllText(Directory.GetFiles(ProjectDirectory, "*.rei").Single()))!;
+            foreach (var field in new[] { "ProjectSolutionPath", "ProjectVisualStudioProjectPath" })
+            {
+                var path = Path.GetFullPath(project[field]!.GetValue<string>());
+                if (!path.StartsWith(ProjectDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+                    throw new InvalidDataException("Prepared build paths must stay inside the isolated project.");
+            }
+            LaunchCount = Directory.GetFiles(RunDirectory, "stdout-*.log")
+                .Select(file => int.TryParse(Path.GetFileNameWithoutExtension(file)[7..], out var count) ? count : 0)
+                .DefaultIfEmpty().Max();
+            _prepared = true;
+        }
     }
 
     public async Task StartAsync()
@@ -292,11 +311,8 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
 
     internal static void TrimBuildOutputs(string runDirectory)
     {
-        var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Rei-engine-tests")).TrimEnd(Path.DirectorySeparatorChar);
-        var run = Path.GetFullPath(runDirectory).TrimEnd(Path.DirectorySeparatorChar);
-        if (!Guid.TryParseExact(Path.GetFileName(run), "N", out _) ||
-            !string.Equals(Path.GetDirectoryName(run), root, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Cleanup only accepts immediate GUID directories under Rei-engine-tests.");
+        var run = ValidateOwnedRunDirectory(runDirectory);
+        var root = Path.GetDirectoryName(run)!;
         if (!Directory.Exists(run)) return;
         var outputs = Path.GetFullPath(Path.Combine(run, "project", "bin"));
         foreach (var parent in new[] { root, run, Path.Combine(run, "project") })
@@ -304,6 +320,18 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         if (!Directory.Exists(outputs)) return;
         ValidateTree(outputs);
         Directory.Delete(outputs, recursive: true);
+    }
+
+    private static string ValidateOwnedRunDirectory(string runDirectory)
+    {
+        var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Rei-engine-tests")).TrimEnd(Path.DirectorySeparatorChar);
+        var run = Path.GetFullPath(runDirectory).TrimEnd(Path.DirectorySeparatorChar);
+        if (!Guid.TryParseExact(Path.GetFileName(run), "N", out _) ||
+            !string.Equals(Path.GetDirectoryName(run), root, StringComparison.OrdinalIgnoreCase))
+            throw new IOException("Cleanup only accepts immediate GUID directories under Rei-engine-tests.");
+        if (Directory.Exists(root)) RejectLink(root);
+        if (Directory.Exists(run)) RejectLink(run);
+        return run;
     }
 
     private static void RejectLink(string path)

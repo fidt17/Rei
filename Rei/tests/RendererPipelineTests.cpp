@@ -12,6 +12,8 @@ namespace
     {
         i32 PointCount = -1;
         std::array<f32, REI_MAX_POINT_LIGHTS_COUNT> PointStrengths{};
+        std::array<f32, REI_MAX_POINT_LIGHTS_COUNT> PointRanges{};
+        std::array<std::array<f32, 3>, REI_MAX_POINT_LIGHTS_COUNT> PointPositions{};
         f32 AmbientStrength = -1;
     };
 
@@ -33,24 +35,44 @@ namespace
             glGetUniformiv(program, location("_PointLightsCount"), &state.PointCount);
             glGetUniformfv(program, location("_AmbientLight.Strength"), &state.AmbientStrength);
             for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+            {
                 glGetUniformfv(program, location("_PointLights[" + std::to_string(i) + "].Strength"), &state.PointStrengths[i]);
+                glGetUniformfv(program, location("_PointLights[" + std::to_string(i) + "].Range"), &state.PointRanges[i]);
+                glGetUniformfv(program, location("_PointLights[" + std::to_string(i) + "].Position"), state.PointPositions[i].data());
+            }
             if (glGetError() != GL_NO_ERROR) throw std::runtime_error("Lighting readback encountered GL error");
         });
         return state;
     }
 
+    f32 ExpectedPointBrightness(const i32 count)
+    {
+        // The center sample is (1/6,1/6,2), lights are (3,0,1), range 10, strength .05.
+        // Existing finite-range lighting replaced the old unattenuated expectation.
+        constexpr f32 DISTANCE_SQUARED = 326.0f / 36.0f;
+        constexpr f32 RANGE = 10;
+        constexpr f32 STRENGTH = 0.05f;
+        const auto normalizedDistanceSquared = DISTANCE_SQUARED / (RANGE * RANGE);
+        const auto envelope = 1.0f - normalizedDistanceSquared * normalizedDistanceSquared;
+        const auto attenuation = envelope * envelope / DISTANCE_SQUARED;
+        return count * STRENGTH * attenuation * (1.0f + 6.0f / std::sqrt(326.0f));
+    }
+
     void VerifyLightingFrame(NativeEngineFixture& engine, const i32 pointCount, const f32 ambientStrength = 0)
     {
         const auto frame = Capture(engine);
-        // Same independent lighting equation as PIPE10: shininess 0, light (3,0,1), quad z=2.
-        const auto brightness = ambientStrength + pointCount * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
+        const auto brightness = ambientStrength + ExpectedPointBrightness(pointCount);
         const auto expected = static_cast<u8>(std::lround(255.0f * (brightness <= 0.0031308f ? 12.92f * brightness : 1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         const auto state = ReadLightingState(engine);
         REQUIRE(state.PointCount == pointCount);
         REQUIRE(state.AmbientStrength == ambientStrength);
         for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
+        {
             REQUIRE(state.PointStrengths[i] == (i < pointCount ? 0.05f : 0));
+            REQUIRE(state.PointRanges[i] == (i < pointCount ? 10.0f : 0));
+            REQUIRE(state.PointPositions[i] == (i < pointCount ? std::array<f32, 3>{3, 0, 1} : std::array<f32, 3>{0, 0, 0}));
+        }
         const auto repeated = Capture(engine);
         REQUIRE(repeated->Width == frame->Width);
         REQUIRE(repeated->Height == frame->Height);
@@ -304,7 +326,7 @@ TEST_CASE("PIPE10 real engine four point lights produce independently computed d
         const auto frame = Capture(engine);
         // Orthographic center pixel: world x/y = +/-1/6; light at (3,0,1), mesh z=2.
         // Four strengths .05; shininess 0 makes specular 1. Diffuse = 6/sqrt(326).
-        const auto brightness = 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
+        const auto brightness = ExpectedPointBrightness(4);
         const auto expected = static_cast<u8>(std::lround(255.0f * (1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         engine.Stop();
@@ -319,7 +341,7 @@ TEST_CASE("PIPE11 real engine fifth point light stays outside four-slot shader c
         engine.Start();
         engine.OnEngineThread([] { CreateLitMeshWithLights(5); Refresh(); });
         const auto frame = Capture(engine);
-        const auto brightness = 4.0f * 0.05f * (1.0f + 6.0f / std::sqrt(326.0f));
+        const auto brightness = ExpectedPointBrightness(4);
         const auto expected = static_cast<u8>(std::lround(255.0f * (1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         engine.Stop();

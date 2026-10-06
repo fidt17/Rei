@@ -7,6 +7,14 @@
 #include "glad/glad.h"
 #include "glm/gtc/type_ptr.hpp"
 #include <atomic>
+#include "GLFW/glfw3.h"
+
+namespace
+{
+    thread_local const rei::render::Shader* uniformBatchShader = nullptr;
+    thread_local const rei::render::Shader* boundShader = nullptr;
+    thread_local const void* boundContext = nullptr;
+}
 
 namespace rei::render
 {
@@ -74,7 +82,34 @@ namespace rei::render
     void Shader::Use() const
     {
         glUseProgram(_id);
+        boundShader = this;
+        boundContext = glfwGetCurrentContext();
         profiling::Count(profiling::markers::SHADER_USE_CALLS.Id);
+    }
+
+    Shader::UniformBatch::UniformBatch(const Shader& shader, const bool bindProgram) : _previous(uniformBatchShader)
+    {
+        uniformBatchShader = &shader;
+        if (bindProgram) shader.Use();
+    }
+
+    Shader::UniformBatch::~UniformBatch()
+    {
+        uniformBatchShader = _previous;
+    }
+
+    void Shader::InvalidateProgramBinding()
+    {
+        boundShader = nullptr;
+        boundContext = nullptr;
+    }
+
+    bool Shader::PrepareUniform(const i32 location) const
+    {
+        if (_id == 0 || location < 0) return false;
+        const auto context = glfwGetCurrentContext();
+        if (uniformBatchShader != this || boundShader != this || boundContext != context) Use();
+        return true;
     }
 
     void Shader::Delete() const
@@ -83,6 +118,7 @@ namespace rei::render
         _id = 0;
         _programRevision = 0;
         _locations.clear();
+        if (boundShader == this) boundShader = nullptr;
         _uniformNamesByType.clear();
     }
 
@@ -96,55 +132,72 @@ namespace rei::render
         return location;
     }
 
-    void Shader::SetInt(const std::string& name, i32 value) const
+    void Shader::SetInt(const std::string& name, const i32 value) const
     {
-        const auto location = GetLocation(name);
-        if (location < 0) return;
-        Use();
-        glUniform1i(location, value);
-        profiling::RecordUniformUpload();
+        SetInt(GetLocation(name), value);
     }
 
     void Shader::SetFloat(const std::string& name, const f32 value) const
     {
-        const auto location = GetLocation(name);
-        if (location < 0) return;
-        Use();
-        glUniform1f(location, value);
-        profiling::RecordUniformUpload();
+        SetFloat(GetLocation(name), value);
     }
 
     void Shader::SetVector3(const std::string& name, const math::Vector3& value) const
     {
-        const auto location = GetLocation(name);
-        if (location < 0) return;
-        Use();
-        glUniform3f(location, value.x, value.y, value.z);
-        profiling::RecordUniformUpload();
+        SetVector3(GetLocation(name), value);
     }
 
     void Shader::SetColor(const std::string& name, const Color& value) const
     {
         const auto location = GetLocation(name);
         if (location < 0) return;
-        Use();
-
-        const auto linear = value.ToLinear();
-        glUniform4f(location, linear.r, linear.g, linear.b, linear.a);
-        profiling::RecordUniformUpload();
+        SetLinearColor(location, value.ToLinear());
     }
 
     void Shader::SetMatrix4f(const std::string& name, glm::mat4 value) const
     {
-        const auto location = GetLocation(name);
-        if (location < 0) return;
-        Use();
-        glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(value));
+        SetMatrix4f(GetLocation(name), value);
+    }
+
+    void Shader::SetInt(const i32 location, const i32 value) const
+    {
+        if (!PrepareUniform(location)) return;
+        glUniform1i(location, value);
+        profiling::RecordUniformUpload();
+    }
+
+    void Shader::SetFloat(const i32 location, const f32 value) const
+    {
+        if (!PrepareUniform(location)) return;
+        glUniform1f(location, value);
+        profiling::RecordUniformUpload();
+    }
+
+    void Shader::SetVector3(const i32 location, const math::Vector3& value) const
+    {
+        if (!PrepareUniform(location)) return;
+        glUniform3f(location, value.x, value.y, value.z);
+        profiling::RecordUniformUpload();
+    }
+
+    void Shader::SetLinearColor(const i32 location, const Color& value) const
+    {
+        if (!PrepareUniform(location)) return;
+        glUniform4f(location, value.r, value.g, value.b, value.a);
+        profiling::RecordUniformUpload();
+    }
+
+    void Shader::SetMatrix4f(const i32 location, const glm::mat4& value) const
+    {
+        const auto data = value_ptr(value);
+        if (!PrepareUniform(location)) return;
+        glUniformMatrix4fv(location, 1, GL_FALSE, data);
         profiling::RecordUniformUpload();
     }
 
     void Shader::SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const
     {
+        UniformBatch uniforms(*this);
         {
             profiling::UniformPhaseScope phase(profiling::UniformPhase::Camera);
             SetMatrix4f("_Projection", projectionMatrix);

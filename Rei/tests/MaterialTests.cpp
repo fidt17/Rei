@@ -65,7 +65,7 @@ TEST_CASE("Material typed reads reflect replacement and clearing immediately", "
     REQUIRE(restored.GetInt("mode", -1) == -1);
 }
 
-// GL spies cover binding/cache semantics; actual rendering is checked in the engine harness.
+// GL spies cover binding semantics; actual rendering is checked in the engine harness.
 
 namespace
 {
@@ -325,7 +325,7 @@ TEST_CASE("Shader profiling counts issued GL calls and restores upload phases", 
         material.Use();
         shader->SetFloat("strength", 2); // Nested camera/object/material phases must restore Lighting.
     }
-    material.Use(); // Unchanged material still performs its actual GL writes.
+    material.Use(); // Each draw restores material uniforms, including unchanged values.
     profiler.EndFrame();
     profiler.BeginFrame();
     const auto snapshot = profiler.CopySnapshot(SnapshotView::LastCapture);
@@ -346,8 +346,123 @@ TEST_CASE("Shader profiling counts issued GL calls and restores upload phases", 
     CHECK(value(markers::UNIFORMS_OTHER) == 5);
     CHECK(value(markers::UNIFORMS_LIGHTING) + value(markers::UNIFORMS_CAMERA) + value(markers::UNIFORMS_OBJECT) +
         value(markers::UNIFORMS_MATERIAL) + value(markers::UNIFORMS_OTHER) == value(markers::UNIFORMS));
-    CHECK(GlBindingSpy::UseCalls == 16);
+    CHECK(GlBindingSpy::UseCalls == 12);
     CHECK(value(markers::SHADER_USE_CALLS) == GlBindingSpy::UseCalls);
     CHECK(GlBindingSpy::ProgramSwitches == 1);
     profiler.Shutdown();
+}
+
+TEST_CASE("Shader batches upload repeated values and preserve tiny changes and signed zero", "[material][material-binding][uniform-batch]")
+{
+    GlBindingSpy spy;
+    auto shader = MakeBindingShader();
+    rei::render::Shader::UniformBatch batch(*shader.Get());
+    shader->SetFloat("value", 1);
+    shader->SetFloat("value", 1);
+    REQUIRE(GlBindingSpy::UniformCalls == 2);
+    shader->SetFloat("value", std::nextafter(1.0f, 2.0f));
+    REQUIRE(GlBindingSpy::Values.at(shader->GetLocation("value"))[0] == std::nextafter(1.0f, 2.0f));
+    shader->SetFloat("value", 0.0f);
+    shader->SetFloat("value", -0.0f);
+    REQUIRE(std::signbit(GlBindingSpy::Values.at(shader->GetLocation("value"))[0]));
+    shader->SetVector3("position", {1, 2, 3});
+    shader->SetVector3("position", {1, 2, 3});
+    shader->SetColor("color", rei::render::Color(0.3f, 0.5f, 0.7f));
+    shader->SetColor("color", rei::render::Color(0.3f, 0.5f, 0.7f));
+    shader->SetInt("count", 2);
+    shader->SetInt("count", 2);
+    shader->SetMatrix4f("matrix", glm::mat4(1));
+    shader->SetMatrix4f("matrix", glm::mat4(1));
+    REQUIRE(GlBindingSpy::UniformCalls == 13);
+    REQUIRE(GlBindingSpy::UseCalls == 1);
+}
+
+TEST_CASE("Material restores repeated and alternating shared-shader draws after direct writes", "[material][material-binding][uniform-batch]")
+{
+    GlBindingSpy spy;
+    auto shader = MakeBindingShader();
+    Material first(shader), second(shader);
+    first.SetFloat("value", 2);
+    second.SetFloat("value", 9);
+    first.Use();
+    first.Use();
+    REQUIRE(GlBindingSpy::UniformCalls == 2);
+    second.Use();
+    REQUIRE(GlBindingSpy::Values.at(shader->GetLocation("value"))[0] == 9);
+    first.Use();
+    REQUIRE(GlBindingSpy::UniformCalls == 4);
+    REQUIRE(GlBindingSpy::Values.at(shader->GetLocation("value"))[0] == 2);
+    second.SetFloat("value", 2);
+    second.Use();
+    REQUIRE(GlBindingSpy::UniformCalls == 5);
+    shader->SetFloat("value", 7);
+    first.Use();
+    REQUIRE(GlBindingSpy::UniformCalls == 7);
+    REQUIRE(GlBindingSpy::Values.at(shader->GetLocation("value"))[0] == 2);
+}
+
+TEST_CASE("Shader batches restore bindings across nested shaders and exceptions", "[material][material-binding][uniform-batch]")
+{
+    GlBindingSpy spy;
+    auto first = MakeBindingShader();
+    auto second = MakeBindingShader();
+    {
+        rei::render::Shader::UniformBatch outer(*first.Get());
+        const auto firstProgram = GlBindingSpy::Program;
+        first->SetFloat("value", 1);
+        try
+        {
+            rei::render::Shader::UniformBatch inner(*second.Get());
+            second->SetFloat("value", 4);
+            REQUIRE(GlBindingSpy::Program != firstProgram);
+            throw std::runtime_error("expected");
+        }
+        catch (const std::runtime_error&) { }
+        first->SetFloat("value", 1); // Repeated value must also restore outer program after inner batch.
+        REQUIRE(GlBindingSpy::Program == firstProgram);
+        REQUIRE(GlBindingSpy::UseCalls == 3);
+        REQUIRE(GlBindingSpy::UniformCalls == 3);
+    }
+    const auto uploads = GlBindingSpy::UniformCalls;
+    second->Use();
+    first->SetFloat("value", 1); // Standalone setter must bind before immediate draw.
+    REQUIRE(GlBindingSpy::UniformCalls == uploads + 1);
+    REQUIRE(GlBindingSpy::UseCalls == 5);
+}
+
+TEST_CASE("Shader uploads survive unloaded programs moves reload and external bindings", "[material][material-binding][uniform-batch]")
+{
+    GlBindingSpy spy;
+    rei::render::Shader shader;
+    shader.SetFloat("value", 3);
+    REQUIRE(GlBindingSpy::UniformCalls == 0);
+    shader.PostLoad();
+    shader.SetFloat("absent", 3);
+    shader.SetFloat("value", 3);
+    shader.SetFloat("value", 3);
+    REQUIRE(GlBindingSpy::UniformCalls == 2);
+    const auto revision = shader.GetProgramRevision();
+    rei::render::Shader moved(std::move(shader));
+    moved.SetFloat("value", 3);
+    REQUIRE(GlBindingSpy::UniformCalls == 3);
+    rei::render::Shader assigned;
+    assigned.PostLoad();
+    assigned.SetFloat("value", 8);
+    assigned = std::move(moved);
+    assigned.SetFloat("value", 3);
+    REQUIRE(GlBindingSpy::UniformCalls == 5);
+    {
+        rei::render::Shader::UniformBatch batch(assigned);
+        const auto program = GlBindingSpy::Program;
+        glUseProgram(0);
+        rei::render::Shader::InvalidateProgramBinding();
+        assigned.SetFloat("value", 3);
+        REQUIRE(GlBindingSpy::Program == program);
+        REQUIRE(GlBindingSpy::UniformCalls == 6);
+    }
+    assigned.Delete();
+    assigned.PostLoad();
+    REQUIRE(assigned.GetProgramRevision() != revision);
+    assigned.SetFloat("value", 3);
+    REQUIRE(GlBindingSpy::UniformCalls == 7);
 }

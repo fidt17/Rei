@@ -57,7 +57,7 @@ public sealed class ProfilingLifecycleTests(ITestOutputHelper output)
             Assert.Equal(uploads, phaseUploads);
             var useCalls = Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == "Rei.Shader.UseCalls")
                 .GetProperty("value").GetUInt64();
-            Assert.True(useCalls >= uploads);
+            if (uploads > 0) Assert.True(useCalls > 0);
             var exclusiveMs = metrics.Sum(metric => metric.GetProperty("exclusiveMs").GetDouble());
             Assert.InRange(exclusiveMs, 0, result.GetProperty("durationMs").GetDouble() + 0.001);
             var scope = Assert.Single(metrics, metric => metric.GetProperty("name").GetString() == "Fixture.Profiling.Update");

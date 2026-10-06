@@ -3,6 +3,7 @@
 #include <map>
 #include <unordered_set>
 #include <variant>
+#include <cstring>
 
 #include "Modules/Render/Shaders/Shader.h"
 #include "Modules/Render/Textures/Texture.h"
@@ -43,6 +44,15 @@ namespace rei::render
         static REI_API assets::AssetRef<Material> CreateInstanceFrom(const Material& source);
 
     private:
+        template <typename T>
+        bool HasPropertyValue(const std::string& name, const T& value) const
+        {
+            const auto property = _propertyBindings.find(name);
+            if (property == _propertyBindings.end()) return false;
+            const auto current = std::get_if<T>(&property->second);
+            return current != nullptr && std::memcmp(current, &value, sizeof(T)) == 0;
+        }
+
         void SyncShaderBindings() const;
         const assets::AssetRef<Texture>& GetWhiteFallbackTexture() const;
         std::unordered_set<std::string> BindTextures() const;

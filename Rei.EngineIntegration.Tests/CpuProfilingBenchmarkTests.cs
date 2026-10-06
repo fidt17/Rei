@@ -27,7 +27,7 @@ public sealed class CpuProfilingBenchmarkTests(ITestOutputHelper output)
         CpuProfilingBenchmark.RequireCurrentEngineBuild();
         var timeoutSeconds = Environment.GetEnvironmentVariable("REI_PROFILE_STARTUP_TIMEOUT_SECONDS");
         TimeSpan? timeout = timeoutSeconds == null ? null : TimeSpan.FromSeconds(int.Parse(timeoutSeconds));
-        await using var engine = new EngineIntegrationHarness(sourceProjectDirectory: source, startupTimeout: timeout);
+        await using var engine = await PreparedBenchmarkProject.OpenAsync(source, timeout);
         output.WriteLine($"Artifacts: {engine.RunDirectory}");
         var before = await ExternalProjectCopy.FingerprintAsync(source);
         Directory.CreateDirectory(engine.RunDirectory);
@@ -35,7 +35,13 @@ public sealed class CpuProfilingBenchmarkTests(ITestOutputHelper output)
         try
         {
             await engine.StartAsync();
+            var processId = engine.ProcessId;
+            var outputs = Directory.EnumerateFiles(Path.Combine(engine.ProjectDirectory, "bin"), "*", SearchOption.AllDirectories)
+                .Where(path => path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".cache", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(path => path, File.GetLastWriteTimeUtc);
             await CpuProfilingBenchmark.CaptureAsync(engine);
+            Assert.Equal(processId, engine.ProcessId);
+            foreach (var (path, timestamp) in outputs) Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
         }
         finally
         {

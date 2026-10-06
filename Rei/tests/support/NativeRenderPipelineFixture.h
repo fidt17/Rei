@@ -107,6 +107,7 @@ namespace rei::tests
         auto& light = registry->Get<render::PointLight>(entity);
         light.SetColor(render::Color::White());
         light.SetStrength(0.05f);
+        light.SetRange(10);
         return entity;
     }
 

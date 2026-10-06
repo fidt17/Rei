@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -82,8 +83,25 @@ internal static class ExternalProjectCopy
         // Copied tracking files contain original absolute outputs. Never let Clean/Build consume them.
         var bin = Path.Combine(destination, "bin");
         if (Directory.Exists(bin))
+        {
             foreach (var file in Directory.EnumerateFiles(bin, "*", SearchOption.AllDirectories).Where(IsBuildTrackingFile))
                 File.Delete(file);
+            foreach (var file in Directory.EnumerateFiles(bin, "asset-cache.json", SearchOption.AllDirectories))
+            {
+                // Cached payloads are keyed by asset ID and content. Remap only the
+                // manifest's source paths so a copied cache remains valid in its owned project.
+                var manifest = JsonNode.Parse(await File.ReadAllTextAsync(file))!;
+                if (manifest["Entries"] is not JsonObject entries) continue;
+                var prefix = source.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                foreach (var entry in entries.Select(entry => entry.Value).OfType<JsonObject>())
+                {
+                    var path = entry["AssetPath"]?.GetValue<string>();
+                    if (path == null || !path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                    entry["AssetPath"] = Path.Combine(destination, RelativeProjectPath(source, path));
+                }
+                await File.WriteAllTextAsync(file, manifest.ToJsonString());
+            }
+        }
     }
 
     private static bool IsBuildTrackingFile(string file) =>

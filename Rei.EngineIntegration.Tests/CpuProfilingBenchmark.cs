@@ -33,7 +33,11 @@ internal static class CpuProfilingBenchmark
         "Rei/resources/rei_behaviours/render/MeshRenderer.h", "Rei/resources/rei_behaviours/render/MeshRenderer.cpp",
         "Rei/resources/rei_behaviours/render/SpriteRenderer.h", "Rei/resources/rei_behaviours/render/SpriteRenderer.cpp",
         "Rei/src/Modules/Physics/Collider.h", "Rei/src/Modules/Physics/ModelCollider.h", "Rei/src/Modules/Physics/ModelCollider.cpp",
-        "Rei/src/Common/Profiling/ProfileMarkers.h", "Rei/src/Common/Profiling/ProfilingService.h", "Rei/src/Common/Profiling/ProfilingService.cpp"
+        "Rei/src/Common/Profiling/ProfileMarkers.h", "Rei/src/Common/Profiling/ProfilingService.h", "Rei/src/Common/Profiling/ProfilingService.cpp",
+        "Rei/src/Modules/Render/Shaders/Shader.h", "Rei/src/Modules/Render/Shaders/Shader.cpp",
+        "Rei/src/Modules/Render/Modules/LightingRenderModule.h", "Rei/src/Modules/Render/Modules/LightingRenderModule.cpp",
+        "Rei/src/Modules/Render/Material/Material.h", "Rei/src/Modules/Render/Material/Material.cpp",
+        "Rei/src/Modules/Render/Renderer.cpp", "Rei/src/Modules/Render/RenderScenario/DefaultRenderScenario.cpp"
     }.Select(path => Path.Combine(root, path));
 
     internal static async Task CaptureAsync(EngineIntegrationHarness engine, int warmupFrames = 120, int framesPerCapture = 120, int captureCount = 3)
@@ -41,17 +45,12 @@ internal static class CpuProfilingBenchmark
         if (warmupFrames is < 1 or > 3600) throw new ArgumentOutOfRangeException(nameof(warmupFrames));
         if (framesPerCapture is < 1 or > 3600) throw new ArgumentOutOfRangeException(nameof(framesPerCapture));
         if (captureCount is < 2 or > 10) throw new ArgumentOutOfRangeException(nameof(captureCount));
-        var buildStartedUtc = DateTimeOffset.UtcNow;
-        await engine.RunOperationAsync("rei_editor_start_build", new()
-        {
-            ["configuration"] = "editor_debug", ["forceSolutionRebuild"] = true,
-            ["forceCleanSolutionBuild"] = true, ["buildSolution"] = true, ["buildAssets"] = false
-        });
+        RequireCurrentEngineBuild();
+        // StartAsync already waits for the Editor's incremental build and asset import.
+        // Capture must not force Clean/Rebuild or restart an already current runtime.
+        var readyUtc = DateTimeOffset.UtcNow;
         var buildLogs = await engine.CallAsync("rei_editor_get_logs", new() { ["minimumLevel"] = "info", ["limit"] = 500 });
         await WriteAsync(engine, "cpu-build-logs.json", buildLogs);
-        // Clean build unloads the engine. A new owned process loads the fresh DLL and clears shutdown-only logs.
-        // Restart keeps this prepared project's absolute paths and imported caches unchanged.
-        await engine.RestartAsync();
         var before = await engine.CallAsync("rei_editor_get_state");
         var projectFile = Directory.GetFiles(engine.ProjectDirectory, "*.rei").Single();
         var project = JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
@@ -78,12 +77,10 @@ internal static class CpuProfilingBenchmark
         var engineInputs = new SortedDictionary<string, object>(StringComparer.Ordinal);
         foreach (var file in EngineInputs(Path.GetDirectoryName(engineFile)!)) engineInputs.Add(file, await DescribeFileAsync(file));
         var projectDll = Path.Combine(engine.ProjectDirectory, "bin", "x64EditorDebug", projectName, projectName + ".dll");
-        Assert.True(File.Exists(projectDll), $"Clean build did not produce project DLL: {projectDll}");
-        Assert.True(File.GetLastWriteTimeUtc(projectDll) >= buildStartedUtc.UtcDateTime.AddSeconds(-2), "Project DLL predates benchmark's clean build.");
-        Assert.True(File.GetLastWriteTimeUtc(projectDll) >= File.GetLastWriteTimeUtc(Path.Combine(nativeDirectory, "Rei.dll")), "Project DLL predates current engine binary.");
+        Assert.True(File.Exists(projectDll), $"Prepared build did not produce project DLL: {projectDll}");
         binaries["projectDll"] = await DescribeFileAsync(projectDll);
         var copiedEngine = Path.Combine(Path.GetDirectoryName(projectDll)!, "Rei.dll");
-        Assert.True(File.Exists(copiedEngine), "Clean build did not copy current engine beside project DLL.");
+        Assert.True(File.Exists(copiedEngine), "Prepared build did not copy current engine beside project DLL.");
         await using (var original = File.OpenRead(Path.Combine(nativeDirectory, "Rei.dll")))
         await using (var copy = File.OpenRead(copiedEngine))
             Assert.Equal(await SHA256.HashDataAsync(original), await SHA256.HashDataAsync(copy));
@@ -92,7 +89,7 @@ internal static class CpuProfilingBenchmark
         {
             schemaVersion = 1, capturedUtc = DateTimeOffset.UtcNow, engine.ProcessId, engine.ProjectDirectory,
             startupTimeoutSeconds = engine.StartupTimeout.TotalSeconds,
-            configuration = "EditorDebug", platform = "x64", projectName, sceneId, buildStartedUtc,
+            configuration = "EditorDebug", platform = "x64", projectName, sceneId, readyUtc,
             warmupFrames, framesPerCapture, captureCount, binaries, engineInputs, manifest,
             editorStateBefore = before,
             camera = new { status = "unavailable", source = "runtime", reason = "Existing MCP does not expose active native camera or Editor fly-camera matrices." },
@@ -176,7 +173,8 @@ internal static class CpuProfilingBenchmark
             phaseUploads += Metric(profile, $"Rei.Shader.UniformUploads.{phase}").GetProperty("value").GetUInt64();
         var total = Metric(profile, "Rei.Shader.UniformUploads").GetProperty("value").GetUInt64();
         Assert.Equal(total, phaseUploads);
-        Assert.True(Metric(profile, "Rei.Shader.UseCalls").GetProperty("value").GetUInt64() >= total);
+        // A uniform batch binds once for several uploads; call counts are independent.
+        if (total > 0) Assert.True(Metric(profile, "Rei.Shader.UseCalls").GetProperty("value").GetUInt64() > 0);
     }
 
     private static JsonElement Metric(JsonElement profile, string name) =>
