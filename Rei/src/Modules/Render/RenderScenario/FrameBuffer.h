@@ -2,10 +2,12 @@
 
 namespace rei::render
 {
+    enum class FrameBufferFormat { Srgb8, LinearHdr };
+
     class FrameBuffer
     {
     public:
-        FrameBuffer(i32 width = 0, i32 height = 0);
+        FrameBuffer(i32 width = 0, i32 height = 0, FrameBufferFormat format = FrameBufferFormat::Srgb8);
 
         ~FrameBuffer();
 
@@ -14,6 +16,7 @@ namespace rei::render
         u32 GetColorTexture() const;
 
     private:
+        FrameBufferFormat _format;
         u32 _fbo = 0; // frame buffer object
         u32 _colorTexture = 0;
         u32 _rbo = 0; // render buffer object for depth and stencil

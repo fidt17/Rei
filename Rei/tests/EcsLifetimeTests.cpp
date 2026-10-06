@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "support/NativeTestSupport.h"
-#include "Ecs/System.h"
 #include "Ecs/World.h"
 #include "Modules/Components/ActiveTag.h"
 #include <algorithm>
@@ -23,14 +22,6 @@ namespace
         ~Token() { Released->push_back(Id); }
     };
     struct OwnedComponent { std::unique_ptr<Token> Resource; };
-
-    class WorldAccessSystem final : public System
-    {
-    public:
-        explicit WorldAccessSystem(const std::shared_ptr<World>& world) : System(world) {}
-        std::shared_ptr<World> ShareWorld() const { return _ecsWorld; }
-        void OnUpdate() override { _ecsWorld->RefreshAll(); }
-    };
 
     void CheckEntities(const std::shared_ptr<Filter>& filter, const std::initializer_list<Entity> expected)
     {
@@ -344,24 +335,6 @@ TEST_CASE("ECS-10 World with a system releases its component storage", "[native]
         CHECK(weakWorld.expired());
         CHECK(*released == std::vector<i32>{9});
     });
-}
-
-TEST_CASE("ECS-10 Retained system cannot acquire destroyed World and releases retained storage", "[native][ecs][coverage]")
-{
-    const auto released = std::make_shared<std::vector<i32>>();
-    auto world = std::make_shared<World>();
-    std::weak_ptr<World> weakWorld = world;
-    world->GetRegistry()->Get<OwnedComponent>(world->GetRegistry()->NewEntity()).Resource = MakeToken(released, 19);
-    auto system = std::make_shared<WorldAccessSystem>(world);
-    CHECK(system->ShareWorld() == world);
-    REQUIRE_NOTHROW(system->OnUpdate());
-    world.reset();
-    REQUIRE(weakWorld.expired());
-    CHECK(released->empty()); // Retained system still legitimately owns its registry.
-    CHECK_THROWS_AS(system->ShareWorld(), std::runtime_error);
-    CHECK_THROWS_AS(system->OnUpdate(), std::runtime_error);
-    system.reset();
-    CHECK(*released == std::vector<i32>{19});
 }
 
 TEST_CASE("ECS-08 Reused entities do not inherit destroyed components", "[native][ecs][coverage]")

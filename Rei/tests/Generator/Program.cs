@@ -16,6 +16,7 @@ Property Collection(string itemSource, SerializedTypeEnum itemType) => new(Seria
 SerializableObjectInfo Object(string ns, string name, Dictionary<string, Property> properties, string? header = null, bool template = false) => new(ns, name, template, new ObjectFile<string>("", header ?? probeHeader), properties, header ?? probeHeader);
 var objects = new List<SerializableObjectInfo>
 {
+    Object("rei::render", "RendererSettings", new() { ["_exposureEV"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_toneMapping"] = Scalar(SerializedTypeEnum.Enum, "rei::render::ToneMappingMode") }, Path.Combine(reiRoot, "resources", "rei_data_assets", "render", "RendererSettings.h")),
     Object("rei::tests", "ProbeNested", new() { ["Value"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Label"] = Scalar(SerializedTypeEnum.String, "std::string") }),
     Object("rei::tests", "ProbeDataAsset", new() { ["Number"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Label"] = Scalar(SerializedTypeEnum.String, "std::string"), ["Settings"] = Custom("rei::tests::ProbeNested"), ["Values"] = Collection("i32", SerializedTypeEnum.Integer) }),
     Object("rei::math", "Vector3", new() { ["x"] = Scalar(SerializedTypeEnum.Float, "f32"), ["y"] = Scalar(SerializedTypeEnum.Float, "f32"), ["z"] = Scalar(SerializedTypeEnum.Float, "f32") }, Path.Combine(reiRoot, "src", "Common", "Math", "Vector3.h")),
@@ -56,7 +57,8 @@ AddEngineBehaviour("rei::render", "Camera", 7301, "render/camera/Camera.h", new(
 {
     ["_fov"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_orthographicSize"] = Scalar(SerializedTypeEnum.Float, "f32"),
     ["_nearClipPlane"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["_farClipPlane"] = Scalar(SerializedTypeEnum.Integer, "i32"),
-    ["_backgroundColor"] = Custom("rei::render::Color"), ["_perspective"] = Scalar(SerializedTypeEnum.Enum, "rei::render::CameraPerspectiveEnum")
+    ["_backgroundColor"] = Custom("rei::render::Color"), ["_perspective"] = Scalar(SerializedTypeEnum.Enum, "rei::render::CameraPerspectiveEnum"),
+    ["_rendererSettings"] = Custom("rei::assets::AssetRef<rei::render::RendererSettings>")
 });
 AddEngineBehaviour("rei::ui", "RectTransform", 7303, "ui/RectTransform.h", new()
 {
@@ -101,7 +103,7 @@ AddEngineBehaviour("rei::ui", "Button", 7310, "ui/Button.h", new()
     ["_hoverColor"] = Custom("rei::render::Color"), ["_pressedColor"] = Custom("rei::render::Color"), ["_disabledColor"] = Custom("rei::render::Color")
 }, ["RectTransform", "Image"]);
 var generator = new BehaviourRegistrySourceGenerator(new OutputResources(output), new FixtureRegistry(objects));
-await generator.GenerateBehaviourRegistrySourceFile(behaviours, objects, [new DataAssetTypeInfo(7201, objects.Single(x => x.ObjectName == "ProbeDataAsset"))]);
+await generator.GenerateBehaviourRegistrySourceFile(behaviours, objects, [new DataAssetTypeInfo(7201, objects.Single(x => x.ObjectName == "ProbeDataAsset")), new DataAssetTypeInfo(7202, objects.Single(x => x.ObjectName == "RendererSettings"))]);
 
 sealed class FixtureRegistry(List<SerializableObjectInfo> objects) : ISerializableObjectsRegistry
 {

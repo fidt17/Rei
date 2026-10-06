@@ -35,6 +35,7 @@ public static class EngineBehavioursConstants
     
     public const string CAMERA = "Camera";
     public const string CAMERA_BACKGROUND_COLOR = "_backgroundColor";
+    public const string CAMERA_RENDERER_SETTINGS = "_rendererSettings";
     
     public const string AMBIENT_LIGHT = "AmbientLight";
     public const string POINT_LIGHT = "PointLight";

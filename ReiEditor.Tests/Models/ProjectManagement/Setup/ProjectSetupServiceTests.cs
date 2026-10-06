@@ -4,6 +4,7 @@ using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Build.Assets;
@@ -21,6 +22,11 @@ namespace ReiEditor.Tests.Models.ProjectManagement.Setup;
 [Trait("Area", "Projects")]
 public sealed class ProjectSetupServiceTests
 {
+    private sealed class TestDefaultSettings(Func<Task> initialize) : IDefaultRendererSettingsService
+    {
+        public Task EnsureCreated() => initialize();
+    }
+
     private sealed class TestProjectUpdateService(Func<Project, Task> update) : IProjectUpdateService
     {
         public Task UpdateProject(Project project) => update(project);
@@ -100,6 +106,7 @@ public sealed class ProjectSetupServiceTests
         public TestBuildStarter Build { get; }
         public TestEntityManagementService Entities { get; }
         public TestLogger<ProjectSetupService> Logger { get; } = new();
+        public Func<Task> OnDefaults { get; set; } = () => Task.CompletedTask;
         public Func<Task> OnUpdate { get; set; } = () => Task.CompletedTask;
         public ProjectSetupService Service { get; }
 
@@ -114,7 +121,8 @@ public sealed class ProjectSetupServiceTests
             Entities = new() { OnCreate = (name, _) => { Calls.Add("template:" + name); return Task.FromResult<ReiEditor.Models.Services.Entities.GameEntity?>(null); } };
             Service = new(Logger, Scenes, active, Assets, Procedures,
                 new TestProjectUpdateService(project => { Assert.Same(Fixture.Project, project); Calls.Add("update"); return OnUpdate(); }),
-                new DefaultSceneTemplate(Entities, new TestBehaviourRegistry()), Build, Fixture.Resources);
+                new DefaultSceneTemplate(Entities, new TestBehaviourRegistry()), Build, Fixture.Resources,
+                new TestDefaultSettings(() => { Calls.Add("defaults"); return OnDefaults(); }));
         }
 
         public Scene CreateScene(string id)
@@ -148,7 +156,7 @@ public sealed class ProjectSetupServiceTests
 
         await context.Service.PrepareProject();
 
-        Assert.Equal(new[] { "update", "initialize", "create", "load:default", "template:Main Camera", "template:Point Light", "save", "build" }, context.Calls);
+        Assert.Equal(new[] { "update", "defaults", "initialize", "create", "load:default", "template:Main Camera", "template:Point Light", "save", "build" }, context.Calls);
         var creation = Assert.Single(context.Scenes.CreateCalls);
         Assert.Equal("Scenes", creation.Path);
         Assert.StartsWith("New Scene", creation.Name);
@@ -176,7 +184,7 @@ public sealed class ProjectSetupServiceTests
 
         Assert.Equal(lastSceneExists ? new[] { "last" } : new[] { "last", "fallback" }, context.Assets.LoadCalls);
         Assert.Same(selected, Assert.Single(context.Scenes.Loaded));
-        Assert.Equal(new[] { "update", "initialize", "load:" + selected.AssetId, "build" }, context.Calls);
+        Assert.Equal(new[] { "update", "defaults", "initialize", "load:" + selected.AssetId, "build" }, context.Calls);
         Assert.Empty(context.Scenes.CreateCalls);
         Assert.False(context.Procedures.AnyActiveProcedures());
     }
@@ -371,4 +379,16 @@ public sealed class ProjectSetupServiceTests
         Assert.False(context.Procedures.AnyActiveProcedures());
         Assert.Equal(1, finishes);
     }
+    [Fact]
+    public async Task DefaultProfileFailureStopsSceneSetupAndCompletesProcedure()
+    {
+        using var context = new TestContext();
+        context.OnDefaults = () => throw new InvalidOperationException("default creation failed");
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => context.Service.PrepareProject());
+        Assert.Equal("default creation failed", error.Message);
+        Assert.Equal(new[] { "update", "defaults" }, context.Calls);
+        Assert.False(context.Fixture.Project.HasBeenSetup);
+        Assert.False(context.Procedures.AnyActiveProcedures());
+    }
+
 }

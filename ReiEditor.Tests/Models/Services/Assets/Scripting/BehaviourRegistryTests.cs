@@ -206,7 +206,7 @@ public sealed class BehaviourRegistryTests : IDisposable
             _project.Resources,
             new TestLogger<BehaviourRegistry>(),
             serializableObjects,
-            new ReiEditor.Models.Services.Assets.DataAssets.DataAssetTypeRegistry(_project.Resources, metaFiles, new TestAssetCreator(), new TestLogger<ReiEditor.Models.Services.Assets.DataAssets.DataAssetTypeRegistry>()),
+            new ReiEditor.Models.Services.Assets.DataAssets.DataAssetTypeRegistry(_project.Resources, metaFiles, new TestAssetCreator(), new TestLogger<ReiEditor.Models.Services.Assets.DataAssets.DataAssetTypeRegistry>(), new TestEngineSettingsProvider(enginePath)),
             solution,
             activeProject,
             sourceFiles,

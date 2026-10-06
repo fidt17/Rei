@@ -12,14 +12,32 @@ namespace rei::render
         explicit PostProcessingModule(const std::shared_ptr<CameraModule>& cameraModule);
 
         void Setup();
+        void OnBeforeRender();
         void Render(const FrameBuffer& frameBuffer) const;
 
     private:
+        struct UniformState
+        {
+            u64 ProgramRevision = 0;
+            f32 ExposureEV = 0;
+            ToneMappingMode ToneMapping = Off;
+        };
+
+        struct OutputState
+        {
+            assets::AssetRef<Material> Material;
+            UniformState Uniforms;
+        };
+
+        OutputState& GetOutput(RenderMode renderMode);
+        static void UpdateUniforms(const Shader& shader, const Camera& camera, UniformState& state);
+        void DrawOutput(const FrameBuffer& frameBuffer) const;
+
+        OutputState _overlayOutput;
+        OutputState _grayscaleOutput;
+        OutputState _inversionOutput;
+        OutputState* _activeOutput = nullptr;
         std::shared_ptr<CameraModule> _cameraModule;
-        
-        assets::AssetRef<Material> _overlayMaterial{};
-        assets::AssetRef<Material> _grayscaleMaterial{};
-        assets::AssetRef<Material> _inversionMaterial{};
 
         QuadVertexData _quadVertexData;
     };

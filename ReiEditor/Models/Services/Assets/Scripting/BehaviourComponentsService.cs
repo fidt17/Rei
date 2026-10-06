@@ -142,6 +142,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
                     if (!component.HasProperty(definition.Key))
                     {
                         component.AddProperty(_serializedPropertiesService.Create(definition.Key, propertyData, null));
+                        if (componentInfo.ObjectName == EngineBehavioursConstants.CAMERA && definition.Key == EngineBehavioursConstants.CAMERA_RENDERER_SETTINGS)
+                            TrySetAssetRefId(component, definition.Key, SpecialAssetIds.DEFAULT_RENDERER_SETTINGS);
                     }
 
                     var property = component.GetProperty(definition.Key);
@@ -204,6 +206,12 @@ public class BehaviourComponentsService : IBehaviourComponentsService
 
     private void SetupCustomBehaviourValues(BehaviourComponent component)
     {
+        if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursConstants.CAMERA))
+        {
+            TrySetAssetRefId(component, EngineBehavioursConstants.CAMERA_RENDERER_SETTINGS, SpecialAssetIds.DEFAULT_RENDERER_SETTINGS);
+            return;
+        }
+
         if (component.Id == _behaviourRegistry.GetIdByName(EngineBehavioursConstants.TRANSFORM))
         {
             if (component.GetProperty(EngineBehavioursConstants.TRANSFORM_SCALE).Value is not Dictionary<string, SerializedProperty> scaleValue)

@@ -16,6 +16,6 @@
 
     void main()
     {   
-        FragColor = Inversion(REI_Sample(_tex));
+        FragColor = Inversion(REI_ApplyToneMapping(REI_Sample(_tex)));
     }
 #endif

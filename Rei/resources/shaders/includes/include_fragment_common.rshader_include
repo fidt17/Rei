@@ -49,6 +49,18 @@ vec3 REI_CalculatePointLight(float shininess)
     return total;
 }
 
+// Final scene output only. RGB is linear; alpha is coverage and stays unchanged.
+uniform float _ExposureMultiplier;
+uniform int _ToneMapping;
+
+vec4 REI_ApplyToneMapping(vec4 color)
+{
+    // Half-float highlights can overflow to infinity; saturate before the curve.
+    vec3 exposed = clamp(color.rgb, vec3(0.0), vec3(65504.0)) * _ExposureMultiplier;
+    if (_ToneMapping == 1) exposed = exposed / (vec3(1.0) + exposed);
+    return vec4(exposed, color.a);
+}
+
 vec4 REI_Sample(sampler2D sampler)
 {
     return texture(sampler, _TexCoords);

@@ -70,7 +70,7 @@ namespace rei::render
         std::shared_ptr<DebugOverlayModule> _debugOverlayModule;
         std::shared_ptr<UIRenderModule> _uiRenderModule;
 
-        FrameBuffer _mainFrameBuffer;
+        FrameBuffer _mainFrameBuffer{0, 0, FrameBufferFormat::LinearHdr};
         std::mutex _frameCaptureMutex;
         FrameCaptureCallback _frameCaptureCallback;
         bool _acceptFrameCapture = true;

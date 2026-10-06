@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include "CameraPerspectiveEnum.h"
+#include "Modules/Assets/Core/AssetRef.h"
+#include "Modules/Assets/Core/AssetIds.h"
+#include "rei_data_assets/render/RendererSettings.h"
 #include "Common/Math/Ray.h"
 #include "glm/ext/matrix_transform.hpp"
 #include "Modules/Render/Color/Color.h"
@@ -19,6 +22,7 @@ namespace rei::render
         SERIALIZE Color _backgroundColor = Color(19 / 255.0f, 23 / 255.0f, 30 / 255.0f, 1);
 
         SERIALIZE CameraPerspectiveEnum _perspective = Perspective;
+        SERIALIZE assets::AssetRef<RendererSettings> _rendererSettings = assets::AssetRef<RendererSettings>(REI_DEFAULT_RENDERER_SETTINGS_ID);
 
         i32 _outputWidth = 1;
         i32 _outputHeight = 1;
@@ -34,10 +38,12 @@ namespace rei::render
         REI_API RenderMode GetRenderMode() const;
         REI_API void GetOutputSize(i32& width, i32& height) const;
         REI_API CameraPerspectiveEnum GetPerspective() const;
+        REI_API const assets::AssetRef<RendererSettings>& GetRendererSettings() const;
 
         REI_API void SetOutputSize(i32 width, i32 height);
         REI_API void SetRenderMode(RenderMode mode);
         REI_API void SetPerspective(CameraPerspectiveEnum perspective);
+        REI_API void SetRendererSettings(const assets::AssetRef<RendererSettings>& settings);
 
         REI_API glm::mat4 GetProjectionMatrix() const;
         REI_API glm::mat4 GetViewMatrix() const;

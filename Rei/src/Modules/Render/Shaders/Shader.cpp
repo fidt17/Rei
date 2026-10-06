@@ -6,6 +6,7 @@
 #include "ShaderUtility.h"
 #include "glad/glad.h"
 #include "glm/gtc/type_ptr.hpp"
+#include <atomic>
 
 namespace rei::render
 {
@@ -19,12 +20,14 @@ namespace rei::render
 
     Shader::Shader(Shader&& other) noexcept
         : _id(other._id),
+          _programRevision(other._programRevision),
           _locations(std::move(other._locations)),
           _uniformNamesByType(std::move(other._uniformNamesByType)),
           _vertexSource(std::move(other._vertexSource)),
           _fragmentSource(std::move(other._fragmentSource))
     {
         other._id = 0;
+        other._programRevision = 0;
         other._locations.clear();
         other._uniformNamesByType.clear();
     }
@@ -38,11 +41,13 @@ namespace rei::render
 
         Delete();
         _id = other._id;
+        _programRevision = other._programRevision;
         _vertexSource = std::move(other._vertexSource);
         _fragmentSource = std::move(other._fragmentSource);
         _locations = std::move(other._locations);
         _uniformNamesByType = std::move(other._uniformNamesByType);
         other._id = 0;
+        other._programRevision = 0;
         other._locations.clear();
         other._uniformNamesByType.clear();
 
@@ -60,6 +65,8 @@ namespace rei::render
         {
             _id = ShaderUtility().CreateShaderProgram(_vertexSource.c_str(), _fragmentSource.c_str());
             if (_id == 0) throw std::runtime_error("Failed to create shader program");
+            static std::atomic<u64> nextProgramRevision{0};
+            _programRevision = ++nextProgramRevision;
             CacheUniformNames();
         }
     }
@@ -73,6 +80,7 @@ namespace rei::render
     {
         if (_id != 0) glDeleteProgram(_id);
         _id = 0;
+        _programRevision = 0;
         _locations.clear();
         _uniformNamesByType.clear();
     }

@@ -90,6 +90,7 @@ void rei::render::DefaultRenderScenario::OnBeforeRender()
 {
     _cameraModule->OnBeforeRender();
     _lighting->OnBeforeRender();
+    _postProcessingModule->OnBeforeRender();
 }
 
 void rei::render::DefaultRenderScenario::Render()

@@ -28,7 +28,7 @@ namespace rei::assets
     {
         SERIALIZABLE_BODY(AssetRef)
 
-        SERIALIZE std::string Id = "";
+        SERIALIZE std::string Id;
         std::shared_ptr<AssetRecord> Record = nullptr;
 
         using AssignHandler = void (*)(AssetRef<T>&, const AssetRef<T>&);

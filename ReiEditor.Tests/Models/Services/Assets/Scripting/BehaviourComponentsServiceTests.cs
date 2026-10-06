@@ -295,6 +295,36 @@ public sealed class BehaviourComponentsServiceTests
     }
 
     /// <summary>Creates service with inspectable error log.</summary>
+
+    [Fact]
+    public void CameraDefaultsMigrateOnlyMissingProfileAndPreserveExplicitReferences()
+    {
+        var behaviours = new TestBehaviourRegistry();
+        var objects = new TestSerializableObjectsRegistry();
+        objects.Objects.Add(new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", "AssetRef.h"),
+            new() { ["Id"] = Property(SerializedTypeEnum.String, "string", null) }, "AssetRef.h"));
+        behaviours.Set(Behaviour(8, EngineBehavioursConstants.CAMERA, new()
+        {
+            [EngineBehavioursConstants.CAMERA_RENDERER_SETTINGS] = Property(SerializedTypeEnum.Custom, "AssetRef<RendererSettings>", null)
+        }));
+        var service = CreateService(behaviours, objects);
+        var entity = new GameEntity(1, "camera");
+        Assert.True(service.AddComponent(entity, 8));
+        var component = entity.GetBehaviour(8)!;
+        var fields = Assert.IsType<Dictionary<string, SerializedProperty>>(component.GetProperty("_rendererSettings").Value);
+        Assert.Equal(ReiEditor.Models.Services.Assets.SpecialAssetIds.DEFAULT_RENDERER_SETTINGS, fields["Id"].Value);
+        fields["Id"].Value = "custom-profile";
+        service.RefreshComponents(entity);
+        Assert.Equal("custom-profile", fields["Id"].Value);
+        fields["Id"].Value = "";
+        service.RefreshComponents(entity);
+        Assert.Equal("", fields["Id"].Value);
+        component.RemoveProperty("_rendererSettings");
+        service.RefreshComponents(entity);
+        var migrated = Assert.IsType<Dictionary<string, SerializedProperty>>(component.GetProperty("_rendererSettings").Value);
+        Assert.Equal(ReiEditor.Models.Services.Assets.SpecialAssetIds.DEFAULT_RENDERER_SETTINGS, migrated["Id"].Value);
+    }
+
     private static BehaviourComponentsService CreateService(TestBehaviourRegistry behaviours, TestSerializableObjectsRegistry objects)
     {
         return new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), behaviours, new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>()));

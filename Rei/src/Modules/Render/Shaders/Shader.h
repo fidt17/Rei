@@ -29,6 +29,7 @@ namespace rei::render
 
         REI_API void SetViewMatrices(const glm::mat4& projectionMatrix, const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) const;
         REI_API void PostLoad();
+        REI_API u64 GetProgramRevision() const { return _programRevision; }
         // References expire when the program is deleted, moved or recreated.
         REI_API const std::vector<std::string>& GetUniformNamesByType(u32 uniformType) const;
         
@@ -38,6 +39,7 @@ namespace rei::render
         void CacheUniformNames();
 
         mutable u32 _id = 0;
+        mutable u64 _programRevision = 0;
         mutable std::unordered_map<std::string, i32> _locations;
         mutable std::unordered_map<u32, std::vector<std::string>> _uniformNamesByType;
 

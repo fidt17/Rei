@@ -2,8 +2,9 @@
 
 #include "glad/glad.h"
 
-rei::render::FrameBuffer::FrameBuffer(const i32 width, const i32 height)
+rei::render::FrameBuffer::FrameBuffer(const i32 width, const i32 height, const FrameBufferFormat format)
     :
+    _format(format),
     _outputWidth(width),
     _outputHeight(height)
 {
@@ -53,7 +54,8 @@ void rei::render::FrameBuffer::CreateTextures()
     glGenTextures(1, &_colorTexture);
     glBindTexture(GL_TEXTURE_2D, _colorTexture);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, _outputWidth, _outputHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    const bool hdr = _format == FrameBufferFormat::LinearHdr;
+    glTexImage2D(GL_TEXTURE_2D, 0, hdr ? GL_RGBA16F : GL_SRGB8_ALPHA8, _outputWidth, _outputHeight, 0, GL_RGBA, hdr ? GL_FLOAT : GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

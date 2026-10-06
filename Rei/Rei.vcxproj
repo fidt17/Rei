@@ -561,6 +561,8 @@
     <ClInclude Include="external\json.hpp" />
     <ClInclude Include="external\KHR\khrplatform.h" />
     <ClInclude Include="external\stb_image.h" />
+    <ClInclude Include="resources\rei_data_assets\render\RendererSettings.h" />
+    <ClInclude Include="src\Modules\Render\ToneMappingMode.h" />
     <ClInclude Include="resources\rei_behaviours\render\camera\Camera.h" />
     <ClInclude Include="resources\rei_behaviours\render\camera\CameraPerspectiveEnum.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
@@ -973,6 +975,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\GeneratedSerializationTests.cpp">
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'!='Tests|x64'">true</ExcludedFromBuild>
       <AdditionalIncludeDirectories>$(IntDir)native-tests;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -1019,6 +1022,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\ProjectDllTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\HdrRenderingTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\RenderModuleIntegrationTests.cpp">

@@ -592,6 +592,7 @@ TEST_CASE("RENDER09 overlay postprocessing preserves flat input color", "[native
         glClear(GL_COLOR_BUFFER_BIT);
         render::FrameBuffer target(32, 32);
         glDisable(GL_DEPTH_TEST);
+        module.OnBeforeRender();
         module.Render(source);
         RequirePixel(ReadPixel(), {137, 188, 225, 255});
     });
@@ -611,6 +612,7 @@ TEST_CASE("RENDER10 grayscale postprocessing outputs weighted luminance", "[nati
         glClear(GL_COLOR_BUFFER_BIT);
         render::FrameBuffer target(32, 32);
         glDisable(GL_DEPTH_TEST);
+        module.OnBeforeRender();
         module.Render(source);
         RequirePixel(ReadPixel(), {127, 127, 127, 255});
     });
@@ -630,6 +632,7 @@ TEST_CASE("RENDER11 inversion postprocessing outputs component complements", "[n
         glClear(GL_COLOR_BUFFER_BIT);
         render::FrameBuffer target(32, 32);
         glDisable(GL_DEPTH_TEST);
+        module.OnBeforeRender();
         module.Render(source);
         RequirePixel(ReadPixel(), {0, 225, 255, 255});
     });

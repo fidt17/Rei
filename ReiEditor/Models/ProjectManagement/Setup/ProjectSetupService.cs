@@ -6,6 +6,7 @@ using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -27,6 +28,7 @@ public class ProjectSetupService : IProjectSetupService
     private readonly DefaultSceneTemplate _defaultSceneTemplate;
     private readonly IBuildStarter _buildStarter;
     private readonly IResourceService _resourceService;
+    private readonly IDefaultRendererSettingsService _defaultRendererSettings;
 
     public ProjectSetupService(
         ILogger<ProjectSetupService> logger, 
@@ -37,7 +39,8 @@ public class ProjectSetupService : IProjectSetupService
         IProjectUpdateService projectUpdateService, 
         DefaultSceneTemplate defaultSceneTemplate, 
         IBuildStarter buildStarter, 
-        IResourceService resourceService)
+        IResourceService resourceService,
+        IDefaultRendererSettingsService defaultRendererSettings)
     {
         _logger = logger;
         _sceneManagementService = sceneManagementService;
@@ -48,6 +51,7 @@ public class ProjectSetupService : IProjectSetupService
         _defaultSceneTemplate = defaultSceneTemplate;
         _buildStarter = buildStarter;
         _resourceService = resourceService;
+        _defaultRendererSettings = defaultRendererSettings;
     }
 
     public async Task PrepareProject()
@@ -60,6 +64,7 @@ public class ProjectSetupService : IProjectSetupService
             var project = _activeProjectService.GetActiveProject();
 
             await _projectUpdateService.UpdateProject(project);
+            await _defaultRendererSettings.EnsureCreated();
             await _sceneManagementService.InitializeAsync();
 
             if (!project.HasBeenSetup)

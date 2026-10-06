@@ -210,3 +210,13 @@ namespace rei::render
         return ray;
     }
 }
+
+const rei::assets::AssetRef<rei::render::RendererSettings>& rei::render::Camera::GetRendererSettings() const
+{
+    return _rendererSettings;
+}
+
+void rei::render::Camera::SetRendererSettings(const assets::AssetRef<RendererSettings>& settings)
+{
+    _rendererSettings = settings;
+}

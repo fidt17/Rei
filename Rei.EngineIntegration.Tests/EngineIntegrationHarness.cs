@@ -182,9 +182,10 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         throw new TimeoutException($"Engine condition timed out. Artifacts: {RunDirectory}");
     }
 
-    public async Task RestartAsync()
+    public async Task RestartAsync(Func<string, Task>? prepareProject = null)
     {
         await StopAsync();
+        if (prepareProject != null) await prepareProject(ProjectDirectory);
         await StartAsync();
     }
 

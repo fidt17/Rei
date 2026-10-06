@@ -18,6 +18,6 @@
 
     void main()
     {   
-        FragColor = Grayscale(REI_Sample(_tex));
+        FragColor = Grayscale(REI_ApplyToneMapping(REI_Sample(_tex)));
     }
 #endif

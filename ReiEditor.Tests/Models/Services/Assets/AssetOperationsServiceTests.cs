@@ -201,7 +201,7 @@ public sealed class AssetOperationsServiceTests
         importer = new TestAssetImporter();
         return new AssetOperationsService(
             new TestLogger<AssetOperationsService>(), project.Resources, importer, registry, metaService,
-            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>()));
+            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>(), null!));
     }
 
 }

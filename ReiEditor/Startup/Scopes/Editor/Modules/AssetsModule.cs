@@ -37,6 +37,7 @@ public class AssetsModule : Module
         b.RegisterSingleton<AssetRuntimeSyncService>().As<IAssetRuntimeSyncService>();
         b.RegisterSingleton<DataAssetService>().As<IDataAssetService>();
         b.RegisterSingleton<DataAssetTypeRegistry>().As<IDataAssetTypeRegistry>();
+        b.RegisterSingleton<DefaultRendererSettingsService>().As<IDefaultRendererSettingsService>();
         b.RegisterSingleton<DataAssetSchemaService>()
             .As<IDataAssetSchemaService>()
             .As<IAssetPostLoadProcessor>();
