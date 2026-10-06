@@ -591,6 +591,8 @@
     <ClInclude Include="src\Common\Math\Plane.h" />
     <ClInclude Include="src\Common\Math\Ray.h" />
     <ClInclude Include="src\Common\Math\Vector2.h" />
+    <ClInclude Include="src\Common\Math\Bounds.h" />
+    <ClInclude Include="src\Common\Profiling\GpuTimer.h" />
     <ClInclude Include="src\Common\Math\Vector3.h" />
     <ClInclude Include="src\Common\Tasks\Task.h" />
     <ClInclude Include="src\Common\Tasks\TaskExecutor.h" />

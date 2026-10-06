@@ -66,6 +66,38 @@ public sealed class PreparedBenchmarkProjectTests
         }
     }
 
+    [Fact]
+    public async Task BuildOutputsAndEditTimestampReuseCacheButSceneSettingInvalidatesIt()
+    {
+        await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);
+        var source = CreateSource(owner.RunDirectory);
+        var index = Path.Combine(owner.RunDirectory, "index");
+        var owned = new HashSet<string>();
+        try
+        {
+            await using var first = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            owned.Add(first.RunDirectory);
+            await first.PrepareProjectAsync(Path.Combine(owner.RunDirectory, "engine.rei_engine"), "msbuild.exe");
+            await File.WriteAllTextAsync(Path.Combine(source, "bin", "Resources", "Cache", "retained.cache"), "rebuilt output");
+            var projectFile = Path.Combine(source, "Fixture.rei");
+            var project = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
+            project["LastEditTime"] = "later timestamp";
+            await File.WriteAllTextAsync(projectFile, project.ToJsonString());
+            await using var second = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            Assert.Equal(first.RunDirectory, second.RunDirectory);
+            project["LastSceneId"] = "another scene";
+            await File.WriteAllTextAsync(projectFile, project.ToJsonString());
+            await using var third = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            owned.Add(third.RunDirectory);
+            Assert.NotEqual(first.RunDirectory, third.RunDirectory);
+        }
+        finally
+        {
+            foreach (var directory in owned) if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            Directory.Delete(owner.RunDirectory, recursive: true);
+        }
+    }
+
     private static string CreateSource(string root)
     {
         var source = Path.Combine(root, "source");

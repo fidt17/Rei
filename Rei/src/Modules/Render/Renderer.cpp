@@ -51,6 +51,18 @@ namespace rei::render
             REI_THROW("GLAD Initialization failed")
         }
 
+        // Measurement-only override; normal launches keep the driver's default.
+        const auto interval = std::getenv("REI_PROFILE_SWAP_INTERVAL");
+        if (interval && (interval[0] == '0' || interval[0] == '1') && interval[1] == '\0')
+        {
+            const i32 requested = interval[0] - '0';
+            glfwSwapInterval(requested);
+            using ReadSwapInterval = i32 (APIENTRY*)();
+            const auto read = reinterpret_cast<ReadSwapInterval>(glfwGetProcAddress("wglGetSwapIntervalEXT"));
+            const i32 actual = read ? read() : -1;
+            LOG("Profiling presentation: requested swap interval={}, actual={} (-1 means unavailable)", requested, actual)
+        }
+
         PrepareAssets();
         _renderScenario = std::make_unique<DefaultRenderScenario>(_target, _customRenderModules);
         _renderScenario->Setup();

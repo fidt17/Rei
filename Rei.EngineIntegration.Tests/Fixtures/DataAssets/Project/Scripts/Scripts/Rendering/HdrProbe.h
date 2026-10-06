@@ -22,6 +22,7 @@ namespace rei::testing
             _output->ProfileId = ref.Id;
             _output->ExposureEV = settings ? settings->GetExposureEV() : 0;
             _output->ToneMapping = settings ? static_cast<i32>(settings->GetToneMapping()) : 0;
+            _output->MaxPointLights = settings ? settings->GetMaxPointLights() : REI_MAX_POINT_LIGHTS_COUNT;
             ++_output->Samples;
         }
     };

@@ -39,6 +39,12 @@ TEST_CASE("HDR01 camera profiles serialize settings and sanitize invalid runtime
     render::RendererSettings settings;
     REQUIRE(settings.GetExposureEV() == 0);
     REQUIRE(settings.GetToneMapping() == render::Reinhard);
+    REQUIRE(settings.GetMaxPointLights() == 8);
+    // Old serialized profiles omit the new field and retain its default.
+    settings.REI_SET(SerializedField("_exposureEV", 0.0));
+    REQUIRE(settings.GetMaxPointLights() == 8);
+    settings.REI_SET(SerializedField("_maxPointLights", 3));
+    REQUIRE(settings.GetMaxPointLights() == 3);
     settings.REI_SET(SerializedField("_exposureEV", 2.5));
     settings.REI_SET(SerializedField("_toneMapping", static_cast<i32>(render::Off)));
     CHECK(settings.GetExposureEV() == 2.5f);
@@ -49,6 +55,13 @@ TEST_CASE("HDR01 camera profiles serialize settings and sanitize invalid runtime
     restored.REI_SET(SerializedField("_toneMapping", serialized.at("_toneMapping")));
     CHECK(restored.GetExposureEV() == 2.5f);
     CHECK(restored.GetToneMapping() == render::Off);
+    restored.REI_SET(SerializedField("_maxPointLights", serialized.at("_maxPointLights")));
+    CHECK(restored.GetMaxPointLights() == 3);
+    for (const auto [requested, expected] : {std::pair<i32, i32>{-10, 0}, {0, 0}, {4, 4}, {8, 8}, {99, 8}})
+    {
+        settings.SetMaxPointLights(requested);
+        CHECK(settings.GetMaxPointLights() == expected);
+    }
     for (const f32 invalid : {std::numeric_limits<f32>::quiet_NaN(), std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity()})
     {
         settings.SetExposureEV(invalid);

@@ -35,6 +35,15 @@ namespace rei::profiling::markers
     inline constexpr auto OVERLAY = MakeScope("Rei.Diagnostics.Overlay");
     inline constexpr auto CAPTURE = MakeScope("Rei.Render.Readback");
     inline constexpr auto SWAP = MakeScope("Rei.Render.Swap");
+    inline constexpr auto LIGHTING_TESTED = MakeCounter("Rei.Lighting.Tested");
+    inline constexpr auto LIGHTING_SELECTED = MakeCounter("Rei.Lighting.Selected");
+    inline constexpr auto LIGHTING_OBJECTS = MakeCounter("Rei.Lighting.Objects");
+    inline constexpr auto GPU_SCENE_NS = MakeCounter("Rei.Gpu.Scene.Nanoseconds");
+    inline constexpr auto GPU_SCENE_SAMPLES = MakeCounter("Rei.Gpu.Scene.Samples");
+    inline constexpr auto GPU_GEOMETRY_NS = MakeCounter("Rei.Gpu.Geometry.Nanoseconds");
+    inline constexpr auto GPU_GEOMETRY_SAMPLES = MakeCounter("Rei.Gpu.Geometry.Samples");
+    inline constexpr auto GPU_UNSUPPORTED = MakeCounter("Rei.Gpu.Unsupported");
+    inline constexpr auto GPU_SKIPPED = MakeCounter("Rei.Gpu.Skipped");
     inline constexpr auto DRAW_CALLS = MakeCounter("Rei.Draw.Calls");
     inline constexpr auto VERTICES = MakeCounter("Rei.Draw.SubmittedVertices");
     inline constexpr auto TRIANGLES = MakeCounter("Rei.Draw.Triangles");
@@ -59,6 +68,7 @@ namespace rei::profiling::markers
         RENDER, PREPARE, SCENE, OUTLINE_PASS, GEOMETRY, LIGHTING_APPLY, OBJECT_DATA, MESH_SUBMIT, HELPERS, OUTPUT, OUTLINE_COMPOSITE,
         UI, UI_COLLECT, UI_IMAGE, UI_TEXT, UI_TEXT_LAYOUT, UI_TEXT_MEASURE, UI_TEXT_GEOMETRY, UI_TEXT_SUBMIT,
         MATERIAL, OVERLAY, CAPTURE, SWAP,
+        LIGHTING_TESTED, LIGHTING_SELECTED, LIGHTING_OBJECTS, GPU_SCENE_NS, GPU_SCENE_SAMPLES, GPU_GEOMETRY_NS, GPU_GEOMETRY_SAMPLES, GPU_UNSUPPORTED, GPU_SKIPPED,
         DRAW_CALLS, VERTICES, TRIANGLES, MATERIAL_BINDS, PROPERTY_WRITES, UNIFORMS, SHADER_USE_CALLS,
         UNIFORMS_LIGHTING, UNIFORMS_CAMERA, UNIFORMS_OBJECT, UNIFORMS_MATERIAL, UNIFORMS_OTHER, TEXTURES, GLYPHS,
         UI_TEXT_DRAWS, UI_ITEMS, PICK_CANDIDATES, PICK_SELECTION_CANDIDATES, TASK_COUNT};

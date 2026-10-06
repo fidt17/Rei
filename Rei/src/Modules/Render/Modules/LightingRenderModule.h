@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Modules/Render/Material/Material.h"
+#include "Common/Math/Bounds.h"
 #include "Modules/Render/Mesh/VertexObjects/CubeVertexData.h"
 #include "Modules/Render/RenderScenario/CameraModule.h"
 #include "Modules/Render/Shaders/Shader.h"
@@ -28,7 +29,7 @@ namespace rei::render
         void OnBeforeRender();
         void Render() const;
 
-        void SetLightValues(const Shader& shader) const;
+        void SetLightValues(const Shader& shader, const math::Bounds& localBounds = {}, const glm::mat4& modelMatrix = glm::mat4(1)) const;
 
     private:
         void FindAmbientLights();
@@ -41,10 +42,10 @@ namespace rei::render
         
         ecs::ComponentRef<AmbientLight> _ambientLight = {};
         std::vector<ecs::ComponentRef<PointLight>> _pointLights = {};
+        i32 _pointLightLimit = REI_MAX_POINT_LIGHTS_COUNT;
         f32 _ambientStrength = 0;
         Color _ambientLinearColor{0, 0, 0, 1};
-        std::array<PointLightSnapshot, REI_MAX_POINT_LIGHTS_COUNT> _pointSnapshot{};
-        i32 _pointCount = 0;
+        std::vector<PointLightSnapshot> _pointSnapshot{};
         // Bounded to programs used this frame; locations themselves are cached by Shader.
         mutable std::unordered_map<u64, LightLocations> _lightLocations;
 

@@ -30,9 +30,12 @@ internal static class CpuProfilingBenchmark
 
     private static IEnumerable<string> EngineInputs(string root) => new[]
     {
+        "Rei/src/Core.h", "Rei/resources/rei_data_assets/render/RendererSettings.h",
         "Rei/resources/rei_behaviours/render/MeshRenderer.h", "Rei/resources/rei_behaviours/render/MeshRenderer.cpp",
         "Rei/resources/rei_behaviours/render/SpriteRenderer.h", "Rei/resources/rei_behaviours/render/SpriteRenderer.cpp",
         "Rei/src/Modules/Physics/Collider.h", "Rei/src/Modules/Physics/ModelCollider.h", "Rei/src/Modules/Physics/ModelCollider.cpp",
+        "Rei/src/Common/Math/Bounds.h", "Rei/src/Modules/Render/Model/Model.h", "Rei/src/Modules/Render/Model/Model.cpp",
+        "Rei/src/Common/Profiling/GpuTimer.h", "Rei/src/Modules/Render/RenderScenario/DefaultRenderScenario.h",
         "Rei/src/Common/Profiling/ProfileMarkers.h", "Rei/src/Common/Profiling/ProfilingService.h", "Rei/src/Common/Profiling/ProfilingService.cpp",
         "Rei/src/Modules/Render/Shaders/Shader.h", "Rei/src/Modules/Render/Shaders/Shader.cpp",
         "Rei/src/Modules/Render/Modules/LightingRenderModule.h", "Rei/src/Modules/Render/Modules/LightingRenderModule.cpp",
@@ -96,7 +99,10 @@ internal static class CpuProfilingBenchmark
             viewport = new { status = "unavailable", source = "runtime", reason = "Existing non-image MCP reads do not expose native framebuffer dimensions." },
             layout = new { source = "harness", preferences = await File.ReadAllTextAsync(Path.Combine(engine.RunDirectory, "storage", "preferences.json")),
                 note = "Fresh isolated storage; old user layout is not copied. Old viewport/camera baseline equivalence is unverified." },
-            measurement = "Native CPU wall time, including GL waits; no GPU timing or framebuffer readback. Profiling enabled in every capture."
+            measurement = "Native CPU wall time including GL waits; optional asynchronous GPU timestamp counters (nanoseconds / samples). No framebuffer readback inside captures.",
+            gpuTimingRequested = Environment.GetEnvironmentVariable("REI_PROFILE_GPU") == "1",
+            swapIntervalRequested = Environment.GetEnvironmentVariable("REI_PROFILE_SWAP_INTERVAL"),
+            presentationNote = "Actual swap interval is logged by native Renderer; request alone does not prove a driver cap is disabled."
         });
         var warmup = await CaptureOneAsync(engine, warmupFrames, null);
         await WriteAsync(engine, "cpu-warmup.json", warmup);

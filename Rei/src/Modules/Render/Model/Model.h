@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Modules/Render/Mesh/Mesh.h"
+#include "Common/Math/Bounds.h"
 
 namespace rei::render
 {
@@ -13,9 +14,12 @@ namespace rei::render
         REI_API void PostLoad();
 
         const std::vector<Mesh>& GetMeshes() const;
+        const math::Bounds& GetBounds() const { return _bounds; }
 
     private:
         std::string _name;
         std::vector<Mesh> _meshes;
+        math::Bounds _bounds;
+        void BuildBounds();
     };
 }

@@ -22,6 +22,7 @@ public sealed class RendererSettingsTests(ITestOutputHelper output)
         await engine.StartAsync();
         await engine.WaitUntilAsync(async () => (await engine.ReadAssetAsync(PROFILE_ID, "runtime")).GetProperty("status").GetString() == "loaded");
         await AssertPropertyAsync(engine, "_exposureEV", 0.0, PROFILE_ID);
+        await AssertPropertyAsync(engine, "_maxPointLights", 8, PROFILE_ID);
         Assert.Equal("unloaded", (await engine.ReadAssetAsync(ALTERNATE_PROFILE_ID, "runtime")).GetProperty("status").GetString());
         await engine.RunOperationAsync("rei_editor_start_playmode");
         await AssertCameraAsync(engine, PROFILE_ID, 0, 1);
@@ -29,7 +30,9 @@ public sealed class RendererSettingsTests(ITestOutputHelper output)
         await AssertPropertyAsync(engine, "_exposureEV", 1.25, PROFILE_ID);
         await SetAsync(engine, "_toneMapping", 0, PROFILE_ID);
         await AssertPropertyAsync(engine, "_toneMapping", 0, PROFILE_ID);
-        await AssertCameraAsync(engine, PROFILE_ID, 1.25, 0);
+        await SetAsync(engine, "_maxPointLights", 3, PROFILE_ID);
+        await AssertPropertyAsync(engine, "_maxPointLights", 3, PROFILE_ID);
+        await AssertCameraAsync(engine, PROFILE_ID, 1.25, 0, 3);
 
         var unloadedWrite = await SetAsync(engine, "_exposureEV", -3, ALTERNATE_PROFILE_ID);
         Assert.False(unloadedWrite.GetProperty("runtimeSynced").GetBoolean());
@@ -59,24 +62,32 @@ public sealed class RendererSettingsTests(ITestOutputHelper output)
         await engine.StartAsync();
         await engine.WaitUntilAsync(async () => (await engine.ReadAssetAsync(PROFILE_ID, "runtime")).GetProperty("status").GetString() == "loaded");
         await SetAsync(engine, "_exposureEV", -0.75, PROFILE_ID);
+        await SetAsync(engine, "_maxPointLights", 6, PROFILE_ID);
         await AssertPropertyAsync(engine, "_exposureEV", -0.75, PROFILE_ID);
+        await AssertPropertyAsync(engine, "_maxPointLights", 6, PROFILE_ID);
         await engine.CallAsync("rei_editor_save_project");
         var path = Path.Combine(engine.ProjectDirectory, "Project", "DataAssets", "Tests", "RendererSettings.asset");
         using (var saved = JsonDocument.Parse(await File.ReadAllTextAsync(path)))
+        {
             Assert.Equal(-0.75, saved.RootElement.GetProperty("SerializedData").GetProperty("_exposureEV").GetProperty("Value").GetDouble());
+            Assert.Equal(6, saved.RootElement.GetProperty("SerializedData").GetProperty("_maxPointLights").GetProperty("Value").GetInt32());
+        }
         await engine.RunOperationAsync("rei_editor_start_build", new() { ["configuration"] = "editor_debug", ["forceSolutionRebuild"] = true });
         await engine.RunOperationAsync("rei_editor_start_playmode");
-        await AssertCameraAsync(engine, PROFILE_ID, -0.75, 1);
+        await AssertCameraAsync(engine, PROFILE_ID, -0.75, 1, 6);
         await SetAsync(engine, "_exposureEV", 2, PROFILE_ID);
-        await AssertCameraAsync(engine, PROFILE_ID, 2, 1);
+        await SetAsync(engine, "_maxPointLights", 2, PROFILE_ID);
+        await AssertCameraAsync(engine, PROFILE_ID, 2, 1, 2);
         await engine.RunOperationAsync("rei_editor_stop_playmode");
         await WaitForProfileAsync(engine);
         await AssertPropertyAsync(engine, "_exposureEV", -0.75, PROFILE_ID);
+        await AssertPropertyAsync(engine, "_maxPointLights", 6, PROFILE_ID);
         await engine.RestartAsync();
         await WaitForProfileAsync(engine);
         await AssertPropertyAsync(engine, "_exposureEV", -0.75, PROFILE_ID);
+        await AssertPropertyAsync(engine, "_maxPointLights", 6, PROFILE_ID);
         await engine.RunOperationAsync("rei_editor_start_playmode");
-        await AssertCameraAsync(engine, PROFILE_ID, -0.75, 1);
+        await AssertCameraAsync(engine, PROFILE_ID, -0.75, 1, 6);
         await engine.RunOperationAsync("rei_editor_stop_playmode");
         await WaitForProfileAsync(engine);
     }
@@ -100,6 +111,7 @@ public sealed class RendererSettingsTests(ITestOutputHelper output)
         await engine.WaitUntilAsync(async () => (await engine.ReadAssetAsync(DEFAULT_ID, "runtime")).GetProperty("status").GetString() == "loaded");
         await AssertPropertyAsync(engine, "_exposureEV", 0, DEFAULT_ID);
         await AssertPropertyAsync(engine, "_toneMapping", 1, DEFAULT_ID);
+        await AssertPropertyAsync(engine, "_maxPointLights", 8, DEFAULT_ID);
         await SetAsync(engine, "_exposureEV", -0.5, DEFAULT_ID);
         await AssertPropertyAsync(engine, "_exposureEV", -0.5, DEFAULT_ID);
         await engine.CallAsync("rei_editor_set_behaviour_property", new()
@@ -144,7 +156,7 @@ public sealed class RendererSettingsTests(ITestOutputHelper output)
         ["entityId"] = 1, ["behaviourName"] = "Camera", ["propertyName"] = "_rendererSettings", ["value"] = new Dictionary<string, object?> { ["Id"] = id }
     });
 
-    private static async Task AssertCameraAsync(EngineIntegrationHarness engine, string id, double exposure, int toneMapping)
+    private static async Task AssertCameraAsync(EngineIntegrationHarness engine, string id, double exposure, int toneMapping, int maxPointLights = 8)
     {
         await engine.WaitUntilAsync(async () =>
         {
@@ -152,7 +164,7 @@ public sealed class RendererSettingsTests(ITestOutputHelper output)
             if (native.GetProperty("status").GetString() != "loaded") return false;
             var values = native.GetProperty("values");
             return values.GetProperty("Samples").GetInt32() > 0 && values.GetProperty("ProfileId").GetString() == id &&
-                Math.Abs(values.GetProperty("ExposureEV").GetDouble() - exposure) <= 0.00001 && values.GetProperty("ToneMapping").GetInt32() == toneMapping;
+                Math.Abs(values.GetProperty("ExposureEV").GetDouble() - exposure) <= 0.00001 && values.GetProperty("ToneMapping").GetInt32() == toneMapping && values.GetProperty("MaxPointLights").GetInt32() == maxPointLights;
         });
     }
 }

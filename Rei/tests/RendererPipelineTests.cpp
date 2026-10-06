@@ -333,15 +333,15 @@ TEST_CASE("PIPE10 real engine four point lights produce independently computed d
     }, 30000, 1024);
 }
 
-TEST_CASE("PIPE11 real engine fifth point light stays outside four-slot shader cap", "[native][coverage][coverage-remaining][gl][engine-integration][renderer][lighting][isolated]")
+TEST_CASE("PIPE11 real engine ninth point light stays outside eight-slot shader cap", "[native][coverage][coverage-remaining][gl][engine-integration][renderer][lighting][isolated]")
 {
     Isolated([]
     {
         NativeEngineFixture engine(internal::engine::PlayMode, "renderer", PrepareRenderResources);
         engine.Start();
-        engine.OnEngineThread([] { CreateLitMeshWithLights(5); Refresh(); });
+        engine.OnEngineThread([] { CreateLitMeshWithLights(9); Refresh(); });
         const auto frame = Capture(engine);
-        const auto brightness = ExpectedPointBrightness(4);
+        const auto brightness = ExpectedPointBrightness(8);
         const auto expected = static_cast<u8>(std::lround(255.0f * (1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255}, 2);
         engine.Stop();
@@ -356,28 +356,28 @@ TEST_CASE("PIPE15 real engine point light lifecycle agrees with shader uniforms 
         engine.Start();
         engine.OnEngineThread([] { CreateLitMeshWithLights(0); });
         VerifyLightingFrame(engine, 0);
-        std::vector<ecs::Entity> lights(5, ecs::NULL_ENTITY);
-        for (i32 i = 0; i < 5; ++i)
+        std::vector<ecs::Entity> lights(9, ecs::NULL_ENTITY);
+        for (i32 i = 0; i < 9; ++i)
         {
             engine.OnEngineThread([&] { lights[i] = CreatePointLight(); });
-            VerifyLightingFrame(engine, std::min(i + 1, 4));
+            VerifyLightingFrame(engine, std::min(i + 1, 8));
         }
-        engine.OnEngineThread([&] { GetEntityManager().DeleteBehaviour(lights[4], 7306); });
-        VerifyLightingFrame(engine, 4);
+        engine.OnEngineThread([&] { GetEntityManager().DeleteBehaviour(lights[8], 7306); });
+        VerifyLightingFrame(engine, 8);
         engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::PointLight>(lights[0]).Disable(); });
-        VerifyLightingFrame(engine, 3);
+        VerifyLightingFrame(engine, 7);
         engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::PointLight>(lights[0]).Enable(); });
-        VerifyLightingFrame(engine, 4);
+        VerifyLightingFrame(engine, 8);
         engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Del<ActiveTag>(lights[0]); });
-        VerifyLightingFrame(engine, 3);
+        VerifyLightingFrame(engine, 7);
         engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<ActiveTag>(lights[0]); });
-        VerifyLightingFrame(engine, 4);
+        VerifyLightingFrame(engine, 8);
         engine.OnEngineThread([&]
         {
-            for (i32 i = 0; i < 3; ++i) GetEntityManager().Destroy(lights[i]);
+            for (i32 i = 0; i < 7; ++i) GetEntityManager().Destroy(lights[i]);
         });
         VerifyLightingFrame(engine, 1);
-        engine.OnEngineThread([&] { GetEntityManager().Destroy(lights[3]); });
+        engine.OnEngineThread([&] { GetEntityManager().Destroy(lights[7]); });
         VerifyLightingFrame(engine, 0);
         engine.Stop();
     }, 30000, 1024);
@@ -428,6 +428,95 @@ TEST_CASE("sRGB real engine presents authoring gray through scene and postproces
         });
         const auto frame = Capture(engine);
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {128, 128, 128, 255});
+        engine.Stop();
+    }, 30000, 1024);
+}
+
+TEST_CASE("PIPE_CULL01 real renderer chooses fifth nearby light and responds to object motion", "[native][gl][engine-integration][renderer][lighting][lighting-culling][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture engine(internal::engine::PlayMode, "renderer", PrepareRenderResources);
+        engine.Start();
+        ecs::Entity meshEntity = ecs::NULL_ENTITY;
+        ecs::Entity nearby = ecs::NULL_ENTITY;
+        engine.OnEngineThread([&]
+        {
+            CreateCamera();
+            meshEntity = CreateMesh(2, render::Color::White());
+            auto material = GetAssetManager().CreateAsset<render::Material>(GetAssetManager().GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID));
+            material->SetColor("_Color", render::Color::White());
+            material->SetFloat("_Shininess", 0);
+            GetInternalWorld()->GetRegistry()->Get<render::MeshRenderer>(meshEntity).SetMaterial(material);
+            for (i32 i = 0; i < 4; ++i)
+            {
+                const auto distant = CreatePointLight();
+                GetInternalWorld()->GetRegistry()->Get<Transform>(distant).GetLocalPosition() = {100 + static_cast<f32>(i), 0, 1};
+            }
+            nearby = CreatePointLight();
+            Refresh();
+        });
+        VerifyLightingFrame(engine, 1);
+        engine.OnEngineThread([&]
+        {
+            // Move geometry away while keeping origin nearby: only complete model bounds can reject.
+            GetInternalWorld()->GetRegistry()->Get<Transform>(meshEntity).GetLocalScale() = {0.01f, 0.01f, 1};
+            GetInternalWorld()->GetRegistry()->Get<Transform>(meshEntity).GetLocalPosition() = {-30, 0, 0};
+        });
+        Capture(engine);
+        const auto empty = ReadLightingState(engine);
+        REQUIRE(empty.PointCount == 0);
+        for (const auto strength : empty.PointStrengths) REQUIRE(strength == 0);
+        engine.OnEngineThread([&]
+        {
+            GetInternalWorld()->GetRegistry()->Get<Transform>(meshEntity).GetLocalScale() = {1, 1, 1};
+            GetInternalWorld()->GetRegistry()->Get<Transform>(meshEntity).GetLocalPosition() = {0, 0, 0};
+        });
+        VerifyLightingFrame(engine, 1);
+        engine.OnEngineThread([&]
+        {
+            GetInternalWorld()->GetRegistry()->Get<Transform>(nearby).GetLocalPosition() = {-100, 0, 1};
+        });
+        VerifyLightingFrame(engine, 0);
+        engine.Stop();
+    }, 30000, 1024);
+}
+
+TEST_CASE("PIPE_BUDGET01 real renderer applies live and replaced camera budgets to uniforms and pixels", "[native][gl][engine-integration][renderer][lighting][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture engine(internal::engine::PlayMode, "renderer", PrepareRenderResources);
+        engine.Start();
+        assets::AssetRef<render::RendererSettings> settings;
+        ecs::Entity camera = ecs::NULL_ENTITY;
+        engine.OnEngineThread([&]
+        {
+            CreateLitMeshWithLights(9);
+            Refresh();
+            camera = render::Camera::GetMainCamera().Get().GetEntity();
+            settings = GetAssetManager().CreateAsset<render::RendererSettings>();
+            settings->SetToneMapping(render::Off);
+            GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(settings);
+            CreateAmbientLight(0.1f);
+            Refresh();
+        });
+        VerifyLightingFrame(engine, 8, 0.1f);
+        for (const i32 limit : {4, 0, 8, 2})
+        {
+            engine.OnEngineThread([&] { settings->SetMaxPointLights(limit); });
+            VerifyLightingFrame(engine, limit, 0.1f);
+        }
+        engine.OnEngineThread([&]
+        {
+            auto replacement = GetAssetManager().CreateAsset<render::RendererSettings>();
+            replacement->SetToneMapping(render::Off);
+            replacement->SetMaxPointLights(6);
+            GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(replacement);
+        });
+        VerifyLightingFrame(engine, 6, 0.1f);
+        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings({}); });
+        VerifyLightingFrame(engine, 8, 0.1f);
         engine.Stop();
     }, 30000, 1024);
 }

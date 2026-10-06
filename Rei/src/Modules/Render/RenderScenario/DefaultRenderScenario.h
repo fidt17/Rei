@@ -3,6 +3,7 @@
 #include <mutex>
 #include <vector>
 
+#include "Common/Profiling/GpuTimer.h"
 #include "BaseRenderScenario.h"
 #include "CameraModule.h"
 #include "FrameBuffer.h"
@@ -70,6 +71,8 @@ namespace rei::render
         std::shared_ptr<DebugOverlayModule> _debugOverlayModule;
         std::shared_ptr<UIRenderModule> _uiRenderModule;
 
+        mutable profiling::GpuTimer _gpuScene{profiling::markers::GPU_SCENE_NS.Id, profiling::markers::GPU_SCENE_SAMPLES.Id};
+        mutable profiling::GpuTimer _gpuGeometry{profiling::markers::GPU_GEOMETRY_NS.Id, profiling::markers::GPU_GEOMETRY_SAMPLES.Id};
         FrameBuffer _mainFrameBuffer{0, 0, FrameBufferFormat::LinearHdr};
         std::mutex _frameCaptureMutex;
         FrameCaptureCallback _frameCaptureCallback;

@@ -15,6 +15,7 @@ namespace rei::render
             Mesh mesh(reader);
             _meshes.push_back(mesh);
         }
+        BuildBounds();
     }
 
     Model::Model(std::string name, Mesh mesh)
@@ -22,6 +23,7 @@ namespace rei::render
     {
         mesh.PostLoad();
         _meshes.push_back(mesh);
+        BuildBounds();
     }
 
     Model::Model(std::string name, std::vector<Mesh>& meshes)
@@ -32,6 +34,14 @@ namespace rei::render
             mesh.PostLoad();
             _meshes.push_back(mesh);
         }
+        BuildBounds();
+    }
+
+    void Model::BuildBounds()
+    {
+        _bounds = {};
+        for (const auto& mesh : _meshes)
+            for (const auto& vertex : mesh.Vertices) _bounds.Include(vertex.Position);
     }
 
     Model::~Model()

@@ -100,6 +100,8 @@ namespace rei::profiling
         REI_API void Shutdown();
         REI_API void AddCounter(u64 id, u64 amount = 1) noexcept;
         REI_API void RecordUniformUpload() noexcept;
+        // Writer-thread only, while Current() is this service. Distinguishes delayed GPU results.
+        u64 GetCaptureToken() const noexcept { return _capturingFrame ? _capture.CaptureId : 0; }
         REI_API static ProfilingService* Current() noexcept;
         REI_API static u64 ReadClock();
         REI_API static std::string ToJson(const Snapshot& snapshot, const char* status, u32 limit = MAX_METRICS);

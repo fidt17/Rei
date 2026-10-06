@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "catch_amalgamated.hpp"
 #include "support/NativeRenderFixture.h"
+#include "Common/Profiling/GpuTimer.h"
 #include "Modules/Components/ActiveTag.h"
 #include "Modules/Render/Modules/UIRenderModule.h"
 #include "Modules/Render/Modules/LightingRenderModule.h"
@@ -277,7 +278,7 @@ TEST_CASE("RENDER07 removed point lights reset stale shader strengths on next re
     });
 }
 
-TEST_CASE("RENDER08 all four point-light shader slots receive distinct native strengths", "[native][coverage][coverage-remaining][gl][lighting][isolated]")
+TEST_CASE("RENDER08 all eight point-light shader slots receive distinct native strengths", "[native][coverage][coverage-remaining][gl][lighting][isolated]")
 {
     IsolatedGl([]
     {
@@ -285,7 +286,7 @@ TEST_CASE("RENDER08 all four point-light shader slots receive distinct native st
         auto camera = MakeCamera(fixture);
         auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
         render::LightingRenderModule lighting(camera);
-        for (i32 i = 0; i < 4; ++i)
+        for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
         {
             const auto entity = fixture.Scene.Entity(101 + i);
             fixture.Scene.Add(entity, 7306, false);
@@ -295,8 +296,8 @@ TEST_CASE("RENDER08 all four point-light shader slots receive distinct native st
         fixture.Scene.World->Refresh();
         lighting.OnBeforeRender();
         lighting.SetLightValues(*shader.Get());
-        for (i32 i = 0; i < 4; ++i) REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[" + std::to_string(i) + "].Strength") == 0.1f * static_cast<f32>(i + 1));
-        REQUIRE(shader->GetLocation("_PointLights[4].Strength") == -1);
+        for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i) REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[" + std::to_string(i) + "].Strength") == 0.1f * static_cast<f32>(i + 1));
+        REQUIRE(shader->GetLocation("_PointLights[8].Strength") == -1);
         REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }
@@ -345,14 +346,14 @@ TEST_CASE("RENDER13 disabled point light contributes zero native shader strength
     });
 }
 
-TEST_CASE("RENDER14 point light count caps at four and clears every unused native slot", "[native][gl][lighting][isolated]")
+TEST_CASE("RENDER14 point light count caps at eight and clears every unused native slot", "[native][gl][lighting][isolated]")
 {
     IsolatedGl([]
     {
         NativeRenderFixture fixture;
         render::LightingRenderModule lighting(MakeCamera(fixture));
         auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
-        std::vector<ecs::Entity> lights(5, ecs::NULL_ENTITY);
+        std::vector<ecs::Entity> lights(9, ecs::NULL_ENTITY);
         const auto verify = [&](const i32 expected)
         {
             fixture.Scene.World->Refresh();
@@ -363,7 +364,7 @@ TEST_CASE("RENDER14 point light count caps at four and clears every unused nativ
             REQUIRE(glGetError() == GL_NO_ERROR);
         };
         verify(0);
-        for (i32 i = 0; i < 5; ++i)
+        for (i32 i = 0; i < 9; ++i)
         {
             lights[i] = fixture.Scene.Entity(101 + i);
             fixture.Scene.Add(lights[i], 7306, false);
@@ -372,13 +373,13 @@ TEST_CASE("RENDER14 point light count caps at four and clears every unused nativ
             auto& light = fixture.Scene.Registry->Get<render::PointLight>(lights[i]);
             light.SetStrength(0.25f);
             light.SetColor(render::Color::Red());
-            verify(std::min(i + 1, 4));
+            verify(std::min(i + 1, 8));
         }
-        REQUIRE(shader->GetLocation("_PointLights[4].Strength") == -1);
-        for (i32 i = 4; i >= 0; --i)
+        REQUIRE(shader->GetLocation("_PointLights[8].Strength") == -1);
+        for (i32 i = 8; i >= 0; --i)
         {
             fixture.Scene.Registry->Del<render::PointLight>(lights[i]);
-            verify(std::min(i, 4));
+            verify(std::min(i, 8));
         }
     });
 }
@@ -848,5 +849,288 @@ TEST_CASE("CAPTURE05 no-camera capture follows resized hidden window dimensions"
         scenario.Dispose();
         REQUIRE(width == expectedWidth);
         REQUIRE(height == expectedHeight);
+    });
+}
+
+namespace
+{
+    struct GpuQuerySpy
+    {
+        inline static PFNGLGETQUERYOBJECTIVPROC OriginalAvailable = nullptr;
+        inline static PFNGLGETQUERYOBJECTUI64VPROC OriginalResult = nullptr;
+        inline static bool ForceUnavailable = true;
+        inline static u32 ResultReads = 0;
+
+        GpuQuerySpy()
+        {
+            OriginalAvailable = glad_glGetQueryObjectiv;
+            OriginalResult = glad_glGetQueryObjectui64v;
+            ForceUnavailable = true;
+            ResultReads = 0;
+            glad_glGetQueryObjectiv = +[](GLuint query, GLenum name, GLint* value)
+            {
+                if (ForceUnavailable) { *value = 0; return; }
+                OriginalAvailable(query, name, value);
+            };
+            glad_glGetQueryObjectui64v = +[](GLuint query, GLenum name, GLuint64* value)
+            {
+                ++ResultReads;
+                OriginalResult(query, name, value);
+            };
+        }
+
+        ~GpuQuerySpy()
+        {
+            glad_glGetQueryObjectiv = OriginalAvailable;
+            glad_glGetQueryObjectui64v = OriginalResult;
+        }
+    };
+}
+
+TEST_CASE("GPU01 asynchronous timer never blocks on unavailable results or crosses captures", "[native][gl][gpu-profiling][render-profiling][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeGlFixture gl;
+        REQUIRE(glQueryCounter != nullptr);
+        REQUIRE(glGetQueryObjectui64v != nullptr);
+        const auto previous = std::getenv("REI_PROFILE_GPU");
+        const std::string previousValue = previous ? previous : "";
+        REQUIRE(_putenv_s("REI_PROFILE_GPU", "1") == 0);
+        profiling::GpuTimer timer(profiling::markers::GPU_SCENE_NS.Id, profiling::markers::GPU_SCENE_SAMPLES.Id);
+        REQUIRE(_putenv_s("REI_PROFILE_GPU", previousValue.c_str()) == 0);
+        GpuQuerySpy spy;
+        profiling::ProfilingService profiler;
+        REQUIRE(profiler.Register(profiling::markers::ALL));
+        REQUIRE(std::string(profiler.RequestCapture(1).Status) == "queued");
+        profiler.BeginFrame();
+        { profiling::GpuTimer::Scope gpu(timer); glClear(GL_COLOR_BUFFER_BIT); }
+        glFlush();
+        timer.Poll();
+        REQUIRE(GpuQuerySpy::ResultReads == 0);
+        profiler.EndFrame();
+        profiler.BeginFrame();
+        profiler.EndFrame();
+        REQUIRE(std::string(profiler.RequestCapture(1).Status) == "queued");
+        profiler.BeginFrame();
+        GpuQuerySpy::ForceUnavailable = false;
+        auto awaitReads = [&](u32 count)
+        {
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+            while (GpuQuerySpy::ResultReads < count && std::chrono::steady_clock::now() < deadline)
+            {
+                timer.Poll();
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            REQUIRE(GpuQuerySpy::ResultReads == count);
+        };
+        awaitReads(2); // Old capture completes; its GPU result must be discarded.
+        { profiling::GpuTimer::Scope gpu(timer); glClear(GL_COLOR_BUFFER_BIT); }
+        glFlush();
+        awaitReads(4);
+        profiler.EndFrame();
+        profiler.BeginFrame();
+        const auto snapshot = profiler.CopySnapshot(profiling::SnapshotView::LastCapture);
+        const auto value = [&](u64 id)
+        {
+            for (u32 i = 0; i < snapshot.MetricCount; ++i)
+                if (snapshot.Metrics[i].Id == id) return snapshot.Metrics[i].Value;
+            throw std::runtime_error("GPU metric missing");
+        };
+        REQUIRE(value(profiling::markers::GPU_SCENE_SAMPLES.Id) == 1);
+        REQUIRE(value(profiling::markers::GPU_SCENE_NS.Id) > 0);
+        REQUIRE(snapshot.InvalidFrames == 0);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+        profiler.Shutdown();
+    });
+}
+
+TEST_CASE("BOUNDS01 sphere overlap preserves edges and transformed model extents", "[native][bounds][lighting-culling]")
+{
+    math::Bounds bounds;
+    REQUIRE(bounds.IntersectsSphere({100, 100, 100}, 1)); // Unknown geometry cannot reject.
+    bounds.Include({-1, -2, -3});
+    bounds.Include({1, 2, 3});
+    REQUIRE(bounds.IntersectsSphere({2, 0, 0}, 1)); // Tangent sphere.
+    REQUIRE_FALSE(bounds.IntersectsSphere({2.01f, 0, 0}, 1));
+    REQUIRE_FALSE(bounds.IntersectsSphere({0, 0, 0}, 0));
+    REQUIRE_FALSE(bounds.IntersectsSphere({0, 0, 0}, -1));
+    glm::mat4 matrix(1);
+    matrix[0] = glm::vec4(0, -2, 0, 0); // Rotation with negative/nonuniform scale.
+    matrix[1] = glm::vec4(3, 1, 0, 0); // Parent shear.
+    matrix[2] = glm::vec4(0, 0, 0.5f, 0);
+    matrix[3] = glm::vec4(10, 20, 30, 1);
+    const auto transformed = bounds.Transform(matrix);
+    REQUIRE(transformed.IsValid());
+    for (u32 corner = 0; corner < 8; ++corner)
+    {
+        const glm::vec3 point((corner & 1) ? 1 : -1, (corner & 2) ? 2 : -2, (corner & 4) ? 3 : -3);
+        const auto world = glm::vec3(matrix * glm::vec4(point, 1));
+        REQUIRE(transformed.IntersectsSphere(world, 0.001f));
+    }
+    REQUIRE(transformed.IntersectsSphere({17, 20, 30}, 1));
+    REQUIRE_FALSE(transformed.IntersectsSphere({17.1f, 20, 30}, 1));
+    matrix[0][3] = 1;
+    REQUIRE_FALSE(bounds.Transform(matrix).IsValid());
+    bounds.Include({std::numeric_limits<f32>::quiet_NaN(), 0, 0});
+    REQUIRE_FALSE(bounds.IsValid());
+    REQUIRE(bounds.IntersectsSphere({100, 100, 100}, 1));
+}
+
+TEST_CASE("BOUNDS02 cached model bounds include vertices across every mesh without BVH faces", "[native][gl][bounds][lighting-culling][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        std::vector<render::Mesh> meshes;
+        meshes.emplace_back("left", std::vector<render::Vertex>{{{-8, -1, 0}, {}, {}}, {{-4, 1, 0}, {}, {}}}, std::vector<u32>{}, std::vector<render::Face>{});
+        meshes.emplace_back("right", std::vector<render::Vertex>{{{4, -2, 1}, {}, {}}, {{9, 2, 1}, {}, {}}}, std::vector<u32>{}, std::vector<render::Face>{});
+        render::Model model("multi mesh", meshes);
+        REQUIRE(model.GetBounds().IsValid());
+        REQUIRE(model.GetBounds().Min == glm::vec3(-8, -2, 0));
+        REQUIRE(model.GetBounds().Max == glm::vec3(9, 2, 1));
+        REQUIRE(model.GetBounds().Transform(glm::mat4(1)).IntersectsSphere({9.5f, 0, 0}, 1));
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("LIGHT_CULL01 per-object selection reaches later lights and clears shared shader slots", "[native][gl][lighting][lighting-culling][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto camera = MakeCamera(fixture);
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        std::vector<ecs::Entity> entities;
+        entities.reserve(6);
+        for (i32 i = 0; i < 6; ++i)
+        {
+            entities.push_back(fixture.Scene.Entity(1200 + i));
+            fixture.Scene.Add(entities[i], 7306, false);
+            auto& light = fixture.Scene.Registry->Get<render::PointLight>(entities[i]);
+            light.SetStrength(static_cast<f32>(i + 1));
+            light.SetRange(1);
+            fixture.Scene.Registry->Get<Transform>(entities[i]).GetLocalPosition() = i < 4 ? math::Vector3(100 + static_cast<f32>(i), 0, 0) : math::Vector3(i == 4 ? 0 : 2, 0, 0);
+            fixture.Scene.Registry->Get<ActiveTag>(entities[i]);
+        }
+        fixture.Scene.World->Refresh();
+        fixture.Scene.World->RefreshAll();
+        math::Bounds bounds;
+        bounds.Include({-1, -1, -1});
+        bounds.Include({1, 1, 1});
+        render::LightingRenderModule module(camera);
+        module.OnBeforeRender();
+        module.SetLightValues(*shader.Get(), bounds);
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 2);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 5);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[1].Strength") == 6);
+        RequireEmptyLightSlots(*shader.Get(), 2);
+        // Another object shares this program; its empty selection must replace the old slots.
+        const auto farMatrix = glm::translate(glm::mat4(1), glm::vec3(-100, 0, 0));
+        module.SetLightValues(*shader.Get(), bounds, farMatrix);
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 0);
+        RequireEmptyLightSlots(*shader.Get(), 0);
+        // Unknown geometry preserves scene order up to the camera budget.
+        module.SetLightValues(*shader.Get());
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 6);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 1);
+        // A moving source takes effect at next snapshot, never halfway through a frame.
+        fixture.Scene.Registry->Get<Transform>(entities[0]).GetLocalPosition() = {0, 0, 0};
+        module.SetLightValues(*shader.Get(), bounds);
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 2);
+        module.OnBeforeRender();
+        module.SetLightValues(*shader.Get(), bounds);
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 3);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 1);
+        fixture.Scene.Registry->Get<render::PointLight>(entities[0]).SetRange(0);
+        module.OnBeforeRender();
+        module.SetLightValues(*shader.Get(), bounds);
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 2);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("LIGHT_CULL02 fixed-count custom shader still receives world positions", "[native][gl][lighting][lighting-culling][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto camera = MakeCamera(fixture);
+        TemporaryDirectory files;
+        const auto content = RenderTextBytes(R"(
+#ifdef VERTEX
+void main() { REI_CalculateFragPosAndNormal(); REI_CalculatePointLightPositions(); }
+#endif
+#ifdef FRAGMENT
+void main() { FragColor = vec4(_PointLights[0].Position, 1); }
+#endif
+)");
+        resources::BinaryReader reader(files.Write("fixed-light.bin", content).string());
+        render::Shader shader(reader);
+        shader.PostLoad();
+        REQUIRE(shader.GetLocation("_PointLightsCount") == -1);
+        const auto entity = fixture.Scene.Entity(1300);
+        fixture.Scene.Add(entity, 7306, false);
+        fixture.Scene.Registry->Get<Transform>(entity).GetLocalPosition() = {8, 9, 10};
+        fixture.Scene.Registry->Get<ActiveTag>(entity);
+        fixture.Scene.World->Refresh();
+        fixture.Scene.World->RefreshAll();
+        render::LightingRenderModule module(camera);
+        module.OnBeforeRender();
+        module.SetLightValues(shader);
+        shader.Use();
+        i32 program = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        std::array<f32, 3> position{};
+        glGetUniformfv(program, shader.GetLocation("_PointLights[0].Position"), position.data());
+        REQUIRE(position == std::array<f32, 3>{8, 9, 10});
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("LIGHT_BUDGET01 camera profile changes budget without relinking shader and clears unused slots", "[native][gl][lighting][lighting-culling][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto camera = MakeCamera(fixture);
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        const auto revision = shader->GetProgramRevision();
+        for (i32 i = 0; i < 9; ++i)
+        {
+            const auto entity = fixture.Scene.Entity(1500 + i);
+            fixture.Scene.Add(entity, 7306, false);
+            fixture.Scene.Registry->Get<ActiveTag>(entity);
+            fixture.Scene.Registry->Get<render::PointLight>(entity).SetStrength(static_cast<f32>(i + 1));
+        }
+        fixture.Scene.World->Refresh();
+        render::LightingRenderModule module(camera);
+        const auto verify = [&](const i32 expected)
+        {
+            module.OnBeforeRender();
+            module.SetLightValues(*shader.Get());
+            REQUIRE(ReadPointLightCount(*shader.Get()) == expected);
+            RequireEmptyLightSlots(*shader.Get(), expected);
+            REQUIRE(shader->GetProgramRevision() == revision);
+        };
+        verify(8);
+        auto settings = fixture.Scene.Assets->CreateAsset<render::RendererSettings>();
+        camera->GetCamera().Get().SetRendererSettings(settings);
+        for (const i32 limit : {3, 0, 8, 1})
+        {
+            settings->SetMaxPointLights(limit);
+            verify(limit);
+        }
+        auto replacement = fixture.Scene.Assets->CreateAsset<render::RendererSettings>();
+        replacement->SetMaxPointLights(5);
+        camera->GetCamera().Get().SetRendererSettings(replacement);
+        verify(5);
+        camera->GetCamera().Get().SetRendererSettings(assets::AssetRef<render::RendererSettings>("missing-profile"));
+        verify(8);
+        camera->GetCamera().Get().SetRendererSettings({});
+        verify(8);
+        camera->SetCamera({});
+        verify(8);
+        REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }

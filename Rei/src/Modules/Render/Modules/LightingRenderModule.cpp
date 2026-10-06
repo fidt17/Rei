@@ -43,7 +43,7 @@ void rei::render::LightingRenderModule::Render() const
     RenderPointLights();
 }
 
-void rei::render::LightingRenderModule::SetLightValues(const Shader& shader) const
+void rei::render::LightingRenderModule::SetLightValues(const Shader& shader, const math::Bounds& localBounds, const glm::mat4& modelMatrix) const
 {
     REI_PROFILE_SCOPE(profiling::markers::LIGHTING_APPLY.Id);
     profiling::UniformPhaseScope phase(profiling::UniformPhase::Lighting);
@@ -51,16 +51,35 @@ void rei::render::LightingRenderModule::SetLightValues(const Shader& shader) con
     Shader::UniformBatch uniforms(shader, false);
     shader.SetFloat(locations[0], _ambientStrength);
     shader.SetLinearColor(locations[1], _ambientLinearColor);
+    // Fixed-count/custom shaders can use light slots without _PointLightsCount.
+    if (std::none_of(locations.begin() + 2, locations.end(), [](const i32 location) { return location >= 0; })) return;
+    const auto worldBounds = localBounds.Transform(modelMatrix);
+    std::array<const PointLightSnapshot*, REI_MAX_POINT_LIGHTS_COUNT> selected{};
+    i32 count = 0;
+    u32 tested = 0;
+    const auto* snapshots = _pointSnapshot.data();
+    const auto snapshotCount = _pointSnapshot.size();
+    for (u64 source = 0; source < snapshotCount && count < _pointLightLimit; ++source)
+    {
+        const auto& light = snapshots[source];
+        ++tested;
+        if (!worldBounds.IntersectsSphere(static_cast<glm::vec3>(light.Position), light.Range)) continue;
+        selected[count++] = &light;
+    }
+    profiling::Count(profiling::markers::LIGHTING_TESTED.Id, tested);
+    profiling::Count(profiling::markers::LIGHTING_OBJECTS.Id);
+    profiling::Count(profiling::markers::LIGHTING_SELECTED.Id, count);
+    const PointLightSnapshot empty{};
     for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
     {
-        const auto& light = _pointSnapshot[i];
+        const auto& light = selected[i] ? *selected[i] : empty;
         const auto slot = 2 + i * 4;
         shader.SetVector3(locations[slot], light.Position);
         shader.SetFloat(locations[slot + 1], light.Strength);
         shader.SetFloat(locations[slot + 2], light.Range);
         shader.SetLinearColor(locations[slot + 3], light.LinearColor);
     }
-    shader.SetInt(locations.back(), _pointCount);
+    shader.SetInt(locations.back(), count);
 }
 
 void rei::render::LightingRenderModule::FindAmbientLights()
@@ -85,6 +104,13 @@ void rei::render::LightingRenderModule::FindPointLights()
 
 void rei::render::LightingRenderModule::BuildSnapshot()
 {
+    _pointLightLimit = REI_MAX_POINT_LIGHTS_COUNT;
+    const auto& camera = _cameraModule->GetCamera();
+    if (!camera.IsNull())
+    {
+        const auto& settingsRef = camera.Get().GetRendererSettings();
+        if (settingsRef.IsLoaded()) _pointLightLimit = settingsRef->GetMaxPointLights();
+    }
     _ambientStrength = 0;
     _ambientLinearColor = Color(0, 0, 0, 1);
     if (!_ambientLight.IsNull())
@@ -93,15 +119,15 @@ void rei::render::LightingRenderModule::BuildSnapshot()
         _ambientStrength = ambient.GetStrength();
         _ambientLinearColor = ambient.GetColor().ToLinear();
     }
-    _pointCount = 0;
-    _pointSnapshot.fill(PointLightSnapshot{});
-    // Preserve the current first-four scene order; object-specific selection is a separate stage.
+    _pointSnapshot.clear();
+    _pointSnapshot.reserve(_pointLights.size());
+    // Keep all enabled sources; select each object's budget of intersecting lights in scene order.
     for (const auto& reference : _pointLights)
     {
-        if (_pointCount == REI_MAX_POINT_LIGHTS_COUNT) break;
         if (reference.IsNull()) continue;
         const auto& light = reference.Get();
-        _pointSnapshot[_pointCount++] = {light.GetTransform().GetWorldPosition(), light.GetStrength(), light.GetRange(), light.GetColor().ToLinear()};
+        const auto position = light.GetTransform().GetWorldPosition();
+        _pointSnapshot.push_back({position, light.GetStrength(), light.GetRange(), light.GetColor().ToLinear()});
     }
 }
 
