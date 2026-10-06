@@ -18,6 +18,7 @@ namespace rei::render
         bool IsRayIntersecting(const math::Ray& ray, const glm::mat4& model, math::Vector3& out_intersectionPoint) const;
 
     private:
+        bool IsLocalRayIntersecting(const math::Ray& ray, f32 determinantScale, math::Vector3& out_intersectionPoint) const;
         void CalculateBoundingBox(const std::vector<Face>& faces);
     };
 }

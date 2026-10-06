@@ -68,21 +68,32 @@ void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Fac
 
 bool rei::render::MeshBVHNode::IsRayIntersecting(const math::Ray& ray, const glm::mat4& model, math::Vector3& out_intersectionPoint) const
 {
-    using math::Vector3;
+    const f32 determinant = glm::determinant(glm::mat3(model));
+    if (!std::isfinite(determinant) || determinant == 0) return false;
 
-    auto boxModel = glm::mat4(1.0f);
-    boxModel = translate(boxModel, glm::vec3(Vector3::Average(Min, Max)));
-    boxModel = scale(boxModel, glm::vec3((Max - Min)));
-    boxModel = model * boxModel;
+    const auto inverseModel = glm::inverse(model);
+    const math::Ray localRay(
+        math::Vector3(glm::vec3(inverseModel * glm::vec4(glm::vec3(ray.Origin), 1))),
+        math::Vector3(glm::vec3(inverseModel * glm::vec4(glm::vec3(ray.Direction), 0))));
+    // Keep direction length: the ray parameter and forward-distance tolerance stay unchanged.
+    math::Vector3 localPoint;
+    if (!IsLocalRayIntersecting(localRay, determinant, localPoint)) return false;
+    out_intersectionPoint = localPoint.Transform(model);
+    return true;
+}
 
-    if (!BoxRayIntersection(Vector3(1, 1, 1), ray, boxModel)) return false;
-
+bool rei::render::MeshBVHNode::IsLocalRayIntersecting(const math::Ray& ray, const f32 determinantScale, math::Vector3& out_intersectionPoint) const
+{
+    if (!math::AxisAlignedBoxRayIntersection(Min, Max, ray)) return false;
     if (!Faces.empty())
     {
-        return std::ranges::any_of(Faces, [&](const auto& f) { return math::FaceRayIntersection(f, ray, model, out_intersectionPoint); });
+        return std::ranges::any_of(Faces, [&](const auto& face)
+        {
+            return math::FaceRayIntersection(face, ray, out_intersectionPoint, determinantScale);
+        });
     }
-
-    return Left && Left->IsRayIntersecting(ray, model, out_intersectionPoint) || Right && Right->IsRayIntersecting(ray, model, out_intersectionPoint);
+    return (Left && Left->IsLocalRayIntersecting(ray, determinantScale, out_intersectionPoint)) ||
+           (Right && Right->IsLocalRayIntersecting(ray, determinantScale, out_intersectionPoint));
 }
 
 void rei::render::MeshBVHNode::CalculateBoundingBox(const std::vector<Face>& faces)

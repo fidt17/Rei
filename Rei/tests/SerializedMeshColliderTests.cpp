@@ -109,7 +109,12 @@ namespace
             {Ray({0.5f, 0.5f, 10}, {0, 0, -0.5f}), glm::mat4(1), true, {0.5f, 0.5f, 5}},
             {Ray({0.5f, 1.75f, 0}, {0, 0, 2}), glm::mat4(1), false, {}},
             {Ray({8.5f, -1, 3}, {0, 0, 2}), transformed, true, {8.5f, -1, 8}},
-            {Ray({7.75f, 1.5f, 3}, {0, 0, 2}), transformed, false, {}}
+            {Ray({7.75f, 1.5f, 3}, {0, 0, 2}), transformed, false, {}},
+            {Ray({9, -0.5f, -5}, {0, 0, 0.25f}), GetTransformationMatrix({10, -2, 3}, glm::quat(1, 0, 0, 0), {-2, 3, -1}), true, {9, -0.5f, -2}},
+            {Ray({9, -0.5f, 0}, {0, 0, 0.25f}), GetTransformationMatrix({10, -2, 3}, glm::quat(1, 0, 0, 0), {-2, 3, 1}), true, {9, -0.5f, 8}},
+            {Ray({0.00005f, 0.00005f, 0}, {0, 0, 100}), glm::scale(glm::mat4(1), glm::vec3(0.0001f)), true, {0.00005f, 0.00005f, 0.0005f}},
+            {Ray({500, 500, 0}, {0, 0, 0.000001f}), glm::scale(glm::mat4(1), glm::vec3(1000)), true, {500, 500, 5000}},
+            {Ray({0.000005f, 0.000005f, 0}, {0, 0, 1}), glm::scale(glm::mat4(1), glm::vec3(0.00001f)), false, {}}
         };
         for (size_t index = 0; index < probes.size(); ++index)
         {
@@ -310,4 +315,26 @@ TEST_CASE("PHY-03 One analytic triangle survives runtime serialized packed and r
         registry.ReleaseAssetWithId(replacement.Id);
         REQUIRE_FALSE(replacement.IsLoaded());
     });
+}
+
+TEST_CASE("PHY-03 BVH local traversal preserves parallel edge hits and singular misses", "[native][physics][bvh][picking]")
+{
+    MeshBVHNode root;
+    root.BuildBVH(root, {Triangle()});
+    for (const auto& origin : std::array<Vector3, 3>{{{0, 0.5f, 0}, {0.5f, 0, 0}, {1, 1, 0}}})
+    {
+        Vector3 point;
+        REQUIRE(root.IsRayIntersecting(Ray(origin, {0, 0, 1}), glm::mat4(1), point));
+        CheckVector(point, {origin.x, origin.y, 5});
+    }
+    Vector3 point(91, 92, 93);
+    CHECK_FALSE(root.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::scale(glm::mat4(1), glm::vec3(1, 1, 0)), point));
+    CheckVector(point, {91, 92, 93});
+    CHECK_FALSE(root.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {}), glm::mat4(1), point));
+    CheckVector(point, {91, 92, 93});
+
+    auto shear = glm::mat4(1);
+    shear[1][0] = 2; // x' = x + 2y.
+    REQUIRE(root.IsRayIntersecting(Ray({1.5f, 0.5f, 0}, {0, 0, 2}), shear, point));
+    CheckVector(point, {1.5f, 0.5f, 5});
 }

@@ -27,7 +27,9 @@ namespace rei::math
     }
 
     REI_API bool SphereRayIntersection(const Vector3& center, f32 radius, const Ray& ray, Vector3& out_intersectionPoint);
+    REI_API bool AxisAlignedBoxRayIntersection(const Vector3& min, const Vector3& max, const Ray& ray);
     REI_API bool BoxRayIntersection(const Vector3& boxSize, const Ray& ray, const glm::mat4& modelMatrix);
     REI_API bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix, Vector3& out_intersectionPoint);
+    REI_API bool FaceRayIntersection(const render::Face& face, const Ray& localRay, Vector3& out_intersectionPoint, f32 determinantScale = 1);
     REI_API bool PlaneRayIntersection(const Plane& plane, const Ray& ray, Vector3& out_intersectionPoint);
 }

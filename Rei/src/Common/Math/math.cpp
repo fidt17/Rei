@@ -2,6 +2,7 @@
 
 #include "glm/gtx/euler_angles.hpp"
 #include <array>
+#include <limits>
 #include <glm/gtc/quaternion.hpp>
 
 namespace rei::math
@@ -184,82 +185,103 @@ namespace rei::math
         return true;
     }
 
-    bool BoxRayIntersection(const Vector3& boxSize, const Ray& ray, const glm::mat4& modelMatrix)
+    bool AxisAlignedBoxRayIntersection(const Vector3& min, const Vector3& max, const Ray& ray)
     {
-        // Transform ray to box's local space
-        glm::mat4 invTransform = inverse(modelMatrix);
-        glm::vec3 localOrigin = glm::vec3(invTransform * glm::vec4(glm::vec3(ray.Origin), 1.0f));
-        glm::vec3 localDirection = glm::vec3(invTransform * glm::vec4(glm::vec3(ray.Direction), 0.0f));
+        const glm::vec3 origin(ray.Origin);
+        const glm::vec3 direction(ray.Direction);
+        const glm::vec3 lower(min);
+        const glm::vec3 upper(max);
+        if (direction.x == 0 && direction.y == 0 && direction.z == 0) return false;
 
-        const auto halfExtents = glm::vec3(boxSize / 2);
+        f32 enter = 0;
+        f32 exit = (std::numeric_limits<f32>::infinity)();
+        for (i32 axis = 0; axis < 3; ++axis)
+        {
+            if (!std::isfinite(origin[axis]) || !std::isfinite(direction[axis]) ||
+                !std::isfinite(lower[axis]) || !std::isfinite(upper[axis]) || lower[axis] > upper[axis]) return false;
+            if (direction[axis] == 0)
+            {
+                if (origin[axis] < lower[axis] || origin[axis] > upper[axis]) return false;
+                continue;
+            }
 
-        // Now treat as axis-aligned box intersection in local space
-        glm::vec3 t1 = (-halfExtents - localOrigin) / localDirection;
-        glm::vec3 t2 = (halfExtents - localOrigin) / localDirection;
-
-        glm::vec3 tMinVec = min(t1, t2);
-        glm::vec3 tMaxVec = max(t1, t2);
-
-        const f32 tMin = glm::max(glm::max(tMinVec.x, tMinVec.y), tMinVec.z); // enter point
-        const f32 tMax = glm::min(glm::min(tMaxVec.x, tMaxVec.y), tMaxVec.z); // exit point
-
-        return tMax >= tMin && tMax >= 0.0f;
+            const f32 first = (lower[axis] - origin[axis]) / direction[axis];
+            const f32 second = (upper[axis] - origin[axis]) / direction[axis];
+            enter = (std::max)(enter, (std::min)(first, second));
+            exit = (std::min)(exit, (std::max)(first, second));
+            if (exit < enter) return false;
+        }
+        return true;
     }
 
-    bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix, Vector3& out_intersectionPoint)
+    bool BoxRayIntersection(const Vector3& boxSize, const Ray& ray, const glm::mat4& modelMatrix)
     {
-        constexpr f32 EPSILON = 1e-6f;
+        const auto inverseModel = inverse(modelMatrix);
+        const Ray localRay(
+            Vector3(glm::vec3(inverseModel * glm::vec4(glm::vec3(ray.Origin), 1))),
+            Vector3(glm::vec3(inverseModel * glm::vec4(glm::vec3(ray.Direction), 0))));
+        const auto halfSize = boxSize / 2;
+        return AxisAlignedBoxRayIntersection(halfSize * -1, halfSize, localRay);
+    }
 
-        if (face.Vertices.size() != 3)
+    namespace
+    {
+        bool IsTriangle(const render::Face& face)
         {
+            if (face.Vertices.size() == 3) return true;
 #if DEBUG
             LOG_WARNING("Only triangle faces are supported for intersection detection")
 #endif
             return false;
         }
 
-        std::array triangle{
+        bool IntersectTriangle(const std::array<Vector3, 3>& triangle, const Ray& ray, Vector3& out_intersectionPoint, const f32 determinantScale)
+        {
+            constexpr f32 EPSILON = 1e-6f;
+            const Vector3 edge1 = triangle[1] - triangle[0];
+            const Vector3 edge2 = triangle[2] - triangle[0];
+            const Vector3 h = Vector3::Cross(ray.Direction, edge2);
+            const f32 determinant = Vector3::Dot(edge1, h);
+            // Preserve the world-space parallel tolerance for a ray transformed into model space.
+            if (!std::isfinite(determinant) || std::fabs(determinant * determinantScale) < EPSILON) return false;
+
+            const f32 inverseDeterminant = 1 / determinant;
+            const Vector3 fromVertex = ray.Origin - triangle[0];
+            const f32 u = inverseDeterminant * Vector3::Dot(fromVertex, h);
+            if (u < 0 || u > 1) return false;
+
+            const Vector3 q = Vector3::Cross(fromVertex, edge1);
+            const f32 v = inverseDeterminant * Vector3::Dot(ray.Direction, q);
+            if (v < 0 || u + v > 1) return false;
+
+            const f32 t = inverseDeterminant * Vector3::Dot(edge2, q);
+            if (!std::isfinite(t) || t < EPSILON) return false;
+
+            out_intersectionPoint = ray.Origin + ray.Direction * t;
+            return true;
+        }
+    }
+
+    bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix, Vector3& out_intersectionPoint)
+    {
+        if (!IsTriangle(face)) return false;
+        const std::array triangle{
             Vector3(glm::vec3(modelMatrix * glm::vec4(face.Vertices[0].Position, 1))),
             Vector3(glm::vec3(modelMatrix * glm::vec4(face.Vertices[1].Position, 1))),
-            Vector3(glm::vec3(modelMatrix * glm::vec4(face.Vertices[2].Position, 1))),
+            Vector3(glm::vec3(modelMatrix * glm::vec4(face.Vertices[2].Position, 1)))
         };
+        return IntersectTriangle(triangle, ray, out_intersectionPoint, 1);
+    }
 
-        // Möller–Trumbore algorithm
-        const Vector3 edge1 = triangle[1] - triangle[0];
-        const Vector3 edge2 = triangle[2] - triangle[0];
-        const Vector3 h = Vector3::Cross(ray.Direction, edge2);
-        const f32 a = Vector3::Dot(edge1, h);
-
-        if (std::fabs(a) < EPSILON)
-        {
-            return false; // Ray parallel to triangle
-        }
-
-        const f32 f = 1.0f / a;
-        const Vector3 s = ray.Origin - Vector3(triangle[0]);
-        const f32 u = f * Vector3::Dot(s, h);
-
-        if (u < 0.0f || u > 1.0f)
-        {
-            return false;
-        }
-
-        const Vector3 q = Vector3::Cross(s, edge1);
-        const f32 v = f * Vector3::Dot(ray.Direction, q);
-
-        if (v < 0.0f || u + v > 1.0f)
-        {
-            return false;
-        }
-
-        const f32 t = f * Vector3::Dot(edge2, q);
-        if (t < EPSILON)
-        {
-            return false;
-        }
-
-        out_intersectionPoint = ray.Origin + ray.Direction * t;
-        return true;
+    bool FaceRayIntersection(const render::Face& face, const Ray& localRay, Vector3& out_intersectionPoint, const f32 determinantScale)
+    {
+        if (!IsTriangle(face)) return false;
+        const std::array triangle{
+            Vector3(face.Vertices[0].Position),
+            Vector3(face.Vertices[1].Position),
+            Vector3(face.Vertices[2].Position)
+        };
+        return IntersectTriangle(triangle, localRay, out_intersectionPoint, determinantScale);
     }
 
     bool PlaneRayIntersection(const Plane& plane, const Ray& ray, Vector3& out_intersectionPoint)

@@ -2,6 +2,7 @@
 #include "support/GeometryTestSupport.h"
 #include <algorithm>
 #include <array>
+#include <limits>
 
 using namespace rei::math;
 using namespace rei::tests;
@@ -193,4 +194,37 @@ TEST_CASE("MATH-02 Plane through point is invariant to normal magnitude", "[nati
         REQUIRE(PlaneRayIntersection(plane, Ray({}, {0, 1, 0}), point));
         CheckVector(point, {0, 3, 0});
     }
+}
+
+TEST_CASE("PHY-02 Local boxes handle parallel boundaries and invalid rays", "[native][math][physics][picking]")
+{
+    const Vector3 min(-1, -2, 3);
+    const Vector3 max(1, 2, 5);
+    for (const f32 x : {-1.0f, 0.0f, 1.0f})
+    {
+        CHECK(AxisAlignedBoxRayIntersection(min, max, Ray({x, 0, 0}, {0, 0, 2})));
+        CHECK(AxisAlignedBoxRayIntersection(min, max, Ray({x, 0, 6}, {0, 0, -0.5f})));
+    }
+    CHECK(AxisAlignedBoxRayIntersection(min, max, Ray({0, 0, 4}, {1, 0, 0})));
+    CHECK_FALSE(AxisAlignedBoxRayIntersection(min, max, Ray({2, 0, 0}, {0, 0, 1})));
+    CHECK_FALSE(AxisAlignedBoxRayIntersection(min, max, Ray({0, 0, 6}, {0, 0, 1})));
+    CHECK_FALSE(AxisAlignedBoxRayIntersection(min, max, Ray({0, 0, 4}, {})));
+    CHECK_FALSE(AxisAlignedBoxRayIntersection(max, min, Ray({}, {0, 0, 1})));
+    const f32 nan = std::numeric_limits<f32>::quiet_NaN();
+    const f32 infinity = std::numeric_limits<f32>::infinity();
+    CHECK_FALSE(AxisAlignedBoxRayIntersection(min, max, Ray({nan, 0, 0}, {0, 0, 1})));
+    CHECK_FALSE(AxisAlignedBoxRayIntersection(min, max, Ray({}, {infinity, 0, 1})));
+}
+
+TEST_CASE("PHY-02 Local triangle keeps non-unit ray distance and determinant tolerance", "[native][math][physics][picking]")
+{
+    Vector3 point(91, 92, 93);
+    REQUIRE(FaceRayIntersection(Triangle(), Ray({0.5f, 0.5f, 0}, {0, 0, 0.5f}), point));
+    CheckVector(point, {0.5f, 0.5f, 5});
+    // Determinant is 4e-8 locally; scaling the world triangle makes it a valid hit.
+    REQUIRE(FaceRayIntersection(Triangle(), Ray({0.5f, 0.5f, 0}, {0, 0, 1e-8f}), point, 100));
+    CheckVector(point, {0.5f, 0.5f, 5});
+    point = {91, 92, 93};
+    CHECK_FALSE(FaceRayIntersection(Triangle(), Ray({0.5f, 0.5f, 0}, {0, 0, 1}), point, 1e-8f));
+    CheckVector(point, {91, 92, 93});
 }
