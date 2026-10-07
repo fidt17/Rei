@@ -35,7 +35,7 @@ namespace rei::tests
         std::vector<PackedAsset> pack;
         for (const auto& [id, path] : std::vector<std::pair<std::string, std::string>>{
             {REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID, "shaders/includes/include_ambient_light.rshader_include"},
-            {REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID, "shaders/includes/include_point_light.rshader_include"},
+            {REI_SHADER_INCLUDE_LIGHTING_ASSET_ID, "shaders/includes/include_lighting.rshader_include"},
             {REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID, "shaders/includes/include_shader_common.rshader_include"},
             {REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID, "shaders/includes/include_vertex_common.rshader_include"},
             {REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID, "shaders/includes/include_fragment_common.rshader_include"},

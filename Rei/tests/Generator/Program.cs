@@ -16,7 +16,7 @@ Property Collection(string itemSource, SerializedTypeEnum itemType) => new(Seria
 SerializableObjectInfo Object(string ns, string name, Dictionary<string, Property> properties, string? header = null, bool template = false) => new(ns, name, template, new ObjectFile<string>("", header ?? probeHeader), properties, header ?? probeHeader);
 var objects = new List<SerializableObjectInfo>
 {
-    Object("rei::render", "RendererSettings", new() { ["_exposure"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_toneMapping"] = Scalar(SerializedTypeEnum.Enum, "rei::render::ToneMappingMode"), ["_maxPointLights"] = Scalar(SerializedTypeEnum.Integer, "i32") }, Path.Combine(reiRoot, "resources", "rei_data_assets", "render", "RendererSettings.h")),
+    Object("rei::render", "RendererSettings", new() { ["_exposure"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_toneMapping"] = Scalar(SerializedTypeEnum.Enum, "rei::render::ToneMappingMode"), ["_maxPointLights"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["_maxSpotLights"] = Scalar(SerializedTypeEnum.Integer, "i32") }, Path.Combine(reiRoot, "resources", "rei_data_assets", "render", "RendererSettings.h")),
     Object("rei::tests", "ProbeNested", new() { ["Value"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Label"] = Scalar(SerializedTypeEnum.String, "std::string") }),
     Object("rei::tests", "ProbeDataAsset", new() { ["Number"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Label"] = Scalar(SerializedTypeEnum.String, "std::string"), ["Settings"] = Custom("rei::tests::ProbeNested"), ["Values"] = Collection("i32", SerializedTypeEnum.Integer) }),
     Object("rei::math", "Vector3", new() { ["x"] = Scalar(SerializedTypeEnum.Float, "f32"), ["y"] = Scalar(SerializedTypeEnum.Float, "f32"), ["z"] = Scalar(SerializedTypeEnum.Float, "f32") }, Path.Combine(reiRoot, "src", "Common", "Math", "Vector3.h")),
@@ -83,6 +83,11 @@ AddEngineBehaviour("rei::ui", "Text", 7305, "ui/Text.h", new()
 AddEngineBehaviour("rei::render", "PointLight", 7306, "render/light/PointLight.h", new()
 {
     ["_strength"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_range"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_color"] = Custom("rei::render::Color")
+});
+AddEngineBehaviour("rei::render", "SpotLight", 7311, "render/light/SpotLight.h", new()
+{
+    ["_strength"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_range"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_color"] = Custom("rei::render::Color"),
+    ["_innerAngle"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_outerAngle"] = Scalar(SerializedTypeEnum.Float, "f32")
 });
 AddEngineBehaviour("rei::render", "AmbientLight", 7307, "render/light/AmbientLight.h", new()
 {

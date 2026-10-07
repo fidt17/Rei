@@ -1,0 +1,11 @@
+{
+  "DataAssetTypeId": 5,
+  "SerializedData": {
+    "Samples": {
+      "Name": "Samples",
+      "Type": 2,
+      "SourceType": "i32",
+      "Value": 0
+    }
+  }
+}

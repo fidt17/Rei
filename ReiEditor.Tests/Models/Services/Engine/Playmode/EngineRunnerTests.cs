@@ -20,6 +20,24 @@ namespace ReiEditor.Tests.Models.Services.Engine.Playmode;
 public sealed class EngineRunnerTests
 {
     [Fact]
+    public async Task StopReturnsToCallerWhileNativeShutdownStillWaits()
+    {
+        await using var context = new TestContext();
+        Assert.True(context.Start(EngineRunMode.PlayMode));
+        await context.AwaitStarted();
+        context.BlockedCleanupStage = "shutdown";
+        var stop = context.Runner.StopEngine();
+        try
+        {
+            await context.CleanupEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(stop.IsCompleted);
+            Assert.DoesNotContain("destroy", context.Calls);
+        }
+        finally { context.AllowCleanup.TrySetResult(); }
+        await stop.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task NativeReadLeasePreventsShutdownAndDllUnloadUntilReadReturns()
     {
         await using var context = new TestContext();
@@ -75,6 +93,7 @@ public sealed class EngineRunnerTests
             Assert.Equal(new IntPtr(123), enginePtr);
             Assert.Equal(1, exitCode);
             context.Touch("shutdown");
+            context.WaitForCleanupGate("shutdown");
             Running = false;
             context.Shutdown.Publish(exitCode);
             context.Release.TrySetResult();

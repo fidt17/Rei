@@ -46,6 +46,7 @@
 // --- RENDER ---
 // Shader capacity; RendererSettings supplies the per-object budget.
 #define REI_MAX_POINT_LIGHTS_COUNT 8
+#define REI_MAX_SPOT_LIGHTS_COUNT 8
 
 #define SORTING_ORDER_DEFAULT 1000
 #define SORTING_ORDER_POST_PROCESSING 2000

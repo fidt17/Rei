@@ -20,9 +20,9 @@ namespace rei::testing
             const auto& ref = camera.Get().GetRendererSettings();
             const auto* settings = ref.Get();
             _output->ProfileId = ref.Id;
-            _output->ExposureEV = settings ? settings->GetExposureEV() : 0;
+            _output->ExposureEV = settings ? settings->GetExposure() : 0;
             _output->ToneMapping = settings ? static_cast<i32>(settings->GetToneMapping()) : 0;
-            _output->MaxPointLights = settings ? settings->GetMaxPointLights() : REI_MAX_POINT_LIGHTS_COUNT;
+            _output->MaxPointLights = settings ? settings->GetMaxPointLights() : render::RendererSettings{}.GetMaxPointLights();
             ++_output->Samples;
         }
     };

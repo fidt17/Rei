@@ -25,6 +25,8 @@ namespace rei
         virtual void Init() { }
         virtual void Start() { }
         virtual void Update() { }
+        // Editor rendering invokes this hook only on selected entities, including disabled behaviours.
+        virtual void OnGizmosSelected() { }
         virtual void Dispose() { }
         virtual void BeforeREI_GET() { }
         virtual void AfterREI_SET() { }

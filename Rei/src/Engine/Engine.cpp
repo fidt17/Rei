@@ -99,6 +99,12 @@ namespace rei::internal::engine
         return mainWindow;
     }
 
+    void Engine::SetStartupScene(const std::string& assetId)
+    {
+        REI_THROW_IF(IsRunning(), "Cannot change startup scene while engine is running")
+        _startupSceneId = assetId;
+    }
+
     void Engine::Start()
     {
         try
@@ -111,7 +117,8 @@ namespace rei::internal::engine
             _time->Reset();
             _runEngine.store(true);
             _internalWorld->Configure(_app, _mainRenderer, _mainThread, _entityManager);
-            _sceneManager->LoadScene(0);
+            if (_isEditor && !_startupSceneId.empty()) _sceneManager->LoadScene(_startupSceneId);
+            else _sceneManager->LoadScene(0);
             _app->OnStart();
 
             LOG_DEBUG("Invoking start event")

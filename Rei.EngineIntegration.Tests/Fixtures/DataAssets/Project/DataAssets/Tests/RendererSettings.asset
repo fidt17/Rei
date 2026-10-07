@@ -1,8 +1,8 @@
 {
   "DataAssetTypeId": 3,
   "SerializedData": {
-    "_exposureEV": {
-      "Name": "_exposureEV",
+    "_exposure": {
+      "Name": "_exposure",
       "Type": 4,
       "SourceType": "f32",
       "Value": 0

@@ -37,10 +37,10 @@ namespace rei::render
         _commonIncludes = BuildIncludeBlock("COMMON",
         {
             REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID,
-            REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID,
+            REI_SHADER_INCLUDE_LIGHTING_ASSET_ID,
             REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID
         });
-        _commonIncludes = "\n#define NR_POINT_LIGHTS " + STRING(REI_MAX_POINT_LIGHTS_COUNT) + "\n" + _commonIncludes;
+        _commonIncludes = "\n#define NR_POINT_LIGHTS " + STRING(REI_MAX_POINT_LIGHTS_COUNT) + "\n#define NR_SPOT_LIGHTS " + STRING(REI_MAX_SPOT_LIGHTS_COUNT) + "\n" + _commonIncludes;
 
         _vertexIncludes = BuildIncludeBlock("VERTEX", {REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID});
         _fragmentIncludes = BuildIncludeBlock("FRAGMENT", {REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID});

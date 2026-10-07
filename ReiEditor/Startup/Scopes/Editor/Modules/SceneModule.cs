@@ -16,6 +16,7 @@ public class SceneModule : Module
     protected override void Load(ContainerBuilder b)
     {
         b.RegisterSingleton<SceneManagementService>().As<ISceneManagementService>();
+        b.RegisterSingleton<SceneOpeningService>().As<ISceneOpeningService>();
         b.RegisterSingleton<SceneAssetDropTargetBuilderService>().As<ISceneAssetDropTargetBuilderService>();
         b.RegisterSingleton<SceneAssetPlacementService>().As<ISceneAssetPlacementService>();
         b.RegisterSingleton<SceneAssetEntityInitializationService>().As<ISceneAssetEntityInitializationService>();

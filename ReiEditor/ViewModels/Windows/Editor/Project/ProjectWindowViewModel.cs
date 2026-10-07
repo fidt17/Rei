@@ -111,7 +111,8 @@ public class ProjectWindowViewModel : BaseViewModel
         IShaderCreationWindowService shaderCreationWindowService,
         ISelectionService selectionService,
         IProjectAssetFocusService projectAssetFocusService,
-        ISceneAssetDragSessionService sceneAssetDragSessionService)
+        ISceneAssetDragSessionService sceneAssetDragSessionService,
+        ISceneOpeningService? sceneOpeningService = null)
     {
         _resourceService = resourceService;
         _assetRegistry = assetRegistry;
@@ -129,7 +130,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _assetItemBuilder = new ProjectAssetItemBuilder(assetRegistry, assetSearchService, fileExplorerProvider);
         _assetSelectionHandler = new ProjectAssetSelectionHandler(selectionService, TrackSearchSelection);
         _assetOperationsHandler = new ProjectAssetOperationsHandler(storageProvider, assetOperationsService, projectAssetDeleteCommand, projectAssetDuplicateCommand, projectAssetMoveCommand, projectAssetRenameCommand);
-        _actionsController = new ProjectWindowActionsController(_directoryBrowser, _assetSelectionHandler, _assetOperationsHandler, textEditorFileOpener, settingsWindowService, () => ActiveItems, ApplyCommandResult, ApplyBatchCommandResult);
+        _actionsController = new ProjectWindowActionsController(_directoryBrowser, _assetSelectionHandler, _assetOperationsHandler, textEditorFileOpener, settingsWindowService, () => ActiveItems, ApplyCommandResult, ApplyBatchCommandResult, sceneOpeningService);
 
         SetupContextMenus();
         _directoryBrowser.BuildTree(resourceService);

@@ -18,12 +18,15 @@ using namespace rei::tests;
 
 namespace
 {
-    std::shared_ptr<render::CameraModule> MakeCamera(NativeRenderFixture& fixture)
+    std::shared_ptr<render::CameraModule> MakeCamera(NativeRenderFixture& fixture, const i32 lightBudget = 4)
     {
         const auto entity = fixture.Scene.Entity(100);
         fixture.Scene.Add(entity, 7301, false);
         auto& camera = fixture.Scene.Registry->Get<render::Camera>(entity);
         camera.SetOutputSize(32, 32);
+        auto settings = fixture.Scene.Assets->CreateAsset<render::RendererSettings>();
+        settings->SetMaxPointLights(lightBudget);
+        camera.SetRendererSettings(settings);
         auto module = std::make_shared<render::CameraModule>();
         module->SetCamera(ecs::ComponentRef<render::Camera>(fixture.Scene.Registry, entity));
         module->OnBeforeRender();
@@ -283,7 +286,7 @@ TEST_CASE("RENDER08 all eight point-light shader slots receive distinct native s
     IsolatedGl([]
     {
         NativeRenderFixture fixture;
-        auto camera = MakeCamera(fixture);
+        auto camera = MakeCamera(fixture, 8);
         auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
         render::LightingRenderModule lighting(camera);
         for (i32 i = 0; i < REI_MAX_POINT_LIGHTS_COUNT; ++i)
@@ -351,7 +354,7 @@ TEST_CASE("RENDER14 point light count caps at eight and clears every unused nati
     IsolatedGl([]
     {
         NativeRenderFixture fixture;
-        render::LightingRenderModule lighting(MakeCamera(fixture));
+        render::LightingRenderModule lighting(MakeCamera(fixture, 8));
         auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
         std::vector<ecs::Entity> lights(9, ecs::NULL_ENTITY);
         const auto verify = [&](const i32 expected)
@@ -999,7 +1002,7 @@ TEST_CASE("LIGHT_CULL01 per-object selection reaches later lights and clears sha
     IsolatedGl([]
     {
         NativeRenderFixture fixture;
-        auto camera = MakeCamera(fixture);
+        auto camera = MakeCamera(fixture, 8);
         auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
         std::vector<ecs::Entity> entities;
         entities.reserve(6);
@@ -1113,7 +1116,7 @@ TEST_CASE("LIGHT_BUDGET01 camera profile changes budget without relinking shader
             RequireEmptyLightSlots(*shader.Get(), expected);
             REQUIRE(shader->GetProgramRevision() == revision);
         };
-        verify(8);
+        verify(4);
         auto settings = fixture.Scene.Assets->CreateAsset<render::RendererSettings>();
         camera->GetCamera().Get().SetRendererSettings(settings);
         for (const i32 limit : {3, 0, 8, 1})
@@ -1126,11 +1129,139 @@ TEST_CASE("LIGHT_BUDGET01 camera profile changes budget without relinking shader
         camera->GetCamera().Get().SetRendererSettings(replacement);
         verify(5);
         camera->GetCamera().Get().SetRendererSettings(assets::AssetRef<render::RendererSettings>("missing-profile"));
-        verify(8);
+        verify(4);
         camera->GetCamera().Get().SetRendererSettings({});
-        verify(8);
+        verify(4);
         camera->SetCamera({});
-        verify(8);
+        verify(4);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("LIGHT_CACHE01 unchanged objects skip intersections while all selection inputs stay live", "[native][gl][lighting][lighting-culling][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        auto camera = MakeCamera(fixture, 8);
+        auto shader = fixture.Scene.Assets->GetById<render::Shader>(REI_SHADER_SIMPLE_LIT_ASSET_ID);
+        const auto object = fixture.Scene.Entity(1600);
+        const auto objectParent = fixture.Scene.Entity(1601);
+        const auto lightParent = fixture.Scene.Entity(1602);
+        const auto first = fixture.Scene.Entity(1603);
+        fixture.Scene.Add(first, 7306, false);
+        fixture.Scene.Registry->Get<ActiveTag>(first);
+        fixture.Scene.Registry->Get<Transform>(object).SetParent(objectParent);
+        fixture.Scene.Registry->Get<Transform>(first).SetParent(lightParent);
+        fixture.Scene.Registry->Get<render::PointLight>(first).SetRange(1);
+        fixture.Scene.Registry->Get<render::PointLight>(first).SetStrength(2);
+        fixture.Scene.World->Refresh();
+        fixture.Scene.World->RefreshAll();
+        math::Bounds bounds;
+        bounds.Include({-1, -1, -1});
+        bounds.Include({1, 1, 1});
+        render::LightingRenderModule module(camera);
+        profiling::ProfilingService profiler;
+        REQUIRE(profiler.Register(profiling::markers::ALL));
+        const auto verify = [&](const i32 count, const bool expectTests)
+        {
+            REQUIRE(std::string(profiler.RequestCapture(1).Status) == "queued");
+            profiler.BeginFrame();
+            module.OnBeforeRender();
+            module.SetLightValues(*shader.Get(), bounds, fixture.Scene.Registry->Get<Transform>(object).CalculateWorldModelMatrix(), object);
+            profiler.EndFrame();
+            // Frame metrics publish at the next start boundary, including inter-frame work.
+            profiler.BeginFrame();
+            profiler.EndFrame();
+            const auto snapshot = profiler.CopySnapshot(profiling::SnapshotView::LastCapture);
+            REQUIRE(snapshot.State == profiling::CaptureState::Complete);
+            REQUIRE(snapshot.InvalidFrames == 0);
+            u64 tested = 0;
+            for (u32 i = 0; i < snapshot.MetricCount; ++i)
+                if (snapshot.Metrics[i].Id == profiling::markers::LIGHTING_TESTED.Id) tested = snapshot.Metrics[i].Value;
+            REQUIRE((tested > 0) == expectTests);
+            REQUIRE(ReadPointLightCount(*shader.Get()) == count);
+            RequireEmptyLightSlots(*shader.Get(), count);
+        };
+        verify(1, true);
+        verify(1, false);
+        fixture.Scene.Registry->Get<render::PointLight>(first).SetStrength(7);
+        fixture.Scene.Registry->Get<render::PointLight>(first).SetColor(render::Color::Red());
+        verify(1, false);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == 7);
+        shader->Use();
+        i32 program = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        std::array<f32, 4> color{};
+        glGetUniformfv(program, shader->GetLocation("_PointLights[0].Color"), color.data());
+        REQUIRE(color == std::array<f32, 4>{1, 0, 0, 1});
+        // Direct mutable references and parent movement must invalidate without setters on the child.
+        fixture.Scene.Registry->Get<Transform>(objectParent).GetLocalPosition() = {100, 0, 0};
+        verify(0, true);
+        fixture.Scene.Registry->Get<Transform>(objectParent).GetLocalPosition() = {0, 0, 0};
+        verify(1, true);
+        fixture.Scene.Registry->Get<Transform>(lightParent).GetLocalPosition() = {100, 0, 0};
+        verify(0, true);
+        fixture.Scene.Registry->Get<render::PointLight>(first).SetRange(200);
+        verify(1, true);
+        fixture.Scene.Registry->Get<Transform>(lightParent).GetLocalPosition() = {0, 0, 0};
+        fixture.Scene.Registry->Get<render::PointLight>(first).SetRange(1);
+        verify(1, true);
+        const auto second = fixture.Scene.Entity(1604);
+        fixture.Scene.Add(second, 7306, false);
+        fixture.Scene.Registry->Get<ActiveTag>(second);
+        fixture.Scene.Registry->Get<render::PointLight>(second).SetRange(1);
+        fixture.Scene.World->Refresh();
+        fixture.Scene.World->RefreshAll();
+        verify(2, true);
+        fixture.Scene.Registry->Del<ActiveTag>(second);
+        fixture.Scene.World->Refresh();
+        verify(1, true);
+        fixture.Scene.Registry->Get<ActiveTag>(second);
+        fixture.Scene.World->Refresh();
+        verify(2, true);
+        fixture.Scene.Registry->Get<render::PointLight>(second).Disable();
+        verify(1, true);
+        fixture.Scene.Registry->Get<render::PointLight>(second).Enable();
+        verify(2, true);
+        fixture.Scene.Registry->Del<render::PointLight>(first);
+        fixture.Scene.World->Refresh();
+        verify(1, true);
+        // Replacement geometry is independent of transform changes.
+        bounds = {};
+        bounds.Include({1000, 0, 0});
+        bounds.Include({1001, 1, 1});
+        verify(0, true);
+        bounds = {};
+        verify(1, true);
+        bounds.Include({-1, -1, -1});
+        bounds.Include({1, 1, 1});
+        verify(1, true);
+        const auto other = fixture.Scene.Entity(1605);
+        module.SetLightValues(*shader.Get(), bounds, glm::translate(glm::mat4(1), glm::vec3(1000, 0, 0)), other);
+        REQUIRE(ReadPointLightCount(*shader.Get()) == 0);
+        RequireEmptyLightSlots(*shader.Get(), 0);
+        verify(1, false);
+        auto settings = camera->GetCamera().Get().GetRendererSettings();
+        settings->SetMaxPointLights(0);
+        verify(0, false);
+        settings->SetMaxPointLights(1);
+        verify(1, true);
+        // A cached selection must restore shared uniforms overwritten by a material/custom renderer.
+        glUniform1f(shader->GetLocation("_PointLights[0].Strength"), 99);
+        verify(1, false);
+        REQUIRE(ReadFloatUniform(*shader.Get(), "_PointLights[0].Strength") == fixture.Scene.Registry->Get<render::PointLight>(second).GetStrength());
+        fixture.Scene.Registry->Del<render::PointLight>(second);
+        fixture.Scene.World->Refresh();
+        verify(0, false);
+        fixture.Scene.Add(second, 7306, false);
+        fixture.Scene.World->Refresh();
+        fixture.Scene.World->RefreshAll();
+        verify(1, true);
+        // Invisible/deleted objects do not retain cache storage indefinitely.
+        module.OnBeforeRender();
+        module.OnBeforeRender();
+        verify(1, true);
         REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }

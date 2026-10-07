@@ -26,7 +26,7 @@ namespace rei::tests
             {"0", "build-scenes", JsonAsset({{"Scenes", {{"0", "empty-scene"}}}})},
             {"empty-scene", "empty", JsonAsset({{"Name", "native fixture"}, {"Entities", entities}})}
         };
-        for (const auto id : {REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID, REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID,
+        for (const auto id : {REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID, REI_SHADER_INCLUDE_LIGHTING_ASSET_ID,
             REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID, REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID, REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID})
             pack.push_back({id, id, TextBytes("// " + marker + "\n")});
         for (const auto id : {REI_SHADER_ERROR_ASSET_ID, REI_SHADER_LIGHT_SOURCE_ASSET_ID, REI_SHADER_ALPHA_OUTLINE_ASSET_ID,

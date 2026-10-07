@@ -194,7 +194,7 @@ void rei::render::DefaultRenderScenario::RenderInNormalMode()
             Shader::InvalidateProgramBinding();
         }
 
-        _gizmos->Render();
+        _gizmos->Render(GetEngine().IsEditor());
 
         if (_cameraModule->GetCamera().Get().GetRenderMode() == BVH)
         {

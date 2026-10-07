@@ -1,3 +1,5 @@
 ﻿uniform AmbientLight _AmbientLight;
 uniform PointLight _PointLights[NR_POINT_LIGHTS];
 uniform int _PointLightsCount;
+uniform SpotLight _SpotLights[NR_SPOT_LIGHTS];
+uniform int _SpotLightsCount;

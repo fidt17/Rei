@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Gizmos.h"
 
+#include "Modules/Editor/Components/SelectedTag.h"
 #include "glad/glad.h"
 #include "glm/detail/type_quat.hpp"
 #include "Modules/EntityManagement/EntityManager.h"
@@ -15,13 +16,63 @@ void rei::render::Gizmos::Setup()
     _gizmosMaterial = GetAssetManager().GetById<Material>(REI_COLOR_MATERIAL_ID);
 }
 
-void rei::render::Gizmos::Render()
+void rei::render::Gizmos::Render(const bool drawSelectedBehaviours)
 {
+    if (drawSelectedBehaviours)
+    {
+        ECS_WORLD(GetInternalWorld());
+        const auto selected = FILTER(editor::SelectedTag, BehaviourCollection);
+        const auto& registry = GetEntityManager().GetBehaviourRegistry();
+        FOR(entity, selected)
+        {
+            for (const auto id : GET(entity, BehaviourCollection).Behaviours) registry.GetBehaviour(entity, id).OnGizmosSelected();
+        }
+    }
+
     for (const auto & action : _drawCommands)
     {
         action(*this);
     }
     _drawCommands.clear();
+}
+
+void rei::render::Gizmos::DrawLines(const std::vector<glm::vec3>& vertices, const Color& color) const
+{
+    if (vertices.empty()) return;
+    const auto& shader = _gizmosMaterial->GetShader();
+    shader.SetColor("_Color", color);
+    shader.SetViewMatrices(_cameraModule->GetProjectionMatrix(), _cameraModule->GetViewMatrix(), glm::mat4(1));
+    shader.Use();
+    i32 previousArray = 0;
+    i32 previousBuffer = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousArray);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previousBuffer);
+    glBindVertexArray(_lineBatchMesh._vertexArray);
+    glBindBuffer(GL_ARRAY_BUFFER, _lineBatchMesh._vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STREAM_DRAW);
+    profiling::RecordDraw(static_cast<u32>(vertices.size()), 0);
+    glDrawArrays(GL_LINES, 0, static_cast<i32>(vertices.size()));
+    glBindVertexArray(previousArray);
+    glBindBuffer(GL_ARRAY_BUFFER, previousBuffer);
+}
+
+void rei::render::Gizmos::DrawSelectionLines(const std::vector<glm::vec3>& vertices, const Color& color) const
+{
+    if (vertices.empty()) return;
+    const auto depthEnabled = glIsEnabled(GL_DEPTH_TEST);
+    i32 depthFunction = GL_LESS;
+    GLboolean depthWrite = GL_TRUE;
+    glGetIntegerv(GL_DEPTH_FUNC, &depthFunction);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthWrite);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_GREATER);
+    DrawLines(vertices, Color(color.r, color.g, color.b, color.a * 0.2f));
+    glDepthFunc(GL_LEQUAL);
+    DrawLines(vertices, color);
+    glDepthFunc(depthFunction);
+    glDepthMask(depthWrite);
+    if (!depthEnabled) glDisable(GL_DEPTH_TEST);
 }
 
 void rei::render::Gizmos::DrawLine(const math::Vector3& start, const math::Vector3& end, const Color& color, const bool useDepth) const

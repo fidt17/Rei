@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "LightSnapshot.h"
+#include "LightUtility.h"
 #include "Modules/Components/ActiveTag.h"
 #include "rei_behaviours/transformation/Transform.h"
 
@@ -24,6 +25,7 @@ void rei::render::LightSnapshot::Update(const ecs::ComponentRef<Camera>& camera)
     FindAmbientLights();
     FindPointLights();
     BuildSnapshot(camera);
+    BuildSpotSnapshot();
 }
 
 void rei::render::LightSnapshot::FindAmbientLights()
@@ -49,10 +51,15 @@ void rei::render::LightSnapshot::FindPointLights()
 void rei::render::LightSnapshot::BuildSnapshot(const ecs::ComponentRef<Camera>& camera)
 {
     _pointLightLimit = RendererSettings{}.GetMaxPointLights();
+    _spotLightLimit = RendererSettings{}.GetMaxSpotLights();
     if (!camera.IsNull())
     {
         const auto& settingsRef = camera.Get().GetRendererSettings();
-        if (settingsRef.IsLoaded()) _pointLightLimit = settingsRef->GetMaxPointLights();
+        if (settingsRef.IsLoaded())
+        {
+            _pointLightLimit = settingsRef->GetMaxPointLights();
+            _spotLightLimit = settingsRef->GetMaxSpotLights();
+        }
     }
     _ambientStrength = 0;
     _ambientLinearColor = Color(0, 0, 0, 1);
@@ -88,4 +95,41 @@ void rei::render::LightSnapshot::BuildSnapshot(const ecs::ComponentRef<Camera>& 
     changed |= _pointSnapshot.size() != index;
     _pointSnapshot.resize(index);
     if (changed) ++_selectionRevision;
+}
+
+void rei::render::LightSnapshot::BuildSpotSnapshot()
+{
+    bool changed = false;
+    u64 index = 0;
+    VisitEnabledLights<SpotLight>([&](const auto& reference)
+    {
+        const auto& light = reference.Get();
+        SpotLightData next;
+        next.Entity = light.GetEntity();
+        next.Position = light.GetTransform().GetWorldPosition();
+        next.Strength = light.GetStrength();
+        next.Range = light.GetRange();
+        next.LinearColor = light.GetColor().ToLinear();
+        next.Direction = light.GetWorldDirection();
+        next.InnerCosine = light_utility::ConeCosine(light.GetInnerAngle());
+        next.OuterCosine = light_utility::ConeCosine(light.GetOuterAngle());
+        if (index < _spotSnapshot.size())
+        {
+            const auto& previous = _spotSnapshot[index];
+            changed |= !(previous.Entity == next.Entity) || static_cast<glm::vec3>(previous.Position) != static_cast<glm::vec3>(next.Position)
+                || previous.Range != next.Range || static_cast<glm::vec3>(previous.Direction) != static_cast<glm::vec3>(next.Direction)
+                || previous.OuterCosine != next.OuterCosine;
+            _spotSnapshot[index] = next;
+        }
+        else
+        {
+            changed = true;
+            _spotSnapshot.push_back(next);
+        }
+        ++index;
+        return true;
+    });
+    changed |= _spotSnapshot.size() != index;
+    _spotSnapshot.resize(index);
+    if (changed) ++_spotSelectionRevision;
 }

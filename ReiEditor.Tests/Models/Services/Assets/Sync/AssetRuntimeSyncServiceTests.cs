@@ -15,6 +15,26 @@ namespace ReiEditor.Tests.Models.Services.Assets.Sync;
 [Trait("Area", "Assets")]
 public sealed class AssetRuntimeSyncServiceTests
 {
+    private sealed class Inspection(string status = "loaded") : IAssetRuntimeInspectionService
+    {
+        public ReiEditor.Mcp.Contracts.ReiAssetState Read(string assetId) => new(assetId, "runtime", status, null);
+    }
+
+    [Theory]
+    [InlineData("unloaded")]
+    [InlineData("engine_unavailable")]
+    public void UnavailableAssetPreservesFalseResultWithoutMisleadingFailureWarning(string status)
+    {
+        using var fixture = new TemporaryProjectFixture();
+        var api = new TestAssetApi { Result = false };
+        CreateService(fixture, api, out var registry);
+        var logger = new TestLogger<AssetRuntimeSyncService>();
+        var service = new AssetRuntimeSyncService(api, registry, logger, new Inspection(status));
+        Assert.False(service.TrySetAssetData("material", "{}"));
+        Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevelEnum.Warning);
+        Assert.Contains(logger.Entries, entry => entry.Message.Contains(status) && entry.Message.Contains("retained"));
+    }
+
     /// <summary>
     /// Captures runtime asset API calls and returns configured results.
     /// </summary>
@@ -153,6 +173,6 @@ public sealed class AssetRuntimeSyncServiceTests
             new AssetInfo(new AssetMeta("material"), fixture.Directory.GetPath("Project", "surface.MAT"))
         });
         logger = new TestLogger<AssetRuntimeSyncService>();
-        return new AssetRuntimeSyncService(api, registry, logger);
+        return new AssetRuntimeSyncService(api, registry, logger, new Inspection());
     }
 }

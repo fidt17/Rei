@@ -11,7 +11,7 @@ namespace rei::testing
         SERIALIZE std::string ProfileId;
         SERIALIZE f32 ExposureEV = 0;
         SERIALIZE i32 ToneMapping = 0;
-        SERIALIZE i32 MaxPointLights = 8;
+        SERIALIZE i32 MaxPointLights = 4;
         SERIALIZE i32 Samples = 0;
     };
 }

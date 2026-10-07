@@ -152,6 +152,23 @@ public sealed class BehaviourComponentDrawerViewModelTests
             new TestEntityManagementService()));
     }
 
+    [Fact]
+    public void RangeMetadataSelectsSliderAndWritesBehaviourProperty()
+    {
+        var parser = new SourceFilesUtility(null!, null!, null!);
+        var source = "REI_RANGE(0, 8) SERIALIZE i32 speed = 3;";
+        var info = new BehaviourAssetInfo("Game", "Mover", 8, new ObjectFile<string>(source, "C:/Mover.h"), parser.GetSerializedProperties(source), [], "Mover.h");
+        var component = new BehaviourComponent(8);
+        var property = new SerializedProperty("speed", SerializedTypeEnum.Integer, 3, "i32", null);
+        component.AddProperty(property);
+        using var drawer = TestCreateDrawer(info, component, new TestRectTransformPropertiesProvider(), new TestBehaviourComponentsService(), new TestEntityManagementService());
+
+        var range = Assert.IsType<RangePropertyViewModel>(drawer.Properties[1]);
+        Assert.Equal(8, range.Range.Maximum);
+        range.SetSliderValue(7.8);
+        Assert.Equal(8, property.Value);
+    }
+
     private static BehaviourComponentDrawerViewModel TestCreateDrawer(
         BehaviourAssetInfo info,
         BehaviourComponent component,

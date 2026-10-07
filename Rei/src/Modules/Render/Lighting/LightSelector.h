@@ -19,6 +19,7 @@ namespace rei::render
         };
 
         void BeginFrame();
+        const Selection& SelectSpots(const math::Bounds& localBounds, const glm::mat4& modelMatrix, ecs::Entity object, const LightSnapshot& snapshot) const;
         const Selection& Select(const math::Bounds& localBounds, const glm::mat4& modelMatrix, ecs::Entity object, const LightSnapshot& snapshot) const;
 
     private:
@@ -26,5 +27,6 @@ namespace rei::render
         mutable Selection _uncachedSelection;
         // Keep objects drawn in this or previous frame. Entity keys include generation.
         mutable std::unordered_map<ecs::Entity, Selection> _selectionCache;
+        mutable std::unordered_map<ecs::Entity, Selection> _spotSelectionCache;
     };
 }

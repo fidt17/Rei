@@ -185,6 +185,42 @@ public sealed class BehaviourRegistryTests : IDisposable
         Assert.Single(fixture.Registry.Behaviours);
     }
 
+    [Fact]
+    public async Task InvalidDataAssetRangePreservesPublishedBehaviourAndGeneratedSource()
+    {
+        var fixture = CreateRegistry();
+        var path = WriteScript("Known.h", "BEHAVIOUR_BODY(Known) REI_RANGE(0, 8) SERIALIZE i32 Count = 4;");
+        fixture.Files.Files.Add(PathData(path));
+        fixture.Files.Metas.Add(Meta(path, 3));
+        var config = WriteScript("Config.h", "DATA_ASSET_BODY(Config) REI_RANGE(0, 8) SERIALIZE i32 Count = 4;");
+        await fixture.Registry.RefreshBehaviours();
+        var generatedPath = _project.Resources.GetProjectPath("Scripts", "Internal", "BehaviourRegistry.cpp");
+        var generated = await File.ReadAllTextAsync(generatedPath);
+        File.WriteAllText(config, "DATA_ASSET_BODY(Config) REI_RANGE(8, 0) SERIALIZE i32 Count = 4;");
+
+        await Assert.ThrowsAsync<Exception>(() => fixture.Registry.RefreshBehaviours());
+
+        Assert.Equal(8, fixture.Registry.Behaviours[3].SerializedProperties["Count"].Range!.Maximum);
+        Assert.Equal(generated, await File.ReadAllTextAsync(generatedPath));
+    }
+
+    [Fact]
+    public async Task InvalidBehaviourRangePreservesLastValidMetadata()
+    {
+        var fixture = CreateRegistry();
+        var path = WriteScript("Known.h", "BEHAVIOUR_BODY(Known) REI_RANGE(0, 8) SERIALIZE i32 Count = 4;");
+        fixture.Files.Files.Add(PathData(path));
+        fixture.Files.Metas.Add(Meta(path, 3));
+        await fixture.Registry.RefreshBehaviours();
+        File.WriteAllText(path, "BEHAVIOUR_BODY(Known) REI_RANGE(0, 1) SERIALIZE i32 Count = 4;");
+        fixture.Files.Files.Clear();
+        fixture.Files.Files.Add(PathData(path));
+
+        await Assert.ThrowsAsync<Exception>(() => fixture.Registry.RefreshBehaviours());
+
+        Assert.Equal(8, fixture.Registry.Behaviours[3].SerializedProperties["Count"].Range!.Maximum);
+    }
+
     /// <summary>Creates registry and focused collaborators over isolated project root.</summary>
     private (BehaviourRegistry Registry, TestBehaviourFileUtility Files, TestMetaFilesService MetaFiles, TestSolutionGenerator Solution) CreateRegistry()
     {

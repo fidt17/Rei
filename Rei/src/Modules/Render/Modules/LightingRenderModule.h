@@ -10,7 +10,9 @@ namespace rei::render
     class LightingRenderModule
     {
     private:
-        static constexpr u32 LIGHT_UNIFORM_COUNT = 3 + REI_MAX_POINT_LIGHTS_COUNT * 4;
+        static constexpr u32 POINT_COUNT_SLOT = 2 + REI_MAX_POINT_LIGHTS_COUNT * 4;
+        static constexpr u32 SPOT_START_SLOT = POINT_COUNT_SLOT + 1;
+        static constexpr u32 LIGHT_UNIFORM_COUNT = SPOT_START_SLOT + REI_MAX_SPOT_LIGHTS_COUNT * 7 + 1;
         using LightLocations = std::array<i32, LIGHT_UNIFORM_COUNT>;
 
     public:

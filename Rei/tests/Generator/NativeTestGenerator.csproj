@@ -9,6 +9,7 @@
         <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/BehaviourRegistrySourceGenerator.cs" Link="Production/BehaviourRegistrySourceGenerator.cs" />
         <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/BehaviourAssetInfo.cs" Link="Production/BehaviourAssetInfo.cs" />
         <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/SerializableObjectInfo.cs" Link="Production/SerializableObjectInfo.cs" />
+        <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/SerializedNumericRange.cs" Link="Production/SerializedNumericRange.cs" />
         <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/SerializableEnum.cs" Link="Production/SerializableEnum.cs" />
         <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/ISerializableObjectsRegistry.cs" Link="Production/ISerializableObjectsRegistry.cs" />
         <Compile Include="../../../ReiEditor/Models/Services/Assets/Scripting/Serialization/Types/SerializedTypeEnum.cs" Link="Production/SerializedTypeEnum.cs" />

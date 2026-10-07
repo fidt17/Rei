@@ -68,7 +68,7 @@ void main(){result=texture(image,uv);}
     {
         WriteAssetPack(files, {
             {REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID, "ambient", StringBytes("")},
-            {REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID, "point", StringBytes("")},
+            {REI_SHADER_INCLUDE_LIGHTING_ASSET_ID, "point", StringBytes("")},
             {REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID, "common", StringBytes("")},
             {REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID, "vertex", StringBytes("")},
             {REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID, "fragment", StringBytes("")},

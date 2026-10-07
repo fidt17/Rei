@@ -37,7 +37,30 @@ void rei::render::LightingRenderModule::SetLightValues(const Shader& shader, con
         shader.SetFloat(locations[slot + 2], light.Range);
         shader.SetLinearColor(locations[slot + 3], light.LinearColor);
     }
-    shader.SetInt(locations.back(), selected.Count);
+    shader.SetInt(locations[POINT_COUNT_SLOT], selected.Count);
+    if (std::none_of(locations.begin() + SPOT_START_SLOT, locations.end(), [](const i32 location) { return location >= 0; })) return;
+    const auto& spots = _selector.SelectSpots(localBounds, modelMatrix, object, _snapshot);
+    if (spots.Count == 0 && locations.back() >= 0)
+    {
+        shader.SetInt(locations.back(), 0);
+        return;
+    }
+    const LightSnapshot::SpotLightData emptySpot{};
+    const auto& view = _cameraModule->GetViewMatrix();
+    profiling::Count(profiling::markers::LIGHTING_SELECTED.Id, spots.Count);
+    for (i32 i = 0; i < REI_MAX_SPOT_LIGHTS_COUNT; ++i)
+    {
+        const auto& light = i < spots.Count ? _snapshot.GetSpotLights()[spots.Indices[i]] : emptySpot;
+        const auto slot = SPOT_START_SLOT + i * 7;
+        shader.SetVector3(locations[slot], i < spots.Count ? glm::vec3(view * glm::vec4(static_cast<glm::vec3>(light.Position), 1)) : glm::vec3(0));
+        shader.SetFloat(locations[slot + 1], light.Strength);
+        shader.SetFloat(locations[slot + 2], light.Range);
+        shader.SetLinearColor(locations[slot + 3], light.LinearColor);
+        shader.SetVector3(locations[slot + 4], glm::vec3(view * glm::vec4(static_cast<glm::vec3>(light.Direction), 0)));
+        shader.SetFloat(locations[slot + 5], light.InnerCosine);
+        shader.SetFloat(locations[slot + 6], light.OuterCosine);
+    }
+    shader.SetInt(locations.back(), spots.Count);
 }
 
 const rei::render::LightingRenderModule::LightLocations& rei::render::LightingRenderModule::GetLightLocations(const Shader& shader) const
@@ -59,7 +82,20 @@ const rei::render::LightingRenderModule::LightLocations& rei::render::LightingRe
             values[slot + 2] = prefix + ".Range";
             values[slot + 3] = prefix + ".Color";
         }
-        values.back() = "_PointLightsCount";
+        values[POINT_COUNT_SLOT] = "_PointLightsCount";
+        for (i32 i = 0; i < REI_MAX_SPOT_LIGHTS_COUNT; ++i)
+        {
+            const auto prefix = "_SpotLights[" + std::to_string(i) + "]";
+            const auto slot = SPOT_START_SLOT + i * 7;
+            values[slot] = prefix + ".Position";
+            values[slot + 1] = prefix + ".Strength";
+            values[slot + 2] = prefix + ".Range";
+            values[slot + 3] = prefix + ".Color";
+            values[slot + 4] = prefix + ".Direction";
+            values[slot + 5] = prefix + ".InnerCosine";
+            values[slot + 6] = prefix + ".OuterCosine";
+        }
+        values.back() = "_SpotLightsCount";
         return values;
     }();
     LightLocations locations;

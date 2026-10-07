@@ -1,3 +1,12 @@
+using ReiEditor.Models.Services.Scenes;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Themes.Fluent;
+using Avalonia.Threading;
+using ReiEditor.Views.Windows.Editor.Project.Assets;
 using Avalonia.Headless.XUnit;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.FileSystem;
@@ -49,6 +58,59 @@ public sealed class ProjectWindowActionsControllerTests : IDisposable
             OpenedPaths.Add(filePath);
             return TextEditorOpenResult.Opened;
         }
+    }
+
+    private sealed class TestSceneOpener : ISceneOpeningService
+    {
+        public List<string> OpenedIds { get; } = new();
+        public Task<bool> OpenAsync(string assetId)
+        {
+            OpenedIds.Add(assetId);
+            return Task.FromResult(true);
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SceneDoubleClickUsesSceneServiceAndNeverTextEditor(bool hasService)
+    {
+        var browser = new ProjectDirectoryBrowser(() => false, () => { }, _ => { });
+        var opener = new TestTextEditorFileOpener();
+        var scenes = new TestSceneOpener();
+        var controller = new ProjectWindowActionsController(browser, new ProjectAssetSelectionHandler(null, _ => { }),
+            new ProjectAssetOperationsHandler(null, null, null, null, null, null), opener, null, () => _items, _ => { }, _ => { }, hasService ? scenes : null);
+        var path = _temporaryDirectory.GetPath("Level.scene");
+        var item = new ProjectAssetItemViewModel("Level", path, ProjectAssetType.Scene,
+            new AssetInfo(new AssetMeta("scene-id"), path), controller.CreateAssetItemActions((_, _) => { }, _ => { }),
+            new ContextMenuViewModel(), new TestFileExplorerProvider());
+        _items.Add(item);
+
+        var theme = new FluentTheme();
+        var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
+        Application.Current!.Styles.Add(theme);
+        Application.Current.Styles.Add(styles);
+        var window = new Window { Width = 400, Height = 120, Content = new ProjectAssetItemView { DataContext = item } };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var point = new Point(80, 12);
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            window.MouseDown(point, MouseButton.Left);
+            window.MouseUp(point, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+        }
+        finally
+        {
+            window.Close();
+            Application.Current.Styles.Remove(styles);
+            Application.Current.Styles.Remove(theme);
+        }
+
+        Assert.Equal(hasService ? new[] { "scene-id" } : Array.Empty<string>(), scenes.OpenedIds);
+        Assert.Empty(opener.OpenedPaths);
     }
 
     private readonly TemporaryDirectory _temporaryDirectory = new();

@@ -37,23 +37,23 @@ TEST_CASE("HDR01 camera profiles serialize settings and sanitize invalid runtime
     CHECK_FALSE(camera.GetRendererSettings().IsLoaded());
     CHECK(camera.GetRendererSettings().Get() == nullptr);
     render::RendererSettings settings;
-    REQUIRE(settings.GetExposureEV() == 0);
+    REQUIRE(settings.GetExposure() == 0);
     REQUIRE(settings.GetToneMapping() == render::Reinhard);
-    REQUIRE(settings.GetMaxPointLights() == 8);
+    REQUIRE(settings.GetMaxPointLights() == 4);
     // Old serialized profiles omit the new field and retain its default.
-    settings.REI_SET(SerializedField("_exposureEV", 0.0));
-    REQUIRE(settings.GetMaxPointLights() == 8);
+    settings.REI_SET(SerializedField("_exposure", 0.0));
+    REQUIRE(settings.GetMaxPointLights() == 4);
     settings.REI_SET(SerializedField("_maxPointLights", 3));
     REQUIRE(settings.GetMaxPointLights() == 3);
-    settings.REI_SET(SerializedField("_exposureEV", 2.5));
+    settings.REI_SET(SerializedField("_exposure", 2.5));
     settings.REI_SET(SerializedField("_toneMapping", static_cast<i32>(render::Off)));
-    CHECK(settings.GetExposureEV() == 2.5f);
+    CHECK(settings.GetExposure() == 2.5f);
     CHECK(settings.GetToneMapping() == render::Off);
     render::RendererSettings restored;
     const auto serialized = settings.REI_GET();
-    restored.REI_SET(SerializedField("_exposureEV", serialized.at("_exposureEV")));
+    restored.REI_SET(SerializedField("_exposure", serialized.at("_exposure")));
     restored.REI_SET(SerializedField("_toneMapping", serialized.at("_toneMapping")));
-    CHECK(restored.GetExposureEV() == 2.5f);
+    CHECK(restored.GetExposure() == 2.5f);
     CHECK(restored.GetToneMapping() == render::Off);
     restored.REI_SET(SerializedField("_maxPointLights", serialized.at("_maxPointLights")));
     CHECK(restored.GetMaxPointLights() == 3);
@@ -64,15 +64,28 @@ TEST_CASE("HDR01 camera profiles serialize settings and sanitize invalid runtime
     }
     for (const f32 invalid : {std::numeric_limits<f32>::quiet_NaN(), std::numeric_limits<f32>::infinity(), -std::numeric_limits<f32>::infinity()})
     {
-        settings.SetExposureEV(invalid);
-        CHECK(settings.GetExposureEV() == 0);
+        settings.SetExposure(invalid);
+        CHECK(settings.GetExposure() == 0);
     }
-    settings.SetExposureEV(100);
-    CHECK(settings.GetExposureEV() == 16);
-    settings.SetExposureEV(-100);
-    CHECK(settings.GetExposureEV() == -16);
+    settings.SetExposure(100);
+    CHECK(settings.GetExposure() == 16);
+    settings.SetExposure(-100);
+    CHECK(settings.GetExposure() == -16);
     settings.SetToneMapping(static_cast<render::ToneMappingMode>(99));
     CHECK(settings.GetToneMapping() == render::Off);
+}
+
+TEST_CASE("HDR_EXPOSURE_ALIAS old profiles retain exposure and new field wins", "[native][hdr]")
+{
+    render::RendererSettings settings;
+    settings.REI_SET(SerializedField("_exposureEV", -2.5));
+    REQUIRE(settings.GetExposure() == -2.5f);
+    auto values = SerializedField("_exposureEV", 10.0);
+    values.update(SerializedField("_exposure", 1.25));
+    settings.REI_SET(values);
+    CHECK(settings.GetExposure() == 1.25f);
+    CHECK(settings.REI_GET().contains("_exposure"));
+    CHECK_FALSE(settings.REI_GET().contains("_exposureEV"));
 }
 
 TEST_CASE("HDR02 linear float framebuffer keeps highlights and alpha after resize", "[native][gl][hdr][isolated]")
@@ -117,7 +130,7 @@ TEST_CASE("HDR03 final pass maps HDR once preserves alpha and reads live and rep
         glDisable(GL_BLEND);
         const auto checkExposure = [&](const f32 ev)
         {
-            profile->SetExposureEV(ev);
+            profile->SetExposure(ev);
             target.EnableBuffer(32, 32);
             module.OnBeforeRender();
             module.Render(source);
@@ -128,12 +141,12 @@ TEST_CASE("HDR03 final pass maps HDR once preserves alpha and reads live and rep
         checkExposure(-2);
         checkExposure(1);
         profile->SetToneMapping(render::Off);
-        profile->SetExposureEV(-2);
+        profile->SetExposure(-2);
         module.OnBeforeRender();
         module.Render(source);
         RequirePixel(ReadPixel(), {DisplayCode(0.5f), 255, 255, 128});
         auto replacement = fixture.Scene.Assets->CreateAsset<render::RendererSettings>();
-        replacement->SetExposureEV(-1);
+        replacement->SetExposure(-1);
         camera->GetCamera().Get().SetRendererSettings(replacement);
         module.OnBeforeRender();
         module.Render(source);
@@ -175,7 +188,7 @@ TEST_CASE("HDR04 real engine tone maps scene highlights and leaves UI display co
         auto frame = Capture(engine);
         const auto expected = DisplayCode(8.0f / 9);
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {expected, expected, expected, 255});
-        engine.OnEngineThread([&] { settings->SetExposureEV(-1); });
+        engine.OnEngineThread([&] { settings->SetExposure(-1); });
         frame = Capture(engine);
         const auto darker = DisplayCode(0.8f);
         RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {darker, darker, darker, 255});
@@ -252,7 +265,7 @@ TEST_CASE("HDR05 uniforms change only with effective settings and reset after sh
         frame();
         CHECK(writes.FloatWrites == 1);
         CHECK(writes.IntWrites == 1);
-        profile->SetExposureEV(-1);
+        profile->SetExposure(-1);
         frame();
         CHECK(writes.FloatWrites == 2);
         CHECK(writes.IntWrites == 1);
@@ -261,7 +274,7 @@ TEST_CASE("HDR05 uniforms change only with effective settings and reset after sh
         CHECK(writes.FloatWrites == 2);
         CHECK(writes.IntWrites == 2);
         auto same = fixture.Scene.Assets->CreateAsset<render::RendererSettings>();
-        same->SetExposureEV(-1);
+        same->SetExposure(-1);
         same->SetToneMapping(render::Off);
         camera->GetCamera().Get().SetRendererSettings(same);
         frame();

@@ -567,6 +567,8 @@
     <ClInclude Include="resources\rei_behaviours\render\camera\CameraPerspectiveEnum.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\AmbientLight.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\PointLight.h" />
+    <ClInclude Include="resources\rei_behaviours\render\light\SpotLight.h" />
+    <ClInclude Include="src\Modules\Render\Lighting\LightUtility.h" />
     <ClInclude Include="resources\rei_behaviours\render\MeshRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\render\SpriteRenderer.h" />
     <ClInclude Include="resources\rei_behaviours\render\RenderOutlineTag.h" />
@@ -699,6 +701,7 @@
     <ClInclude Include="src\Modules\Render\Model\Model.h" />
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\Gizmos.h" />
+    <ClInclude Include="src\Modules\Render\Lighting\LightGizmoGeometry.h" />
     <ClInclude Include="src\Modules\Render\Modules\GridRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Lighting\LightSnapshot.h" />
     <ClInclude Include="src\Modules\Render\Lighting\LightSelector.h" />
@@ -782,6 +785,7 @@
     <ClCompile Include="resources\rei_behaviours\render\camera\Camera.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\AmbientLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\PointLight.cpp" />
+    <ClCompile Include="resources\rei_behaviours\render\light\SpotLight.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\MeshRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\SpriteRenderer.cpp" />
     <ClCompile Include="resources\rei_behaviours\transformation\Transform.cpp" />
@@ -1042,6 +1046,9 @@
     <ClCompile Include="tests\HdrRenderingTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="tests\SpotLightTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="tests\RenderModuleIntegrationTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
@@ -1091,7 +1098,7 @@
     <Content Include="resources\shaders\editor\editor_grid.rshader" />
     <Content Include="resources\shaders\includes\include_ambient_light.rshader_include" />
     <Content Include="resources\shaders\includes\include_fragment_common.rshader_include" />
-    <Content Include="resources\shaders\includes\include_point_light.rshader_include" />
+    <Content Include="resources\shaders\includes\include_lighting.rshader_include" />
     <Content Include="resources\shaders\includes\include_shader_common.rshader_include" />
     <Content Include="resources\shaders\includes\include_vertex_common.rshader_include" />
     <Content Include="resources\shaders\post_processing\post_processing_alpha_outline.rshader" />

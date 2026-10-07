@@ -8,6 +8,14 @@ using namespace rei::tests;
 
 namespace
 {
+    void SetMainLightBudget(const i32 budget)
+    {
+        auto settings = GetAssetManager().CreateAsset<render::RendererSettings>();
+        settings->SetToneMapping(render::Off);
+        settings->SetMaxPointLights(budget);
+        render::Camera::GetMainCamera().Get().SetRendererSettings(settings);
+    }
+
     struct LightingState
     {
         i32 PointCount = -1;
@@ -339,7 +347,7 @@ TEST_CASE("PIPE11 real engine ninth point light stays outside eight-slot shader 
     {
         NativeEngineFixture engine(internal::engine::PlayMode, "renderer", PrepareRenderResources);
         engine.Start();
-        engine.OnEngineThread([] { CreateLitMeshWithLights(9); Refresh(); });
+        engine.OnEngineThread([] { CreateLitMeshWithLights(9); Refresh(); SetMainLightBudget(8); });
         const auto frame = Capture(engine);
         const auto brightness = ExpectedPointBrightness(8);
         const auto expected = static_cast<u8>(std::lround(255.0f * (1.055f * std::pow(brightness, 1.0f / 2.4f) - 0.055f)));
@@ -354,7 +362,7 @@ TEST_CASE("PIPE15 real engine point light lifecycle agrees with shader uniforms 
     {
         NativeEngineFixture engine(internal::engine::PlayMode, "lighting-point", PrepareRenderResources);
         engine.Start();
-        engine.OnEngineThread([] { CreateLitMeshWithLights(0); });
+        engine.OnEngineThread([] { CreateLitMeshWithLights(0); Refresh(); SetMainLightBudget(8); });
         VerifyLightingFrame(engine, 0);
         std::vector<ecs::Entity> lights(9, ecs::NULL_ENTITY);
         for (i32 i = 0; i < 9; ++i)
@@ -482,41 +490,80 @@ TEST_CASE("PIPE_CULL01 real renderer chooses fifth nearby light and responds to 
     }, 30000, 1024);
 }
 
+namespace
+{
+    void VerifyCameraRenderingProfile(const internal::engine::EngineMode mode, const bool isEditor)
+    {
+    NativeEngineFixture engine(mode, "renderer", PrepareRenderResources, isEditor);
+    engine.Start();
+    engine.OnEngineThread([] { GetEditorEventsRelay().GridRenderSettingsReceivedEvent(render::GridRenderSettings{false, false, false, 0}); });
+    assets::AssetRef<render::RendererSettings> settings;
+    ecs::Entity camera = ecs::NULL_ENTITY;
+    engine.OnEngineThread([&]
+    {
+        CreateLitMeshWithLights(9);
+        Refresh();
+        camera = render::Camera::GetMainCamera().Get().GetEntity();
+        settings = GetAssetManager().CreateAsset<render::RendererSettings>();
+        settings->SetToneMapping(render::Off);
+        GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(settings);
+        CreateAmbientLight(0.1f);
+        Refresh();
+    });
+    VerifyLightingFrame(engine, 4, 0.1f);
+    for (const i32 limit : {4, 0, 8, 2})
+    {
+        engine.OnEngineThread([&] { settings->SetMaxPointLights(limit); });
+        VerifyLightingFrame(engine, limit, 0.1f);
+    }
+    engine.OnEngineThread([&]
+    {
+        auto replacement = GetAssetManager().CreateAsset<render::RendererSettings>();
+        replacement->SetToneMapping(render::Off);
+        replacement->SetMaxPointLights(6);
+        GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(replacement);
+    });
+    VerifyLightingFrame(engine, 6, 0.1f);
+    engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings({}); });
+    VerifyLightingFrame(engine, 4, 0.1f);
+    // Main camera profile also controls the final pass in both modes.
+    engine.OnEngineThread([&] { settings->SetMaxPointLights(0); settings->SetExposure(1); GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(settings); });
+    auto frame = Capture(engine);
+    RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {124, 124, 124, 255}, 2);
+    engine.OnEngineThread([&] { settings->SetToneMapping(render::Reinhard); });
+    frame = Capture(engine);
+    RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {113, 113, 113, 255}, 2);
+    engine.Stop();
+    }
+}
+
 TEST_CASE("PIPE_BUDGET01 real renderer applies live and replaced camera budgets to uniforms and pixels", "[native][gl][engine-integration][renderer][lighting][isolated]")
+{
+    Isolated([] { VerifyCameraRenderingProfile(internal::engine::PlayMode, false); }, 30000, 1024);
+}
+
+TEST_CASE("PIPE_EDITOR_PROFILE01 editor follows main camera lighting exposure and tone mapping", "[native][gl][engine-integration][renderer][lighting][hdr][isolated]")
+{
+    Isolated([] { VerifyCameraRenderingProfile(internal::engine::EditorMode, true); }, 30000, 1024);
+}
+
+TEST_CASE("PIPE_LIGHT_HELPERS01 point sources do not draw marker cubes in editor mode", "[native][gl][engine-integration][renderer][lighting][isolated]")
 {
     Isolated([]
     {
-        NativeEngineFixture engine(internal::engine::PlayMode, "renderer", PrepareRenderResources);
+        NativeEngineFixture engine(internal::engine::EditorMode, "renderer", PrepareRenderResources, true);
         engine.Start();
-        assets::AssetRef<render::RendererSettings> settings;
-        ecs::Entity camera = ecs::NULL_ENTITY;
-        engine.OnEngineThread([&]
+        engine.OnEngineThread([]
         {
-            CreateLitMeshWithLights(9);
-            Refresh();
-            camera = render::Camera::GetMainCamera().Get().GetEntity();
-            settings = GetAssetManager().CreateAsset<render::RendererSettings>();
-            settings->SetToneMapping(render::Off);
-            GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(settings);
-            CreateAmbientLight(0.1f);
+            GetEditorEventsRelay().GridRenderSettingsReceivedEvent(render::GridRenderSettings{false, false, false, 0});
+            CreateCamera();
+            const auto light = CreatePointLight();
+            GetInternalWorld()->GetRegistry()->Get<Transform>(light).GetLocalPosition() = {0, 0, 2};
+            GetInternalWorld()->GetRegistry()->Get<render::PointLight>(light).SetStrength(1);
             Refresh();
         });
-        VerifyLightingFrame(engine, 8, 0.1f);
-        for (const i32 limit : {4, 0, 8, 2})
-        {
-            engine.OnEngineThread([&] { settings->SetMaxPointLights(limit); });
-            VerifyLightingFrame(engine, limit, 0.1f);
-        }
-        engine.OnEngineThread([&]
-        {
-            auto replacement = GetAssetManager().CreateAsset<render::RendererSettings>();
-            replacement->SetToneMapping(render::Off);
-            replacement->SetMaxPointLights(6);
-            GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings(replacement);
-        });
-        VerifyLightingFrame(engine, 6, 0.1f);
-        engine.OnEngineThread([&] { GetInternalWorld()->GetRegistry()->Get<render::Camera>(camera).SetRendererSettings({}); });
-        VerifyLightingFrame(engine, 8, 0.1f);
+        const auto frame = Capture(engine);
+        RequirePixel(Pixel(*frame, frame->Width / 2, frame->Height / 2), {0, 0, 0, 255});
         engine.Stop();
     }, 30000, 1024);
 }

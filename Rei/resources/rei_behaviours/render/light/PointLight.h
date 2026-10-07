@@ -13,6 +13,8 @@ namespace rei::render
         SERIALIZE Color _color;
 
     public:
+        REI_API void OnGizmosSelected() override;
+
         REI_API f32 GetStrength() const;
         REI_API f32 GetRange() const;
         REI_API Color GetColor() const;

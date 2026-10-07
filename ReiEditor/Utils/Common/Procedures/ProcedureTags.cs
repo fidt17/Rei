@@ -2,6 +2,7 @@ namespace ReiEditor.Utils.Common.Procedures;
 
 public static class ProcedureTags
 {
+    public const string LOAD_SCENE = "Loading scene";
     public const string ENGINE_STARTING = "Engine starting";
     public const string SAVE_PROJECT = "Saving project";
     public const string IMPORT_ASSETS = "Importing assets";

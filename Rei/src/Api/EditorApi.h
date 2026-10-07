@@ -13,6 +13,12 @@ REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
     });
 }
 
+REI_EXTERN_API inline void SetStartupScene(rei::internal::engine::Engine* engine, const char* assetId)
+{
+    REI_THROW_IF(engine == nullptr || assetId == nullptr, "Invalid startup scene arguments")
+    engine->SetStartupScene(assetId);
+}
+
 typedef void (*EngineStartCallbackDelegate)();
 REI_EXTERN_API inline void AddEngineStartCallback(const EngineStartCallbackDelegate callback)
 {

@@ -46,9 +46,30 @@ public sealed class DefaultRendererSettingsServiceTests
 
         public Task Register() => Types.RefreshAsync([new SerializableObjectInfo("rei::render", "RendererSettings", false,
             new ObjectFile<string>("", Project.Resources.GetScriptsPath("RendererSettings.h")),
-            new() { ["_exposureEV"] = Property(SerializedTypeEnum.Float, "f32", "0"), ["_toneMapping"] = Property(SerializedTypeEnum.Enum, "ToneMappingMode", "Reinhard") }, "RendererSettings.h")]);
+            new() { ["_exposure"] = Property(SerializedTypeEnum.Float, "f32", "0"), ["_toneMapping"] = Property(SerializedTypeEnum.Enum, "ToneMappingMode", "Reinhard") }, "RendererSettings.h")]);
 
         public void Dispose() => Project.Dispose();
+    }
+
+    [Fact]
+    public async Task CurrentExposureSurvivesLoadAndSave()
+    {
+        using var context = new Context();
+        await context.Register();
+        await context.Service.EnsureCreated();
+        var root = JObject.Parse(await File.ReadAllTextAsync(context.Path));
+        var values = (JObject)root["SerializedData"]!;
+        values["_exposure"]!["Value"] = -2.5;
+        await File.WriteAllTextAsync(context.Path, root.ToString());
+        context.Assets.Unload(SpecialAssetIds.DEFAULT_RENDERER_SETTINGS);
+        var asset = await context.Assets.Load<DataAsset>(SpecialAssetIds.DEFAULT_RENDERER_SETTINGS);
+        Assert.NotNull(asset);
+        Assert.False(asset.HasProperty("_exposureEV"));
+        Assert.Equal(-2.5, Convert.ToDouble(asset.GetProperty("_exposure").Value));
+        await context.Assets.SaveProject();
+        var saved = JObject.Parse(await File.ReadAllTextAsync(context.Path))["SerializedData"]!;
+        Assert.Null(saved["_exposureEV"]);
+        Assert.Equal(-2.5, saved["_exposure"]!["Value"]!.Value<double>());
     }
 
     [Fact]
@@ -59,13 +80,13 @@ public sealed class DefaultRendererSettingsServiceTests
         await context.Service.EnsureCreated();
         var initial = await context.Assets.Load<DataAsset>(SpecialAssetIds.DEFAULT_RENDERER_SETTINGS);
         Assert.NotNull(initial);
-        Assert.Equal(0.0, Convert.ToDouble(initial.GetProperty("_exposureEV").Value));
+        Assert.Equal(0.0, Convert.ToDouble(initial.GetProperty("_exposure").Value));
         Assert.Equal(1, initial.GetProperty("_toneMapping").Value);
         var original = await File.ReadAllTextAsync(context.Path);
         Assert.Equal(SpecialAssetIds.DEFAULT_RENDERER_SETTINGS, JObject.Parse(await File.ReadAllTextAsync(context.Path + ".meta"))["AssetId"]!.Value<string>());
-        initial.GetProperty("_exposureEV").Value = -2.5;
+        initial.GetProperty("_exposure").Value = -2.5;
         await context.Service.EnsureCreated();
-        Assert.Equal(-2.5, initial.GetProperty("_exposureEV").Value);
+        Assert.Equal(-2.5, initial.GetProperty("_exposure").Value);
         Assert.Equal(original, await File.ReadAllTextAsync(context.Path));
         var renamed = context.Project.Resources.GetProjectPath("Settings/Rendering/Renamed.asset");
         File.Move(context.Path, renamed);

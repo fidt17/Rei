@@ -15,6 +15,8 @@ public sealed class EditorInteractionOverlayViewModelTests
 {
     /// <summary>Each blocking tag displays the overlay; completion eventually restores interaction and disposal detaches new work.</summary>
     [AvaloniaTheory]
+    [InlineData(ProcedureTags.LOAD_SCENE)]
+    [InlineData(ProcedureTags.ENGINE_STARTING)]
     [InlineData(ProcedureTags.SAVE_PROJECT)]
     [InlineData(ProcedureTags.IMPORT_ASSETS)]
     [InlineData(ProcedureTags.BUILD_PROJECT)]

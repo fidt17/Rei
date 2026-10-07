@@ -1,7 +1,0 @@
-﻿struct PointLight
-{
-    vec3 Position;
-    float Strength;
-    float Range;
-    vec4 Color;
-};

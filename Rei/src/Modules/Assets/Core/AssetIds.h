@@ -41,7 +41,7 @@
 
 // Includes
 #define REI_SHADER_INCLUDE_AMBIENT_LIGHT_ASSET_ID "rei_include_ambient_light.rshader_include"
-#define REI_SHADER_INCLUDE_POINT_LIGHT_ASSET_ID "rei_include_point_light.rshader_include"
+#define REI_SHADER_INCLUDE_LIGHTING_ASSET_ID "rei_include_lighting.rshader_include"
 #define REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID "rei_include_shader_common.rshader_include"
 #define REI_SHADER_INCLUDE_VERTEX_COMMON_ASSET_ID "rei_include_vertex_common.rshader_include"
 #define REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID "rei_include_fragment_common.rshader_include"

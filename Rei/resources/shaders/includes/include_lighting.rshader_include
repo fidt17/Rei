@@ -1,0 +1,19 @@
+﻿struct PointLight
+{
+    vec3 Position;
+    float Strength;
+    float Range;
+    vec4 Color;
+};
+
+// Native renderer supplies spot position and unit direction in view space.
+struct SpotLight
+{
+    vec3 Position;
+    float Strength;
+    float Range;
+    vec4 Color;
+    vec3 Direction;
+    float InnerCosine;
+    float OuterCosine;
+};

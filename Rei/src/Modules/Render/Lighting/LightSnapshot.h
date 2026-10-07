@@ -2,6 +2,7 @@
 #include "rei_behaviours/render/camera/Camera.h"
 #include "rei_behaviours/render/light/AmbientLight.h"
 #include "rei_behaviours/render/light/PointLight.h"
+#include "rei_behaviours/render/light/SpotLight.h"
 
 namespace rei::render
 {
@@ -17,16 +18,27 @@ namespace rei::render
             Color LinearColor{0, 0, 0, 1};
         };
 
+        struct SpotLightData : PointLightData
+        {
+            math::Vector3 Direction{0, 0, 1};
+            f32 InnerCosine = 1;
+            f32 OuterCosine = 1;
+        };
+
         void Update(const ecs::ComponentRef<Camera>& camera);
         f32 GetAmbientStrength() const { return _ambientStrength; }
         const Color& GetAmbientColor() const { return _ambientLinearColor; }
         i32 GetPointLightLimit() const { return _pointLightLimit; }
         u64 GetSelectionRevision() const { return _selectionRevision; }
         const std::vector<PointLightData>& GetPointLights() const { return _pointSnapshot; }
+        i32 GetSpotLightLimit() const { return _spotLightLimit; }
+        u64 GetSpotSelectionRevision() const { return _spotSelectionRevision; }
+        const std::vector<SpotLightData>& GetSpotLights() const { return _spotSnapshot; }
 
     private:
         void FindAmbientLights();
         void FindPointLights();
+        void BuildSpotSnapshot();
         void BuildSnapshot(const ecs::ComponentRef<Camera>& camera);
 
         ecs::ComponentRef<AmbientLight> _ambientLight{};
@@ -36,5 +48,8 @@ namespace rei::render
         f32 _ambientStrength = 0;
         Color _ambientLinearColor{0, 0, 0, 1};
         u64 _selectionRevision = 0;
+        std::vector<SpotLightData> _spotSnapshot{};
+        i32 _spotLightLimit = 0;
+        u64 _spotSelectionRevision = 0;
     };
 }

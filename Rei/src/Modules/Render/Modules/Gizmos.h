@@ -14,7 +14,9 @@ namespace rei::render
 
         void Setup();
 
-        void Render();
+        void Render(bool drawSelectedBehaviours = false);
+        void DrawLines(const std::vector<glm::vec3>& vertices, const Color& color) const;
+        REI_API void DrawSelectionLines(const std::vector<glm::vec3>& vertices, const Color& color) const;
 
         REI_API void DrawLine(const math::Vector3& start, const math::Vector3& end, const Color& color, bool useDepth = true) const;
 
@@ -41,6 +43,7 @@ namespace rei::render
 
         CubeVertexData _cubeMesh;
         LineVertexData _lineMesh;
+        LineVertexData _lineBatchMesh;
         std::unordered_map<i32, std::unique_ptr<CircleVertexData>> _circles{};
     };
 }
