@@ -32,6 +32,7 @@ namespace rei::editor
     PointerEntitySelectionSystem::PointerEntitySelectionSystem(const std::shared_ptr<ecs::World>& world): System(world)
     {
         EditorPointerInteractionState::Reset();
+        _sourceRevision = Input::GetSourceRevision();
         _checkEntities = FILTER(SelectableByPointerTag, ActiveTag);
         _blockSelectionEntities = FILTER(SelectionByPointerBlockerTag, physics::PointerCollisionListener, ActiveTag);
     }
@@ -43,12 +44,19 @@ namespace rei::editor
 
     void PointerEntitySelectionSystem::OnUpdate()
     {
+        if (_sourceRevision != Input::GetSourceRevision())
+        {
+            _sourceRevision = Input::GetSourceRevision();
+            EditorPointerInteractionState::Reset();
+            ResetPickCycle();
+        }
         const auto camera = render::Camera::GetMainCamera();
         const auto cameraEntity = camera.IsNull() ? ecs::NULL_ENTITY : camera.Get().GetEntity();
         if (camera.IsNull() || (EditorPointerInteractionState::HasSelectionCandidate() && _candidateCamera != cameraEntity))
         {
             EditorPointerInteractionState::Reset();
             _candidateCamera = ecs::NULL_ENTITY;
+            ResetPickCycle();
             if (camera.IsNull()) return;
         }
         if (!Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT) && !Input::IsMouseButtonReleased(GLFW_MOUSE_BUTTON_LEFT))
@@ -76,26 +84,57 @@ namespace rei::editor
         if (EditorPointerInteractionState::HasSelectionCandidate() && !EditorPointerInteractionState::IsConsumed())
         {
             const auto candidate = EditorPointerInteractionState::GetSelectionCandidate();
-            if (IsCandidateValid(candidate)) CommitSelection(candidate, EditorPointerInteractionState::IsAdditiveSelection());
+            if (IsCandidateValid(candidate))
+            {
+                CommitSelection(candidate, EditorPointerInteractionState::IsAdditiveSelection());
+                RememberPick(candidate);
+            }
         }
 
         EditorPointerInteractionState::Reset();
         _candidateCamera = ecs::NULL_ENTITY;
     }
 
-    ecs::Entity PointerEntitySelectionSystem::FindSelectionCandidate() const
+    void PointerEntitySelectionSystem::ResetPickCycle()
+    {
+        _pickHistory.clear();
+        _pressHits.clear();
+        _restartCycle = false;
+    }
+
+    void PointerEntitySelectionSystem::RememberPick(const ecs::Entity entity)
+    {
+        if (_restartCycle) _pickHistory.clear();
+        std::erase_if(_pickHistory, [&](const ecs::Entity previous) { return !_pressHits.contains(previous); });
+        if (entity != ecs::NULL_ENTITY) _pickHistory.insert(entity);
+    }
+
+    ecs::Entity PointerEntitySelectionSystem::FindSelectionCandidate()
     {
         REI_PROFILE_SCOPE(profiling::markers::PICK_SELECTION.Id);
+        struct Hit
+        {
+            ecs::Entity Entity;
+            f32 Depth;
+            bool IsUi;
+            std::vector<i32> UiOrder;
+        };
+        _pressHits.clear();
+        _restartCycle = false;
         const auto camera = render::Camera::GetMainCamera();
         if (camera.IsNull()) return ecs::NULL_ENTITY;
-        f32 x = 0.0f, y = 0.0f;
+        f32 x = 0, y = 0;
         Input::GetMousePosition(x, y);
         const auto ray = camera.Get().GetScreenPointToRay(x, y);
-        ecs::Entity selectedCandidate = ecs::NULL_ENTITY;
+        const auto view = camera.Get().GetViewMatrix();
+        std::vector<Hit> hits;
         FOR(e, _checkEntities)
         {
+            if (!HAS(e, Transform)) continue;
+            const auto isUi = render::ui_render_utility::IsUiEntity(e);
+            const auto model = GET(e, Transform).CalculateWorldModelMatrix();
             bool isInside = false;
-            if (!render::ui_render_utility::IsUiEntity(e) && HAS(e, EditorSelectionCollider) && HAS(e, Transform))
+            if (!isUi && HAS(e, EditorSelectionCollider))
             {
                 const auto& collider = GET(e, EditorSelectionCollider).Collider;
                 if (collider)
@@ -103,7 +142,7 @@ namespace rei::editor
                     profiling::Count(profiling::markers::PICK_SELECTION_CANDIDATES.Id);
                     profiling::Count(profiling::markers::PICK_CANDIDATES.Id);
                     math::Vector3 point;
-                    isInside = collider->Intersect(ray, GET(e, Transform).CalculateWorldModelMatrix(), point);
+                    isInside = collider->Intersect(ray, model, point);
                 }
             }
             else if (HAS(e, physics::PointerCollisionListener))
@@ -111,23 +150,31 @@ namespace rei::editor
                 isInside = GET(e, physics::PointerCollisionListener).IsInside;
             }
             if (!isInside) continue;
-
-            if (render::ui_render_utility::IsUiEntity(e))
-            {
-                if (render::ui_render_utility::IsHigherUiEntity(e, selectedCandidate))
-                {
-                    selectedCandidate = e;
-                }
-                continue;
-            }
-
-            if (IS_DEAD(selectedCandidate))
-            {
-                selectedCandidate = e;
-            }
+            // Camera-space origin depth is enough for ordering; geometry only answers hit/miss.
+            const auto depth = isUi ? 0 : -(view * model[3]).z;
+            if (!std::isfinite(depth)) continue;
+            hits.push_back({e, depth, isUi, isUi ? render::ui_render_utility::BuildHierarchySortKey(e) : std::vector<i32>{}});
+            _pressHits.insert(e);
         }
-
-        return selectedCandidate;
+        std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b)
+        {
+            if (a.IsUi != b.IsUi) return a.IsUi;
+            if (a.IsUi && a.UiOrder != b.UiOrder) return a.UiOrder > b.UiOrder;
+            if (a.Depth != b.Depth) return a.Depth < b.Depth;
+            if (a.Entity.Id != b.Entity.Id) return a.Entity.Id < b.Entity.Id;
+            return a.Entity.Generation < b.Entity.Generation;
+        });
+        for (const auto& hit : hits)
+        {
+            if (!HAS(hit.Entity, SelectedTag) && !_pickHistory.contains(hit.Entity)) return hit.Entity;
+        }
+        // Every current hit was selected or visited. Begin another round on successful release.
+        _restartCycle = true;
+        for (const auto& hit : hits)
+        {
+            if (!HAS(hit.Entity, SelectedTag)) return hit.Entity;
+        }
+        return hits.empty() ? ecs::NULL_ENTITY : hits.front().Entity;
     }
 
     bool PointerEntitySelectionSystem::IsCandidateValid(const ecs::Entity candidate) const

@@ -7,6 +7,7 @@ namespace rei
     void Input::SetSource(GLFWwindow* window)
     {
         _window = window;
+        ++_sourceRevision;
 
         glfwSetKeyCallback(window, KeyCallback);
         glfwSetMouseButtonCallback(window, MouseButtonCallback);

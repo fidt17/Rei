@@ -420,3 +420,42 @@ TEST_CASE("Editor picking real engine UI priority and stale no camera state", "[
         engine.Stop();
     });
 }
+
+TEST_CASE("Editor picking real input cycles overlapping models by origin depth despite pointer jitter", "[native][editor-picking][engine-integration][gl][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture engine(EditorMode, "picking-cycle", PrepareRenderResources, true);
+        engine.Start();
+        std::vector<ecs::Entity> targets;
+        engine.OnEngineThread([&]
+        {
+            CreateCamera();
+            auto registry = GetInternalWorld()->GetRegistry();
+            for (const f32 depth : {5.0f, 7.0f, 9.0f})
+            {
+                const auto target = CreatePickableMesh();
+                registry->Get<Transform>(target).GetLocalPosition() = {0, 0, depth};
+                targets.push_back(target);
+            }
+            // Rotation tool leaves object body available; handle clicks remain blocked/consumed.
+            const auto controls = GetInternalWorld()->GetFiltersRegistry()->Get<editor::TransformationControl>();
+            for (const auto entity : controls->Entities()) registry->Get<editor::TransformationControl>(entity).Mode = editor::Rotation;
+            Refresh();
+        });
+        const i32 xPositions[] = {17, 18, 17, 18};
+        for (i32 click = 0; click < 4; ++click)
+        {
+            engine.QueueMouse(WM_MOUSEMOVE, xPositions[click], 11);
+            engine.QueueMouse(WM_LBUTTONDOWN, xPositions[click], 11);
+            engine.QueueMouse(WM_LBUTTONUP, xPositions[click], 11);
+            engine.OnEngineThread([&]
+            {
+                const auto registry = GetInternalWorld()->GetRegistry();
+                for (u32 index = 0; index < targets.size(); ++index)
+                    CHECK(registry->Has<editor::SelectedTag>(targets[index]) == (index == click % targets.size()));
+            });
+        }
+        engine.Stop();
+    }, 20000, 1024);
+}

@@ -105,7 +105,7 @@ TEST_CASE("Editor picking uses current object parent and camera transforms at pr
     });
 }
 
-TEST_CASE("Editor picking preserves filter first hit rather than nearest distance", "[native][editor-picking][isolated]")
+TEST_CASE("Editor picking prioritizes nearest surface and cycles overlapping objects", "[native][editor-picking][isolated]")
 {
     Isolated([]
     {
@@ -121,8 +121,14 @@ TEST_CASE("Editor picking preserves filter first hit rather than nearest distanc
         f.Native.Registry->Get<Transform>(order.back()).GetLocalPosition() = {0, 0, 3};
         f.Press();
         f.Release();
+        CHECK(f.Selected(order.back()));
+        CHECK_FALSE(f.Selected(order.front()));
+        f.Press(); f.Release();
         CHECK(f.Selected(order.front()));
         CHECK_FALSE(f.Selected(order.back()));
+        f.Press(); f.Release();
+        CHECK(f.Selected(order.back()));
+        CHECK_FALSE(f.Selected(order.front()));
     });
 }
 
@@ -248,5 +254,161 @@ TEST_CASE("Editor picking gizmo blocker bypasses scene query and held entry rema
         rei::Input::Update();
         f.Input.Mouse(f.Input.First, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, 0);
         CHECK(editor::transformation_control_drag::ShouldStartPointerDrag(listener));
+    });
+}
+
+TEST_CASE("Editor picking cycles fresh hit lists despite pointer camera and hit set changes", "[native][editor-picking][isolated]")
+{
+    Isolated([]
+    {
+        SelectionFixture f;
+        std::vector<ecs::Entity> targets{f.Target};
+        for (i32 i = 0; i < 3; ++i)
+        {
+            const auto e = f.Native.Entity();
+            f.Native.Registry->Get<ActiveTag>(e);
+            f.Native.Registry->Get<editor::SelectableByPointerTag>(e);
+            f.Native.Registry->Get<editor::EditorSelectionCollider>(e).Collider = std::make_shared<physics::SphereCollider>();
+            f.Native.Registry->Get<Transform>(e).GetLocalPosition() = {0, 0, 7.0f + i * 2};
+            targets.push_back(e);
+        }
+        const f32 offsets[] = {0, 6, -6, 3, 0};
+        for (i32 i = 0; i < 5; ++i)
+        {
+            f.Input.Cursor(f.Input.First, 128 + offsets[i], 128);
+            f.Native.Registry->Get<Transform>(f.CameraEntity).GetLocalPosition().x = i * 0.001f;
+            f.Press(); f.Release();
+            CHECK(f.Selected(targets[i % 4]));
+        }
+        f.Native.Registry->Del<editor::SelectableByPointerTag>(targets[1]);
+        f.Press(); f.Release();
+        CHECK(f.Selected(targets[2]));
+        f.Native.Registry->Del<editor::SelectableByPointerTag>(targets[3]);
+        f.Press(); f.Release();
+        CHECK(f.Selected(targets[0]));
+        Input::SetSource(f.Input.First);
+        f.Native.Registry->Del<editor::SelectedTag>(targets[0]);
+        f.Press(); f.Release();
+        CHECK(f.Selected(targets[0]));
+    });
+}
+
+TEST_CASE("Editor picking consumed and invalid clicks cannot advance cycle or lose selection", "[native][editor-picking][isolated]")
+{
+    Isolated([]
+    {
+        SelectionFixture f;
+        const auto farEntity = f.Native.Entity();
+        f.Native.Registry->Get<ActiveTag>(farEntity);
+        f.Native.Registry->Get<editor::SelectableByPointerTag>(farEntity);
+        f.Native.Registry->Get<editor::EditorSelectionCollider>(farEntity).Collider = std::make_shared<physics::SphereCollider>();
+        f.Native.Registry->Get<Transform>(farEntity).GetLocalPosition() = {0, 0, 9};
+        f.Press(); f.Release();
+        REQUIRE(f.Selected(f.Target));
+        f.Press();
+        REQUIRE(editor::EditorPointerInteractionState::GetSelectionCandidate() == farEntity);
+        editor::EditorPointerInteractionState::Consume();
+        f.Release();
+        CHECK(f.Selected(f.Target));
+        f.Press(); f.Release();
+        CHECK(f.Selected(farEntity));
+        f.Press();
+        f.Native.Registry->Get<editor::EditorSelectionCollider>(f.Target).Collider.reset();
+        f.Release();
+        CHECK(f.Selected(farEntity));
+        f.Press(); f.Release();
+        CHECK(f.Selected(farEntity));
+    });
+}
+
+TEST_CASE("Editor picking cycles equal-depth overlaps and additive selections deterministically", "[native][editor-picking][isolated]")
+{
+    Isolated([]
+    {
+        SelectionFixture f;
+        const auto second = f.Native.Entity();
+        const auto third = f.Native.Entity();
+        for (const auto e : {second, third})
+        {
+            f.Native.Registry->Get<ActiveTag>(e);
+            f.Native.Registry->Get<editor::SelectableByPointerTag>(e);
+            f.Native.Registry->Get<editor::EditorSelectionCollider>(e).Collider = std::make_shared<physics::SphereCollider>();
+            f.Native.Registry->Get<Transform>(e).GetLocalPosition() = {0, 0, 5};
+        }
+        f.Press(); f.Release();
+        REQUIRE(f.Selected(f.Target));
+        f.Input.Key(f.Input.First, GLFW_KEY_LEFT_CONTROL, 0, GLFW_PRESS, 0);
+        f.Press(); f.Release();
+        CHECK(f.Selected(f.Target)); CHECK(f.Selected(second));
+        f.Press(); f.Release();
+        CHECK(f.Selected(third));
+        f.Input.Key(f.Input.First, GLFW_KEY_LEFT_CONTROL, 0, GLFW_RELEASE, 0);
+        f.Press(); f.Release();
+        CHECK(f.Selected(f.Target)); CHECK_FALSE(f.Selected(second)); CHECK_FALSE(f.Selected(third));
+    });
+}
+
+TEST_CASE("Editor picking skips an already selected hit without requiring click history", "[native][editor-picking][isolated]")
+{
+    Isolated([]
+    {
+        SelectionFixture f;
+        const auto other = f.Native.Entity();
+        f.Native.Registry->Get<ActiveTag>(other);
+        f.Native.Registry->Get<editor::SelectableByPointerTag>(other);
+        f.Native.Registry->Get<editor::EditorSelectionCollider>(other).Collider = std::make_shared<physics::SphereCollider>();
+        f.Native.Registry->Get<Transform>(other).GetLocalPosition() = {0, 0, 9};
+        f.Native.Registry->Get<editor::SelectedTag>(f.Target);
+        f.Press(); f.Release();
+        CHECK(f.Selected(other));
+        CHECK_FALSE(f.Selected(f.Target));
+    });
+}
+
+TEST_CASE("Editor picking depth uses object origins rather than first triangle or surface distance", "[native][editor-picking][isolated]")
+{
+    Isolated([]
+    {
+        SelectionFixture f;
+        const auto other = f.Native.Entity();
+        auto large = std::make_shared<physics::SphereCollider>();
+        large->SetRadius(5);
+        f.Native.Registry->Get<ActiveTag>(other);
+        f.Native.Registry->Get<editor::SelectableByPointerTag>(other);
+        f.Native.Registry->Get<editor::EditorSelectionCollider>(other).Collider = large;
+        f.Native.Registry->Get<Transform>(other).GetLocalPosition() = {0, 0, 7};
+        // Far object's surface is z=2, but its origin z=7 follows target origin z=5.
+        f.Press(); f.Release();
+        CHECK(f.Selected(f.Target));
+        CHECK_FALSE(f.Selected(other));
+        f.Press(); f.Release();
+        CHECK(f.Selected(other));
+    });
+}
+
+TEST_CASE("Editor picking cancelled drag retains already visited overlapping objects", "[native][editor-picking][isolated]")
+{
+    Isolated([]
+    {
+        SelectionFixture f;
+        std::vector<ecs::Entity> targets{f.Target};
+        for (const f32 depth : {7.0f, 9.0f})
+        {
+            const auto e = f.Native.Entity();
+            f.Native.Registry->Get<ActiveTag>(e);
+            f.Native.Registry->Get<editor::SelectableByPointerTag>(e);
+            f.Native.Registry->Get<editor::EditorSelectionCollider>(e).Collider = std::make_shared<physics::SphereCollider>();
+            f.Native.Registry->Get<Transform>(e).GetLocalPosition() = {0, 0, depth};
+            targets.push_back(e);
+        }
+        f.Press(); f.Release();
+        f.Press(); f.Release();
+        REQUIRE(f.Selected(targets[1]));
+        f.Press();
+        editor::EditorPointerInteractionState::Consume();
+        f.Release();
+        CHECK(f.Selected(targets[1]));
+        f.Press(); f.Release();
+        CHECK(f.Selected(targets[2]));
     });
 }

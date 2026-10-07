@@ -16,6 +16,7 @@ namespace rei
     class Input {
     public:
         static void SetSource(GLFWwindow* window);
+        static u64 GetSourceRevision() { return _sourceRevision; }
         static void Update();
     
         REI_API static bool IsKeyDown(i32 key);
@@ -39,6 +40,7 @@ namespace rei
 
     private:
         inline static GLFWwindow* _window = nullptr;
+        inline static u64 _sourceRevision = 0;
 
         inline static std::array<bool, GLFW_KEY_LAST> _currentKeyStates { };
         inline static std::array<bool, GLFW_KEY_LAST> _previousKeyStates { };
