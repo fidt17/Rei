@@ -7,7 +7,7 @@ namespace ReiEditor.Models.Services.Assets.Scripting;
 
 internal static class SerializedPropertyAnnotationParser
 {
-    internal readonly record struct Declaration(int Index, int EndIndex, string? Header, bool HideInEditor);
+    internal readonly record struct Declaration(int Index, int EndIndex, string? Header, bool HideInEditor, string? RangeArguments);
 
     // Literals are atomic: macro names and semicolons inside them are not declarations.
     internal const string LITERAL_PATTERN =
@@ -22,6 +22,7 @@ internal static class SerializedPropertyAnnotationParser
     {
         var tokens = Regex.Matches(text, TOKEN_PATTERN);
         string? header = null;
+        string? rangeArguments = null;
         var hideIndex = -1;
         for (var index = 0; index < tokens.Count; index++)
         {
@@ -39,6 +40,25 @@ internal static class SerializedPropertyAnnotationParser
                 continue;
             }
 
+            if (token.Value == SourceFileMacrosConstants.REI_RANGE)
+            {
+                if (rangeArguments != null) throw new FormatException($"Duplicate REI_RANGE at offset {token.Index}.");
+                if (index + 1 >= tokens.Count || tokens[index + 1].Value != "(")
+                    throw new FormatException($"REI_RANGE expects parentheses at offset {token.Index}.");
+                var end = index + 2;
+                while (end < tokens.Count && tokens[end].Value != ")")
+                {
+                    if (tokens[end].Value is "(" or ";" || tokens[end].Value == SourceFileMacrosConstants.SERIALIZE)
+                        throw new FormatException($"Malformed REI_RANGE at offset {token.Index}.");
+                    end++;
+                }
+                if (end == tokens.Count) throw new FormatException($"Unclosed REI_RANGE at offset {token.Index}.");
+                var start = tokens[index + 1].Index + 1;
+                rangeArguments = text.Substring(start, tokens[end].Index - start);
+                index = end;
+                continue;
+            }
+
             if (token.Value == SourceFileMacrosConstants.HIDE_IN_EDITOR)
             {
                 hideIndex = token.Index;
@@ -51,18 +71,25 @@ internal static class SerializedPropertyAnnotationParser
                 if (end == tokens.Count) throw new FormatException($"Missing semicolon after SERIALIZE at offset {token.Index}.");
                 var hideInEditor = hideIndex >= text.LastIndexOf('\n', token.Index) + 1;
                 for (var attributeIndex = index + 1; attributeIndex < end; attributeIndex++)
+                {
+                    if (tokens[attributeIndex].Value == SourceFileMacrosConstants.REI_RANGE)
+                        throw new FormatException($"REI_RANGE must precede SERIALIZE at offset {tokens[attributeIndex].Index}.");
                     hideInEditor |= tokens[attributeIndex].Value == SourceFileMacrosConstants.HIDE_IN_EDITOR;
-                yield return new Declaration(token.Index, tokens[end].Index, header, hideInEditor);
+                }
+                yield return new Declaration(token.Index, tokens[end].Index, header, hideInEditor, rangeArguments);
                 header = null;
+                rangeArguments = null;
                 hideIndex = -1;
                 index = end;
                 continue;
             }
 
             if (header != null) throw new FormatException($"REI_HEADER must immediately precede a SERIALIZE declaration at offset {token.Index}.");
+            if (rangeArguments != null) throw new FormatException($"REI_RANGE must immediately precede a SERIALIZE declaration at offset {token.Index}.");
             hideIndex = -1;
         }
 
         if (header != null) throw new FormatException("REI_HEADER has no following SERIALIZE declaration.");
+        if (rangeArguments != null) throw new FormatException("REI_RANGE has no following SERIALIZE declaration.");
     }
 }

@@ -47,7 +47,7 @@ public class EngineApi : IEngineApi
     private delegate void StartEngineDelegate(IntPtr enginePtr);
     public void Start(IntPtr enginePtr)
     {
-        IsEngineRunning = true;
+        IsEngineRunning = false;
         try
         {
             Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
@@ -142,6 +142,8 @@ public class EngineApi : IEngineApi
         if (!IsEngineRunning || callback == IntPtr.Zero) return false;
         return Invoke<int>(typeof(RequestFrameCaptureDelegate), "RequestFrameCapture", callback) == 1;
     }
+
+    public void MarkEngineStarted() => IsEngineRunning = true;
 
     public void MarkEngineStopped()
     {

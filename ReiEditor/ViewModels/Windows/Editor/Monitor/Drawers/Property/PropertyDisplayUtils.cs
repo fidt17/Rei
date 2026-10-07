@@ -22,12 +22,16 @@ public static class PropertyDisplayUtils
     }
 
     public static IEnumerable<BaseViewModel> CreateRows(IEnumerable<SerializedProperty> visibleProperties, IReadOnlyDictionary<string, SerializableObjectInfo.SerializedPropertyData>? schema, Func<SerializedProperty, BaseViewModel> createProperty)
+        => CreateRows(visibleProperties, schema, (property, _) => createProperty(property));
+
+    public static IEnumerable<BaseViewModel> CreateRows(IEnumerable<SerializedProperty> visibleProperties, IReadOnlyDictionary<string, SerializableObjectInfo.SerializedPropertyData>? schema, Func<SerializedProperty, SerializableObjectInfo.SerializedPropertyData?, BaseViewModel> createProperty)
     {
         foreach (var property in visibleProperties)
         {
-            if (schema != null && schema.TryGetValue(property.Name, out var metadata) && metadata.HeaderBefore != null)
-                yield return new PropertyHeaderViewModel(metadata.HeaderBefore);
-            yield return createProperty(property);
+            SerializableObjectInfo.SerializedPropertyData? metadata = null;
+            schema?.TryGetValue(property.Name, out metadata);
+            if (metadata?.HeaderBefore != null) yield return new PropertyHeaderViewModel(metadata.HeaderBefore);
+            yield return createProperty(property, metadata);
         }
     }
 }

@@ -309,7 +309,7 @@ public class SourceFilesUtility
 
                 var variableName = words[equalsIdx - 1];
                 var defaultValue = words[equalsIdx + 1];
-                result.Add(variableName, CreateSerializedPropertyData(variableType, defaultValue, hideInEditor, annotation.Header, declarationIndex++));
+                result.Add(variableName, CreateSerializedPropertyData(variableType, defaultValue, hideInEditor, annotation.Header, declarationIndex++, annotation.RangeArguments, variableName));
             }
             else
             {
@@ -318,7 +318,7 @@ public class SourceFilesUtility
                 if (serializedType == SerializedTypeEnum.Invalid) continue;
 
                 var variableName = words[^1];
-                result.Add(variableName, CreateSerializedPropertyData(variableType, null, hideInEditor, annotation.Header, declarationIndex++));
+                result.Add(variableName, CreateSerializedPropertyData(variableType, null, hideInEditor, annotation.Header, declarationIndex++, annotation.RangeArguments, variableName));
             }
         }
 
@@ -343,11 +343,24 @@ public class SourceFilesUtility
         return result;
     }
 
-    private SerializableObjectInfo.SerializedPropertyData CreateSerializedPropertyData(string variableType, string? defaultValue, bool hideInEditor, string? headerBefore, int declarationIndex)
+    private SerializableObjectInfo.SerializedPropertyData CreateSerializedPropertyData(string variableType, string? defaultValue, bool hideInEditor, string? headerBefore, int declarationIndex, string? rangeArguments, string propertyName)
     {
         var sourceType = SerializedTypeNameParser.NormalizeSourceType(variableType);
         var templateTypeName = GetTemplateTypeName(sourceType);
         var serializedType = GetSerializedTypeForVariableType(variableType);
+
+        SerializedNumericRange? range = null;
+        if (rangeArguments != null)
+        {
+            try
+            {
+                range = SerializedNumericRange.Parse(rangeArguments, sourceType, defaultValue);
+            }
+            catch (FormatException exception)
+            {
+                throw new FormatException($"Invalid REI_RANGE for field {propertyName} ({sourceType}): {exception.Message}", exception);
+            }
+        }
 
         var itemType = SerializedTypeEnum.Invalid;
         string? itemSourceType = null;
@@ -370,7 +383,8 @@ public class SourceFilesUtility
             defaultValue,
             hideInEditor,
             headerBefore,
-            declarationIndex);
+            declarationIndex,
+            range);
     }
 
     private SerializedTypeEnum GetSerializedTypeForVariableType(string type)

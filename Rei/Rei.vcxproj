@@ -700,6 +700,8 @@
     <ClInclude Include="src\Modules\Render\Modules\BVHRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\Gizmos.h" />
     <ClInclude Include="src\Modules\Render\Modules\GridRenderModule.h" />
+    <ClInclude Include="src\Modules\Render\Lighting\LightSnapshot.h" />
+    <ClInclude Include="src\Modules\Render\Lighting\LightSelector.h" />
     <ClInclude Include="src\Modules\Render\Modules\LightingRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\OutlineRenderModule.h" />
     <ClInclude Include="src\Modules\Render\Modules\PostProcessingModule.h" />
@@ -877,6 +879,8 @@
     <ClCompile Include="src\Modules\Render\Modules\BVHRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\Gizmos.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\GridRenderModule.cpp" />
+    <ClCompile Include="src\Modules\Render\Lighting\LightSnapshot.cpp" />
+    <ClCompile Include="src\Modules\Render\Lighting\LightSelector.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\LightingRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\OutlineRenderModule.cpp" />
     <ClCompile Include="src\Modules\Render\Modules\PostProcessingModule.cpp" />

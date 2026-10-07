@@ -102,8 +102,7 @@ public class BehaviourRegistry : IBehaviourRegistry
         _logger.Log("Refreshing behaviours...");
         
         var processedFiles = _sourceFilesUtility.ProcessFiles();
-        _serializableObjectsRegistry.Replace(processedFiles.SerializableObjects, processedFiles.SerializableEnums);
-        await _dataAssetTypeRegistry.RefreshAsync(processedFiles.DataAssetDeclarations);
+        if (!_sourceFilesUtility.AreSourceFilesValid) throw new Exception("Cannot refresh registry with source files validation errors.");
 
         var behaviourFiles = _utility.GetAllBehaviours();
         var metaFiles = await _utility.GetAllBehaviourMetas();
@@ -111,6 +110,8 @@ public class BehaviourRegistry : IBehaviourRegistry
         var refreshedBehaviours = new Dictionary<int, BehaviourAssetInfo>();
         var refreshedBehavioursByName = new Dictionary<string, BehaviourAssetInfo>();
         var maxBehaviourId = await RegisterBehaviours(behaviourFiles, metaFiles, refreshedBehaviours);
+        _serializableObjectsRegistry.Replace(processedFiles.SerializableObjects, processedFiles.SerializableEnums);
+        await _dataAssetTypeRegistry.RefreshAsync(processedFiles.DataAssetDeclarations);
 
         foreach (var behaviourAssetInfo in refreshedBehaviours)
         {

@@ -152,8 +152,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
 
         var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(BehaviourComponent.Properties.Values.Where(property => schema.ContainsKey(property.Name)), schema)
             .Where(property => !_rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, property.Name));
-        foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, property =>
-                     PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry)))
+        foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
+                     PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata)))
         {
             Properties.Add(row);
         }

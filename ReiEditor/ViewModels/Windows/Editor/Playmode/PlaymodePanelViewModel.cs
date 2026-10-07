@@ -165,7 +165,9 @@ public class PlaymodePanelViewModel : BaseViewModel
     {
         Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (ptr == null)
+            // Native window is created before scene loading ends. Attach it only after readiness.
+            ptr = _engineWindow.WindowPointer.Value;
+            if (ptr == null || !_engineRunner.IsActive.Value)
             {
                 WindowProvider = null;
             }
@@ -189,5 +191,6 @@ public class PlaymodePanelViewModel : BaseViewModel
     private void HandleIsEngineActiveValueChangedEvent(bool isActive)
     {
         EngineActive = isActive;
+        HandleWindowPointerChangedEvent(_engineWindow.WindowPointer.Value);
     }
 }

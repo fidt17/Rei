@@ -10,16 +10,20 @@ namespace rei::render
     {
         DATA_ASSET_BODY(RendererSettings)
 
-        SERIALIZE f32 _exposureEV = 0;
+        REI_RANGE(-16.0f, 16.0f)
+        SERIALIZE f32 _exposure = 0;
         SERIALIZE ToneMappingMode _toneMapping = Reinhard;
-        SERIALIZE i32 _maxPointLights = 8;
+        REI_RANGE(0, 8)
+        SERIALIZE i32 _maxPointLights = 4;
 
     public:
-        f32 GetExposureEV() const { return std::isfinite(_exposureEV) ? std::clamp(_exposureEV, -16.0f, 16.0f) : 0.0f; }
+        f32 GetExposure() const { return std::isfinite(_exposure) ? std::clamp(_exposure, -16.0f, 16.0f) : 0.0f; }
+        f32 GetExposureEV() const { return GetExposure(); }
         ToneMappingMode GetToneMapping() const { return _toneMapping == Reinhard ? Reinhard : Off; }
         i32 GetMaxPointLights() const { return std::clamp(_maxPointLights, 0, REI_MAX_POINT_LIGHTS_COUNT); }
 
-        void SetExposureEV(f32 exposureEV) { _exposureEV = exposureEV; }
+        void SetExposure(f32 exposure) { _exposure = exposure; }
+        void SetExposureEV(f32 exposureEV) { SetExposure(exposureEV); }
         void SetToneMapping(ToneMappingMode toneMapping) { _toneMapping = toneMapping; }
         void SetMaxPointLights(i32 maxPointLights) { _maxPointLights = maxPointLights; }
     };

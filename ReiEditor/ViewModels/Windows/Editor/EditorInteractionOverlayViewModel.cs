@@ -97,6 +97,7 @@ public class EditorInteractionOverlayViewModel : BaseViewModel
     {
         return procedure.Name is ProcedureTags.SAVE_PROJECT
             or ProcedureTags.IMPORT_ASSETS
-            or ProcedureTags.BUILD_PROJECT;
+            or ProcedureTags.BUILD_PROJECT
+            or ProcedureTags.ENGINE_STARTING;
     }
 }

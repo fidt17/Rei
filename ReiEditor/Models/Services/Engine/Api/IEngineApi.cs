@@ -39,6 +39,7 @@ public interface IEngineApi
     int GetTransformationMode();
     bool RequestFrameCapture(IntPtr callback);
 
+    void MarkEngineStarted() { }
     void MarkEngineStopped();
 
     void SetDllPtr(IntPtr ptr);

@@ -193,7 +193,9 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         }
     }
 
-    public async Task StopEngine()
+    public Task StopEngine() => Task.Run(StopEngineCore);
+
+    private async Task StopEngineCore()
     {
         Task completion;
         lock (_lifecycleLock) completion = _engineCompletion;
@@ -249,6 +251,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         {
             try
             {
+                _engineApi.MarkEngineStarted();
                 _isActive.Value = true;
                 _isPlaymodeActive.Value = ActiveMode == EngineRunMode.PlayMode;
                 _isEditormodeActive.Value = ActiveMode == EngineRunMode.EditorMode;
@@ -270,7 +273,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
     private void BeginStartProcedure()
     {
         if (_startProcedure != null) return;
-        _startProcedure = new Procedure("Engine starting");
+        _startProcedure = new Procedure(ProcedureTags.ENGINE_STARTING);
         _editorProceduresService.TrackProcedure(_startProcedure);
     }
 

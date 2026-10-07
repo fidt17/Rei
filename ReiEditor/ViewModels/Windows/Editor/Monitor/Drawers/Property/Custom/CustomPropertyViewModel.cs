@@ -112,8 +112,8 @@ public class CustomPropertyViewModel : BaseViewModel
             _displayedProperties.Clear();
             
             _displayedProperties.AddRange(visibleProperties);
-            foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, property =>
-                         PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry)))
+            foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
+                         PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata)))
             {
                 Value.Add(row);
             }

@@ -18,6 +18,7 @@ public class SerializableObjectInfo
         public bool HideInEditor { get; }
         public string? HeaderBefore { get; }
         public int DeclarationIndex { get; }
+        public SerializedNumericRange? Range { get; }
 
         public SerializedPropertyData(
             SerializedTypeEnum type,
@@ -29,7 +30,8 @@ public class SerializableObjectInfo
             string? defaultValue,
             bool hideInEditor,
             string? headerBefore = null,
-            int declarationIndex = 0)
+            int declarationIndex = 0,
+            SerializedNumericRange? range = null)
         {
             Type = type;
             SourceType = sourceType;
@@ -41,6 +43,7 @@ public class SerializableObjectInfo
             HideInEditor = hideInEditor;
             HeaderBefore = headerBefore;
             DeclarationIndex = declarationIndex;
+            Range = range;
         }
     }
     

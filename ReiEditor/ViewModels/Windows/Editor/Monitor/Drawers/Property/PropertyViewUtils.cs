@@ -28,8 +28,11 @@ public static class PropertyViewUtils
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
-        IDataAssetTypeRegistry? dataAssetTypeRegistry = null)
+        IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
+        SerializableObjectInfo.SerializedPropertyData? metadata = null)
     {
+        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range);
+
         return property.Type switch
         {
             SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property),

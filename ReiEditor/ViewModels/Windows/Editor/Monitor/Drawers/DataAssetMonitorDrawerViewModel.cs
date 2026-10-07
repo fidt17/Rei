@@ -129,8 +129,8 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
                 if (_isDisposed) return;
                 TypeLabel = $"Type: {typeInfo.ObjectName} ({_asset.DataAssetTypeId})";
                 var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(_asset.Properties.Values, typeInfo.SerializedProperties).ToList();
-                foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, typeInfo.SerializedProperties, property =>
-                             PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry)))
+                foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, typeInfo.SerializedProperties, (property, metadata) =>
+                             PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata)))
                 {
                     Properties.Add(row);
                 }
@@ -182,7 +182,8 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
     private void SyncRuntimeImmediate()
     {
         if (_isDisposed || _asset == null || string.IsNullOrWhiteSpace(AssetId)) return;
-        _dataAssetService.TrySyncRuntime(_asset);
+        StatusText = _dataAssetService.TrySyncRuntime(_asset) ? "" :
+            "Runtime not synchronized. Live changes require a loaded asset; RendererSettings affects cameras referencing this profile.";
     }
 
     private void CancelRuntimeSync()

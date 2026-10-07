@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="src\Modules\Render\Lighting\LightSnapshot.cpp" />
+    <ClCompile Include="src\Modules\Render\Lighting\LightSelector.cpp" />
     <ClCompile Include="src\Common\Logging\Log.cpp" />
     <ClCompile Include="src\Common\Logging\Logger.cpp" />
     <ClCompile Include="src\Engine\Engine.cpp" />
@@ -100,6 +102,8 @@
     <ClCompile Include="src\Modules\Render\Textures\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Modules\Render\Lighting\LightSnapshot.h" />
+    <ClInclude Include="src\Modules\Render\Lighting\LightSelector.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\Rei.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />

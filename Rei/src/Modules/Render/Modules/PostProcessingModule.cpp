@@ -50,7 +50,7 @@ void rei::render::PostProcessingModule::UpdateUniforms(const Shader& shader, con
 {
     const auto& settingsRef = camera.GetRendererSettings();
     const auto* settings = settingsRef.IsLoaded() ? settingsRef.Get() : nullptr;
-    const f32 exposureEV = settings ? settings->GetExposureEV() : 0;
+    const f32 exposureEV = settings ? settings->GetExposure() : 0;
     const ToneMappingMode toneMapping = settings ? settings->GetToneMapping() : Off;
 
     const u64 revision = shader.GetProgramRevision();

@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:property="clr-namespace:ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property"
+             x:Class="ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.RangePropertyView"
+             x:DataType="property:RangePropertyViewModel">
+    <Border Padding="1">
+        <Grid ColumnDefinitions="120,*,80" RowDefinitions="Auto,Auto">
+            <TextBlock VerticalAlignment="Center" FontSize="14"
+                       Foreground="{StaticResource Gray_4}" Text="{Binding PropertyName.Value}" />
+            <Slider x:Name="RangeSlider" Grid.Column="1" Margin="0,0,6,0"
+                    VerticalAlignment="Center" ToolTip.Tip="{Binding Range.Label}" />
+            <TextBox x:Name="RangeInput" Grid.Column="2" Height="24" Padding="5,0,0,0"
+                     VerticalContentAlignment="Center" Text="{Binding InputText, Mode=TwoWay}"
+                     KeyDown="InputKeyDown" LostFocus="InputLostFocus" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" FontSize="11"
+                       Foreground="{StaticResource Warning}" TextWrapping="Wrap"
+                       IsVisible="{Binding HasStatus}" Text="{Binding StatusText}" />
+        </Grid>
+    </Border>
+</UserControl>

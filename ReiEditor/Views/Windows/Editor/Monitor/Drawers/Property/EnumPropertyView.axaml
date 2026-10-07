@@ -25,7 +25,7 @@
                 VerticalAlignment="Center"
                 FontSize="14"
                 Foreground="{StaticResource Gray_4}"
-                Text="hello" />
+                Text="{Binding PropertyName.Value}" />
 
             <ComboBox
                 Grid.Column="1"
