@@ -47,6 +47,8 @@ public sealed class AssetBuilderTests
         public void AddEngineStartCallback(IntPtr callback) => throw new NotSupportedException();
         public void AddShutdownCallback(IntPtr callback) => throw new NotSupportedException();
         public void AddEditorInputCallback(IntPtr callback) => throw new NotSupportedException();
+        public void SetSceneSyncCallback(IEngineApi.SceneSyncCallbackDelegate? callback) => throw new NotSupportedException();
+        public void RequestSceneSync() => throw new NotSupportedException();
         public Task<IntPtr> CreateEngineWindow() => throw new NotSupportedException();
         public IntPtr GetWindowHandle(IntPtr windowPtr) => throw new NotSupportedException();
         public void ResizeWindow(IntPtr windowPtr, int width, int height) => throw new NotSupportedException();

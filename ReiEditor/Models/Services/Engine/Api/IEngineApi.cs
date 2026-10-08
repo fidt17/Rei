@@ -13,7 +13,7 @@ public interface IEngineApi
     delegate void FunctionPointerDelegate(IntPtr ptr);
     delegate void IntPtrCallbackDelegate(IntPtr ptr);
     delegate void IntCallbackDelegate(int value);
-    delegate void SelectionCallbackDelegate(IntPtr json, int byteCount);
+    delegate void SceneSyncCallbackDelegate(IntPtr json, int byteCount);
     delegate void FrameCaptureCallbackDelegate(IntPtr pixels, int width, int height);
 	
     bool IsEngineRunning { get; }
@@ -28,6 +28,8 @@ public interface IEngineApi
     void AddEngineStartCallback(IntPtr callback);
     void AddShutdownCallback(IntPtr callback);
     void AddEditorInputCallback(IntPtr callback);
+    void SetSceneSyncCallback(SceneSyncCallbackDelegate? callback);
+    void RequestSceneSync();
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 

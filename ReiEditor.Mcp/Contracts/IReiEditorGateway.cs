@@ -4,6 +4,8 @@ public interface IReiEditorGateway
 {
     Task<System.Text.Json.JsonElement> GetProfilingSnapshotAsync(string source, string view, string? expectedSessionId, int limit, CancellationToken cancellationToken);
     Task<System.Text.Json.JsonElement> StartProfilingCaptureAsync(int frameCount, CancellationToken cancellationToken);
+    Task<ReiSelectionState> GetSelectionStateAsync(string source, CancellationToken cancellationToken);
+    Task<ReiSelectionState> SetEntitySelectionAsync(IReadOnlyList<int> entityIds, CancellationToken cancellationToken);
     Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken);
     Task<ReiEntityList> ListEntitiesAsync(CancellationToken cancellationToken);
     Task<ReiEntityDetails> GetEntityAsync(int entityId, CancellationToken cancellationToken);

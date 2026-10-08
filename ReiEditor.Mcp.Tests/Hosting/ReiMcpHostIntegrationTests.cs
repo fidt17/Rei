@@ -42,6 +42,12 @@ public sealed class ReiMcpHostIntegrationTests
             return Task.FromResult(JsonSerializer.SerializeToElement(new { status = "queued", frameCount, captureId = "1" }));
         }
 
+        public Task<ReiSelectionState> GetSelectionStateAsync(string source, CancellationToken cancellationToken) =>
+            Task.FromResult(new ReiSelectionState(source, "ok", new[] { 42 }));
+
+        public Task<ReiSelectionState> SetEntitySelectionAsync(IReadOnlyList<int> entityIds, CancellationToken cancellationToken) =>
+            Task.FromResult(new ReiSelectionState("editor", "ok", entityIds));
+
         public Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(new ReiEditorState(
@@ -303,7 +309,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(25, tools.Count);
+        Assert.Equal(27, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
@@ -560,6 +566,38 @@ public sealed class ReiMcpHostIntegrationTests
         Assert.Equal(8, document.RootElement.GetProperty("limit").GetInt32());
         var started = await client.CallToolAsync("rei_editor_start_profiling_capture", new Dictionary<string, object?> { ["frameCount"] = 240 });
         Assert.Contains("\"frameCount\":240", GetText(started));
+    }
+
+    [Fact]
+    public async Task SelectionToolsTransportExplicitSourcesAndEmptySets()
+    {
+        await using var host = CreateHost(new FakeEditorGateway());
+        await host.StartAsync();
+        await using var client = await CreateClient(host.Endpoint!);
+        var tools = await client.ListToolsAsync();
+        var read = Assert.Single(tools, tool => tool.Name == "rei_editor_get_selection_state");
+        Assert.True(read.ProtocolTool.Annotations?.ReadOnlyHint);
+        var write = Assert.Single(tools, tool => tool.Name == "rei_editor_set_entity_selection");
+        Assert.False(write.ProtocolTool.Annotations?.ReadOnlyHint);
+        Assert.False(write.ProtocolTool.Annotations?.DestructiveHint);
+        Assert.True(write.ProtocolTool.Annotations?.IdempotentHint);
+
+        foreach (var source in new[] { "editor", "runtime" })
+        {
+            var result = await client.CallToolAsync(read.Name, new Dictionary<string, object?> { ["source"] = source });
+            Assert.NotEqual(true, result.IsError);
+            using var packet = JsonDocument.Parse(GetText(result));
+            Assert.Equal(source, packet.RootElement.GetProperty("source").GetString());
+            Assert.Equal(42, packet.RootElement.GetProperty("selectedIds")[0].GetInt32());
+        }
+        var cleared = await client.CallToolAsync(write.Name, new Dictionary<string, object?> { ["entityIds"] = Array.Empty<int>() });
+        Assert.NotEqual(true, cleared.IsError);
+        using var state = JsonDocument.Parse(GetText(cleared));
+        Assert.Equal(0, state.RootElement.GetProperty("selectedIds").GetArrayLength());
+        var selected = await client.CallToolAsync(write.Name, new Dictionary<string, object?> { ["entityIds"] = new[] { 2, 1 } });
+        Assert.NotEqual(true, selected.IsError);
+        using var selectedState = JsonDocument.Parse(GetText(selected));
+        Assert.Equal(new[] { 2, 1 }, selectedState.RootElement.GetProperty("selectedIds").EnumerateArray().Select(id => id.GetInt32()));
     }
 
     private static ReiMcpHost CreateHost(IReiEditorGateway gateway)

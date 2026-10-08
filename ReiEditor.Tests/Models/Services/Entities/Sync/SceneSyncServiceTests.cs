@@ -1,303 +1,194 @@
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
-using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Assets.Import;
-using ReiEditor.Models.Services.Assets.Scripting;
-using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Api.DTO;
+using ReiEditor.Models.Services.Engine.SceneSync;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
-using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Tests.Models.Services.Entities.Sync;
 
-/// <summary>Verifies immediate scene snapshot reconciliation without stopwatch delays or engine polling.</summary>
 [Collection(HeadlessCollection.NAME)]
 [Trait("Category", "Headless")]
 [Trait("Area", "SceneSync")]
 public sealed class SceneSyncServiceTests
 {
-    private sealed class TestImporter : IAssetImporter
+    private sealed class Source : IEngineSceneSyncEventSource
     {
-        public event Action ImportedAssetsEvent { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
-        public Observable<bool> Importing { get; } = new(false);
-        public ReiEditor.Utils.Common.IObservable<bool> IsImporting => Importing;
-        public Task<List<AssetInfo>> ReimportAll() => throw new NotSupportedException();
-        public Task<List<AssetInfo>> ReimportPaths(IEnumerable<string> paths) => throw new NotSupportedException();
+        public event Action<SceneSyncPacket>? Received;
+        public event Action? ConnectionReset;
+        public bool IsConnected { get; private set; } = true;
+        public int SnapshotRequests { get; private set; }
+        public void Connect() { IsConnected = true; ConnectionReset?.Invoke(); }
+        public void Disconnect() { IsConnected = false; ConnectionReset?.Invoke(); }
+        public void RequestSnapshot() { if (IsConnected) SnapshotRequests++; }
+        public void Send(SceneSyncPacket packet) => Received?.Invoke(packet);
     }
 
-    private readonly TestImporter _importer = new();
-    private readonly TestEngineRunner _runner = new();
-    private readonly TestEntityApi _api = new();
+    private sealed class Selectable(GameEntity entity) : IEntitySelectable
+    {
+        public GameEntity Entity { get; } = entity;
+        public void Select() { }
+        public void Deselect() { }
+    }
+
+    private readonly Source _source = new();
     private readonly TestSceneManagementService _scenes = new();
-    private readonly TestLogger<EntitySyncService> _logger = new();
+    private readonly TestEntityApi _api = new();
+    private readonly TestLogger<SceneSyncService> _logger = new();
+    private readonly Scene _scene = new("events");
+    private readonly SelectionService _selection;
+    private readonly List<ISelectable> _registered = new();
 
-    /// <summary>Inactive engine, active import, null snapshots and API exceptions preserve the existing scene.</summary>
-    [AvaloniaTheory]
-    [InlineData("inactive")]
-    [InlineData("importing")]
-    [InlineData("null")]
-    [InlineData("exception")]
-    public void UnavailableSnapshotsDoNotMutateScene(string state)
+    public SceneSyncServiceTests()
     {
-        var scene = new Scene("original");
-        var entity = new GameEntity(1, "kept");
-        scene.AddEntity(entity);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = state != "inactive";
-        _importer.Importing.Value = state == "importing";
-        var calls = 0;
-        _api.OnGetSceneEntities = () => { calls++; return state == "exception" ? throw new IOException("api") : null; };
-
-        CreateService().SynchronizeWithEngine();
-        Assert.Same(entity, Assert.Single(scene.Entities));
-        Assert.Equal(state is "inactive" or "importing" ? 0 : 1, calls);
-        if (state == "exception") Assert.IsType<IOException>(Assert.Single(_logger.Entries).Exception);
-        else Assert.Empty(_logger.Entries);
+        _selection = new SelectionService(_api);
+        _scenes.Scene.Value = _scene;
+        // Reproduce hierarchy rebuilding its selectable view models synchronously.
+        _scene.HierarchyRebuiltEvent += () =>
+        {
+            foreach (var selectable in _registered) _selection.UnregisterSelectable(selectable);
+            _registered.Clear();
+            foreach (var entity in _scene.Entities)
+            {
+                var selectable = new Selectable(entity);
+                _registered.Add(selectable);
+                _selection.RegisterSelectable(selectable);
+            }
+        };
     }
 
-    /// <summary>A changed engine entity set applies names and parent/order state before rebuilding the hierarchy.</summary>
     [AvaloniaFact]
-    public void ChangedSnapshotAddsUpdatesAndRemovesEntities()
+    public void SnapshotCreatesWholeHierarchyBeforeApplyingSelectionWithoutQueriesOrEcho()
     {
-        var scene = new Scene("sync");
-        var existing = new GameEntity(1, "old name");
-        scene.AddEntity(existing);
-        scene.AddEntity(new GameEntity(9, "removed"));
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(2, 1);
-        var requested = new List<int>();
-        _api.OnGetEntityData = id => { requested.Add(id); return State(id, id == 2 ? 1 : 0); };
-        var rebuilds = 0;
-        scene.HierarchyRebuiltEvent += () => rebuilds++;
-
-        CreateService().SynchronizeWithEngine();
-        Assert.Equal(new[] { 1, 2 }, scene.Entities.Select(x => x.Id).Order());
-        Assert.Same(existing, scene.GetById(1));
-        Assert.Equal("engine-1", existing.Name);
-        Assert.Equal("engine-2", scene.GetById(2)!.Name);
-        Assert.Equal(1, scene.GetById(2)!.Transform.Parent);
-        Assert.Same(scene.Hierarchy.GetNode(existing), scene.Hierarchy.GetNode(scene.GetById(2)!)!.Parent);
-        Assert.Equal(new[] { 2, 1 }, requested);
-        Assert.Equal(1, rebuilds);
+        _scene.AddEntity(new GameEntity(9, "obsolete"));
+        using var service = Create();
+        Task.Run(() => _source.Send(Packet(true, new[] { State(2, 1, 0), State(1), State(3, 1, 1) }, selected: new[] { 2, 3 }))).GetAwaiter().GetResult();
+        Assert.Single(_scene.Entities);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(new[] { 1, 2, 3 }, _scene.Entities.Select(entity => entity.Id).Order());
+        Assert.Equal(new[] { 2, 3 }, _scene.Hierarchy.GetNode(_scene.GetById(1)!)!.ChildNodes.Select(node => node.Content.Id));
+        Assert.Equal(new[] { 2, 3 }, Selected());
         Assert.Empty(_api.Selections);
         Assert.Empty(_logger.Entries);
     }
 
-    /// <summary>Removing an obsolete parent must retain a surviving child that the engine moved to the root.</summary>
     [AvaloniaFact]
-    public void RemovingOldParentPreservesReparentedSurvivingChild()
+    public void ChangedMetadataPreservesBehaviourDataAndRestoresSelectionAfterRebuild()
     {
-        var scene = new Scene("sync");
-        var parent = new GameEntity(1, "removed");
-        var child = new GameEntity(2, "survivor");
-        scene.AddEntity(parent);
-        scene.AddEntity(child);
-        scene.MoveEntity(child, parent, 0);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(2);
-        _api.OnGetEntityData = id => State(id, 0);
-        var rebuilds = 0;
-        scene.HierarchyRebuiltEvent += () => rebuilds++;
-
-        CreateService().SynchronizeWithEngine();
-        Assert.Empty(_logger.Entries);
-        Assert.Same(child, Assert.Single(scene.Entities));
-        Assert.Null(scene.GetById(1));
-        Assert.Equal(0, child.Transform.Parent);
-        Assert.NotNull(scene.Hierarchy.GetNode(child));
-        Assert.Equal(1, rebuilds);
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1), State(2), State(3) }, selected: new[] { 2 }));
+        Dispatcher.UIThread.RunJobs();
+        var child = _scene.GetById(2)!;
+        var behaviour = new BehaviourComponent(42);
+        child.AddBehaviour(behaviour);
+        _source.Send(Packet(false, new[] { new SceneEntityState(2, "renamed", 1, 5), State(3, 1, 0) }, selected: new[] { 2 }));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Same(child, _scene.GetById(2));
+        Assert.Equal("renamed", child.Name);
+        Assert.Same(behaviour, Assert.Single(child.Behaviours));
+        Assert.Equal(new[] { 3, 2 }, _scene.Hierarchy.GetNode(_scene.GetById(1)!)!.ChildNodes.Select(node => node.Content.Id));
+        Assert.Equal(new[] { 2 }, Selected());
+        Assert.Empty(_api.Selections);
     }
 
-    /// <summary>A surviving child can move from a removed parent to another existing surviving entity.</summary>
-    [AvaloniaFact]
-    public void RemovingOldParentPreservesChildReparentedToExistingEntity()
-    {
-        var scene = new Scene("sync");
-        var oldParent = new GameEntity(1, "removed");
-        var child = new GameEntity(2, "survivor");
-        var newParent = new GameEntity(3, "new parent");
-        var sibling = new GameEntity(4, "sibling");
-        scene.AddEntity(oldParent);
-        scene.AddEntity(child);
-        scene.AddEntity(newParent);
-        scene.AddEntity(sibling);
-        scene.MoveEntity(child, oldParent, 0);
-        scene.MoveEntity(sibling, newParent, 0);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(2, 3, 4);
-        _api.OnGetEntityData = id => id switch
-        {
-            2 => State(id, newParent.Id, 1),
-            4 => State(id, newParent.Id, 0),
-            _ => State(id, 0)
-        };
-
-        CreateService().SynchronizeWithEngine();
-
-        Assert.Empty(_logger.Entries);
-        Assert.Equal(3, scene.Entities.Count());
-        Assert.Same(child, scene.GetById(child.Id));
-        Assert.Same(newParent, scene.GetById(newParent.Id));
-        Assert.Same(sibling, scene.GetById(sibling.Id));
-        var newParentNode = scene.Hierarchy.GetNode(newParent);
-        Assert.Same(newParentNode, scene.Hierarchy.GetNode(child)!.Parent);
-        Assert.Equal(1, child.Transform.Order);
-        Assert.Equal(new[] { sibling, child }, newParentNode!.ChildNodes.Select(x => x.Content));
-    }
-
-    /// <summary>A surviving child can move from a removed parent to a parent added by the same snapshot.</summary>
-    [AvaloniaFact]
-    public void RemovingOldParentPreservesChildReparentedToNewEntity()
-    {
-        var scene = new Scene("sync");
-        var oldParent = new GameEntity(1, "removed");
-        var child = new GameEntity(2, "survivor");
-        scene.AddEntity(oldParent);
-        scene.AddEntity(child);
-        scene.MoveEntity(child, oldParent, 0);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(2, 3);
-        _api.OnGetEntityData = id => State(id, id == child.Id ? 3 : 0);
-
-        CreateService().SynchronizeWithEngine();
-
-        Assert.Empty(_logger.Entries);
-        var newParent = scene.GetById(3);
-        Assert.NotNull(newParent);
-        Assert.Same(child, scene.GetById(child.Id));
-        Assert.Same(scene.Hierarchy.GetNode(newParent), scene.Hierarchy.GetNode(child)!.Parent);
-    }
-
-    /// <summary>Detaching a surviving subtree boundary retains descendants while its old ancestor is removed.</summary>
     [AvaloniaTheory]
-    [InlineData(1)]
-    [InlineData(2)]
-    public void RemovingOldAncestorPreservesSurvivingSubtree(int obsoleteAncestorLevels)
+    [InlineData(0)]
+    [InlineData(3)]
+    public void RemovingParentKeepsSurvivingChild(int newParent)
     {
-        var scene = new Scene("sync");
-        var oldAncestor = new GameEntity(1, "removed");
-        var subtreeRoot = new GameEntity(2, "surviving root");
-        var child = new GameEntity(3, "surviving child");
-        scene.AddEntity(oldAncestor);
-        scene.AddEntity(subtreeRoot);
-        scene.AddEntity(child);
-        var oldParent = oldAncestor;
-        if (obsoleteAncestorLevels == 2)
-        {
-            oldParent = new GameEntity(4, "removed middle");
-            scene.AddEntity(oldParent);
-            scene.MoveEntity(oldParent, oldAncestor, 0);
-        }
-
-        scene.MoveEntity(subtreeRoot, oldParent, 0);
-        scene.MoveEntity(child, subtreeRoot, 0);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(2, 3);
-        _api.OnGetEntityData = id => State(id, id == child.Id ? subtreeRoot.Id : 0);
-
-        CreateService().SynchronizeWithEngine();
-
-        Assert.Empty(_logger.Entries);
-        Assert.Equal(2, scene.Entities.Count());
-        Assert.Same(subtreeRoot, scene.GetById(subtreeRoot.Id));
-        Assert.Same(child, scene.GetById(child.Id));
-        Assert.Null(scene.Hierarchy.GetNode(subtreeRoot)!.Parent);
-        Assert.Same(scene.Hierarchy.GetNode(subtreeRoot), scene.Hierarchy.GetNode(child)!.Parent);
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1), State(2, 1), State(3) }));
+        Dispatcher.UIThread.RunJobs();
+        var child = _scene.GetById(2)!;
+        _source.Send(Packet(false, new[] { State(2, newParent) }, new[] { 1 }, new[] { 2 }));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Same(child, _scene.GetById(2));
+        Assert.Null(_scene.GetById(1));
+        Assert.Equal(newParent, child.Transform.Parent);
+        Assert.Equal(newParent == 0 ? null : _scene.GetById(3), _scene.Hierarchy.GetNode(child)!.Parent?.Content);
+        Assert.Equal(new[] { 2 }, Selected());
     }
 
-    /// <summary>A surviving child with unavailable state is retained and repaired to the root after its parent disappears.</summary>
     [AvaloniaFact]
-    public void RemovingOldParentPreservesChildWithUnavailableState()
+    public void BurstIsAppliedInFifoOrderAndYieldsBetweenBatches()
     {
-        var scene = new Scene("sync");
-        var oldParent = new GameEntity(1, "removed");
-        var child = new GameEntity(2, "survivor");
-        scene.AddEntity(oldParent);
-        scene.AddEntity(child);
-        scene.MoveEntity(child, oldParent, 0);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(2);
-        _api.OnGetEntityData = _ => null;
-
-        CreateService().SynchronizeWithEngine();
-
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1) }));
+        Dispatcher.UIThread.RunJobs();
+        var names = new List<string>();
+        _scene.GetById(1)!.NameChangedEvent += (_, name) => names.Add(name);
+        for (var i = 1; i <= 64; i++)
+            _source.Send(Packet(false, new[] { new SceneEntityState(1, $"name-{i}", 0, 0) }));
+        var appliedBeforeNextUiJob = 0;
+        Dispatcher.UIThread.Post(() => appliedBeforeNextUiJob = names.Count);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(16, appliedBeforeNextUiJob);
+        Assert.Equal(Enumerable.Range(1, 64).Select(i => $"name-{i}"), names);
         Assert.Empty(_logger.Entries);
-        Assert.Same(child, Assert.Single(scene.Entities));
-        Assert.Equal(0, child.Transform.Parent);
-        Assert.Null(scene.Hierarchy.GetNode(child)!.Parent);
     }
 
-    /// <summary>A removed parent still deletes its full subtree when none of those entities survive the snapshot.</summary>
     [AvaloniaFact]
-    public void RemovingObsoleteParentDeletesObsoleteSubtree()
+    public void EmptySnapshotClearsSceneAndSelection()
     {
-        var scene = new Scene("sync");
-        var oldParent = new GameEntity(1, "removed");
-        var oldChild = new GameEntity(2, "removed child");
-        scene.AddEntity(oldParent);
-        scene.AddEntity(oldChild);
-        scene.MoveEntity(oldChild, oldParent, 0);
-        _scenes.Scene.Value = scene;
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot();
-        var rebuilds = 0;
-        scene.HierarchyRebuiltEvent += () => rebuilds++;
-
-        CreateService().SynchronizeWithEngine();
-
-        Assert.Empty(_logger.Entries);
-        Assert.Empty(scene.Entities);
-        Assert.Empty(scene.Hierarchy.RootNodes);
-        Assert.Equal(1, rebuilds);
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1), State(2, 1) }, selected: new[] { 2 }));
+        Dispatcher.UIThread.RunJobs();
+        _source.Send(Packet(true, Array.Empty<SceneEntityState>()));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(_scene.Entities);
+        Assert.Empty(Selected());
+        Assert.Empty(_api.Selections);
     }
 
-    /// <summary>A missing scene is logged without applying a returned snapshot.</summary>
     [AvaloniaFact]
-    public void MissingCurrentSceneIsReported()
+    public void RestartDiscardsQueuedOldPacketsAndAcceptsNewSnapshot()
     {
-        _runner.Active.Value = true;
-        _api.OnGetSceneEntities = () => Snapshot(1);
-        CreateService().SynchronizeWithEngine();
-        Assert.Contains("Current scene is missing", Assert.Single(_logger.Entries).Message);
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1) }));
+        _source.Disconnect();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(_scene.Entities);
+        _source.Connect();
+        _source.Send(Packet(true, new[] { State(2) }));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(2, Assert.Single(_scene.Entities).Id);
     }
 
-    private SceneSyncService CreateService()
+    [AvaloniaFact]
+    public void SceneChangeAndExplicitReloadRequestFreshSnapshot()
     {
-        var registry = new TestBehaviourRegistry();
-        registry.Ids[EngineBehavioursConstants.TRANSFORM] = 10;
-        var components = new TestBehaviourComponentsService
-        {
-            OnAdd = (entity, id) => { entity.AddBehaviour(new BehaviourComponent(id)); return true; },
-            OnDelete = (entity, component) => { entity.DeleteBehaviour(component); return true; }
-        };
-        var applier = new EntityStateApplier(_logger, registry, components, new SerializedPropertiesService(new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>()), new TestLogger<SerializedPropertiesService>()));
-        var selection = new SelectionService(_api);
-        return new(_importer, _runner, _api, _scenes, _logger, new EngineSelectionSyncService(selection), applier);
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1) }));
+        _scenes.Scene.Value = new Scene("next");
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(_scenes.Scene.Value.Entities);
+        Assert.Equal(1, _source.SnapshotRequests);
+        service.SynchronizeWithEngine();
+        Assert.Equal(2, _source.SnapshotRequests);
     }
 
-    private static GetSceneEntitiesResponse Snapshot(params int[] ids) => new()
+    [AvaloniaFact]
+    public void DisposeDiscardsQueuedPacketsAndUnsubscribes()
     {
-        Entities = ids.Select(id => new GetSceneEntitiesResponse.SceneEntitiesResponseEntity { Id = id }).ToList()
-    };
+        var service = Create();
+        _source.Send(Packet(true, new[] { State(1) }));
+        service.Dispose();
+        _source.Send(Packet(true, new[] { State(2) }));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(_scene.Entities);
+    }
 
-    private static GetEntityDataResponse State(int id, int parent, int order = 0) => new()
+    private SceneSyncService Create() => new(_source, _scenes, new EngineSelectionSyncService(_selection), _logger);
+    private int[] Selected() => _selection.SelectedItems.OfType<IEntitySelectable>().Select(item => item.Entity.Id).Order().ToArray();
+    private static SceneEntityState State(int id, int parent = 0, int order = 0) => new(id, $"entity-{id}", parent, order);
+    private static SceneSyncPacket Packet(bool snapshot, SceneEntityState[] entities, int[]? removed = null, int[]? selected = null) => new()
     {
-        SceneId = id,
-        Name = $"engine-{id}",
-        Behaviours = new()
-        {
-            new() { ["REI_TYPE"] = EngineBehavioursConstants.TRANSFORM, [EngineBehavioursConstants.TRANSFORM_PARENT] = parent, [EngineBehavioursConstants.TRANSFORM_ORDER] = order }
-        }
+        IsSnapshot = snapshot, Entities = entities,
+        RemovedEntityIds = removed ?? Array.Empty<int>(), SelectedEntityIds = selected ?? Array.Empty<int>()
     };
 }

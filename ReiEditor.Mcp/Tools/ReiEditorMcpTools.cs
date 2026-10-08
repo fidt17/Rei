@@ -31,6 +31,16 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.StartProfilingCaptureAsync(frameCount, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_get_selection_state", Title = "Read Rei entity selection", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Reads entity selection from explicit source: editor or runtime. Runtime reads native SelectedTag state without loading entities or falling back to Editor/cache. Returns status ok, engine_unavailable, or read_failed; selectedIds is null when unavailable.")]
+    public Task<ReiSelectionState> GetSelectionState([Description("editor or runtime.")] string source, CancellationToken cancellationToken) =>
+        Execute(() => _gateway.GetSelectionStateAsync(source, cancellationToken));
+
+    [McpServerTool(Name = "rei_editor_set_entity_selection", Title = "Set Rei entity selection", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Replaces current selection through Editor SelectionService and native selection API. Empty array clears selection; duplicate ids are ignored. Validates entire set before mutation. Returns Editor state; read runtime independently to verify synchronization. Does not save scene.")]
+    public Task<ReiSelectionState> SetEntitySelection([Description("Current-scene entity ids; empty array clears selection.")] int[] entityIds, CancellationToken cancellationToken) =>
+        Execute(() => _gateway.SetEntitySelectionAsync(entityIds, cancellationToken));
+
     [McpServerTool(Name = "rei_editor_get_state", Title = "Get Rei editor state", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Returns active project, scene, engine, import, build, and automation-operation state. Call before other editor tools.")]
     public Task<ReiEditorState> GetState(CancellationToken cancellationToken)

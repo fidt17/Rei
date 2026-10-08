@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "EditorInputEvent.h"
 #include "EditorEventsRelay.h"
+#include "SceneSyncRelay.h"
 #include "Engine/Engine.h"
 #include "Modules/Editor/TransformationControls/TransformationControl.h"
 
@@ -35,6 +36,17 @@ REI_EXTERN_API inline void AddShutdownCallback(const ShutdownCallbackDelegate ca
     {
         callback(exitCode);
     });
+}
+
+typedef void (*SceneSyncCallbackDelegate)(const char* json, i32 byteCount);
+REI_EXTERN_API inline void SetSceneSyncCallback(const SceneSyncCallbackDelegate callback)
+{
+    rei::GetSceneSyncRelay().SetCallback(callback);
+}
+
+REI_EXTERN_API inline void RequestSceneSync()
+{
+    rei::GetEngine().ExecuteOnMainThread([] { rei::GetSceneSyncRelay().RequestSnapshot(); });
 }
 
 typedef void (*EditorInputCallbackDelegate)(const rei::api::EditorInputEvent& inputEvent);

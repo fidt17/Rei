@@ -4,7 +4,7 @@
 #include "InternalEngineWorld.h"
 #include "Common/Profiling/ProfilingService.h"
 #include "Api/EditorEventsRelay.h"
-#include "Api/EditorSelectionRelay.h"
+#include "Api/SceneSyncRelay.h"
 #include "Common/Diagnostics/DiagnosticsService.h"
 #include "Common/Tasks/TaskExecutor.h"
 #include "Common/Time/TimeService.h"
@@ -70,7 +70,7 @@ namespace rei::internal::engine
         std::shared_ptr<scenes::SceneManager> _sceneManager;
 
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
-        std::shared_ptr<api::EditorSelectionRelay> _editorSelectionRelay;
+        std::shared_ptr<api::SceneSyncRelay> _sceneSyncRelay;
         std::shared_ptr<common::diagnostics::DiagnosticsService> _diagnostics;
         std::shared_ptr<profiling::ProfilingService> _profiler;
 

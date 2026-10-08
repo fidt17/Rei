@@ -18,6 +18,8 @@ internal abstract class TestEngineApi : IEngineApi
     public virtual void AddEngineStartCallback(IntPtr callback) => throw new NotSupportedException();
     public virtual void AddShutdownCallback(IntPtr callback) => throw new NotSupportedException();
     public virtual void AddEditorInputCallback(IntPtr callback) => throw new NotSupportedException();
+    public virtual void SetSceneSyncCallback(IEngineApi.SceneSyncCallbackDelegate? callback) => throw new NotSupportedException();
+    public virtual void RequestSceneSync() => throw new NotSupportedException();
     public virtual long BuildAsset(string assetPath, string destinationFile, long offset) => throw new NotSupportedException();
     public virtual Task<IntPtr> CreateEngineWindow() => throw new NotSupportedException();
     public virtual IntPtr GetWindowHandle(IntPtr windowPtr) => throw new NotSupportedException();

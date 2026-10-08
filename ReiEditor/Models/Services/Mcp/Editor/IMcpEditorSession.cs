@@ -8,6 +8,8 @@ internal interface IMcpEditorSession
 {
     System.Text.Json.JsonElement GetProfilingSnapshot(string source, string view, string? expectedSessionId, int limit);
     System.Text.Json.JsonElement StartProfilingCapture(int frameCount);
+    ReiSelectionState GetSelectionState(string source);
+    ReiSelectionState SetEntitySelection(System.Collections.Generic.IReadOnlyList<int> entityIds);
     ReiEditorState GetState();
     ReiEntityList ListEntities();
     ReiEntityDetails GetEntity(int entityId);

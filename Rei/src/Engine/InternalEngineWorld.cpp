@@ -4,7 +4,7 @@
 #include "InternalEngineWorld.h"
 
 #include "Engine.h"
-#include "Api/EditorSelectionRelay.h"
+#include "Api/SceneSyncRelay.h"
 #include "Engine/Services.h"
 #include "Common/Diagnostics/Systems/DiagnosticsRunnerSystem.h"
 #include "Common/Time/Stopwatch.h"
@@ -103,9 +103,12 @@ namespace rei::internal::engine
             GetDiagnostics().SetExecutionTimes(executionTimes);
         });
 
-        if (GetEngine().IsEditorMode())
+        if (GetEngine().IsEditorMode() || GetEngine().IsEditor())
         {
-            _world->AddSystem([] { GetEditorSelectionRelay().Capture(GetInternalWorld()); });
+            _world->AddSystem([]
+            {
+                if (GetEngine().IsRunning()) GetSceneSyncRelay().Capture(GetInternalWorld());
+            });
         }
 
         LOG_DEBUG("Configured internal world")

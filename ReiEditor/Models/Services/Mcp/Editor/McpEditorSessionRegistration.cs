@@ -56,6 +56,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly ISelectionService _selectionService;
     private readonly IAssetRuntimeInspectionService _runtimeInspection;
     private readonly IEngineProfilingService _profiling;
+    private readonly IMcpEntitySelectionService _entitySelection;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -77,7 +78,8 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IProjectAssetFocusService assetFocusService,
         ISelectionService selectionService,
         IAssetRuntimeInspectionService runtimeInspection,
-        IEngineProfilingService profiling)
+        IEngineProfilingService profiling,
+        IMcpEntitySelectionService entitySelection)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
@@ -97,12 +99,16 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _selectionService = selectionService;
         _runtimeInspection = runtimeInspection;
         _profiling = profiling;
+        _entitySelection = entitySelection;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
 
     public System.Text.Json.JsonElement GetProfilingSnapshot(string source, string view, string? expectedSessionId, int limit) => _profiling.Read(source, view, expectedSessionId, limit);
     public System.Text.Json.JsonElement StartProfilingCapture(int frameCount) => _profiling.StartCapture(frameCount);
+
+    public ReiSelectionState GetSelectionState(string source) => _entitySelection.Read(source);
+    public ReiSelectionState SetEntitySelection(IReadOnlyList<int> entityIds) => _entitySelection.Set(entityIds);
 
     public void Dispose()
     {

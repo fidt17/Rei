@@ -1,191 +1,132 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using ReiEditor.Models.Services.Assets.Import;
-using ReiEditor.Models.Services.Engine.Api;
+using Avalonia.Threading;
 using ReiEditor.Models.Services.Engine.Api.DTO;
-using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.Engine.SceneSync;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Scenes;
 
 namespace ReiEditor.Models.Services.Entities.Sync;
 
-public class SceneSyncService : ISceneSyncService
+public sealed class SceneSyncService : ISceneSyncService, IDisposable
 {
-    private const int ENTITY_STATE_SYNC_INTERVAL_MS = 250;
+    private const int MAX_PACKETS_PER_BATCH = 16;
 
-    private readonly IAssetImporter _assetImporter;
-    private readonly IEngineRunner _engineRunner;
-    private readonly IEntityApi _entityApi;
-    private readonly ISceneManagementService _sceneManagement;
-    private readonly ILogger<EntitySyncService> _logger;
-    private readonly EngineSelectionSyncService _selectionSyncService;
-    private readonly IEntityStateApplier _entityStateApplier;
-    private readonly IEngineSelectionEventSyncService? _selectionEvents;
-    private readonly Stopwatch _stateSyncStopwatch = Stopwatch.StartNew();
+    private readonly object _gate = new();
+    private readonly Queue<SceneSyncPacket> _packets = new();
+    private readonly IEngineSceneSyncEventSource _source;
+    private readonly ISceneManagementService _scenes;
+    private readonly EngineSelectionSyncService _selection;
+    private readonly ILogger<SceneSyncService> _logger;
+    private bool _scheduled;
+    private bool _disposed;
 
-    public SceneSyncService(
-        IAssetImporter assetImporter,
-        IEngineRunner engineRunner,
-        IEntityApi entityApi,
-        ISceneManagementService sceneManagement,
-        ILogger<EntitySyncService> logger,
-        EngineSelectionSyncService selectionSyncService,
-        IEntityStateApplier entityStateApplier,
-        IEngineSelectionEventSyncService? selectionEvents = null)
+    public SceneSyncService(IEngineSceneSyncEventSource source, ISceneManagementService scenes, EngineSelectionSyncService selection, ILogger<SceneSyncService> logger)
     {
-        _assetImporter = assetImporter;
-        _engineRunner = engineRunner;
-        _entityApi = entityApi;
-        _sceneManagement = sceneManagement;
+        _source = source;
+        _scenes = scenes;
+        _selection = selection;
         _logger = logger;
-        _selectionSyncService = selectionSyncService;
-        _entityStateApplier = entityStateApplier;
-        _selectionEvents = selectionEvents;
+        _source.Received += Receive;
+        _source.ConnectionReset += ClearQueue;
+        _scenes.CurrentScene.Subscribe(HandleSceneChanged, invoke: false);
     }
 
-    public void SynchronizeWithEngine()
+    public void SynchronizeWithEngine() => _source.RequestSnapshot();
+
+    public void Dispose()
     {
-        try
-        {
-            if (!_engineRunner.IsActive.Value) return;
-            if (_assetImporter.IsImporting.Value) return;
-
-            var useEvents = _selectionEvents?.IsEnabled == true;
-            var selectionBeforeSync = useEvents ? new HashSet<int>() : _selectionSyncService.CaptureEditorSelectedEntityIds();
-            var entities = _entityApi.GetSceneEntities();
-            if (entities == null) return;
-
-            var scene = _sceneManagement.CurrentScene.Value;
-            if (scene == null) throw new Exception("Current scene is missing");
-
-            var currentSceneEntities = scene.Entities.ToList();
-            var didUpdateSelection = !useEvents && _selectionSyncService.TryApplySelectionSnapshot(currentSceneEntities, entities, selectionBeforeSync);
-            var entitySetChanged = HasEntitySetChanged(currentSceneEntities, entities);
-            if (!entitySetChanged && _stateSyncStopwatch.ElapsedMilliseconds < ENTITY_STATE_SYNC_INTERVAL_MS) return;
-
-            _stateSyncStopwatch.Restart();
-
-            var entityStates = LoadEntityStates(entities, out var parentByEntityId, out var orderByEntityId);
-            var selectedEntityIds = new HashSet<int>();
-            var needsHierarchyRefresh = ApplyEntityStates(scene, currentSceneEntities, entities, entityStates, parentByEntityId, orderByEntityId, selectedEntityIds);
-
-            if (needsHierarchyRefresh)
-            {
-                scene.RebuildHierarchy();
-            }
-
-            if (!useEvents && !didUpdateSelection && selectionBeforeSync.SetEquals(_selectionSyncService.CaptureEditorSelectedEntityIds()))
-            {
-                _selectionSyncService.ApplySelection(scene.Entities.ToList(), selectedEntityIds);
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogException(e);
-        }
+        lock (_gate) { _disposed = true; _packets.Clear(); }
+        _source.Received -= Receive;
+        _source.ConnectionReset -= ClearQueue;
+        _scenes.CurrentScene.Unsubscribe(HandleSceneChanged);
     }
 
-    private static bool HasEntitySetChanged(IReadOnlyCollection<GameEntity> currentSceneEntities, GetSceneEntitiesResponse entities)
+    private void Receive(SceneSyncPacket packet)
     {
-        if (currentSceneEntities.Count != entities.Entities.Count) return true;
-
-        var currentEntityIds = currentSceneEntities.Select(x => x.Id).ToHashSet();
-        return entities.Entities.Any(x => !currentEntityIds.Contains(x.Id));
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _packets.Enqueue(packet);
+            if (_scheduled) return;
+            _scheduled = true;
+        }
+        Dispatcher.UIThread.Post(DrainQueue);
     }
 
-    private Dictionary<int, GetEntityDataResponse?> LoadEntityStates(
-        GetSceneEntitiesResponse entities,
-        out Dictionary<int, int> parentByEntityId,
-        out Dictionary<int, int> orderByEntityId)
+    private void ClearQueue()
     {
-        var entityStates = new Dictionary<int, GetEntityDataResponse?>();
-        parentByEntityId = new Dictionary<int, int>();
-        orderByEntityId = new Dictionary<int, int>();
-
-        foreach (var entity in entities.Entities)
-        {
-            var state = _entityApi.GetEntityData(entity.Id);
-            entityStates[entity.Id] = state;
-
-            var parentId = 0;
-            var order = 0;
-            if (state != null && EntitySyncUtility.TryGetTransformData(state.Behaviours, out var transformParent, out var transformOrder))
-            {
-                parentId = transformParent ?? 0;
-                order = transformOrder ?? 0;
-            }
-
-            parentByEntityId[entity.Id] = parentId;
-            orderByEntityId[entity.Id] = order;
-        }
-
-        return entityStates;
+        lock (_gate) _packets.Clear();
     }
 
-    private bool ApplyEntityStates(
-        Scene scene,
-        IReadOnlyCollection<GameEntity> currentSceneEntities,
-        GetSceneEntitiesResponse entities,
-        IReadOnlyDictionary<int, GetEntityDataResponse?> entityStates,
-        Dictionary<int, int> parentByEntityId,
-        Dictionary<int, int> orderByEntityId,
-        ISet<int> selectedEntityIds)
+    private void HandleSceneChanged(Scene? scene)
     {
-        var needsHierarchyRefresh = false;
-        var orderedEntityIds = EntitySyncUtility.BuildOrderedEntityIds(parentByEntityId, orderByEntityId);
-        var engineEntityIds = entities.Entities.Select(x => x.Id).ToHashSet();
-
-        foreach (var entityId in orderedEntityIds)
-        {
-            var engineEntity = entities.Entities.Find(x => x.Id == entityId);
-            if (engineEntity == null) continue;
-
-            var gameEntity = scene.GetById(engineEntity.Id);
-            if (gameEntity == null)
-            {
-                gameEntity = new GameEntity(engineEntity.Id, $"Entity {engineEntity}");
-                scene.AddEntity(gameEntity);
-                needsHierarchyRefresh = true;
-            }
-
-            var state = entityStates[entityId];
-            if (state != null)
-            {
-                needsHierarchyRefresh |= _entityStateApplier.Apply(gameEntity, state);
-            }
-
-            if (engineEntity.IsSelected)
-            {
-                selectedEntityIds.Add(gameEntity.Id);
-            }
-        }
-
-        DetachSurvivingEntitiesFromRemovedParents(scene, currentSceneEntities, engineEntityIds);
-
-        foreach (var gameEntity in currentSceneEntities.Where(x => !engineEntityIds.Contains(x.Id)))
-        {
-            scene.DeleteEntity(gameEntity, refreshTransforms: false);
-            needsHierarchyRefresh = true;
-        }
-
-        return needsHierarchyRefresh;
+        ClearQueue();
+        if (scene != null) _source.RequestSnapshot();
     }
 
-    private static void DetachSurvivingEntitiesFromRemovedParents(
-        Scene scene,
-        IReadOnlyCollection<GameEntity> currentSceneEntities,
-        IReadOnlySet<int> engineEntityIds)
+    private void DrainQueue()
     {
-        foreach (var gameEntity in currentSceneEntities)
+        for (var i = 0; i < MAX_PACKETS_PER_BATCH; i++)
         {
-            if (!engineEntityIds.Contains(gameEntity.Id)) continue;
-
-            var node = scene.Hierarchy.GetNode(gameEntity);
-            if (node?.Parent == null || engineEntityIds.Contains(node.Parent.Content.Id)) continue;
-
-            scene.Hierarchy.MoveNode(node, null, int.MaxValue);
+            var scene = _scenes.CurrentScene.Value;
+            SceneSyncPacket packet;
+            lock (_gate)
+            {
+                if (_disposed || scene == null || !_packets.TryDequeue(out packet!)) break;
+            }
+            try { Apply(scene, packet); }
+            catch (Exception error) { _logger.LogException(error); }
         }
+
+        lock (_gate)
+        {
+            _scheduled = !_disposed && _packets.Count > 0 && _scenes.CurrentScene.Value != null;
+            if (!_scheduled) return;
+        }
+        Dispatcher.UIThread.Post(DrainQueue);
+    }
+
+    private void Apply(Scene scene, SceneSyncPacket packet)
+    {
+        var removedIds = packet.IsSnapshot
+            ? scene.Entities.Select(entity => entity.Id).Except(packet.Entities.Select(entity => entity.Id)).ToHashSet()
+            : packet.RemovedEntityIds.ToHashSet();
+        var hierarchyChanged = false;
+        foreach (var state in packet.Entities)
+        {
+            if (scene.GetById(state.Id) != null) continue;
+            scene.AddEntity(new GameEntity(state.Id, state.Name));
+            hierarchyChanged = true;
+        }
+
+        foreach (var state in packet.Entities)
+        {
+            var entity = scene.GetById(state.Id)!;
+            entity.SetName(state.Name);
+            hierarchyChanged |= entity.Transform.Parent != state.ParentId || entity.Transform.Order != state.Order;
+            entity.Transform.SetParent(state.ParentId);
+            entity.Transform.SetOrder(state.Order);
+        }
+
+        // Scene.DeleteEntity removes a subtree. Detach children that survived in the engine first.
+        foreach (var entity in scene.Entities.ToList())
+        {
+            if (removedIds.Contains(entity.Id)) continue;
+            var node = scene.Hierarchy.GetNode(entity);
+            if (node?.Parent != null && removedIds.Contains(node.Parent.Content.Id))
+                scene.Hierarchy.MoveNode(node, null, int.MaxValue);
+        }
+        foreach (var id in removedIds)
+        {
+            var entity = scene.GetById(id);
+            if (entity == null) continue;
+            scene.DeleteEntity(entity, refreshTransforms: false);
+            hierarchyChanged = true;
+        }
+
+        if (hierarchyChanged) scene.RebuildHierarchy();
+        _selection.ApplySelection(scene.Entities.ToList(), packet.SelectedEntityIds.ToHashSet());
     }
 }

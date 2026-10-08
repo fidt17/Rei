@@ -46,6 +46,8 @@ Parameter names below match MCP input schema. `—` means no parameters. Results
 | Tool | Parameters | Result / effect |
 | --- | --- | --- |
 | `rei_editor_get_state` | — | Project, scene, engine, import/build flags and active operation. |
+| `rei_editor_get_selection_state` | `source` | Independent entity ID set from `editor` or native `runtime`. Status: `ok`, `engine_unavailable`, `read_failed`. Unavailable: `selectedIds=null`; empty selection: `[]`. No loading, save, or Editor fallback. |
+| `rei_editor_set_entity_selection` | `entityIds` | Replaces selection through Editor SelectionService; `[]` clears it. Validates all IDs before mutation, removes duplicates, keeps first ID as primary. Returns Editor selection; read runtime separately to verify sync. No scene save. |
 | `rei_editor_list_entities` | — | Hierarchy in display order: entity/parent ids, order, depth and attached behaviours. |
 | `rei_editor_get_entity` | `entityId` | Behaviour property names, types and JSON-compatible values. |
 | `rei_editor_rename_entity` | `entityId`, `newName` | Renames entity. Name must be non-empty, at most 128 characters. |

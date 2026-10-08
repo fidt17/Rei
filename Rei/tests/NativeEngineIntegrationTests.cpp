@@ -267,3 +267,195 @@ TEST_CASE("BEH-04 Reentrant Dispose of own entity remains bounded and happens on
         fixture.Stop();
     }, 20000, 1024);
 }
+
+namespace
+{
+    thread_local std::vector<nlohmann::json>* ScenePackets = nullptr;
+    void ReceiveScenePacket(const char* json, const i32 byteCount)
+    {
+        if (ScenePackets) ScenePackets->push_back(nlohmann::json::parse(json, json + byteCount));
+    }
+}
+
+TEST_CASE("Scene relay sends initial snapshot and only changed hierarchy metadata", "[native][scene-sync][engine-integration][isolated]")
+{
+    Isolated([]
+    {
+        std::vector<nlohmann::json> packets;
+        NativeEngineFixture fixture(EditorMode, "scene-sync");
+        fixture.Start();
+        fixture.OnEngineThread([&]
+        {
+            ECS_WORLD(GetInternalWorld());
+            ScenePackets = &packets;
+            SetSceneSyncCallback(ReceiveScenePacket);
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            REQUIRE(packets.size() == 1);
+            CHECK(packets.back()["IsSnapshot"] == true);
+            CHECK(packets.back()["Entities"].empty());
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            CHECK(packets.size() == 1);
+
+            const auto first = GetEntityManager().CreateNewEntity("first");
+            const auto second = GetEntityManager().CreateNewEntity("second");
+            const auto firstId = GET(first, EntityInfo).Id;
+            const auto secondId = GET(second, EntityInfo).Id;
+            GET(first, Transform).SetChildOrder(0);
+            GET(second, Transform).SetChildOrder(1);
+            editor::selection_utility::Select(GetInternalWorld(), second);
+            GetInternalWorld()->Refresh();
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            REQUIRE(packets.size() == 2);
+            CHECK(packets.back()["IsSnapshot"] == false);
+            CHECK(packets.back()["Entities"] == nlohmann::json::array({
+                {{"Id", firstId}, {"Name", "first"}, {"ParentId", 0}, {"Order", 0}},
+                {{"Id", secondId}, {"Name", "second"}, {"ParentId", 0}, {"Order", 1}}
+            }));
+            CHECK(packets.back()["SelectedEntityIds"] == nlohmann::json::array({secondId}));
+
+            GET(first, EntityInfo).Name = "renamed";
+            GET(second, Transform).SetParent(first);
+            GET(second, Transform).SetChildOrder(4);
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            REQUIRE(packets.size() == 3);
+            CHECK(packets.back()["Entities"][0]["Name"] == "renamed");
+            CHECK(packets.back()["Entities"][1]["ParentId"] == firstId);
+            CHECK(packets.back()["Entities"][1]["Order"] == 4);
+
+            // Property and behaviour changes belong to Monitor, not the scene stream.
+            GET(first, Transform).Translate(math::Vector3{1, 2, 3});
+            GetEntityManager().AddBehaviour(first, PROBE_A, nlohmann::json());
+            GetInternalWorld()->Refresh();
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            CHECK(packets.size() == 3);
+
+            GET(second, Transform).SetParent(ecs::NULL_ENTITY);
+            GET(second, Transform).SetChildOrder(0);
+            GetEntityManager().Destroy(first);
+            GetInternalWorld()->Refresh();
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            REQUIRE(packets.size() == 4);
+            CHECK(packets.back()["RemovedEntityIds"] == nlohmann::json::array({firstId}));
+            CHECK(packets.back()["Entities"][0]["Id"] == secondId);
+            CHECK(packets.back()["Entities"][0]["ParentId"] == 0);
+
+            editor::selection_utility::Reset(GetInternalWorld());
+            GetInternalWorld()->Refresh();
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            REQUIRE(packets.size() == 5);
+            CHECK(packets.back()["Entities"].empty());
+            CHECK(packets.back()["SelectedEntityIds"].empty());
+
+            GetSceneSyncRelay().RequestSnapshot();
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            REQUIRE(packets.size() == 6);
+            CHECK(packets.back()["IsSnapshot"] == true);
+            CHECK(packets.back()["Entities"].size() == 1);
+            CHECK(packets.back()["RemovedEntityIds"].empty());
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            CHECK(packets.size() == 6);
+            SetSceneSyncCallback(nullptr);
+            GetSceneSyncRelay().Capture(GetInternalWorld());
+            CHECK(packets.size() == 6);
+            ScenePackets = nullptr;
+        });
+        fixture.Stop();
+    });
+}
+
+TEST_CASE("Scene frame stream serves embedded Play and stays silent in standalone Play", "[native][scene-sync][engine-integration][isolated]")
+{
+    Isolated([]
+    {
+        for (const bool embeddedEditor : {false, true})
+        {
+            std::vector<nlohmann::json> packets;
+            NativeEngineFixture fixture(PlayMode, "scene-play", {}, embeddedEditor);
+            fixture.Start();
+            i32 sceneId = 0;
+            fixture.OnEngineThread([&]
+            {
+                ECS_WORLD(GetInternalWorld());
+                ScenePackets = &packets;
+                SetSceneSyncCallback(ReceiveScenePacket);
+                const auto entity = GetEntityManager().CreateNewEntity("selected");
+                sceneId = GET(entity, EntityInfo).Id;
+                editor::selection_utility::Select(GetInternalWorld(), entity);
+            });
+            fixture.WaitForNextFrames();
+            fixture.OnEngineThread([&]
+            {
+                if (embeddedEditor)
+                {
+                    REQUIRE(packets.size() == 1);
+                    CHECK(packets[0]["IsSnapshot"] == true);
+                    CHECK(packets[0]["Entities"][0]["Id"] == sceneId);
+                    CHECK(packets[0]["SelectedEntityIds"] == nlohmann::json::array({sceneId}));
+                }
+                else CHECK(packets.empty());
+                SetSceneSyncCallback(nullptr);
+                ScenePackets = nullptr;
+            });
+            fixture.Stop();
+        }
+    });
+}
+
+TEST_CASE("Scene stream does not publish engine shutdown as scene deletion", "[native][scene-sync][engine-integration][isolated]")
+{
+    Isolated([]
+    {
+        std::vector<nlohmann::json> packets;
+        NativeEngineFixture fixture(EditorMode, "scene-stop");
+        fixture.Start();
+        fixture.OnEngineThread([&]
+        {
+            ScenePackets = &packets;
+            SetSceneSyncCallback(ReceiveScenePacket);
+            GetEntityManager().CreateNewEntity("keep in Editor");
+        });
+        fixture.WaitForNextFrames();
+        fixture.Stop();
+        REQUIRE(packets.size() == 1);
+        CHECK(packets[0]["Entities"].size() == 1);
+    });
+}
+
+TEST_CASE("Selection API applies multi-select and clear", "[native][scene-sync][engine-integration][isolated]")
+{
+    Isolated([]
+    {
+        NativeEngineFixture fixture(EditorMode);
+        fixture.Start();
+        std::vector<i32> ids;
+        fixture.OnEngineThread([&]
+        {
+            ECS_WORLD(GetInternalWorld());
+            for (const auto name : {"first", "second"})
+            {
+                const auto entity = GetEntityManager().CreateNewEntity(name);
+                ids.push_back(GET(entity, EntityInfo).Id);
+            }
+        });
+        const auto request = nlohmann::json{{"EntityIds", ids}}.dump();
+        SetEntitySelection(request.c_str());
+        fixture.OnEngineThread([&]
+        {
+            ECS_WORLD(GetInternalWorld());
+            GetInternalWorld()->Refresh();
+            std::vector<i32> nativeIds;
+            const auto& selected = FILTER(EntityInfo, editor::SelectedTag);
+            FOR(entity, selected) nativeIds.push_back(GET(entity, EntityInfo).Id);
+            std::sort(nativeIds.begin(), nativeIds.end());
+            CHECK(nativeIds == ids);
+        });
+        SetEntitySelection(R"({"EntityIds":[]})");
+        fixture.OnEngineThread([&]
+        {
+            ECS_WORLD(GetInternalWorld());
+            GetInternalWorld()->Refresh();
+            CHECK(FILTER(EntityInfo, editor::SelectedTag)->GetEntitiesCount() == 0);
+        });
+        fixture.Stop();
+    });
+}

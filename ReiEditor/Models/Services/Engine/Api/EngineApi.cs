@@ -84,6 +84,14 @@ public class EngineApi : IEngineApi
 
     public void AddEditorInputCallback(IntPtr callback) => Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddEditorInputCallback", callback);
 
+    public void SetSceneSyncCallback(IEngineApi.SceneSyncCallbackDelegate? callback)
+    {
+        var pointer = callback == null ? IntPtr.Zero : Marshal.GetFunctionPointerForDelegate(callback);
+        Invoke(typeof(IEngineApi.FunctionPointerDelegate), "SetSceneSyncCallback", pointer);
+    }
+
+    public void RequestSceneSync() => Invoke(typeof(IEngineApi.VoidCallbackDelegate), "RequestSceneSync");
+
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 

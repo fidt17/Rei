@@ -28,7 +28,7 @@ namespace rei::internal::engine
         _entityManager(std::make_shared<EntityManager>(_internalWorld->GetWorld())),
         _sceneManager(std::make_shared<scenes::SceneManager>(_assetManager, _entityManager)),
         _editorEventsRelay(std::make_shared<api::EditorEventsRelay>()),
-        _editorSelectionRelay(std::make_shared<api::EditorSelectionRelay>()),
+        _sceneSyncRelay(std::make_shared<api::SceneSyncRelay>()),
         _diagnostics(std::make_shared<common::diagnostics::DiagnosticsService>()),
         _profiler(std::make_shared<profiling::ProfilingService>(mode))
     {
@@ -39,7 +39,7 @@ namespace rei::internal::engine
         Services::GetInstance()->SetEntityManager(_entityManager);
         Services::GetInstance()->SetWindowManager(_windowManager);
         Services::GetInstance()->SetEditorEventsRelay(_editorEventsRelay);
-        Services::GetInstance()->SetEditorSelectionRelay(_editorSelectionRelay);
+        Services::GetInstance()->SetSceneSyncRelay(_sceneSyncRelay);
         Services::GetInstance()->SetDiagnostics(_diagnostics);
         Services::GetInstance()->SetProfiler(_profiler);
         _profiler->Register(profiling::markers::ALL);

@@ -1,6 +1,4 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Api;
@@ -11,8 +9,6 @@ namespace ReiEditor.Models.Services.Entities.Sync;
 
 public class EntitySyncService : IEntitySyncService, IDisposable
 {
-    private CancellationTokenSource? _sceneUpdateTaskCTS;
-
     private readonly IAssetImporter _assetImporter;
     private readonly IEngineRunner _engineRunner;
     private readonly IEntityApi _entityApi;
@@ -20,7 +16,6 @@ public class EntitySyncService : IEntitySyncService, IDisposable
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IEntityStateApplier _entityStateApplier;
     private readonly BehaviourSyncService _behaviourSyncService;
-    private readonly ISceneSyncService _sceneSyncService;
 
     public EntitySyncService(
         IAssetImporter assetImporter,
@@ -29,7 +24,7 @@ public class EntitySyncService : IEntitySyncService, IDisposable
         IEngineRunner engineRunner,
         IBehaviourComponentsService behaviourComponentsService,
         BehaviourSyncService behaviourSyncService,
-        ISceneSyncService sceneSyncService, IEntityStateApplier entityStateApplier)
+        IEntityStateApplier entityStateApplier)
     {
         _assetImporter = assetImporter;
         _entityApi = entityApi;
@@ -37,21 +32,14 @@ public class EntitySyncService : IEntitySyncService, IDisposable
         _engineRunner = engineRunner;
         _behaviourComponentsService = behaviourComponentsService;
         _behaviourSyncService = behaviourSyncService;
-        _sceneSyncService = sceneSyncService;
         _entityStateApplier = entityStateApplier;
 
         _behaviourComponentsService.BehaviourPropertyChangedEvent += _behaviourSyncService.WriteChangedProperty;
-        _engineRunner.IsActive.Subscribe(HandleEngineActiveChanged, invoke: false);
     }
 
     public void Dispose()
     {
-        _sceneUpdateTaskCTS?.Cancel();
-        _sceneUpdateTaskCTS?.Dispose();
-        _sceneUpdateTaskCTS = null;
-
         _behaviourComponentsService.BehaviourPropertyChangedEvent -= _behaviourSyncService.WriteChangedProperty;
-        _engineRunner.IsActive.Unsubscribe(HandleEngineActiveChanged);
     }
 
     public void UpdateEntityState(GameEntity entity)
@@ -69,26 +57,4 @@ public class EntitySyncService : IEntitySyncService, IDisposable
         }
     }
 
-    private void HandleEngineActiveChanged(bool isActive)
-    {
-        if (isActive)
-        {
-            _sceneUpdateTaskCTS?.Cancel();
-            _sceneUpdateTaskCTS = new CancellationTokenSource();
-
-            var token = _sceneUpdateTaskCTS.Token;
-            Task.Run(async () =>
-            {
-                while (_engineRunner.IsActive.Value && !token.IsCancellationRequested)
-                {
-                    await Task.Delay(33, token);
-                    _sceneSyncService.SynchronizeWithEngine();
-                }
-            }, token);
-        }
-        else
-        {
-            _sceneUpdateTaskCTS?.Cancel();
-        }
-    }
 }

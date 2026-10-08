@@ -14,7 +14,7 @@ namespace rei
         _internalWorld.reset();
         _entityManager.reset();
         _editorEventsRelay.reset();
-        _editorSelectionRelay.reset();
+        _sceneSyncRelay.reset();
         _windowManager.reset();
         _assetManager.reset();
         _diagnostics.reset();

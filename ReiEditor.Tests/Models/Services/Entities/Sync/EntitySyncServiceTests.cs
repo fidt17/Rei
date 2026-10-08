@@ -68,11 +68,6 @@ public sealed class EntitySyncServiceTests
         }
     }
 
-    private sealed class TestSceneSyncService : ISceneSyncService
-    {
-        public void SynchronizeWithEngine() => throw new InvalidOperationException("Background sync must not start in these tests");
-    }
-
     /// <summary>
     /// Inactive engine and active asset import each suppress entity-data reads.
     /// </summary>
@@ -181,6 +176,6 @@ public sealed class EntitySyncServiceTests
         components ??= new TestBehaviourComponentsService();
         var importer = new TestAssetImporter(importing);
         var behaviourSync = new BehaviourSyncService(importer, runner, api, new TestLogger<EntitySyncService>(), applier);
-        return new EntitySyncService(importer, api, sceneManagement, runner, components, behaviourSync, new TestSceneSyncService(), applier);
+        return new EntitySyncService(importer, api, sceneManagement, runner, components, behaviourSync, applier);
     }
 }

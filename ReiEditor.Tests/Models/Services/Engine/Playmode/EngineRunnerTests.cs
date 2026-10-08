@@ -5,6 +5,7 @@ using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Input;
+using ReiEditor.Models.Services.Engine.SceneSync;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Models.Services.Windows.Playmode;
@@ -155,6 +156,18 @@ public sealed class EngineRunnerTests
         public void SetViewportSize(int width, int height) => throw new NotSupportedException();
     }
 
+    private sealed class SceneEvents : IEngineSceneSyncEventSource
+    {
+        public event Action<ReiEditor.Models.Services.Engine.Api.DTO.SceneSyncPacket>? Received { add { } remove { } }
+        public event Action? ConnectionReset { add { } remove { } }
+        public void RequestSnapshot() { }
+        public bool IsConnected { get; private set; }
+        public int ConnectCount { get; private set; }
+        public int DisconnectCount { get; private set; }
+        public void Connect() { ConnectCount++; IsConnected = true; }
+        public void Disconnect() { DisconnectCount++; IsConnected = false; }
+    }
+
     private sealed class TestContext : IAsyncDisposable
     {
         private bool _workerExpected;
@@ -167,6 +180,7 @@ public sealed class EngineRunnerTests
         public TestDllManager Dll { get; }
         public TestShutdownListener Shutdown { get; }
         public EngineRunner Runner { get; }
+        public SceneEvents Events { get; } = new();
         public string? FailedStage { get; set; }
         public bool LoadSucceeded { get; set; }
         public string? BlockedCleanupStage { get; set; }
@@ -183,7 +197,7 @@ public sealed class EngineRunnerTests
             Api = new(this);
             Dll = new(this);
             Shutdown = new(this);
-            Runner = new(Api, Logger, new TestEngineLogger(this), new TestEngineInput(this), new TestWindowController(this), Shutdown, Project.Resources, Dll, Procedures);
+            Runner = new(Api, Logger, new TestEngineLogger(this), new TestEngineInput(this), new TestWindowController(this), Shutdown, Project.Resources, Dll, Procedures, sceneEvents: Events);
             Runner.EngineStartedEvent += () => Started.TrySetResult();
             Runner.EngineStartFailedEvent += () => Failed.TrySetResult();
             Procedures.ProcedureFinishedEvent += _ => ProcedureFinished.TrySetResult();
@@ -274,6 +288,8 @@ public sealed class EngineRunnerTests
         await context.AwaitStarted();
 
         Assert.Equal(mode, context.Runner.ActiveMode);
+        Assert.Equal(1, context.Events.ConnectCount);
+        Assert.True(context.Events.IsConnected);
         Assert.True(context.Runner.IsActive.Value);
         Assert.Equal(mode == EngineRunMode.PlayMode, context.Runner.IsPlaymodeActive.Value);
         Assert.Equal(mode == EngineRunMode.EditorMode, context.Runner.IsEditorActive.Value);
@@ -290,6 +306,8 @@ public sealed class EngineRunnerTests
         Assert.False(context.Runner.IsEditorActive.Value);
         Assert.False(context.Dll.Loaded.Value);
         Assert.Equal(new[] { "shutdown", "window-destroy", "destroy", "unload" }, context.Calls.Skip(8));
+        Assert.False(context.Events.IsConnected);
+        Assert.Equal(1, context.Events.DisconnectCount);
     }
 
     /// <summary>A running engine rejects another start without creating a second procedure or engine instance.</summary>

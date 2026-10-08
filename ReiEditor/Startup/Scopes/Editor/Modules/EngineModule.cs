@@ -4,7 +4,7 @@ using ReiEditor.Models.Services.Engine.Profiling;
 using ReiEditor.Models.Services.Engine.Capture;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Input;
-using ReiEditor.Models.Services.Engine.Selection;
+using ReiEditor.Models.Services.Engine.SceneSync;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Utils.Extensions;
@@ -17,7 +17,7 @@ public class EngineModule : Module
     {
         builder.RegisterSingleton<ClientDllManager>().As<IClientDllManager>();
         builder.RegisterSingleton<EngineApi>().As<IEngineApi>();
-        builder.RegisterSingleton<EngineSelectionEventSource>().As<IEngineSelectionEventSource>();
+        builder.RegisterSingleton<EngineSceneSyncEventSource>().As<IEngineSceneSyncEventSource>();
         builder.RegisterSingleton<EngineFrameCaptureService>().As<IEngineFrameCaptureService>();
         builder.RegisterSingleton<EntityApi>().As<IEntityApi>();
         builder.RegisterSingleton<AssetApi>().As<IAssetApi>();

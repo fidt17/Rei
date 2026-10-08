@@ -9,7 +9,7 @@ using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Input;
-using ReiEditor.Models.Services.Engine.Selection;
+using ReiEditor.Models.Services.Engine.SceneSync;
 using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Windows.Playmode;
@@ -54,7 +54,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
     private readonly IClientDllManager _clientDllManager;
     private readonly IEditorProceduresService _editorProceduresService;
 
-    private readonly IEngineSelectionEventSource? _selectionEvents;
+    private readonly IEngineSceneSyncEventSource? _sceneEvents;
     private readonly IActiveProjectService? _activeProject;
 
     private Procedure? _startProcedure;
@@ -70,7 +70,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         IClientDllManager clientDllManager,
         IEditorProceduresService editorProceduresService,
         IActiveProjectService? activeProject = null,
-        IEngineSelectionEventSource? selectionEvents = null)
+        IEngineSceneSyncEventSource? sceneEvents = null)
     {
         _engineApi = engineApi;
         _logger = logger;
@@ -82,7 +82,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         _clientDllManager = clientDllManager;
         _editorProceduresService = editorProceduresService;
         _activeProject = activeProject;
-        _selectionEvents = selectionEvents;
+        _sceneEvents = sceneEvents;
 
         _startCallbackDelegate = HandleEngineStartedEvent;
     }
@@ -134,7 +134,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             _engineLogger.SubscribeToClient();
             _engineInputService.SubscribeToClient();
             _shutdownListener.SubscribeToClient();
-            if (mode == EngineRunMode.EditorMode) _selectionEvents?.Connect();
+            _sceneEvents?.Connect();
             _engineWindowController.SetupWindow();
             _engineApi.Start(enginePtr);
         }
@@ -153,7 +153,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             lock (_nativeCallLock)
             {
                 // Start has returned: unsubscribe before destruction and project DLL unload.
-                try { _selectionEvents?.Disconnect(); }
+                try { _sceneEvents?.Disconnect(); }
                 catch (Exception e) { _logger.LogException(e); }
                 try
                 {
