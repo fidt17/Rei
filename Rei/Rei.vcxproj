@@ -583,6 +583,7 @@
     <ClInclude Include="resources\rei_behaviours\ui\Text.h" />
     <ClInclude Include="src\Common\Transform\RectTransformUtility.h" />
     <ClInclude Include="src\Api\EditorEventsRelay.h" />
+    <ClInclude Include="src\Api\EditorSelectionRelay.h" />
     <ClInclude Include="src\Api\EntityApi.h" />
     <ClInclude Include="src\Common\Assert.h" />
     <ClInclude Include="src\Common\Diagnostics\DiagnosticsService.h" />
@@ -798,6 +799,7 @@
     <ClCompile Include="resources\rei_behaviours\ui\Text.cpp" />
     <ClCompile Include="src\Common\Transform\RectTransformUtility.cpp" />
     <ClCompile Include="src\Api\EditorEventsRelay.cpp" />
+    <ClCompile Include="src\Api\EditorSelectionRelay.cpp" />
     <ClCompile Include="src\Common\Diagnostics\DiagnosticsService.cpp" />
     <ClCompile Include="src\Common\Diagnostics\Systems\DiagnosticsRunnerSystem.cpp" />
     <ClCompile Include="src\Common\Math\math.cpp" />

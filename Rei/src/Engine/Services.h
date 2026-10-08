@@ -24,6 +24,7 @@ namespace rei
     namespace api
     {
         class EditorEventsRelay;
+        class EditorSelectionRelay;
     }
 
     class EntityManager;
@@ -60,6 +61,8 @@ namespace rei
 
         void SetEditorEventsRelay(const std::shared_ptr<api::EditorEventsRelay>& relay) { _editorEventsRelay = relay; }
         REI_API api::EditorEventsRelay& GetEditorEventsRelay() const { return *_editorEventsRelay; }
+        void SetEditorSelectionRelay(const std::shared_ptr<api::EditorSelectionRelay>& relay) { _editorSelectionRelay = relay; }
+        REI_API api::EditorSelectionRelay& GetEditorSelectionRelay() const { return *_editorSelectionRelay; }
 
         void SetProfiler(const std::shared_ptr<profiling::ProfilingService>& profiler) { _profiler = profiler; }
         REI_API profiling::ProfilingService& GetProfiler() const { return *_profiler; }
@@ -84,6 +87,7 @@ namespace rei
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<window::WindowManager> _windowManager;
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
+        std::shared_ptr<api::EditorSelectionRelay> _editorSelectionRelay;
         std::shared_ptr<common::diagnostics::DiagnosticsService> _diagnostics;
         std::shared_ptr<profiling::ProfilingService> _profiler;
         std::shared_ptr<render::Gizmos> _gizmos;
@@ -96,6 +100,7 @@ namespace rei
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline window::WindowManager& GetWindowManager() { return Services::GetInstance()->GetWindowManager(); }
     inline api::EditorEventsRelay& GetEditorEventsRelay() { return Services::GetInstance()->GetEditorEventsRelay(); }
+    inline api::EditorSelectionRelay& GetEditorSelectionRelay() { return Services::GetInstance()->GetEditorSelectionRelay(); }
     inline profiling::ProfilingService& GetProfiler() { return Services::GetInstance()->GetProfiler(); }
     inline common::diagnostics::DiagnosticsService& GetDiagnostics() { return Services::GetInstance()->GetDiagnostics(); }
     inline render::Gizmos& GetGizmos() { return Services::GetInstance()->GetGizmos(); }

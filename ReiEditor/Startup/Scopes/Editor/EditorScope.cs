@@ -65,6 +65,7 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterSingleton<McpEditorOperationCoordinator>().As<IMcpEditorOperationCoordinator>();
         b.RegisterSingleton<McpEditorAutomationService>().As<IMcpEditorAutomationService>();
 
+        b.RegisterSingleton<McpEntitySelectionService>().As<IMcpEntitySelectionService>();
         b.RegisterSingleton<McpEditorSessionRegistration>();
         b.RegisterBuildCallback(scope => scope.Resolve<McpEditorSessionRegistration>());
 		

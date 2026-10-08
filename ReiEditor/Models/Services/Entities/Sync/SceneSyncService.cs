@@ -22,6 +22,7 @@ public class SceneSyncService : ISceneSyncService
     private readonly ILogger<EntitySyncService> _logger;
     private readonly EngineSelectionSyncService _selectionSyncService;
     private readonly IEntityStateApplier _entityStateApplier;
+    private readonly IEngineSelectionEventSyncService? _selectionEvents;
     private readonly Stopwatch _stateSyncStopwatch = Stopwatch.StartNew();
 
     public SceneSyncService(
@@ -31,7 +32,8 @@ public class SceneSyncService : ISceneSyncService
         ISceneManagementService sceneManagement,
         ILogger<EntitySyncService> logger,
         EngineSelectionSyncService selectionSyncService,
-        IEntityStateApplier entityStateApplier)
+        IEntityStateApplier entityStateApplier,
+        IEngineSelectionEventSyncService? selectionEvents = null)
     {
         _assetImporter = assetImporter;
         _engineRunner = engineRunner;
@@ -40,6 +42,7 @@ public class SceneSyncService : ISceneSyncService
         _logger = logger;
         _selectionSyncService = selectionSyncService;
         _entityStateApplier = entityStateApplier;
+        _selectionEvents = selectionEvents;
     }
 
     public void SynchronizeWithEngine()
@@ -49,7 +52,8 @@ public class SceneSyncService : ISceneSyncService
             if (!_engineRunner.IsActive.Value) return;
             if (_assetImporter.IsImporting.Value) return;
 
-            var selectionBeforeSync = _selectionSyncService.CaptureEditorSelectedEntityIds();
+            var useEvents = _selectionEvents?.IsEnabled == true;
+            var selectionBeforeSync = useEvents ? new HashSet<int>() : _selectionSyncService.CaptureEditorSelectedEntityIds();
             var entities = _entityApi.GetSceneEntities();
             if (entities == null) return;
 
@@ -57,7 +61,7 @@ public class SceneSyncService : ISceneSyncService
             if (scene == null) throw new Exception("Current scene is missing");
 
             var currentSceneEntities = scene.Entities.ToList();
-            var didUpdateSelection = _selectionSyncService.TryApplySelectionSnapshot(currentSceneEntities, entities, selectionBeforeSync);
+            var didUpdateSelection = !useEvents && _selectionSyncService.TryApplySelectionSnapshot(currentSceneEntities, entities, selectionBeforeSync);
             var entitySetChanged = HasEntitySetChanged(currentSceneEntities, entities);
             if (!entitySetChanged && _stateSyncStopwatch.ElapsedMilliseconds < ENTITY_STATE_SYNC_INTERVAL_MS) return;
 
@@ -72,7 +76,7 @@ public class SceneSyncService : ISceneSyncService
                 scene.RebuildHierarchy();
             }
 
-            if (!didUpdateSelection && selectionBeforeSync.SetEquals(_selectionSyncService.CaptureEditorSelectedEntityIds()))
+            if (!useEvents && !didUpdateSelection && selectionBeforeSync.SetEquals(_selectionSyncService.CaptureEditorSelectedEntityIds()))
             {
                 _selectionSyncService.ApplySelection(scene.Entities.ToList(), selectedEntityIds);
             }

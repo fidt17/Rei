@@ -13,6 +13,7 @@ public interface IEngineApi
     delegate void FunctionPointerDelegate(IntPtr ptr);
     delegate void IntPtrCallbackDelegate(IntPtr ptr);
     delegate void IntCallbackDelegate(int value);
+    delegate void SelectionCallbackDelegate(IntPtr json, int byteCount);
     delegate void FrameCaptureCallbackDelegate(IntPtr pixels, int width, int height);
 	
     bool IsEngineRunning { get; }
