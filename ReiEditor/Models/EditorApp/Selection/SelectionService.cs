@@ -216,11 +216,7 @@ public class SelectionService : ISelectionService
 
     private void PublishSelectionChanged(ISelectable? primarySelection)
     {
-        var entityId = (primarySelection as IEntitySelectable)?.Entity.Id ?? 0;
-        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Selection.ActiveObservers", entityId))
-            _activeSelection.Value = primarySelection;
-        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Selection.HighlightObservers", entityId))
-            _selectionChanged.SetAndInvoke(_selectedItems.ToArray());
-        ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Mark("Selection.Published", entityId);
+        _activeSelection.Value = primarySelection;
+        _selectionChanged.SetAndInvoke(_selectedItems.ToArray());
     }
 }

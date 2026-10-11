@@ -132,7 +132,6 @@ public class EntityManagementService : IEntityManagementService
 
     public void SetParent(GameEntity e, GameEntity? parent, int idx)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Command.SetParent", e.Id);
         if (e == parent) return;
         
         if (!_engineRunner.IsActive.Value) return;
@@ -275,7 +274,7 @@ public class EntityManagementService : IEntityManagementService
             _entitySyncService.UpdateEntityState(gameEntity);
         }
 
-        scene.RebuildHierarchy();
+        scene.SynchronizeHierarchy();
     }
 
     public void DestroyEntity(GameEntity e)
@@ -311,7 +310,7 @@ public class EntityManagementService : IEntityManagementService
 
         gameEntity = AddSyncedEntity(scene, entityId, state);
         _entitySyncService.UpdateEntityState(gameEntity);
-        scene.RebuildHierarchy();
+        scene.SynchronizeHierarchy();
         return gameEntity;
     }
 

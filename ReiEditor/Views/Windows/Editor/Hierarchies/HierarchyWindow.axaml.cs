@@ -20,18 +20,6 @@ public partial class HierarchyWindow : UserControl
         DataContextChanged += HandleDataContextChangedEvent;
     }
 
-    protected override Avalonia.Size MeasureOverride(Avalonia.Size availableSize)
-    {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.Measure");
-        return base.MeasureOverride(availableSize);
-    }
-
-    protected override Avalonia.Size ArrangeOverride(Avalonia.Size finalSize)
-    {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.Arrange");
-        return base.ArrangeOverride(finalSize);
-    }
-
     protected override void OnUnloaded(RoutedEventArgs e)
     {
         base.OnUnloaded(e);

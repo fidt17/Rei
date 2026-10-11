@@ -35,7 +35,6 @@ public class HierarchyNodeCollectionController
 
     public void SetHierarchy(Hierarchy<GameEntity> hierarchy, IReadOnlySet<int> expandedEntityIds)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.BuildVM");
         Reset();
 
         _activeHierarchy = hierarchy;
@@ -83,11 +82,8 @@ public class HierarchyNodeCollectionController
 
     private void Reset()
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.DisposeVM", count: _nodeMap.Count);
-        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.DisposeNodes", count: _nodeMap.Count))
-            foreach (var node in Nodes.ToArray()) DisposeNodeSubtree(node);
-        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.ClearRootItems", count: Nodes.Count))
-            Nodes.Clear();
+        foreach (var node in Nodes.ToArray()) DisposeNodeSubtree(node);
+        Nodes.Clear();
         _nodeMap.Clear();
 
         if (_activeHierarchy != null)
@@ -140,32 +136,17 @@ public class HierarchyNodeCollectionController
     {
         if (!_nodeMap.TryGetValue(node, out var nodeVm)) return;
 
-        if (node.Parent == oldParent && oldOrder < newOrder)
+        var oldSiblings = oldParent == null ? Nodes : _nodeMap[oldParent].ChildNodes;
+        var newSiblings = node.Parent == null ? Nodes : _nodeMap[node.Parent].ChildNodes;
+        var index = _activeHierarchy!.GetNodeOrder(node);
+        if (ReferenceEquals(oldSiblings, newSiblings))
         {
-            newOrder -= 1;
-        }
-
-        if (oldParent == null)
-        {
-            Nodes.Remove(nodeVm);
-        }
-        else if (_nodeMap.TryGetValue(oldParent, out var oldParentNode))
-        {
-            oldParentNode.ChildNodes.Remove(nodeVm);
-        }
-
-        if (node.Parent == null)
-        {
-            var insertIndex = Math.Clamp(newOrder, 0, Nodes.Count);
-            Nodes.Insert(insertIndex, nodeVm);
+            oldSiblings.Move(oldSiblings.IndexOf(nodeVm), index);
             return;
         }
 
-        if (_nodeMap.TryGetValue(node.Parent, out var newParentNode))
-        {
-            var insertIndex = Math.Clamp(newOrder, 0, newParentNode.ChildNodes.Count);
-            newParentNode.ChildNodes.Insert(insertIndex, nodeVm);
-        }
+        oldSiblings.Remove(nodeVm);
+        newSiblings.Insert(index, nodeVm);
     }
 
     private void DisposeNodeSubtree(HierarchyNodeViewModel node)

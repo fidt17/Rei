@@ -4,7 +4,7 @@ using ReiEditor.Models.EditorApp.Selection;
 
 namespace ReiEditor.Models.Services.Entities.Sync;
 
-public class EngineSelectionSyncService
+public sealed class EngineSelectionSyncService : IEngineSelectionSyncService
 {
     private readonly ISelectionService _selectionService;
 
@@ -13,9 +13,8 @@ public class EngineSelectionSyncService
         _selectionService = selectionService;
     }
 
-    public void ApplySelection(IReadOnlyCollection<GameEntity> entities, IReadOnlySet<int> selectedEntityIds)
+    public void ApplySelection(IEnumerable<GameEntity> entities, IReadOnlySet<int> selectedEntityIds)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Selection.ApplyNative", count: selectedEntityIds.Count);
         var selectedItems = entities
             .Where(entity => selectedEntityIds.Contains(entity.Id))
             .Select(entity => _selectionService.GetEntitySelectable(entity))

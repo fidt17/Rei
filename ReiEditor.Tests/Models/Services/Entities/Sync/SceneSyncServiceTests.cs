@@ -58,16 +58,19 @@ public sealed class SceneSyncServiceTests
     {
         _selection = new SelectionService(_api);
         _scenes.Scene.Value = _scene;
-        // Reproduce hierarchy rebuilding its selectable view models synchronously.
-        _scene.HierarchyRebuiltEvent += () =>
+        _scene.Hierarchy.NodeAddedEvent += node =>
         {
-            foreach (var selectable in _registered) _selection.UnregisterSelectable(selectable);
-            _registered.Clear();
-            foreach (var entity in _scene.Entities)
+            var selectable = new Selectable(node.Content);
+            _registered.Add(selectable);
+            _selection.RegisterSelectable(selectable);
+        };
+        _scene.Hierarchy.NodeRemovedEvent += node =>
+        {
+            var removed = new[] { node }.Concat(_scene.Hierarchy.GetAllChildNodes(node)).Select(item => item.Content).ToHashSet();
+            foreach (var selectable in _registered.OfType<IEntitySelectable>().Where(item => removed.Contains(item.Entity)).ToArray())
             {
-                var selectable = new Selectable(entity);
-                _registered.Add(selectable);
-                _selection.RegisterSelectable(selectable);
+                _selection.UnregisterSelectable(selectable);
+                _registered.Remove(selectable);
             }
         };
     }
@@ -88,7 +91,7 @@ public sealed class SceneSyncServiceTests
     }
 
     [AvaloniaFact]
-    public void ChangedMetadataPreservesBehaviourDataAndRestoresSelectionAfterRebuild()
+    public void ChangedMetadataPreservesBehaviourDataAndSelection()
     {
         using var service = Create();
         _source.Send(Packet(true, new[] { State(1), State(2), State(3) }, selected: new[] { 2 }));
@@ -141,7 +144,7 @@ public sealed class SceneSyncServiceTests
         Assert.Equal(1, transform.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value);
 
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(1, rebuilds);
+        Assert.Equal(0, rebuilds);
         Assert.Same(_scene.GetById(1), _scene.Hierarchy.GetNode(entity)!.Parent!.Content);
         Assert.Equal(new[] { 2 }, Selected());
         Assert.Same(transform, entity.GetBehaviour(1));
@@ -152,7 +155,7 @@ public sealed class SceneSyncServiceTests
         Assert.Equal("renamed", entity.Name);
         Assert.Equal(1, entity.Transform.Parent);
         Assert.Equal(3, entity.Transform.Order);
-        Assert.Equal(1, rebuilds);
+        Assert.Equal(0, rebuilds);
         Assert.Same(_scene.GetById(1), _scene.Hierarchy.GetNode(entity)!.Parent!.Content);
         Assert.Equal(new[] { 2 }, Selected());
         Assert.Empty(_api.Selections);

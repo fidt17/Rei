@@ -40,7 +40,6 @@ public class EntitySyncService : IEntitySyncService, IDisposable
 
     public void UpdateEntityState(GameEntity entity)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Entity.Sync", entity.Id);
         if (!_engineRunner.IsActive.Value) return;
         if (_assetImporter.IsImporting.Value) return;
 

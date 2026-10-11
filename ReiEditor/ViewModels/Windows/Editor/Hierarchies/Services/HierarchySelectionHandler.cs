@@ -28,7 +28,6 @@ public class HierarchySelectionHandler
 
     public void HandleSelectionChanged(IReadOnlyCollection<ISelectable> selection)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.Highlight", count: selection.Count);
         var selectedEntities = selection
             .OfType<IEntitySelectable>()
             .Select(selectable => selectable.Entity.Id)

@@ -159,7 +159,23 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
         await engine.WaitUntilAsync(async () =>
         {
             var editor = await engine.CallAsync("rei_editor_list_entities");
-            var actual = editor.GetProperty("entities").EnumerateArray().Select(entity => new EntityState(
+            var rows = editor.GetProperty("entities").EnumerateArray().ToArray();
+            // Validate the actual tree traversal too; Transform metadata alone can hide stale nodes.
+            var ancestors = new List<int>();
+            var lastOrderByParent = new Dictionary<int, int>();
+            foreach (var row in rows)
+            {
+                var depth = row.GetProperty("depth").GetInt32();
+                if (depth < 0 || depth > ancestors.Count) return false;
+                ancestors.RemoveRange(depth, ancestors.Count - depth);
+                var parent = depth == 0 ? 0 : ancestors[depth - 1];
+                if (row.GetProperty("parentId").GetInt32() != parent) return false;
+                var order = row.GetProperty("order").GetInt32();
+                if (lastOrderByParent.TryGetValue(parent, out var previousOrder) && previousOrder > order) return false;
+                lastOrderByParent[parent] = order;
+                ancestors.Add(row.GetProperty("id").GetInt32());
+            }
+            var actual = rows.Select(entity => new EntityState(
                 entity.GetProperty("id").GetInt32(), entity.GetProperty("name").GetString()!,
                 entity.GetProperty("parentId").GetInt32(), entity.GetProperty("order").GetInt32())).OrderBy(entity => entity.Id).ToArray();
             return expected.SequenceEqual(actual);
@@ -205,7 +221,6 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
 #include "Startup/AppEntryPoint.h"
 #include "Modules/Editor/EntitySelectionUtility.h"
 #include <fstream>
-#include <Windows.h>
 
 class SceneSyncProbe final
 {
@@ -286,9 +301,7 @@ public:
             entities.push_back({{"Id", info.Id}, {"Name", info.Name}, {"ParentId", parentId}, {"Order", transform.GetChildOrder()}});
             if (HAS(entity, rei::editor::SelectedTag)) selected.push_back(info.Id);
         }
-        LARGE_INTEGER ticks;
-        QueryPerformanceCounter(&ticks);
-        const nlohmann::json packet = {{"Step", _step}, {"Entities", entities}, {"SelectedIds", selected}, {"Ticks", ticks.QuadPart}};
+        const nlohmann::json packet = {{"Step", _step}, {"Entities", entities}, {"SelectedIds", selected}};
         std::ofstream file(R"(__STATE_PATH__)");
         file << packet.dump();
         LOG("SceneSyncProbe step={} entities={} selected={}", _step, entities.size(), selected.size());

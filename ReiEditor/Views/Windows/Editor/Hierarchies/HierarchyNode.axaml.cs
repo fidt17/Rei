@@ -19,7 +19,6 @@ public partial class HierarchyNode : UserControl
 
     public HierarchyNode()
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.CreateControl");
         InitializeComponent();
 
         RootBorder.AddHandler(PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -28,16 +27,10 @@ public partial class HierarchyNode : UserControl
         ConfigureDragAndDrop();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override void OnLoaded(RoutedEventArgs e)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.MeasureNode", _vm?.Node?.Content.Id ?? 0);
-        return base.MeasureOverride(availableSize);
-    }
-
-    protected override Size ArrangeOverride(Size finalSize)
-    {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.ArrangeNode", _vm?.Node?.Content.Id ?? 0);
-        return base.ArrangeOverride(finalSize);
+        base.OnLoaded(e);
+        HandleDataContextChangedEvent(this, EventArgs.Empty);
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -56,8 +49,8 @@ public partial class HierarchyNode : UserControl
     private void HandleDataContextChangedEvent(object? sender, EventArgs e)
     {
         UnsubscribeFromVm();
-        if (DataContext is not HierarchyNodeViewModel vm) return;
-        _vm = vm;
+        _vm = DataContext as HierarchyNodeViewModel;
+        if (_vm == null) return;
 
         _vm.StartRenameCommand.ExecutedEvent += EnableNameTextBox;
         _vm.ContextMenu.AnyCommandExecutedEvent += HandleAnyContextMenuCommandExecuted;

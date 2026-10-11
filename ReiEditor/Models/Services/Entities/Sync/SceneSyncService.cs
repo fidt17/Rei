@@ -17,12 +17,12 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
     private readonly Queue<SceneSyncPacket> _packets = new();
     private readonly IEngineSceneSyncEventSource _source;
     private readonly ISceneManagementService _scenes;
-    private readonly EngineSelectionSyncService _selection;
+    private readonly IEngineSelectionSyncService _selection;
     private readonly ILogger<SceneSyncService> _logger;
     private bool _scheduled;
     private bool _disposed;
 
-    public SceneSyncService(IEngineSceneSyncEventSource source, ISceneManagementService scenes, EngineSelectionSyncService selection, ILogger<SceneSyncService> logger)
+    public SceneSyncService(IEngineSceneSyncEventSource source, ISceneManagementService scenes, IEngineSelectionSyncService selection, ILogger<SceneSyncService> logger)
     {
         _source = source;
         _scenes = scenes;
@@ -45,7 +45,6 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     private void Receive(SceneSyncPacket packet)
     {
-        ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Mark("SceneSync.Enqueue", packet.SelectedEntityIds.FirstOrDefault(), packet.Entities.Length);
         lock (_gate)
         {
             if (_disposed) return;
@@ -77,7 +76,6 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             {
                 if (_disposed || scene == null || !_packets.TryDequeue(out packet!)) break;
             }
-            ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Mark("SceneSync.Dequeue", packet.SelectedEntityIds.FirstOrDefault(), packet.Entities.Length);
             try { Apply(scene, packet); }
             catch (Exception error) { _logger.LogException(error); }
         }
@@ -92,21 +90,19 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     private void Apply(Scene scene, SceneSyncPacket packet)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("SceneSync.Apply", count: packet.Entities.Length);
         var removedIds = packet.IsSnapshot
             ? scene.Entities.Select(entity => entity.Id).Except(packet.Entities.Select(entity => entity.Id)).ToHashSet()
             : packet.RemovedEntityIds.ToHashSet();
         var hierarchyChanged = false;
         foreach (var state in packet.Entities)
         {
-            if (scene.GetById(state.Id) != null) continue;
-            scene.AddEntity(new GameEntity(state.Id, state.Name));
-            hierarchyChanged = true;
-        }
-
-        foreach (var state in packet.Entities)
-        {
-            var entity = scene.GetById(state.Id)!;
+            var entity = scene.GetById(state.Id);
+            if (entity == null)
+            {
+                entity = new GameEntity(state.Id, state.Name);
+                scene.AddEntity(entity);
+                hierarchyChanged = true;
+            }
             entity.SetName(state.Name);
             hierarchyChanged |= entity.Transform.Parent != state.ParentId || entity.Transform.Order != state.Order;
             entity.Transform.SetParent(state.ParentId);
@@ -114,12 +110,15 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
         }
 
         // Scene.DeleteEntity removes a subtree. Detach children that survived in the engine first.
-        foreach (var entity in scene.Entities.ToList())
+        if (removedIds.Count > 0)
         {
-            if (removedIds.Contains(entity.Id)) continue;
-            var node = scene.Hierarchy.GetNode(entity);
-            if (node?.Parent != null && removedIds.Contains(node.Parent.Content.Id))
-                scene.Hierarchy.MoveNode(node, null, int.MaxValue);
+            foreach (var entity in scene.Entities)
+            {
+                if (removedIds.Contains(entity.Id)) continue;
+                var node = scene.Hierarchy.GetNode(entity);
+                if (node?.Parent != null && removedIds.Contains(node.Parent.Content.Id))
+                    scene.Hierarchy.MoveNode(node, null, int.MaxValue);
+            }
         }
         foreach (var id in removedIds)
         {
@@ -129,7 +128,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             hierarchyChanged = true;
         }
 
-        if (hierarchyChanged) scene.RebuildHierarchy();
-        _selection.ApplySelection(scene.Entities.ToList(), packet.SelectedEntityIds.ToHashSet());
+        if (hierarchyChanged) scene.SynchronizeHierarchy();
+        _selection.ApplySelection(scene.Entities, packet.SelectedEntityIds.ToHashSet());
     }
 }

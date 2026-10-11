@@ -46,9 +46,7 @@
                     <ItemsControl
                         ItemsSource="{Binding Nodes}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="hierarchies:HierarchyNodeViewModel">
-                                <hierarchies1:HierarchyNode />
-                            </DataTemplate>
+                            <hierarchies1:HierarchyNodeTemplate />
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>

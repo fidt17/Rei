@@ -101,7 +101,6 @@ public class MonitorWindowViewModel : BaseViewModel
 
     private void UpdateDrawer(ISelectable? obj)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Monitor.UpdateDrawer", (obj as IEntitySelectable)?.Entity.Id ?? 0);
         _entityUpdateStateCTS?.Cancel();
 
         if (Drawer != null)
@@ -110,22 +109,18 @@ public class MonitorWindowViewModel : BaseViewModel
             Drawer = null;
         }
 
-        GameEntity? entityToSync;
-        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Monitor.CreateDrawer", (obj as IEntitySelectable)?.Entity.Id ?? 0))
-        {
-            Drawer = MonitorDrawerUtils.CreateDrawer(
-                obj,
-                _entityMonitorFactory,
-                _dataAssetMonitorFactory,
-                _assetsService,
-                _assetSearchService,
-                _shaderRegistry,
-                _assetRegistry,
-                _assetTypeMapper,
-                _assetRuntimeSyncService,
-                _projectAssetFocusService,
-                out entityToSync);
-        }
+        Drawer = MonitorDrawerUtils.CreateDrawer(
+            obj,
+            _entityMonitorFactory,
+            _dataAssetMonitorFactory,
+            _assetsService,
+            _assetSearchService,
+            _shaderRegistry,
+            _assetRegistry,
+            _assetTypeMapper,
+            _assetRuntimeSyncService,
+            _projectAssetFocusService,
+            out var entityToSync);
 
         if (entityToSync != null)
         {

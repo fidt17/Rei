@@ -31,7 +31,7 @@ public class SceneModule : Module
         b.RegisterSingleton<SelectedEntityInputService>();
         b.RegisterSingleton<EntityStateApplier>().As<IEntityStateApplier>();
         b.RegisterSingleton<BehaviourSyncService>();
-        b.RegisterSingleton<EngineSelectionSyncService>();
+        b.RegisterSingleton<EngineSelectionSyncService>().As<IEngineSelectionSyncService>();
         b.RegisterSingleton<SceneSyncService>().As<ISceneSyncService>().AutoActivate();
         b.RegisterSingleton<EntitySyncService>().As<IEntitySyncService>();
         b.RegisterType<EntityRenameCommand>().As<IEntityRenameCommand>();

@@ -32,7 +32,6 @@ public class EntityStateApplier : IEntityStateApplier
 
     public void Apply(GameEntity entity, GetEntityDataResponse state)
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Entity.Apply", entity.Id);
         IsApplyingEngineState = true;
         try
         {

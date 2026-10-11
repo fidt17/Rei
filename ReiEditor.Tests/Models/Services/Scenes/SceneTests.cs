@@ -242,6 +242,24 @@ public sealed class SceneTests
     /// <summary>
     /// Adds entity to scene and returns it.
     /// </summary>
+    [Fact]
+    public void RebuildAndIncrementalUpdateUseSameOrderWhenSiblingOrdersMatch()
+    {
+        var scene = new Scene("Scene");
+        foreach (var id in new[] { 6, 4, 5, 2, 3, 1 })
+            scene.AddEntity(new GameEntity(id, $"Entity {id}"));
+        foreach (var entity in scene.Entities)
+            SetTransform(entity, parentId: entity.Id > 3 ? 1 : 0, order: 0);
+
+        scene.SynchronizeHierarchy();
+        Assert.Equal(new[] { 1, 2, 3 }, scene.Hierarchy.RootNodes.Select(node => node.Content.Id));
+        Assert.Equal(new[] { 4, 5, 6 }, scene.Hierarchy.GetNode(scene.GetById(1)!)!.ChildNodes.Select(node => node.Content.Id));
+
+        scene.RebuildHierarchy();
+        Assert.Equal(new[] { 1, 2, 3 }, scene.Hierarchy.RootNodes.Select(node => node.Content.Id));
+        Assert.Equal(new[] { 4, 5, 6 }, scene.Hierarchy.GetNode(scene.GetById(1)!)!.ChildNodes.Select(node => node.Content.Id));
+    }
+
     private static GameEntity AddEntity(Scene scene, int id, string name)
     {
         var entity = new GameEntity(id, name);

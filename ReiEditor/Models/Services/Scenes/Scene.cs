@@ -40,6 +40,37 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
         CreateHierarchy();
     }
 
+    public void SynchronizeHierarchy()
+    {
+        var entityById = NormalizeParents();
+
+        var changedParents = _entities.Select(entity => Hierarchy.GetNode(entity)!)
+            .Where(node => (node.Parent?.Content.Id ?? 0) != node.Content.Transform.Parent).ToArray();
+        // Break old ancestry before attaching new parents, including parent/child swaps in one packet.
+        foreach (var node in changedParents)
+            if (node.Parent != null) Hierarchy.MoveNode(node, null, int.MaxValue);
+        foreach (var node in changedParents)
+        {
+            var parentId = node.Content.Transform.Parent;
+            if (parentId != 0) Hierarchy.MoveNode(node, Hierarchy.GetNode(entityById[parentId]), int.MaxValue);
+        }
+
+        ReorderSiblings(null, Hierarchy.RootNodes);
+        foreach (var entity in _entities)
+        {
+            var node = Hierarchy.GetNode(entity)!;
+            ReorderSiblings(node, node.ChildNodes);
+        }
+    }
+
+    private void ReorderSiblings(HierarchyNode<GameEntity>? parent, IEnumerable<HierarchyNode<GameEntity>> siblings)
+    {
+        var ordered = siblings.ToArray();
+        Array.Sort(ordered, CompareHierarchyNodes);
+        for (var index = 0; index < ordered.Length; index++)
+            if (Hierarchy.GetNodeOrder(ordered[index]) != index) Hierarchy.MoveNode(ordered[index], parent, index);
+    }
+
     public int AllocateEntityId() => _entities.Count == 0 ? 1 : _entities.Max(x => x.Id) + 1;
 
     public GameEntity? GetById(int id) => _entities.Find(x => x.Id == id);
@@ -53,17 +84,9 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
         RefreshEntityTransform(entity);
     }
 
-    public void DeleteEntity(GameEntity entity)
-    {
-        DeleteEntityInternal(entity, refreshTransforms: true);
-    }
+    public void DeleteEntity(GameEntity entity) => DeleteEntity(entity, refreshTransforms: true);
 
     public void DeleteEntity(GameEntity entity, bool refreshTransforms)
-    {
-        DeleteEntityInternal(entity, refreshTransforms);
-    }
-
-    private void DeleteEntityInternal(GameEntity entity, bool refreshTransforms)
     {
         _entities.Remove(entity);
         
@@ -143,17 +166,8 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
 
     private void CreateHierarchy()
     {
-        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.BuildModel", count: _entities.Count);
         Hierarchy = new Hierarchy<GameEntity>(Name);
-        var entityById = _entities.ToDictionary(x => x.Id);
-
-        foreach (var entity in _entities)
-        {
-            if (!entity.Transform.HasParent()) continue;
-            if (!HasInvalidParentLink(entity, entityById)) continue;
-
-            entity.Transform.SetParent(0);
-        }
+        var entityById = NormalizeParents();
         
         foreach (var e in _entities)
         {
@@ -161,38 +175,20 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
             Hierarchy.AddNode(node, !e.Transform.HasParent());
         }
         
-        foreach (var e in _entities)
+        foreach (var entity in _entities)
         {
-            var node = Hierarchy.GetNode(e);
-            if (node == null) throw new Exception($"Missing node for {e}");
+            if (!entity.Transform.HasParent()) continue;
+            var node = Hierarchy.GetNode(entity)!;
+            var parent = Hierarchy.GetNode(entityById[entity.Transform.Parent])!;
+            node.SetParent(parent);
+            parent.PushChild(node);
+        }
 
-            if (e.Transform.HasParent())
-            {
-                if (!entityById.TryGetValue(e.Transform.Parent, out var parent))
-                {
-                    e.Transform.SetParent(0);
-                    continue;
-                }
-                
-                var parentNode = Hierarchy.GetNode(parent);
-                if (parentNode == null) throw new Exception($"Missing parent node for {parent}");
-                
-                node.SetParent(parentNode);
-                parentNode.PushChild(node);
-            }
-        }
+        foreach (var entity in _entities)
+            Hierarchy.GetNode(entity)!.SortChildren(CompareHierarchyNodes);
         
-        foreach (var e in _entities)
-        {
-            var node = Hierarchy.GetNode(e);
-            if (node == null) throw new Exception($"Missing node for {e}");
-            
-            node.SortChildren((a, b) => a.Content.Transform.Order.CompareTo(b.Content.Transform.Order));
-        }
-        
-        Hierarchy.SortRootNodes((a, b) => a.Content.Transform.Order.CompareTo(b.Content.Transform.Order));
-        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.NotifyViews", count: _entities.Count))
-            HierarchyRebuiltEvent?.Invoke();
+        Hierarchy.SortRootNodes(CompareHierarchyNodes);
+        HierarchyRebuiltEvent?.Invoke();
     }
 
     private void RefreshTransforms(IEnumerable<GameEntity> entities)
@@ -240,6 +236,14 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
         if (orderCompare != 0) return orderCompare;
 
         return left.Content.Id.CompareTo(right.Content.Id);
+    }
+
+    private Dictionary<int, GameEntity> NormalizeParents()
+    {
+        var entityById = _entities.ToDictionary(entity => entity.Id);
+        foreach (var entity in _entities)
+            if (HasInvalidParentLink(entity, entityById)) entity.Transform.SetParent(0);
+        return entityById;
     }
 
     private static bool HasInvalidParentLink(GameEntity entity, IReadOnlyDictionary<int, GameEntity> entityById)
