@@ -132,6 +132,7 @@ public class EntityManagementService : IEntityManagementService
 
     public void SetParent(GameEntity e, GameEntity? parent, int idx)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Command.SetParent", e.Id);
         if (e == parent) return;
         
         if (!_engineRunner.IsActive.Value) return;
@@ -144,7 +145,6 @@ public class EntityManagementService : IEntityManagementService
             {
                 ApplyRectTransformLayout(e, rectTransform, preservedLayout);
             }
-            _entitySyncService.UpdateEntityState(e);
         }
         catch (Exception exception)
         {
@@ -246,10 +246,12 @@ public class EntityManagementService : IEntityManagementService
 
         var parentByEntityId = new System.Collections.Generic.Dictionary<int, int>();
         var orderByEntityId = new System.Collections.Generic.Dictionary<int, int>();
+        var states = new Dictionary<int, GetEntityDataResponse>();
 
         foreach (var entityId in newEntityIds)
         {
             var state = _entityApi.GetEntityData(entityId);
+            if (state != null) states[entityId] = state;
             var parentId = 0;
             var order = 0;
             if (state != null && EntitySyncUtility.TryGetTransformData(state.Behaviours, out var transformParent, out var transformOrder))
@@ -267,8 +269,7 @@ public class EntityManagementService : IEntityManagementService
             var gameEntity = scene.GetById(entityId);
             if (gameEntity == null)
             {
-                gameEntity = new GameEntity(entityId, $"Entity {entityId}");
-                scene.AddEntity(gameEntity);
+                gameEntity = AddSyncedEntity(scene, entityId, states.GetValueOrDefault(entityId));
             }
 
             _entitySyncService.UpdateEntityState(gameEntity);
@@ -308,11 +309,23 @@ public class EntityManagementService : IEntityManagementService
         var gameEntity = scene.GetById(entityId);
         if (gameEntity != null) return gameEntity;
 
-        gameEntity = new GameEntity(entityId, state.Name);
-        scene.AddEntity(gameEntity);
+        gameEntity = AddSyncedEntity(scene, entityId, state);
         _entitySyncService.UpdateEntityState(gameEntity);
         scene.RebuildHierarchy();
         return gameEntity;
+    }
+
+    // Creation commands return an initialized entity immediately; subsequent metadata comes from SceneSync.
+    private static GameEntity AddSyncedEntity(Scene scene, int entityId, GetEntityDataResponse? state)
+    {
+        var entity = new GameEntity(entityId, state?.Name ?? $"Entity {entityId}");
+        scene.AddEntity(entity);
+        if (state != null && EntitySyncUtility.TryGetTransformData(state.Behaviours, out var parent, out var order) && parent.HasValue && order.HasValue)
+        {
+            entity.Transform.SetParent(parent.Value);
+            entity.Transform.SetOrder(order.Value);
+        }
+        return entity;
     }
 
     private GameEntity? WaitForCreatedEntity(string name, System.Collections.Generic.HashSet<int> existingIds)

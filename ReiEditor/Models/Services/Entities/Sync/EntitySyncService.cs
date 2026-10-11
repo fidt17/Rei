@@ -3,7 +3,6 @@ using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
-using ReiEditor.Models.Services.Scenes;
 
 namespace ReiEditor.Models.Services.Entities.Sync;
 
@@ -12,7 +11,6 @@ public class EntitySyncService : IEntitySyncService, IDisposable
     private readonly IAssetImporter _assetImporter;
     private readonly IEngineRunner _engineRunner;
     private readonly IEntityApi _entityApi;
-    private readonly ISceneManagementService _sceneManagement;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IEntityStateApplier _entityStateApplier;
     private readonly BehaviourSyncService _behaviourSyncService;
@@ -20,7 +18,6 @@ public class EntitySyncService : IEntitySyncService, IDisposable
     public EntitySyncService(
         IAssetImporter assetImporter,
         IEntityApi entityApi,
-        ISceneManagementService sceneManagement,
         IEngineRunner engineRunner,
         IBehaviourComponentsService behaviourComponentsService,
         BehaviourSyncService behaviourSyncService,
@@ -28,7 +25,6 @@ public class EntitySyncService : IEntitySyncService, IDisposable
     {
         _assetImporter = assetImporter;
         _entityApi = entityApi;
-        _sceneManagement = sceneManagement;
         _engineRunner = engineRunner;
         _behaviourComponentsService = behaviourComponentsService;
         _behaviourSyncService = behaviourSyncService;
@@ -44,17 +40,13 @@ public class EntitySyncService : IEntitySyncService, IDisposable
 
     public void UpdateEntityState(GameEntity entity)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Entity.Sync", entity.Id);
         if (!_engineRunner.IsActive.Value) return;
         if (_assetImporter.IsImporting.Value) return;
 
         var state = _entityApi.GetEntityData(entity.Id);
         if (state == null) return;
-        var needsHierarchyRefresh = _entityStateApplier.Apply(entity, state);
-
-        if (needsHierarchyRefresh)
-        {
-            _sceneManagement.CurrentScene.Value!.RebuildHierarchy();
-        }
+        _entityStateApplier.Apply(entity, state);
     }
 
 }

@@ -78,6 +78,11 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.GetEntityAsync(entityId, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_set_entity_parent", Title = "Move Rei entity", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Moves one current-scene entity through Editor EntityManagementService. parentId=0 moves to scene root; order is a non-negative insertion index. Requires running engine; rejects cycles. Returns accepted request, not runtime confirmation. Read Editor and native states separately. Does not save scene.")]
+    public Task<ReiEntityParentResult> SetEntityParent(int entityId, int parentId, int order, CancellationToken cancellationToken) =>
+        Execute(() => _gateway.SetEntityParentAsync(entityId, parentId, order, cancellationToken));
+
     [McpServerTool(Name = "rei_editor_rename_entity", Title = "Rename Rei entity", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Renames one entity in current scene. Change remains in editor state until rei_editor_save_project is called.")]
     public Task<ReiEntityMutationResult> RenameEntity(

@@ -45,6 +45,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     private void Receive(SceneSyncPacket packet)
     {
+        ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Mark("SceneSync.Enqueue", packet.SelectedEntityIds.FirstOrDefault(), packet.Entities.Length);
         lock (_gate)
         {
             if (_disposed) return;
@@ -76,6 +77,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             {
                 if (_disposed || scene == null || !_packets.TryDequeue(out packet!)) break;
             }
+            ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Mark("SceneSync.Dequeue", packet.SelectedEntityIds.FirstOrDefault(), packet.Entities.Length);
             try { Apply(scene, packet); }
             catch (Exception error) { _logger.LogException(error); }
         }
@@ -90,6 +92,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     private void Apply(Scene scene, SceneSyncPacket packet)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("SceneSync.Apply", count: packet.Entities.Length);
         var removedIds = packet.IsSnapshot
             ? scene.Entities.Select(entity => entity.Id).Except(packet.Entities.Select(entity => entity.Id)).ToHashSet()
             : packet.RemovedEntityIds.ToHashSet();

@@ -175,6 +175,7 @@ public class EngineApi : IEngineApi
 
     public void Invoke(Type delegateType, [CallerMemberName] string methodName = "", params object?[]? args)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Api." + methodName);
         try
         {
             if (_dllPtr == null) throw new Exception("Missing dll pointer");
@@ -195,6 +196,7 @@ public class EngineApi : IEngineApi
 
     public T Invoke<T>(Type delegateType, string methodName, params object?[]? args)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Api." + methodName);
         try
         {
             if (_dllPtr == null) throw new Exception("Missing dll pointer");

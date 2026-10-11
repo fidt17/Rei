@@ -75,6 +75,9 @@ public sealed class ReiMcpHostIntegrationTests
                 [new ReiBehaviourDetails(1, "Transform", [])]));
         }
 
+        public Task<ReiEntityParentResult> SetEntityParentAsync(int entityId, int parentId, int order, CancellationToken cancellationToken) =>
+            Task.FromResult(new ReiEntityParentResult(true, entityId, parentId, order));
+
         public Task<ReiEntityMutationResult> RenameEntityAsync(int entityId, string newName, CancellationToken cancellationToken)
         {
             RenamedEntityId = entityId;
@@ -309,7 +312,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(27, tools.Count);
+        Assert.Equal(28, tools.Count);
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
@@ -598,6 +601,31 @@ public sealed class ReiMcpHostIntegrationTests
         Assert.NotEqual(true, selected.IsError);
         using var selectedState = JsonDocument.Parse(GetText(selected));
         Assert.Equal(new[] { 2, 1 }, selectedState.RootElement.GetProperty("selectedIds").EnumerateArray().Select(id => id.GetInt32()));
+    }
+
+    [Fact]
+    public async Task ReparentToolPreservesRootAndInsertionOrderOverTransport()
+    {
+        await using var host = CreateHost(new FakeEditorGateway());
+        await host.StartAsync();
+        await using var client = await CreateClient(host.Endpoint!);
+        var tool = Assert.Single(await client.ListToolsAsync(), tool => tool.Name == "rei_editor_set_entity_parent");
+        Assert.False(tool.ProtocolTool.Annotations?.ReadOnlyHint);
+        Assert.False(tool.ProtocolTool.Annotations?.DestructiveHint);
+        Assert.False(tool.ProtocolTool.Annotations?.IdempotentHint);
+        foreach (var parentId in new[] { 0, 42 })
+        {
+            var result = await client.CallToolAsync(tool.Name, new Dictionary<string, object?>
+            {
+                ["entityId"] = 7, ["parentId"] = parentId, ["order"] = int.MaxValue
+            });
+            Assert.NotEqual(true, result.IsError);
+            using var packet = JsonDocument.Parse(GetText(result));
+            Assert.True(packet.RootElement.GetProperty("accepted").GetBoolean());
+            Assert.Equal(7, packet.RootElement.GetProperty("entityId").GetInt32());
+            Assert.Equal(parentId, packet.RootElement.GetProperty("parentId").GetInt32());
+            Assert.Equal(int.MaxValue, packet.RootElement.GetProperty("order").GetInt32());
+        }
     }
 
     private static ReiMcpHost CreateHost(IReiEditorGateway gateway)

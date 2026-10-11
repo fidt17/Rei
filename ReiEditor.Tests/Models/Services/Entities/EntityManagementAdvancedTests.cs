@@ -271,14 +271,7 @@ public sealed class EntityManagementAdvancedTests
         var scene = new Scene("Scene");
         var api = ApiForSnapshot(20, 21, 20);
         api.OnGetEntityData = id => TransformState(id, id == 21 ? 20 : 0, id == 21 ? 2 : 1);
-        var sync = new TestEntitySyncService
-        {
-            OnUpdate = entity =>
-            {
-                if (entity.Id == 20) { entity.Transform.SetParent(0); entity.Transform.SetOrder(1); }
-                if (entity.Id == 21) { entity.Transform.SetParent(20); entity.Transform.SetOrder(2); }
-            }
-        };
+        var sync = new TestEntitySyncService();
         var service = CreateService(scene, true, api, sync);
 
         service.InstantiateEntity(new GameEntity(4, "Source"));
@@ -287,6 +280,9 @@ public sealed class EntityManagementAdvancedTests
         var parent = scene.GetById(20)!;
         var child = scene.GetById(21)!;
         Assert.Same(parent, scene.Hierarchy.GetNode(child)!.Parent!.Content);
+        Assert.Equal("Entity 20", parent.Name);
+        Assert.Equal("Entity 21", child.Name);
+        Assert.Equal(2, child.Transform.Order);
     }
 
     /// <summary>
@@ -365,10 +361,10 @@ public sealed class EntityManagementAdvancedTests
     }
 
     /// <summary>
-    /// Parent change without preserved rect sends target parent and order then refreshes target entity.
+    /// Parent change without preserved rect sends target parent and order without reading state or rebuilding hierarchy.
     /// </summary>
     [Fact]
-    public void SetParentWithoutPreservedRectMovesThenRefreshesEntity()
+    public void SetParentWaitsForSceneSyncWithoutReadingOrRebuilding()
     {
         var entity = new GameEntity(4, "Entity");
         var parent = new GameEntity(5, "Parent");
@@ -382,20 +378,28 @@ public sealed class EntityManagementAdvancedTests
         };
         var sync = new TestEntitySyncService { OnUpdate = _ => trace.Add("sync") };
         var rect = new TestRectTransformLayoutService { PreserveResult = false, OnCall = trace.Add };
-        var service = CreateService(new Scene("Scene"), true, api, sync, rect);
+        var scene = new Scene("Scene");
+        scene.AddEntity(entity);
+        scene.AddEntity(parent);
+        var rebuilds = 0;
+        scene.HierarchyRebuiltEvent += () => rebuilds++;
+        var service = CreateService(scene, true, api, sync, rect);
 
         service.SetParent(entity, parent, 3);
 
         Assert.True(call.HasValue);
         Assert.Equal((4, 5, 3), call.Value);
         Assert.Equal(new[] { "preserve" }, rect.Calls);
-        Assert.Same(entity, Assert.Single(sync.UpdatedEntities));
+        Assert.Empty(sync.UpdatedEntities);
         Assert.Equal(new[] { "set-parent" }, api.Calls);
-        Assert.Equal(new[] { "preserve", "set-parent", "sync" }, trace);
+        Assert.Equal(new[] { "preserve", "set-parent" }, trace);
+        Assert.Equal(0, entity.Transform.Parent);
+        Assert.Null(scene.Hierarchy.GetNode(entity)!.Parent);
+        Assert.Equal(0, rebuilds);
     }
 
     /// <summary>
-    /// Preserved rect is applied to editor and serialized to runtime before entity refresh.
+    /// Preserved rect is applied to editor and serialized to runtime without an entity read.
     /// </summary>
     [Fact]
     public void SetParentAppliesAndSerializesPreservedRect()
@@ -432,7 +436,7 @@ public sealed class EntityManagementAdvancedTests
         Assert.Equal(layout, rect.AppliedLayout);
         Assert.Equal(new[] { "preserve", "get-rect", "apply-editor" }, rect.Calls);
         Assert.Equal(new[] { "set-parent", "set-data" }, api.Calls);
-        Assert.Equal(new[] { "preserve", "set-parent", "get-rect", "apply-editor", "set-data", "sync" }, trace);
+        Assert.Equal(new[] { "preserve", "set-parent", "get-rect", "apply-editor", "set-data" }, trace);
         Assert.NotNull(data);
         Assert.Equal(4, data.SceneId);
         var behaviour = Assert.Single(data.Behaviours);
@@ -443,11 +447,11 @@ public sealed class EntityManagementAdvancedTests
         AssertVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, 0.3f, 0.7f);
         AssertVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, 10f, 20f);
         AssertVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, 80f, 40f);
-        Assert.Same(entity, Assert.Single(sync.UpdatedEntities));
+        Assert.Empty(sync.UpdatedEntities);
     }
 
     /// <summary>
-    /// Successful preservation without rect component skips layout write but still refreshes entity.
+    /// Successful preservation without rect component skips layout write and waits for SceneSync.
     /// </summary>
     [Fact]
     public void SetParentMissingRectComponentSkipsLayoutWrite()
@@ -465,11 +469,11 @@ public sealed class EntityManagementAdvancedTests
         Assert.Equal((4, 0, 0), call.Value);
         Assert.Equal(new[] { "set-parent" }, api.Calls);
         Assert.Equal(new[] { "preserve", "get-rect" }, rect.Calls);
-        Assert.Same(entity, Assert.Single(sync.UpdatedEntities));
+        Assert.Empty(sync.UpdatedEntities);
     }
 
     /// <summary>
-    /// Parent API exception is logged and prevents layout write and entity refresh.
+    /// Parent API exception is logged and prevents layout write.
     /// </summary>
     [Fact]
     public void SetParentApiFailureLogsAndStopsRemainingWork()

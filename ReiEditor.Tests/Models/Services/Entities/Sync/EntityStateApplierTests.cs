@@ -11,7 +11,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace ReiEditor.Tests.Models.Services.Entities.Sync;
 
 /// <summary>
-/// Verifies engine entity state application, component reconciliation, and hierarchy updates.
+/// Verifies engine entity state application, component reconciliation, and preservation of hierarchy metadata.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Area", "EntitySync")]
@@ -84,10 +84,10 @@ public sealed class EntityStateApplierTests
     }
 
     /// <summary>
-    /// Applying a complete state adds missing components, updates fields, removes absent components, and reports transform changes.
+    /// Applying a complete state adds missing components, updates fields and removes absent components without changing hierarchy metadata.
     /// </summary>
     [Fact]
-    public void CompleteStateReconcilesComponentsAndTransform()
+    public void CompleteStateReconcilesComponentsWithoutChangingHierarchy()
     {
         var entity = new GameEntity(8, "Old");
         entity.AddBehaviour(new BehaviourComponent(99));
@@ -108,12 +108,13 @@ public sealed class EntityStateApplierTests
             }
         };
 
-        var hierarchyChanged = applier.Apply(entity, state);
+        applier.Apply(entity, state);
 
-        Assert.True(hierarchyChanged);
         Assert.Equal("New", entity.Name);
-        Assert.Equal(4, entity.Transform.Parent);
-        Assert.Equal(2, entity.Transform.Order);
+        Assert.Equal(0, entity.Transform.Parent);
+        Assert.Equal(0, entity.Transform.Order);
+        Assert.Equal(4, entity.GetBehaviour(1)!.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value);
+        Assert.Equal(2, entity.GetBehaviour(1)!.GetProperty(EngineBehavioursConstants.TRANSFORM_ORDER).Value);
         Assert.Equal(new[] { 1, 2 }, components.AddedIds);
         Assert.Equal(new[] { 99 }, components.DeletedIds);
         Assert.Equal(7, entity.GetBehaviour(2)!.GetProperty("first").Value);
@@ -136,9 +137,8 @@ public sealed class EntityStateApplierTests
             Behaviours = { new Dictionary<string, object> { ["REI_TYPE"] = "Unknown" } }
         };
 
-        var hierarchyChanged = applier.Apply(entity, state);
+        applier.Apply(entity, state);
 
-        Assert.False(hierarchyChanged);
         Assert.NotNull(entity.GetBehaviour(99));
         Assert.Empty(components.DeletedIds);
         Assert.Contains(logger.Entries, entry => entry.Message.Contains("Unknown", StringComparison.Ordinal));
@@ -176,7 +176,7 @@ public sealed class EntityStateApplierTests
     }
 
     /// <summary>
-    /// A partial transform pair leaves hierarchy metadata unchanged and reports no refresh.
+    /// A partial transform pair updates the available behaviour property and leaves hierarchy metadata unchanged.
     /// </summary>
     [Fact]
     public void PartialTransformPairDoesNotChangeHierarchy()
@@ -197,9 +197,9 @@ public sealed class EntityStateApplierTests
             }
         };
 
-        var hierarchyChanged = applier.Apply(entity, state);
+        applier.Apply(entity, state);
 
-        Assert.False(hierarchyChanged);
+        Assert.Equal(9, entity.GetBehaviour(1)!.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value);
         Assert.Equal(3, entity.Transform.Parent);
         Assert.Equal(4, entity.Transform.Order);
     }

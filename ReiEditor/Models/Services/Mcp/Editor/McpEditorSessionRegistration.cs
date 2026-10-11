@@ -153,6 +153,21 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         return new ReiEntityDetails(entity.Id, entity.Name, entity.Transform.Parent, entity.Transform.Order, behaviours);
     }
 
+    public ReiEntityParentResult SetEntityParent(int entityId, int parentId, int order)
+    {
+        if (order < 0) throw new ReiMcpOperationException("invalid_order", "Sibling insertion order must be non-negative.");
+        var entity = GetRequiredEntity(entityId);
+        var parent = parentId == 0 ? null : GetRequiredEntity(parentId);
+        for (var node = parent == null ? null : GetRequiredScene().Hierarchy.GetNode(parent); node != null; node = node.Parent)
+        {
+            if (node.Content == entity) throw new ReiMcpOperationException("invalid_parent", "Entity cannot be parented to itself or its descendant.");
+        }
+        if (_automationService.GetEngineInfo().Status != "running")
+            throw new ReiMcpOperationException("engine_unavailable", "Reparenting requires a running engine.");
+        _entityManagementService.SetParent(entity, parent, order);
+        return new ReiEntityParentResult(true, entityId, parentId, order);
+    }
+
     public ReiEntityMutationResult RenameEntity(int entityId, string newName)
     {
         if (string.IsNullOrWhiteSpace(newName))

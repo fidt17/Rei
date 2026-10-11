@@ -30,16 +30,14 @@ public class EntityStateApplier : IEntityStateApplier
         _serializedPropertiesService = serializedPropertiesService;
     }
 
-    public bool Apply(GameEntity entity, GetEntityDataResponse state)
+    public void Apply(GameEntity entity, GetEntityDataResponse state)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Entity.Apply", entity.Id);
         IsApplyingEngineState = true;
         try
         {
             entity.SetName(state.Name);
             var behaviourIds = new List<int>();
-            int? transformParent = null;
-            int? transformOrder = null;
-            var needsHierarchyRefresh = false;
             var hasBehaviourResolutionErrors = false;
 
             foreach (var behaviourState in state.Behaviours)
@@ -88,12 +86,6 @@ public class EntityStateApplier : IEntityStateApplier
                             _logger.LogError($"Exception while parsing property({propertyName}) in behaviour state: {JsonConvert.SerializeObject(behaviourState, Formatting.Indented)}. \n{exception}");
                         }
                     }
-
-                    if (reiType == EngineBehavioursConstants.TRANSFORM)
-                    {
-                        transformParent = EntitySyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_PARENT);
-                        transformOrder = EntitySyncUtility.TryReadInt(behaviourState, EngineBehavioursConstants.TRANSFORM_ORDER);
-                    }
                 }
                 catch (Exception exception)
                 {
@@ -110,18 +102,6 @@ public class EntityStateApplier : IEntityStateApplier
                     _behaviourComponentsService.DeleteComponent(entity, behaviour);
                 }
             }
-
-            if (transformParent.HasValue && transformOrder.HasValue)
-            {
-                if (entity.Transform.Parent != transformParent.Value || entity.Transform.Order != transformOrder.Value)
-                {
-                    entity.Transform.SetParent(transformParent.Value);
-                    entity.Transform.SetOrder(transformOrder.Value);
-                    needsHierarchyRefresh = true;
-                }
-            }
-
-            return needsHierarchyRefresh;
         }
         finally
         {

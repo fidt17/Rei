@@ -46,7 +46,7 @@ public sealed class BehaviourSyncServiceTests
     private sealed class TestEntityStateApplier(bool applying) : IEntityStateApplier
     {
         public bool IsApplyingEngineState { get; } = applying;
-        public bool Apply(GameEntity entity, GetEntityDataResponse state) => throw new NotSupportedException();
+        public void Apply(GameEntity entity, GetEntityDataResponse state) => throw new NotSupportedException();
     }
 
     private sealed class TestEntityApi : IEntityApi

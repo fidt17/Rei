@@ -15,6 +15,7 @@ public class EngineSelectionSyncService
 
     public void ApplySelection(IReadOnlyCollection<GameEntity> entities, IReadOnlySet<int> selectedEntityIds)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Selection.ApplyNative", count: selectedEntityIds.Count);
         var selectedItems = entities
             .Where(entity => selectedEntityIds.Contains(entity.Id))
             .Select(entity => _selectionService.GetEntitySelectable(entity))

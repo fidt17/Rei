@@ -26,13 +26,16 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
             var initial = await CommandAsync(engine, "read");
             Assert.Equal(extraEntities + 2, States(initial).Length);
             await VerifyEditorSelectionAsync(engine);
+            await VerifyEditorParentAsync(engine);
             await engine.CallAsync("rei_editor_rename_entity", new() { ["entityId"] = 2, ["newName"] = "Editor renamed" });
             var renamed = await CommandAsync(engine, "read");
             Assert.Equal("Editor renamed", States(renamed).Single(entity => entity.Id == 2).Name);
             await File.WriteAllTextAsync(CommandPath(engine), "{\"Step\":0}");
             await engine.RunOperationAsync("rei_editor_start_playmode");
+            await AssertPersistedStateAsync(engine, States(renamed));
             Assert.Equal(States(renamed), States(await CommandAsync(engine, "read")));
             await VerifyEditorSelectionAsync(engine);
+            await VerifyEditorParentAsync(engine);
             await VerifyNativeChangesAsync(engine);
 
             await File.WriteAllTextAsync(CommandPath(engine), "{\"Step\":0}");
@@ -40,8 +43,22 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
             await engine.WaitUntilAsync(async () => (await engine.CallAsync("rei_editor_get_state")).GetProperty("engine").GetProperty("status").GetString() == "running");
             Assert.Equal(States(renamed), States(await CommandAsync(engine, "read")));
             await VerifyEditorSelectionAsync(engine);
+            await VerifyEditorParentAsync(engine);
+            await AssertPersistedStateAsync(engine, States(renamed));
             await VerifyNativeChangesAsync(engine);
         }
+    }
+
+    private static async Task AssertPersistedStateAsync(EngineIntegrationHarness engine, EntityState[] expected)
+    {
+        using var scene = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(engine.ProjectDirectory, "Project", "Scenes", "New Scene.scene")));
+        var saved = scene.RootElement.GetProperty("Entities").EnumerateArray().Select(entity =>
+        {
+            var transform = entity.GetProperty("Behaviours").EnumerateArray().Single(behaviour => behaviour.GetProperty("Id").GetInt32() == 2).GetProperty("SerializedData");
+            return new EntityState(entity.GetProperty("Id").GetInt32(), entity.GetProperty("Name").GetString()!,
+                transform.GetProperty("_parent").GetProperty("Value").GetInt32(), transform.GetProperty("_order").GetProperty("Value").GetInt32());
+        }).OrderBy(entity => entity.Id).ToArray();
+        Assert.Equal(expected, saved);
     }
 
     private async Task VerifyNativeChangesAsync(EngineIntegrationHarness engine)
@@ -66,6 +83,23 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
         Assert.Empty(States(await CommandAsync(engine, "clear")));
     }
 
+    private async Task VerifyEditorParentAsync(EngineIntegrationHarness engine)
+    {
+        var original = States(await CommandAsync(engine, "read")).Single(entity => entity.Id == 2);
+        await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
+        foreach (var (parent, order) in new[] { (1, 0), (0, 0), (original.ParentId, original.Order) })
+        {
+            var accepted = await engine.CallAsync("rei_editor_set_entity_parent", new() { ["entityId"] = 2, ["parentId"] = parent, ["order"] = order });
+            Assert.True(accepted.GetProperty("accepted").GetBoolean());
+            var native = await ReadUntilAsync(engine, packet => States(packet).Any(entity => entity.Id == 2 && entity.ParentId == parent && entity.Order == order));
+            var moved = States(native).Single(entity => entity.Id == 2);
+            Assert.Equal(parent, moved.ParentId);
+            Assert.Equal(order, moved.Order);
+            Assert.Equal(new[] { 2 }, native.GetProperty("SelectedIds").EnumerateArray().Select(id => id.GetInt32()));
+            await AssertSelectionAsync(engine, new[] { 2 });
+        }
+    }
+
     private static async Task VerifyEditorSelectionAsync(EngineIntegrationHarness engine)
     {
         foreach (var ids in new[] { new[] { 1 }, new[] { 2 }, new[] { 1, 2, 1 }, Array.Empty<int>() })
@@ -75,7 +109,27 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
         }
     }
 
-    private async Task<JsonElement> CommandAsync(EngineIntegrationHarness engine, string action, params (string Key, object Value)[] fields)
+    internal async Task<JsonElement> CommandAsync(EngineIntegrationHarness engine, string action, params (string Key, object Value)[] fields)
+    {
+        var native = await ReadNativeCommandAsync(engine, action, fields);
+        await AssertEditorMatchesNativeAsync(engine, native);
+        return native;
+    }
+
+    internal async Task<JsonElement> ReadUntilAsync(EngineIntegrationHarness engine, Func<JsonElement, bool> condition)
+    {
+        JsonElement native = default;
+        // Editor commands enqueue native work. A probe can run before that work in the same frame.
+        await engine.WaitUntilAsync(async () =>
+        {
+            native = await ReadNativeCommandAsync(engine, "read");
+            return condition(native);
+        }, TimeSpan.FromSeconds(20));
+        await AssertEditorMatchesNativeAsync(engine, native);
+        return native;
+    }
+
+    private async Task<JsonElement> ReadNativeCommandAsync(EngineIntegrationHarness engine, string action, params (string Key, object Value)[] fields)
     {
         var step = ++_step;
         var command = fields.ToDictionary(field => field.Key, field => field.Value);
@@ -95,6 +149,11 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
             return native.ValueKind != JsonValueKind.Undefined;
         }, TimeSpan.FromSeconds(20));
 
+        return native;
+    }
+
+    private static async Task AssertEditorMatchesNativeAsync(EngineIntegrationHarness engine, JsonElement native)
+    {
         // Probe reads native ECS fields directly; list_entities reads Editor hierarchy only.
         var expected = States(native);
         await engine.WaitUntilAsync(async () =>
@@ -106,7 +165,6 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
             return expected.SequenceEqual(actual);
         }, TimeSpan.FromSeconds(15));
         await AssertSelectionAsync(engine, native.GetProperty("SelectedIds").EnumerateArray().Select(id => id.GetInt32()).Order().ToArray());
-        return native;
     }
 
     private static async Task AssertSelectionAsync(EngineIntegrationHarness engine, int[] expected)
@@ -126,24 +184,28 @@ public sealed class SceneSynchronizationTests(ITestOutputHelper output)
         entity.GetProperty("ParentId").GetInt32(), entity.GetProperty("Order").GetInt32())).OrderBy(entity => entity.Id).ToArray();
     private static string CommandPath(EngineIntegrationHarness engine) => Path.Combine(engine.ProjectDirectory, "scene-sync-command.json");
 
-    private static async Task PrepareProbeAsync(string project, int extraEntities)
+    internal static async Task PrepareProbeAsync(string project, int extraEntities, bool preserveApplication = false)
     {
-        var scenePath = Path.Combine(project, "Project", "Scenes", "New Scene.scene");
-        var scene = JsonNode.Parse(await File.ReadAllTextAsync(scenePath))!;
-        var entities = scene["Entities"]!.AsArray();
-        var transform = entities[0]!["Behaviours"]!.AsArray().Single(behaviour => behaviour!["Id"]!.GetValue<int>() == 2)!;
-        var nextId = entities.Max(entity => entity!["Id"]!.GetValue<int>()) + 1;
-        for (var i = 0; i < extraEntities; i++)
-            entities.Add(new JsonObject
-            {
-                ["Id"] = nextId + i, ["Name"] = $"Scene load {i}",
-                ["Behaviours"] = new JsonArray(transform.DeepClone())
-            });
-        await File.WriteAllTextAsync(scenePath, scene.ToJsonString());
+        if (extraEntities > 0)
+        {
+            var scenePath = Path.Combine(project, "Project", "Scenes", "New Scene.scene");
+            var scene = JsonNode.Parse(await File.ReadAllTextAsync(scenePath))!;
+            var entities = scene["Entities"]!.AsArray();
+            var transform = entities[0]!["Behaviours"]!.AsArray().Single(behaviour => behaviour!["Id"]!.GetValue<int>() == 2)!;
+            var nextId = entities.Max(entity => entity!["Id"]!.GetValue<int>()) + 1;
+            for (var i = 0; i < extraEntities; i++)
+                entities.Add(new JsonObject
+                {
+                    ["Id"] = nextId + i, ["Name"] = $"Scene load {i}",
+                    ["Behaviours"] = new JsonArray(transform.DeepClone())
+                });
+            await File.WriteAllTextAsync(scenePath, scene.ToJsonString());
+        }
         var source = """
 #include "Startup/AppEntryPoint.h"
 #include "Modules/Editor/EntitySelectionUtility.h"
 #include <fstream>
+#include <Windows.h>
 
 class SceneSyncProbe final
 {
@@ -224,10 +286,12 @@ public:
             entities.push_back({{"Id", info.Id}, {"Name", info.Name}, {"ParentId", parentId}, {"Order", transform.GetChildOrder()}});
             if (HAS(entity, rei::editor::SelectedTag)) selected.push_back(info.Id);
         }
-        const nlohmann::json packet = {{"Step", _step}, {"Entities", entities}, {"SelectedIds", selected}};
+        LARGE_INTEGER ticks;
+        QueryPerformanceCounter(&ticks);
+        const nlohmann::json packet = {{"Step", _step}, {"Entities", entities}, {"SelectedIds", selected}, {"Ticks", ticks.QuadPart}};
         std::ofstream file(R"(__STATE_PATH__)");
         file << packet.dump();
-        LOG("SceneSyncProbe {}", packet.dump());
+        LOG("SceneSyncProbe step={} entities={} selected={}", _step, entities.size(), selected.size());
     }
 };
 
@@ -244,6 +308,20 @@ std::shared_ptr<rei::App> CreateApp() { return std::make_shared<TestApplication>
 """;
         source = source.Replace("__COMMAND_PATH__", Path.Combine(project, "scene-sync-command.json"))
             .Replace("__STATE_PATH__", Path.Combine(project, "scene-sync-state.json"));
-        await File.WriteAllTextAsync(Path.Combine(project, "Project", "Scripts", "ReiApp.cpp"), source);
+        var appPath = Path.Combine(project, "Project", "Scripts", "ReiApp.cpp");
+        if (preserveApplication)
+        {
+            var existing = (await File.ReadAllTextAsync(appPath)).Replace("\r\n", "\n");
+            var probe = source[..source.IndexOf("class TestApplication", StringComparison.Ordinal)];
+            var application = System.Text.RegularExpressions.Regex.Match(existing, @"class\s+\w+\s+(?:final\s+)?:\s*public\s+rei::App\s*\{");
+            if (!application.Success) throw new InvalidDataException("Probe requires an application class deriving from rei::App.");
+            existing = existing.Insert(application.Index + application.Length, "\n    SceneSyncProbe _sceneSyncProbe;");
+            existing = existing.Insert(application.Index, probe);
+            var onStart = System.Text.RegularExpressions.Regex.Match(existing, @"void\s+OnStart\(\)\s+override\s*\{");
+            if (!onStart.Success) throw new InvalidDataException("Probe requires an OnStart override.");
+            existing = existing.Insert(onStart.Index + onStart.Length, "\n        rei::GetInternalWorld()->AddSystem([this] { _sceneSyncProbe.Tick(); });");
+            source = existing;
+        }
+        await File.WriteAllTextAsync(appPath, source);
     }
 }

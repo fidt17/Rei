@@ -7,7 +7,6 @@ using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
-using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.Utils.Common;
 
@@ -54,17 +53,16 @@ public sealed class EntitySyncServiceTests
         public void ResetEntitySelection() => throw new NotSupportedException();
     }
 
-    private sealed class TestEntityStateApplier(bool hierarchyChanged) : IEntityStateApplier
+    private sealed class TestEntityStateApplier : IEntityStateApplier
     {
         public bool IsApplyingEngineState => false;
         public int ApplyCalls { get; private set; }
         public GetEntityDataResponse? AppliedState { get; private set; }
 
-        public bool Apply(GameEntity entity, GetEntityDataResponse state)
+        public void Apply(GameEntity entity, GetEntityDataResponse state)
         {
             ApplyCalls++;
             AppliedState = state;
-            return hierarchyChanged;
         }
     }
 
@@ -77,7 +75,7 @@ public sealed class EntitySyncServiceTests
     public void UpdateIsSuppressedByRuntimeGates(bool active, bool importing)
     {
         var api = new TestEntityApi { State = new GetEntityDataResponse() };
-        using var service = CreateService(active, importing, api, new TestEntityStateApplier(false));
+        using var service = CreateService(active, importing, api, new TestEntityStateApplier());
 
         service.UpdateEntityState(new GameEntity(4, "Entity"));
 
@@ -91,7 +89,7 @@ public sealed class EntitySyncServiceTests
     public void MissingStateDoesNotInvokeApplier()
     {
         var api = new TestEntityApi();
-        var applier = new TestEntityStateApplier(false);
+        var applier = new TestEntityStateApplier();
         using var service = CreateService(true, false, api, applier);
 
         service.UpdateEntityState(new GameEntity(4, "Entity"));
@@ -101,41 +99,20 @@ public sealed class EntitySyncServiceTests
     }
 
     /// <summary>
-    /// Available engine state is forwarded once without rebuilding hierarchy when transform metadata is unchanged.
+    /// Available engine state is forwarded once to the behaviour state applier.
     /// </summary>
     [Fact]
-    public void UnchangedStateAppliesWithoutHierarchyRebuild()
+    public void AvailableStateIsForwardedOnce()
     {
         var state = new GetEntityDataResponse { EntityId = 4, Name = "Entity" };
         var api = new TestEntityApi { State = state };
-        var applier = new TestEntityStateApplier(false);
-        var scene = new Scene("Scene");
-        var rebuilds = 0;
-        scene.HierarchyRebuiltEvent += () => rebuilds++;
-        using var service = CreateService(true, false, api, applier, scene: scene);
+        var applier = new TestEntityStateApplier();
+        using var service = CreateService(true, false, api, applier);
 
         service.UpdateEntityState(new GameEntity(4, "Entity"));
 
         Assert.Equal(1, applier.ApplyCalls);
         Assert.Same(state, applier.AppliedState);
-        Assert.Equal(0, rebuilds);
-    }
-
-    /// <summary>
-    /// State application requesting hierarchy refresh rebuilds the current scene exactly once.
-    /// </summary>
-    [Fact]
-    public void ChangedTransformRebuildsCurrentScene()
-    {
-        var api = new TestEntityApi { State = new GetEntityDataResponse() };
-        var scene = new Scene("Scene");
-        var rebuilds = 0;
-        scene.HierarchyRebuiltEvent += () => rebuilds++;
-        using var service = CreateService(true, false, api, new TestEntityStateApplier(true), scene: scene);
-
-        service.UpdateEntityState(new GameEntity(4, "Entity"));
-
-        Assert.Equal(1, rebuilds);
     }
 
     /// <summary>
@@ -146,7 +123,7 @@ public sealed class EntitySyncServiceTests
     {
         var api = new TestEntityApi();
         var components = new TestBehaviourComponentsService();
-        var service = CreateService(true, false, api, new TestEntityStateApplier(false), components);
+        var service = CreateService(true, false, api, new TestEntityStateApplier(), components);
         var entity = new GameEntity(4, "Entity");
         var component = new BehaviourComponent(6);
         var property = new SerializedProperty("speed", SerializedTypeEnum.Integer, 3, "int", null);
@@ -166,16 +143,13 @@ public sealed class EntitySyncServiceTests
         bool importing,
         TestEntityApi api,
         TestEntityStateApplier applier,
-        TestBehaviourComponentsService? components = null,
-        Scene? scene = null)
+        TestBehaviourComponentsService? components = null)
     {
         var runner = new TestEngineRunner();
         runner.Active.Value = active;
-        var sceneManagement = new TestSceneManagementService();
-        sceneManagement.Scene.Value = scene;
         components ??= new TestBehaviourComponentsService();
         var importer = new TestAssetImporter(importing);
         var behaviourSync = new BehaviourSyncService(importer, runner, api, new TestLogger<EntitySyncService>(), applier);
-        return new EntitySyncService(importer, api, sceneManagement, runner, components, behaviourSync, applier);
+        return new EntitySyncService(importer, api, runner, components, behaviourSync, applier);
     }
 }

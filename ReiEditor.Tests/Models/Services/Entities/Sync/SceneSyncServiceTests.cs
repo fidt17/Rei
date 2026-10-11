@@ -1,6 +1,9 @@
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.SceneSync;
@@ -17,6 +20,13 @@ namespace ReiEditor.Tests.Models.Services.Entities.Sync;
 [Trait("Area", "SceneSync")]
 public sealed class SceneSyncServiceTests
 {
+    private sealed class Properties : ISerializedPropertiesService
+    {
+        public void ApplyValue(SerializedProperty property, object? value) => property.Value = value;
+        public SerializedProperty Create(string name, SerializableObjectInfo.SerializedPropertyData data, SerializedProperty? parent) => throw new NotSupportedException();
+        public void Refresh(SerializedProperty property) => throw new NotSupportedException();
+    }
+
     private sealed class Source : IEngineSceneSyncEventSource
     {
         public event Action<SceneSyncPacket>? Received;
@@ -92,6 +102,58 @@ public sealed class SceneSyncServiceTests
         Assert.Equal("renamed", child.Name);
         Assert.Same(behaviour, Assert.Single(child.Behaviours));
         Assert.Equal(new[] { 3, 2 }, _scene.Hierarchy.GetNode(_scene.GetById(1)!)!.ChildNodes.Select(node => node.Content.Id));
+        Assert.Equal(new[] { 2 }, Selected());
+        Assert.Empty(_api.Selections);
+    }
+
+    [AvaloniaFact]
+    public void EntityPropertyReadsCannotConsumeOrOverwriteHierarchyEvents()
+    {
+        using var service = Create();
+        _source.Send(Packet(true, new[] { State(1), State(2) }, selected: new[] { 2 }));
+        Dispatcher.UIThread.RunJobs();
+        var entity = _scene.GetById(2)!;
+        var transform = new BehaviourComponent(1);
+        transform.AddProperty(new SerializedProperty(EngineBehavioursConstants.TRANSFORM_PARENT, SerializedTypeEnum.Integer, 0, "int", null));
+        transform.AddProperty(new SerializedProperty(EngineBehavioursConstants.TRANSFORM_ORDER, SerializedTypeEnum.Integer, 0, "int", null));
+        entity.AddBehaviour(transform);
+        var registry = new TestBehaviourRegistry();
+        registry.Ids[EngineBehavioursConstants.TRANSFORM] = 1;
+        var applier = new EntityStateApplier(new TestLogger<EntitySyncService>(), registry, new TestBehaviourComponentsService(), new Properties());
+        var state = new GetEntityDataResponse
+        {
+            EntityId = 2, Name = "renamed",
+            Behaviours = { new Dictionary<string, object>
+            {
+                ["REI_TYPE"] = EngineBehavioursConstants.TRANSFORM,
+                [EngineBehavioursConstants.TRANSFORM_PARENT] = 1,
+                [EngineBehavioursConstants.TRANSFORM_ORDER] = 3
+            } }
+        };
+        var rebuilds = 0;
+        _scene.HierarchyRebuiltEvent += () => rebuilds++;
+
+        _source.Send(Packet(false, new[] { new SceneEntityState(2, "renamed", 1, 3) }, selected: new[] { 2 }));
+        applier.Apply(entity, state);
+        Assert.Equal(0, entity.Transform.Parent);
+        Assert.Null(_scene.Hierarchy.GetNode(entity)!.Parent);
+        Assert.Equal(0, rebuilds);
+        Assert.Equal(1, transform.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value);
+
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, rebuilds);
+        Assert.Same(_scene.GetById(1), _scene.Hierarchy.GetNode(entity)!.Parent!.Content);
+        Assert.Equal(new[] { 2 }, Selected());
+        Assert.Same(transform, entity.GetBehaviour(1));
+
+        state.Behaviours[0][EngineBehavioursConstants.TRANSFORM_PARENT] = 0;
+        state.Behaviours[0][EngineBehavioursConstants.TRANSFORM_ORDER] = 0;
+        applier.Apply(entity, state);
+        Assert.Equal("renamed", entity.Name);
+        Assert.Equal(1, entity.Transform.Parent);
+        Assert.Equal(3, entity.Transform.Order);
+        Assert.Equal(1, rebuilds);
+        Assert.Same(_scene.GetById(1), _scene.Hierarchy.GetNode(entity)!.Parent!.Content);
         Assert.Equal(new[] { 2 }, Selected());
         Assert.Empty(_api.Selections);
     }

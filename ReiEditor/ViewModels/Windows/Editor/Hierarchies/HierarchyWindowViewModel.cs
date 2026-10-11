@@ -87,6 +87,7 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     public void SetHierarchy(Hierarchy<GameEntity> hierarchy)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.SetHierarchy");
         _activeHierarchy = hierarchy;
 
         var expandedEntityIds = _nodeCollectionController.CaptureExpandedEntityIds();
@@ -168,6 +169,7 @@ public class HierarchyWindowViewModel : BaseViewModel
 
     public void MoveEntities(IReadOnlyList<int> draggedEntityIds, int? targetParentEntityId, int insertionIndex)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.MoveSelection", count: draggedEntityIds.Count);
         var hierarchy = _activeHierarchy;
         if (hierarchy == null) return;
 

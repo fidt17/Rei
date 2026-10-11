@@ -9,6 +9,7 @@ public interface IReiEditorGateway
     Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken);
     Task<ReiEntityList> ListEntitiesAsync(CancellationToken cancellationToken);
     Task<ReiEntityDetails> GetEntityAsync(int entityId, CancellationToken cancellationToken);
+    Task<ReiEntityParentResult> SetEntityParentAsync(int entityId, int parentId, int order, CancellationToken cancellationToken);
     Task<ReiEntityMutationResult> RenameEntityAsync(int entityId, string newName, CancellationToken cancellationToken);
     Task<ReiBehaviourMutationResult> AddBehaviourAsync(int entityId, string behaviourName, CancellationToken cancellationToken);
     Task<ReiBehaviourPropertyMutationResult> SetBehaviourPropertyAsync(

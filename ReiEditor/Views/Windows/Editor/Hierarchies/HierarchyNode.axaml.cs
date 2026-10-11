@@ -19,12 +19,25 @@ public partial class HierarchyNode : UserControl
 
     public HierarchyNode()
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.CreateControl");
         InitializeComponent();
 
         RootBorder.AddHandler(PointerPressedEvent, RootBorder_OnPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         DataContextChanged += HandleDataContextChangedEvent;
 
         ConfigureDragAndDrop();
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.MeasureNode", _vm?.Node?.Content.Id ?? 0);
+        return base.MeasureOverride(availableSize);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.ArrangeNode", _vm?.Node?.Content.Id ?? 0);
+        return base.ArrangeOverride(finalSize);
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)

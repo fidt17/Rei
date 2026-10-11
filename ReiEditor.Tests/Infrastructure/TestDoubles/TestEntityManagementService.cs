@@ -7,6 +7,8 @@ internal sealed class TestEntityManagementService : IEntityManagementService
 {
     public List<(string Name, GameEntity? Parent)> CreateCalls { get; } = new();
     public List<(GameEntity Entity, int BehaviourId)> AddBehaviourCalls { get; } = new();
+    public List<(GameEntity Entity, GameEntity? Parent, int Order)> ParentCalls { get; } = new();
+    public Action<GameEntity, GameEntity?, int>? OnSetParent { get; set; }
     public List<GameEntity> DestroyCalls { get; } = new();
     public List<(GameEntity Entity, string Name)> RenameCalls { get; } = new();
     public List<(GameEntity Entity, string? Name, bool IncludeChildren)> InstantiateCalls { get; } = new();
@@ -46,6 +48,10 @@ internal sealed class TestEntityManagementService : IEntityManagementService
         return (OnInstantiate ?? throw new NotSupportedException())(sourceEntity, requestedName, includeChildren);
     }
 
-    public void SetParent(GameEntity e, GameEntity? parent, int idx) => throw new NotSupportedException();
+    public void SetParent(GameEntity e, GameEntity? parent, int idx)
+    {
+        ParentCalls.Add((e, parent, idx));
+        (OnSetParent ?? throw new NotSupportedException())(e, parent, idx);
+    }
     public void DeleteBehaviour(GameEntity e, int behaviourId) => throw new NotSupportedException();
 }

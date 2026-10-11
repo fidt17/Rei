@@ -11,6 +11,7 @@ public partial class EntityMonitorDrawer : UserControl
 
     public EntityMonitorDrawer()
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Monitor.BuildView");
         InitializeComponent();
         DataContextChanged += HandleDataContextChangedEvent;
     }
@@ -23,15 +24,36 @@ public partial class EntityMonitorDrawer : UserControl
 
     private void HandleDataContextChangedEvent(object? sender, EventArgs e)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Monitor.BindView", (DataContext as EntityMonitorDrawerViewModel)?.EntityId ?? 0);
         UnsubscribeFromViewModel();
         _viewModel = DataContext as EntityMonitorDrawerViewModel;
         if (_viewModel == null) return;
 
         _viewModel.BehaviourSelectedEvent += HandleBehaviourSelectedEvent;
+        if (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Enabled) LayoutUpdated += HandleFirstLayout;
+    }
+
+    private void HandleFirstLayout(object? sender, EventArgs e)
+    {
+        LayoutUpdated -= HandleFirstLayout;
+        ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Mark("Monitor.FirstLayout", _viewModel?.EntityId ?? 0);
+    }
+
+    protected override Avalonia.Size MeasureOverride(Avalonia.Size availableSize)
+    {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Monitor.Measure", _viewModel?.EntityId ?? 0);
+        return base.MeasureOverride(availableSize);
+    }
+
+    protected override Avalonia.Size ArrangeOverride(Avalonia.Size finalSize)
+    {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Monitor.Arrange", _viewModel?.EntityId ?? 0);
+        return base.ArrangeOverride(finalSize);
     }
 
     private void UnsubscribeFromViewModel()
     {
+        LayoutUpdated -= HandleFirstLayout;
         if (_viewModel == null) return;
         _viewModel.BehaviourSelectedEvent -= HandleBehaviourSelectedEvent;
     }

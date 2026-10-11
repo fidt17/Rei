@@ -34,6 +34,7 @@ public class BehaviourSelectionData
 public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
 {
     public event Action? BehaviourSelectedEvent;
+    internal int EntityId => _entity?.Id ?? 0;
 
     public ObservableCollection<BaseViewModel> Elements { get; } = new();
     public SearchFieldViewModel SearchField { get; } = new();

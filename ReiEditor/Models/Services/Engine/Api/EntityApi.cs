@@ -41,6 +41,7 @@ public class EntityApi : IEntityApi
     private delegate void GetEntityDataDelegate(int sceneEntityId, StringBuilder outputBuffer, int bufferSize);
     public GetEntityDataResponse? GetEntityData(int sceneEntityId)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Entity.GetData", sceneEntityId);
         if (!_engineApi.IsEngineRunning) return null;
 
         try

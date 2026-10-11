@@ -143,6 +143,7 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
 
     private void CreateHierarchy()
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.BuildModel", count: _entities.Count);
         Hierarchy = new Hierarchy<GameEntity>(Name);
         var entityById = _entities.ToDictionary(x => x.Id);
 
@@ -190,7 +191,8 @@ public class Scene : Asset, IHierarchyProvider<GameEntity>, IOnDeserialized
         }
         
         Hierarchy.SortRootNodes((a, b) => a.Content.Transform.Order.CompareTo(b.Content.Transform.Order));
-        HierarchyRebuiltEvent?.Invoke();
+        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.NotifyViews", count: _entities.Count))
+            HierarchyRebuiltEvent?.Invoke();
     }
 
     private void RefreshTransforms(IEnumerable<GameEntity> entities)

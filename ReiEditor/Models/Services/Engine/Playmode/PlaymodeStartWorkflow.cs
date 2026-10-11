@@ -44,7 +44,6 @@ public class PlaymodeStartWorkflow : IPlaymodeStartWorkflow, IDisposable
 
         try
         {
-            await _engineRunner.StopEngine();
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!_saveProjectCommand.CanExecute(null))
@@ -54,6 +53,8 @@ public class PlaymodeStartWorkflow : IPlaymodeStartWorkflow, IDisposable
             }
 
             await _saveProjectCommand.SaveProject();
+            cancellationToken.ThrowIfCancellationRequested();
+            await _engineRunner.StopEngine();
             cancellationToken.ThrowIfCancellationRequested();
 
             var didBuild = await _buildStarter.BuildProject(

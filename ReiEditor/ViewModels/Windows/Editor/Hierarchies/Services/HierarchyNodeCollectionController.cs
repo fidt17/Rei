@@ -35,6 +35,7 @@ public class HierarchyNodeCollectionController
 
     public void SetHierarchy(Hierarchy<GameEntity> hierarchy, IReadOnlySet<int> expandedEntityIds)
     {
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.BuildVM");
         Reset();
 
         _activeHierarchy = hierarchy;
@@ -82,8 +83,11 @@ public class HierarchyNodeCollectionController
 
     private void Reset()
     {
-        foreach (var node in Nodes.ToArray()) DisposeNodeSubtree(node);
-        Nodes.Clear();
+        using var timing = ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.DisposeVM", count: _nodeMap.Count);
+        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.DisposeNodes", count: _nodeMap.Count))
+            foreach (var node in Nodes.ToArray()) DisposeNodeSubtree(node);
+        using (ReiEditor.Utils.Diagnostics.EditorInteractionTiming.Measure("Hierarchy.ClearRootItems", count: Nodes.Count))
+            Nodes.Clear();
         _nodeMap.Clear();
 
         if (_activeHierarchy != null)

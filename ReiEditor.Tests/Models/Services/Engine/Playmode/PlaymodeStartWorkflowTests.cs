@@ -13,7 +13,7 @@ using ReiEditor.ViewModels.Windows.Editor.Commands;
 
 namespace ReiEditor.Tests.Models.Services.Engine.Playmode;
 
-/// <summary>Verifies stop, save, build and callback-based playmode startup with cancellation cleanup.</summary>
+/// <summary>Verifies save, stop, build and callback-based playmode startup with cancellation cleanup.</summary>
 [Collection(HeadlessCollection.NAME)]
 [Trait("Category", "Headless")]
 [Trait("Area", "Playmode")]
@@ -147,7 +147,7 @@ public sealed class PlaymodeStartWorkflowTests
         Assert.Empty(context.Calls);
     }
 
-    /// <summary>Successful workflow preserves stop, synchronize, save, EditorDebug build and callback start order.</summary>
+    /// <summary>Successful workflow reads and saves scene state before stopping the engine, then builds and starts playmode.</summary>
     [AvaloniaFact]
     public async Task TestSuccessfulStartRunsStagesInOrderAndForwardsToken()
     {
@@ -157,8 +157,28 @@ public sealed class PlaymodeStartWorkflowTests
 
         Assert.True(await context.Workflow.StartAsync(cancellation.Token));
 
-        Assert.Equal(new[] { "stop", "synchronize", "save", "build", "start" }, context.Calls);
+        Assert.Equal(new[] { "synchronize", "save", "stop", "build", "start" }, context.Calls);
         Assert.Equal(cancellation.Token, Assert.Single(context.Build.Tokens));
+    }
+
+    /// <summary>Saving while the engine is active preserves access to native behaviour state.</summary>
+    [AvaloniaFact]
+    public async Task TestSceneIsSavedBeforeNativeStateBecomesUnavailable()
+    {
+        using var context = new TestContext();
+        context.Engine.Active.Value = true;
+        context.Engine.OnStop = () => { context.Engine.Active.Value = false; return Task.CompletedTask; };
+        var saved = false;
+        context.Assets.OnSave = () =>
+        {
+            Assert.True(context.Engine.IsActive.Value);
+            saved = true;
+            return Task.CompletedTask;
+        };
+        context.Playmode.OnStart = () => { context.Engine.PublishStarted(); return true; };
+
+        Assert.True(await context.Workflow.StartAsync());
+        Assert.True(saved);
     }
 
     /// <summary>Save guard, failed build, rejected start and failed callback stop at their respective stages.</summary>
@@ -242,7 +262,7 @@ public sealed class PlaymodeStartWorkflowTests
         context.Engine.OnStop = () => { context.Calls.Add("stop"); cancellation.Cancel(); return Task.CompletedTask; };
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => context.Workflow.StartAsync(cancellation.Token));
-        Assert.Equal(new[] { "stop" }, context.Calls);
+        Assert.Equal(new[] { "synchronize", "save", "stop" }, context.Calls);
 
         context.Engine.OnStop = () => Task.CompletedTask;
         context.Playmode.OnStart = () => { context.Engine.PublishStarted(); return true; };
