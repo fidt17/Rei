@@ -32,7 +32,6 @@ namespace rei::internal::engine
         REI_API ~Engine();
         Engine(const Engine& e) = delete;
 
-        REI_API void SetStartupScene(const std::string& assetId);
         REI_API void Start();
         REI_API void Shutdown(i32 exitCode);
 
@@ -50,7 +49,6 @@ namespace rei::internal::engine
     private:
         EngineMode _mode;
         bool _isEditor;
-        std::string _startupSceneId;
 
         std::atomic<bool> _runEngine = false;
         i32 _exitCode;

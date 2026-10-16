@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
-using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Engine.Api;
@@ -20,8 +19,6 @@ namespace ReiEditor.Models.Services.Engine.Playmode;
 
 public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
 {
-    private delegate void SetStartupSceneDelegate(IntPtr engine, [MarshalAs(UnmanagedType.LPUTF8Str)] string assetId);
-
     public event Action? EngineStartedEvent;
     public event Action? EngineStartFailedEvent;
     
@@ -55,7 +52,6 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
     private readonly IEditorProceduresService _editorProceduresService;
 
     private readonly IEngineSceneSyncEventSource? _sceneEvents;
-    private readonly IActiveProjectService? _activeProject;
 
     private Procedure? _startProcedure;
 
@@ -69,7 +65,6 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         IResourceService resourceService, 
         IClientDllManager clientDllManager,
         IEditorProceduresService editorProceduresService,
-        IActiveProjectService? activeProject = null,
         IEngineSceneSyncEventSource? sceneEvents = null)
     {
         _engineApi = engineApi;
@@ -81,7 +76,6 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         _resourceService = resourceService;
         _clientDllManager = clientDllManager;
         _editorProceduresService = editorProceduresService;
-        _activeProject = activeProject;
         _sceneEvents = sceneEvents;
 
         _startCallbackDelegate = HandleEngineStartedEvent;
@@ -128,8 +122,6 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             ActiveMode = mode;
             enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
             lock (_nativeCallLock) _enginePtr = enginePtr;
-            var sceneId = _activeProject?.GetActiveProject().LastSceneId;
-            if (!string.IsNullOrWhiteSpace(sceneId)) _engineApi.Invoke(typeof(SetStartupSceneDelegate), "SetStartupScene", enginePtr, sceneId);
             _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
             _engineLogger.SubscribeToClient();
             _engineInputService.SubscribeToClient();

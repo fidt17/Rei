@@ -6,14 +6,12 @@ using MsBox.Avalonia.Enums;
 using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.Services.FileSystem;
-using ReiEditor.Models.Services.Scenes;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Project.Services;
 
 public class ProjectWindowActionsController
 {
-    private readonly ISceneOpeningService? _sceneOpeningService;
     private readonly ProjectDirectoryBrowser _directoryBrowser;
     private readonly ProjectAssetSelectionHandler _assetSelectionHandler;
     private readonly ProjectAssetOperationsHandler _assetOperationsHandler;
@@ -31,10 +29,8 @@ public class ProjectWindowActionsController
         ISettingsWindowService? settingsWindowService,
         Func<IReadOnlyList<ProjectAssetItemViewModel>> activeItemsProvider,
         Action<ProjectAssetCommandResult> commandResultHandler,
-        Action<ProjectAssetBatchCommandResult> batchCommandResultHandler,
-        ISceneOpeningService? sceneOpeningService = null)
+        Action<ProjectAssetBatchCommandResult> batchCommandResultHandler)
     {
-        _sceneOpeningService = sceneOpeningService;
         _directoryBrowser = directoryBrowser;
         _assetSelectionHandler = assetSelectionHandler;
         _assetOperationsHandler = assetOperationsHandler;
@@ -55,12 +51,6 @@ public class ProjectWindowActionsController
         if (item.IsDirectory)
         {
             _directoryBrowser.OpenDirectory(item.FullPath);
-            return;
-        }
-
-        if (item.AssetType == ProjectAssetType.Scene)
-        {
-            if (_sceneOpeningService != null) _ = _sceneOpeningService.OpenAsync(item.AssetId);
             return;
         }
 

@@ -39,18 +39,7 @@ namespace rei::scenes
         REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
 
         _activeScene = _buildScenesConfig->GetScene(id);
-        LoadActiveScene();
-    }
-
-    void SceneManager::LoadScene(const std::string& assetId)
-    {
-        _activeScene = _assetManager->GetById<Scene>(assetId);
-        LoadActiveScene();
-    }
-
-    void SceneManager::LoadActiveScene()
-    {
-        REI_THROW_IF(!_assetManager->Load(_activeScene), "Failed to load scene")
+        _assetManager->Load(_activeScene);
 
         _sceneAssetPreloader.Preload(CollectSceneAssetDependencies());
 
