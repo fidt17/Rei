@@ -244,28 +244,27 @@ namespace rei
             REI_THROW("Cannot instantiate from NULL entity, source={}, requestedName={}", std::string(source), requestedName)
         }
 
-        // json work-around
-        auto wrapValueForSet = [&](const nlohmann::json& value, auto&& wrapValueForSetRef) -> nlohmann::json
+        // Setters wrap object fields; collection elements keep their own shape.
+        auto wrapObjectFieldsForSet = [](const nlohmann::json& value, auto&& self) -> nlohmann::json
         {
-            if (value.is_object())
+            if (value.is_array())
             {
-                nlohmann::json obj = nlohmann::json::object();
-                for (const auto& item : value.items())
+                auto items = nlohmann::json::array();
+                for (const auto& item : value)
                 {
-                    if (item.key() == "REI_TYPE")
-                    {
-                        obj[item.key()] = item.value();
-                    }
-                    else
-                    {
-                        obj[item.key()] = wrapValueForSetRef(item.value(), wrapValueForSetRef);
-                    }
+                    items.push_back(self(item, self));
                 }
-
-                return nlohmann::json { { "Value", obj } };
+                return items;
             }
+            if (!value.is_object()) return value;
 
-            return nlohmann::json { { "Value", value } };
+            auto object = nlohmann::json::object();
+            for (const auto& item : value.items())
+            {
+                object[item.key()] = item.key() == "REI_TYPE" ? item.value() :
+                    nlohmann::json{{"Value", self(item.value(), self)}};
+            }
+            return object;
         };
 
         // recursively creates entities and required children
@@ -300,20 +299,7 @@ namespace rei
                 if (behaviourId == transformBehaviourId) continue;
 
                 const auto behaviourData = _behaviourRegistry.GetBehaviourData(src, behaviourId);
-                nlohmann::json behaviourSetData = nlohmann::json::object();
-
-                for (const auto& item : behaviourData.items())
-                {
-                    if (item.key() == "REI_TYPE")
-                    {
-                        behaviourSetData[item.key()] = item.value();
-                    }
-                    else
-                    {
-                        behaviourSetData[item.key()] = wrapValueForSet(item.value(), wrapValueForSet);
-                    }
-                }
-
+                const auto behaviourSetData = wrapObjectFieldsForSet(behaviourData, wrapObjectFieldsForSet);
                 AddBehaviour(clone, behaviourId, behaviourSetData, true);
             }
 
@@ -357,7 +343,7 @@ namespace rei
     {
         GetInternalWorld()->RefreshAll(); // force refresh filters in case we are creating multiple entities in one frame
         
-        i32 maxId = -1;
+        i32 maxId = 0; // Serialized references reserve zero for null.
         FOR(e, _entityInfoFilter)
         {
             const i32 id = GET(e, EntityInfo).Id;

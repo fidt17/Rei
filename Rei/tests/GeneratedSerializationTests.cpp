@@ -17,6 +17,13 @@ namespace
 {
     json Field(const std::string& name, json value) { return {{name, {{"Value", std::move(value)}}}}; }
 
+    void SetAssetCollection(BehaviourFixture& fixture, const ecs::Entity entity, const std::vector<std::string>& ids)
+    {
+        auto items = json::array();
+        for (const auto& id : ids) items.push_back(Field("Id", id));
+        fixture.Manager->GetBehaviourRegistry().SetBehaviourData(entity, PROBE_A, Field("Assets", items));
+    }
+
     std::filesystem::path Package(BehaviourFixture& fixture, const std::string& body)
     {
         const auto path = fixture.Files.Write("asset.bin", {});
@@ -184,20 +191,141 @@ TEST_CASE("SER-01 Clearing generated AssetRef collection releases its acquisitio
 {
     Isolated([]
     {
+        const i32 count = GENERATE(1, 3);
+        const bool keepExternalOwner = GENERATE(false, true);
         BehaviourFixture fixture;
         const auto entity = fixture.Entity();
         fixture.Add(entity, PROBE_A, false);
         auto created = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("data-a");
-        fixture.Manager->GetBehaviourRegistry().SetBehaviourData(entity, PROBE_A, Field("Assets", json::array({Field("Id", "data-a")})));
+        const std::weak_ptr<void> payload = created.Record->Value;
+        SetAssetCollection(fixture, entity, std::vector<std::string>(count, "data-a"));
         auto& probe = fixture.Registry->Get<ProbeA>(entity);
-        REQUIRE(probe.Assets.size() == 1);
-        REQUIRE(probe.Assets[0].IsLoaded());
-        CHECK(probe.Assets[0].Get() == created.Get());
-        fixture.Assets->Release(created);
-        REQUIRE(created.IsLoaded());
-        fixture.Manager->GetBehaviourRegistry().SetBehaviourData(entity, PROBE_A, Field("Assets", json::array()));
+        REQUIRE(probe.Assets.size() == count);
+        for (const auto& ref : probe.Assets) REQUIRE(ref.Get() == created.Get());
+        if (!keepExternalOwner) fixture.Assets->Release(created);
+        SetAssetCollection(fixture, entity, {});
         CHECK(probe.Assets.empty());
-        CHECK_FALSE(created.IsLoaded());
+        CHECK(created.IsLoaded() == keepExternalOwner);
+        CHECK(payload.expired() == !keepExternalOwner);
+        SetAssetCollection(fixture, entity, {});
+        CHECK(created.IsLoaded() == keepExternalOwner);
+        if (keepExternalOwner) fixture.Assets->Release(created);
+        CHECK(payload.expired());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("SER-03 Replacing AssetRef collection balances duplicate and retained runtime resources", "[native][serialization][generated][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto entity = fixture.Entity();
+        fixture.Add(entity, PROBE_A, false);
+        auto first = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("first");
+        auto removed = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("removed");
+        auto added = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("added");
+        first.Get()->Number = 31;
+        added.Get()->Number = 59;
+        const auto firstPayload = first.Get();
+        const std::weak_ptr<void> firstLifetime = first.Record->Value;
+        const std::weak_ptr<void> removedLifetime = removed.Record->Value;
+        const std::weak_ptr<void> addedLifetime = added.Record->Value;
+        SetAssetCollection(fixture, entity, {"first", "first", "removed"});
+        fixture.Assets->Release(first);
+        fixture.Assets->Release(removed);
+        SetAssetCollection(fixture, entity, {"first", "added"});
+        fixture.Assets->Release(added);
+        for (i32 i = 0; i < 3; ++i)
+        {
+            SetAssetCollection(fixture, entity, {"first", "added"});
+            const auto& refs = fixture.Registry->Get<ProbeA>(entity).Assets;
+            REQUIRE(refs.size() == 2);
+            REQUIRE(refs[0].Get() == firstPayload);
+            CHECK(refs[0].Get()->Number == 31);
+            REQUIRE(refs[1].IsLoaded());
+            CHECK(refs[1].Get()->Number == 59);
+            CHECK(removedLifetime.expired());
+        }
+        SetAssetCollection(fixture, entity, {});
+        CHECK(firstLifetime.expired());
+        CHECK(addedLifetime.expired());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("SER-03 Clearing AssetRef collection releases bound IDs and skips unbound references", "[native][serialization][generated][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto entity = fixture.Entity();
+        fixture.Add(entity, PROBE_A, false);
+        auto bound = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("bound");
+        const std::weak_ptr<void> lifetime = bound.Record->Value;
+        SetAssetCollection(fixture, entity, {"late", "", "bound"});
+        fixture.Assets->Release(bound);
+        auto late = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("late");
+        auto& refs = fixture.Registry->Get<ProbeA>(entity).Assets;
+        REQUIRE(refs.size() == 3);
+        REQUIRE_FALSE(refs[0].IsLoaded());
+        refs[2].Id = "late"; // The acquisition still belongs to the bound record.
+        SetAssetCollection(fixture, entity, {});
+        CHECK(lifetime.expired());
+        CHECK(late.IsLoaded());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 1);
+        fixture.Assets->Release(late);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("SER-03 Clearing AssetRef collection releases failed payloads", "[native][serialization][generated][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto entity = fixture.Entity();
+        fixture.Add(entity, PROBE_A, false);
+        auto created = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("failed");
+        const std::weak_ptr<void> payload = created.Record->Value;
+        SetAssetCollection(fixture, entity, {"failed"});
+        fixture.Assets->Release(created);
+        created.Record->State = assets::AssetState::Failed;
+        SetAssetCollection(fixture, entity, {});
+        CHECK(payload.expired());
+        CHECK(created.Record->State == assets::AssetState::Unloaded);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("SER-03 Malformed AssetRef collection preserves current acquisitions without leaks", "[native][serialization][generated][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto entity = fixture.Entity();
+        fixture.Add(entity, PROBE_A, false);
+        auto retained = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("retained");
+        auto candidate = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("candidate");
+        const std::weak_ptr<void> retainedLifetime = retained.Record->Value;
+        const std::weak_ptr<void> candidateLifetime = candidate.Record->Value;
+        SetAssetCollection(fixture, entity, {"retained"});
+        fixture.Assets->Release(retained);
+        const auto original = fixture.Registry->Get<ProbeA>(entity).REI_GET().at("Assets");
+        const std::vector<json> invalid = {42, json::object(), json::array({Field("Id", "candidate"), Field("Id", 42)}),
+            json::array({Field("Id", "candidate"), json{{"Id", "missing wrapper"}}})};
+        for (const auto& data : invalid)
+        {
+            CHECK_THROWS(fixture.Manager->GetBehaviourRegistry().SetBehaviourData(entity, PROBE_A, Field("Assets", data)));
+            CHECK(fixture.Registry->Get<ProbeA>(entity).REI_GET().at("Assets") == original);
+            CHECK_FALSE(retainedLifetime.expired());
+        }
+        fixture.Manager->GetBehaviourRegistry().SetBehaviourData(entity, PROBE_A, Field("Number", 17));
+        CHECK(fixture.Registry->Get<ProbeA>(entity).REI_GET().at("Assets") == original);
+        fixture.Assets->Release(candidate);
+        CHECK(candidateLifetime.expired());
+        SetAssetCollection(fixture, entity, {});
+        CHECK(retainedLifetime.expired());
         CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
     });
 }

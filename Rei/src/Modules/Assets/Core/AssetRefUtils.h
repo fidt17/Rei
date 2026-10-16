@@ -27,6 +27,46 @@ namespace rei::assets
     }
 
     template <typename T>
+    void ClearAssetRefCollection(std::vector<AssetRef<T>>& collection)
+    {
+        for (const auto& ref : collection)
+        {
+            if (ref.Record == nullptr || ref.Record->Value == nullptr) continue;
+            GetAssetManager().ReleaseById<T>(ref.Record->Id);
+        }
+        collection.clear();
+    }
+
+    template <typename T>
+    void SetAssetRefCollection(std::vector<AssetRef<T>>& collection, const nlohmann::json& data)
+    {
+        const auto& items = data.get_ref<const nlohmann::json::array_t&>();
+        std::vector<AssetRef<T>> replacement;
+        replacement.reserve(items.size());
+        for (const auto& itemData : items)
+        {
+            replacement.emplace_back().REI_SET(itemData);
+        }
+
+        // Acquire replacements before releasing old refs, including repeated IDs.
+        try
+        {
+            for (auto& ref : replacement)
+            {
+                SyncAfterExternalChange(ref);
+            }
+        }
+        catch (...)
+        {
+            ClearAssetRefCollection(replacement);
+            throw;
+        }
+
+        collection.swap(replacement);
+        ClearAssetRefCollection(replacement);
+    }
+
+    template <typename T>
     void Assign(AssetRef<T>& target, const AssetRef<T>& other)
     {
         if (&target == &other) return;

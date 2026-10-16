@@ -83,10 +83,8 @@ public sealed class BehaviourRegistrySourceGeneratorTests : IDisposable
         Assert.Contains("void game::Settings::REI_SET", write.Data);
         Assert.Contains("CreateTypedAssetDependency<rei::render::Texture>", write.Data);
         Assert.Contains("FramesJson.push_back(itemValue.REI_GET())", write.Data);
-        Assert.Contains("Frames.clear();", write.Data);
-        Assert.Contains("typename decltype(Frames)::value_type itemValue;", write.Data);
-        Assert.Contains("Frames.emplace_back(std::move(itemValue));", write.Data);
-        Assert.Contains("for (auto& itemValue : Frames)", write.Data);
+        Assert.Contains("""rei::assets::SetAssetRefCollection(Frames, data.at("Frames").at("Value"));""", write.Data);
+        Assert.DoesNotContain("Frames.clear();", write.Data);
         Assert.Contains("""if (data.contains("Frames")) { const auto& rawValue = data.at("Frames"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; for (const auto& assetRefItem : assetRefValue)""", write.Data);
         Assert.Contains("""if (data.contains("Portrait")) { const auto& rawValue = data.at("Portrait"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id"))""", write.Data);
         Assert.DoesNotContain("Missing", write.Data);

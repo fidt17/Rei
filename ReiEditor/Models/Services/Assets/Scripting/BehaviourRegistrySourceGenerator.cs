@@ -342,6 +342,13 @@ public class BehaviourRegistrySourceGenerator
     {
         if (propertyData.Type == SerializedTypeEnum.Collection)
         {
+            if (IsCollectionOfAssetRef(propertyData))
+            {
+                str.AppendLine($"    if (data.contains(\"{propertyName}\"))");
+                str.AppendLine($"        rei::assets::SetAssetRefCollection({propertyName}, data.at(\"{propertyName}\").at(\"Value\"));");
+                return;
+            }
+
             str.AppendLine($"    if (data.contains(\"{propertyName}\"))");
             str.AppendLine("    {");
             str.AppendLine($"        {propertyName}.clear();");
@@ -366,14 +373,6 @@ public class BehaviourRegistrySourceGenerator
             else
             {
                 str.AppendLine($"        {propertyName} = collectionData.get<std::remove_reference_t<decltype({propertyName})>>();");
-            }
-
-            if (IsCollectionOfAssetRef(propertyData))
-            {
-                str.AppendLine($"        for (auto& itemValue : {propertyName})");
-                str.AppendLine("        {");
-                str.AppendLine("            rei::assets::SyncAfterExternalChange(itemValue);");
-                str.AppendLine("        }");
             }
 
             str.AppendLine("    }");

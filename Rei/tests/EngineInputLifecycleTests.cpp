@@ -186,8 +186,7 @@ TEST_CASE("LIFE02 native sessions dispose owned runtime objects before fixture c
             CHECK(GetInternalWorld()->GetRegistry() != oldRegistry);
             CHECK_FALSE(oldRegistry->IsAlive(oldEntity));
             CHECK(GetAssetManager().InspectLoadedAsset("session-A-owned").at("status") == "unloaded");
-            // Read actual new AssetManager payload, independently of ShaderGenerator's
-            // known cached-include policy tested by the separate LIFE-02 shader case.
+            // Read current AssetManager payload independently of generated shader source.
             CHECK(GetAssetManager().GetById<assets::TextAsset>(REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID)->GetValue() == "// RUNTIME_SESSION_B\n");
             CHECK(GetInternalWorld()->GetFiltersRegistry()->Get<EntityInfo>()->Entities().empty());
         });

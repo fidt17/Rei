@@ -32,7 +32,7 @@ namespace rei::render
 
     void ShaderGenerator::Initialize()
     {
-        if (_isInitialized) return;
+        _isInitialized = false;
 
         _commonIncludes = BuildIncludeBlock("COMMON",
         {

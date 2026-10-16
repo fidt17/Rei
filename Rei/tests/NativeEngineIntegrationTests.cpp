@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "support/NativeEngineFixture.h"
+#include "Modules/Assets/Types/TextAsset.h"
 #include "Api/AssetApi.h"
 #include "Api/EntityApi.h"
 #include "Api/EditorApi.h"
@@ -178,20 +179,28 @@ TEST_CASE("BEH-05 Editor engine suppresses Start Update and play Dispose", "[nat
 
 TEST_CASE("LIFE-02 Second engine session composes shader includes from new resource pack", "[native][engine-integration][coverage][coverage-remaining][isolated]")
 {
-    Isolated([]
+    const auto mode = GENERATE(EditorMode, PlayMode);
+    Isolated([mode]
     {
+        for (const std::string marker : {"SESSION_A", "SESSION_B", "SESSION_C"})
         {
-            NativeEngineFixture fixture(PlayMode, "SESSION_A");
+            NativeEngineFixture fixture(mode, marker);
             fixture.Start();
-            CHECK(render::ShaderGenerator::GetInstance().ComposeVertexSource("").find("SESSION_A") != std::string::npos);
+            fixture.OnEngineThread([&]
+            {
+                const auto& generator = render::ShaderGenerator::GetInstance();
+                for (const auto& source : {generator.ComposeVertexSource(""), generator.ComposeFragmentSource("")})
+                {
+                    CHECK(source.find(marker) != std::string::npos);
+                    for (const std::string other : {"SESSION_A", "SESSION_B", "SESSION_C"})
+                    {
+                        if (other != marker) CHECK(source.find(other) == std::string::npos);
+                    }
+                }
+                CHECK(GetAssetManager().GetById<assets::TextAsset>(REI_SHADER_INCLUDE_SHADER_COMMON_ASSET_ID)->GetValue() == "// " + marker + "\n");
+            });
             fixture.Stop();
         }
-        NativeEngineFixture fixture(PlayMode, "SESSION_B");
-        fixture.Start();
-        const auto source = render::ShaderGenerator::GetInstance().ComposeVertexSource("");
-        CHECK(source.find("SESSION_B") != std::string::npos);
-        CHECK(source.find("SESSION_A") == std::string::npos);
-        fixture.Stop();
     }, 25000, 1536);
 }
 
