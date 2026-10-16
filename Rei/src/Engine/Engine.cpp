@@ -37,6 +37,7 @@ namespace rei::internal::engine
         Services::GetInstance()->SetAssetManager(_assetManager);
         Services::GetInstance()->SetInternalWorld(_internalWorld->GetWorld());
         Services::GetInstance()->SetEntityManager(_entityManager);
+        Services::GetInstance()->SetSceneManager(_sceneManager);
         Services::GetInstance()->SetWindowManager(_windowManager);
         Services::GetInstance()->SetEditorEventsRelay(_editorEventsRelay);
         Services::GetInstance()->SetSceneSyncRelay(_sceneSyncRelay);

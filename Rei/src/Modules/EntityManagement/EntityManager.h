@@ -202,6 +202,7 @@ namespace rei
         REI_API ecs::Entity Instantiate(ecs::Entity source, const std::string& requestedName = "", bool includeChildren = true) const;
 
         REI_API void Destroy(ecs::Entity e) const;
+        REI_API void DestroySceneEntities() const;
         REI_API void ResolveDependencies() const;
         REI_API void ResolveTransformParents() const;
 

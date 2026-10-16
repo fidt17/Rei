@@ -29,6 +29,11 @@ namespace rei
 
     class EntityManager;
 
+    namespace scenes
+    {
+        class SceneManager;
+    }
+
     namespace internal::engine
     {
         class Engine;
@@ -52,6 +57,9 @@ namespace rei
 
         void SetEntityManager(const std::shared_ptr<EntityManager>& entityManager) { _entityManager = entityManager; }
         REI_API EntityManager& GetEntityManager() const { return *_entityManager; }
+
+        void SetSceneManager(const std::shared_ptr<scenes::SceneManager>& sceneManager) { _sceneManager = sceneManager; }
+        REI_API scenes::SceneManager& GetSceneManager() const { return *_sceneManager; }
 
         void SetAssetManager(const std::shared_ptr<assets::AssetManager>& assetManager) { _assetManager = assetManager; }
         REI_API assets::AssetManager& GetAssetManager() const { return *_assetManager; }
@@ -84,6 +92,7 @@ namespace rei
         std::shared_ptr<time::TimeService> _time;
         std::shared_ptr<ecs::World> _internalWorld;
         std::shared_ptr<EntityManager> _entityManager;
+        std::shared_ptr<scenes::SceneManager> _sceneManager;
         std::shared_ptr<assets::AssetManager> _assetManager;
         std::shared_ptr<window::WindowManager> _windowManager;
         std::shared_ptr<api::EditorEventsRelay> _editorEventsRelay;
@@ -97,6 +106,7 @@ namespace rei
     inline internal::engine::Engine& GetEngine() { return Services::GetInstance()->GetEngine(); }
     inline std::shared_ptr<ecs::World> GetInternalWorld() { return Services::GetInstance()->GetInternalWorld(); }
     inline EntityManager& GetEntityManager() { return Services::GetInstance()->GetEntityManager(); }
+    inline scenes::SceneManager& GetSceneManager() { return Services::GetInstance()->GetSceneManager(); }
     inline assets::AssetManager& GetAssetManager() { return Services::GetInstance()->GetAssetManager(); }
     inline window::WindowManager& GetWindowManager() { return Services::GetInstance()->GetWindowManager(); }
     inline api::EditorEventsRelay& GetEditorEventsRelay() { return Services::GetInstance()->GetEditorEventsRelay(); }

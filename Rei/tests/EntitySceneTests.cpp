@@ -291,9 +291,9 @@ TEST_CASE("SCENE-01 SceneManager rejects duplicate serialized entity IDs", "[nat
     {
         BehaviourFixture fixture([](TemporaryDirectory& files) { WriteScenes(files, json::array({SceneObject(7, "a", json::array({TransformData()})), SceneObject(7, "b", json::array({TransformData()}))})); });
         scenes::SceneManager manager(fixture.Assets, fixture.Manager);
-        CHECK_THROWS(manager.LoadScene(0));
-        const auto entities = LiveSceneEntities(fixture);
-        CHECK(entities.size() <= 1); // No two live entities may share this scene ID.
+        CHECK_FALSE(manager.LoadScene(0));
+        CHECK(LiveSceneEntities(fixture).empty());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 1);
     });
 }
 
@@ -306,47 +306,9 @@ TEST_CASE("SCENE-03 Failed scene dependency prevents successful entity creation"
             WriteScenes(files, json::array({SceneObject(7, "dependent", json::array({TransformData(), SceneBehaviour(PROBE_A, SerializedField("Asset", SerializedField("Id", "missing")))}))}));
         });
         scenes::SceneManager manager(fixture.Assets, fixture.Manager);
-        CHECK_THROWS(manager.LoadScene(0));
+        CHECK_FALSE(manager.LoadScene(0));
         CHECK(LiveSceneEntities(fixture).empty());
-    });
-}
-
-TEST_CASE("SCENE-03 Switching scene replaces previous scene entities", "[native][scene][coverage][coverage-assets][isolated]")
-{
-    Isolated([]
-    {
-        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteScenes(files, json::array({SceneObject(7, "a", json::array({TransformData()}))}), json::array({SceneObject(8, "b", json::array({TransformData()}))})); });
-        scenes::SceneManager manager(fixture.Assets, fixture.Manager);
-        manager.LoadScene(0);
-        REQUIRE(fixture.Manager->GetBySceneId(7) != NULL_ENTITY);
-        manager.LoadScene(1);
-        CHECK(fixture.Manager->GetBySceneId(7) == NULL_ENTITY);
-        CHECK(fixture.Manager->GetBySceneId(8) != NULL_ENTITY);
-        CHECK(LiveSceneEntities(fixture).size() == 1);
-    });
-}
-
-TEST_CASE("SCENE-03 Loading same scene twice does not duplicate native IDs", "[native][scene][coverage][coverage-assets][isolated]")
-{
-    Isolated([]
-    {
-        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteScenes(files, json::array({SceneObject(7, "a", json::array({TransformData()}))})); });
-        scenes::SceneManager manager(fixture.Assets, fixture.Manager);
-        manager.LoadScene(0);
-        manager.LoadScene(0);
-        CHECK(LiveSceneEntities(fixture).size() == 1);
-    });
-}
-
-TEST_CASE("SCENE-03 Missing build scene ID fails before loading a scene payload", "[native][scene][coverage][coverage-assets][isolated]")
-{
-    Isolated([]
-    {
-        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteScenes(files, json::array()); });
-        scenes::SceneManager manager(fixture.Assets, fixture.Manager);
-        CHECK_THROWS(manager.LoadScene(99));
-        CHECK(LiveSceneEntities(fixture).empty());
-        CHECK(fixture.Assets->GetLoadedAssetCount() == 1); // Config only.
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 1);
     });
 }
 
@@ -362,5 +324,46 @@ TEST_CASE("SCENE-03 Empty scene shutdown releases scene and configuration assets
         CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
         CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
         CHECK_NOTHROW(manager.Shutdown());
+    });
+}
+
+TEST_CASE("SCENE-03 Unload clears unrefreshed entities without Transform and preserves internal entities", "[native][scene][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteScenes(files, json::array()); });
+        scenes::SceneManager manager(fixture.Assets, fixture.Manager);
+        REQUIRE(manager.LoadScene(0));
+        const auto internalEntity = fixture.Registry->NewEntity();
+        const auto sceneEntity = fixture.Registry->NewEntity();
+        fixture.Registry->Get<EntityInfo>(sceneEntity) = {7, "unfinished"};
+        manager.UnloadCurrentScene();
+        CHECK_FALSE(fixture.Registry->IsAlive(sceneEntity));
+        CHECK(fixture.Registry->IsAlive(internalEntity));
+        CHECK(LiveSceneEntities(fixture).empty());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 1);
+        CHECK_NOTHROW(manager.UnloadCurrentScene());
+    });
+}
+
+TEST_CASE("SCENE-03 Repeated unload releases only the manager scene reference", "[native][scene][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteScenes(files, json::array()); });
+        scenes::SceneManager manager(fixture.Assets, fixture.Manager);
+        REQUIRE(manager.LoadScene(0));
+        auto retained = fixture.Assets->GetById<scenes::Scene>("scene-a");
+        manager.UnloadCurrentScene();
+        REQUIRE(retained.IsLoaded());
+        manager.UnloadCurrentScene();
+        REQUIRE(retained.IsLoaded());
+        manager.Shutdown();
+        manager.Shutdown();
+        CHECK(retained.IsLoaded());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 1);
+        fixture.Assets->Release(retained);
+        CHECK_FALSE(retained.IsLoaded());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
     });
 }

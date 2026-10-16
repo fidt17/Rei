@@ -2,6 +2,7 @@
 #include "EntityManager.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 
 #include "rei_behaviours/transformation/Transform.h"
@@ -54,57 +55,27 @@ namespace rei
     {
         ECS_WORLD(GetInternalWorld())
 
-        struct EntityToBehaviour
+        const auto entity = NEW_ENTITY();
+        GET(entity, EntityInfo) = {.Id = sceneEntity.GetId(), .Name = sceneEntity.GetName()};
+        for (const auto& behaviourData : sceneEntity.GetBehaviours())
         {
-            ecs::Entity Entity;
-            i32 BehaviourId;
-        };
-        auto behavioursToInit = std::vector<EntityToBehaviour>();
-
-        try
-        {
-            const auto e = NEW_ENTITY();
-            GET(e, EntityInfo) = {.Id = sceneEntity.GetId(), .Name = sceneEntity.GetName()};
-            auto& behavioursToAdd = sceneEntity.GetBehaviours();
-
-            for (auto behaviourData : behavioursToAdd)
+            const i32 behaviourId = behaviourData.at("Id");
+            const auto serializedData = behaviourData.value("SerializedData", nlohmann::json());
+            if (HasBehaviour(entity, behaviourId))
             {
-                const i32 behaviourId = behaviourData.at("Id");
-
-                const std::string SERIALIZE_DATA = "SerializedData";
-                nlohmann::json serializedData;
-                if (behaviourData.contains(SERIALIZE_DATA))
-                {
-                    serializedData = behaviourData.at(SERIALIZE_DATA);
-                }
-
-                if (HasBehaviour(e, behaviourId))
-                {
-                    _behaviourRegistry.SetBehaviourData(e, behaviourId, serializedData);
-                }
-                else
-                {
-                    AddBehaviour(e, behaviourId, serializedData, false);
-                }
+                _behaviourRegistry.SetBehaviourData(entity, behaviourId, serializedData);
             }
-
-            if (HAS(e, BehaviourCollection))
+            else
             {
-                for (const auto behaviourId : GET(e, BehaviourCollection).Behaviours)
-                {
-                    behavioursToInit.push_back({.Entity = e, .BehaviourId = behaviourId});
-                }
+                AddBehaviour(entity, behaviourId, serializedData, false);
             }
         }
-        catch (std::exception& e)
-        {
-            LOG_ERROR("Scene entity creation exception. Entity Id {}. Exception: {}", sceneEntity.GetId(), e.what())
-        }
 
-        for (const auto& [Entity, BehaviourId] : behavioursToInit)
+        if (!HAS(entity, BehaviourCollection)) return;
+        const auto behavioursToInit = GET(entity, BehaviourCollection).Behaviours;
+        for (const auto behaviourId : behavioursToInit)
         {
-            auto& b = GetBehaviour(Entity, BehaviourId);
-            InitBehaviour(Entity, b);
+            InitBehaviour(entity, GetBehaviour(entity, behaviourId));
         }
     }
 
@@ -165,11 +136,16 @@ namespace rei
 
     void EntityManager::Destroy(const ecs::Entity e) const
     {
-        // recursively collects all nested entities (and root)
+        const auto isDeadOrPendingDestroy = [&](const ecs::Entity entity)
+        {
+            return IS_DEAD(entity) || _ecs->GetDestroyedEntities().contains(entity);
+        };
+        // Collect children before parents, including malformed cyclic hierarchies.
+        std::unordered_set<ecs::Entity> visited;
         auto collectEntitiesForDestroy = [&](auto&& self, const ecs::Entity current,
                                              std::vector<ecs::Entity>& result) -> void
         {
-            if (IS_DEAD(current)) return;
+            if (isDeadOrPendingDestroy(current) || !visited.insert(current).second) return;
 
             if (HAS(current, Transform))
             {
@@ -187,21 +163,45 @@ namespace rei
 
         for (const auto entity : entitiesToDestroy)
         {
-            if (IS_DEAD(entity)) continue;
+            if (isDeadOrPendingDestroy(entity)) continue;
+            // ECS keeps components readable until Refresh; mark first to prevent repeated or reentrant Dispose.
+            DESTROY_ENTITY(entity);
 
-            if (HAS(entity, BehaviourCollection))
+            if (HAS(entity, BehaviourCollection) && GetEngine().IsPlaymode())
             {
-                for (const auto behaviour : GET(entity, BehaviourCollection).Behaviours)
+                const auto behaviours = GET(entity, BehaviourCollection).Behaviours;
+                for (const auto behaviour : behaviours)
                 {
-                    if (GetEngine().IsPlaymode())
+                    if (IS_DEAD(entity)) break;
+                    if (!HasBehaviour(entity, behaviour)) continue;
+                    try
                     {
                         GetBehaviour(entity, behaviour).Dispose();
+                    }
+                    catch (const std::exception& exception)
+                    {
+                        LOG_ERROR("Behaviour disposal failed. Entity {}, behaviour {}. {}", std::string(entity), behaviour, exception.what())
+                    }
+                    catch (...)
+                    {
+                        LOG_ERROR("Behaviour disposal failed. Entity {}, behaviour {}. Unknown exception", std::string(entity), behaviour)
                     }
                 }
             }
 
-            DESTROY_ENTITY(entity);
         }
+    }
+
+    void EntityManager::DestroySceneEntities() const
+    {
+        const auto world = GetInternalWorld();
+        world->Refresh();
+        const auto entities = _entityInfoFilter->Entities();
+        for (const auto entity : entities)
+        {
+            Destroy(entity);
+        }
+        world->Refresh();
     }
 
     void EntityManager::ResolveTransformParents() const

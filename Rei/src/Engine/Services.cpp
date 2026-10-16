@@ -11,6 +11,7 @@ namespace rei
 
         // Runtime components release while their other services remain available.
         _gizmos.reset();
+        _sceneManager.reset();
         _internalWorld.reset();
         _entityManager.reset();
         _editorEventsRelay.reset();

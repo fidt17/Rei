@@ -16,7 +16,8 @@ namespace rei::tests
         return bytes;
     }
 
-    inline void PrepareEngineResources(TemporaryDirectory& files, const std::string& marker = "first-session", const nlohmann::json& entities = nlohmann::json::array())
+    inline void PrepareEngineResources(TemporaryDirectory& files, const std::string& marker = "first-session",
+        const nlohmann::json& entities = nlohmann::json::array(), const std::vector<PackedAsset>& additionalAssets = {})
     {
         // Small real shader programs, independent of the user's resource pack.
         const std::string shader =
@@ -33,6 +34,11 @@ namespace rei::tests
             REI_SHADER_OVERLAY_TEXTURE_ASSET_ID, REI_SHADER_GRAYSCALE_ASSET_ID, REI_SHADER_INVERSION_ASSET_ID,
             REI_SHADER_DEPTH_ASSET_ID, REI_SHADER_COLOR_ASSET_ID, REI_SHADER_EDITOR_GRID_ASSET_ID, REI_SHADER_TEXT_ASSET_ID})
             pack.push_back({id, id, TextBytes(shader)});
+        for (const auto& asset : additionalAssets)
+        {
+            std::erase_if(pack, [&](const PackedAsset& existing) { return existing.Id == asset.Id; });
+            pack.push_back(asset);
+        }
         WriteAssetPack(files, pack);
     }
 
