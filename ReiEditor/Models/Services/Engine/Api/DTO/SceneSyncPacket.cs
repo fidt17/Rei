@@ -4,6 +4,8 @@ namespace ReiEditor.Models.Services.Engine.Api.DTO;
 
 public sealed class SceneSyncPacket
 {
+    public string? SceneAssetId { get; set; }
+    public string? SceneName { get; set; }
     public bool IsSnapshot { get; set; }
     public SceneEntityState[] Entities { get; set; } = Array.Empty<SceneEntityState>();
     public int[] RemovedEntityIds { get; set; } = Array.Empty<int>();

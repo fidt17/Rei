@@ -22,6 +22,7 @@ namespace rei::api
 
         std::map<i32, EntityState> _entities;
         std::vector<i32> _selected;
+        std::string _sceneAssetId;
         void (*_callback)(const char*, i32) = nullptr;
         bool _sendSnapshot = true;
 

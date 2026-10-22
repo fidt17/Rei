@@ -79,6 +79,7 @@ namespace rei::tests
         std::shared_ptr<EngineProbeApp> App = std::make_shared<EngineProbeApp>();
         std::unique_ptr<internal::engine::Engine> Engine;
         std::function<void()> BeforeStartAction;
+        std::string LastSceneId;
 
         explicit NativeEngineFixture(const internal::engine::EngineMode mode = internal::engine::PlayMode, const std::string& marker = "first-session", const std::function<void(TemporaryDirectory&)>& prepareResources = {}, const bool isEditor = false)
             : Resources([&](TemporaryDirectory& files) { if (prepareResources) prepareResources(files); else PrepareEngineResources(files, marker); }),
@@ -125,7 +126,7 @@ namespace rei::tests
                             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
                             const WindowCreationSettings settings{"Rei native integration", 32, 24, true, false, false};
                             Engine->CreateMainWindow(settings);
-                            if (!_stopRequested) Engine->Start();
+                            if (!_stopRequested) Engine->Start(LastSceneId);
                         }
                     }
                 }

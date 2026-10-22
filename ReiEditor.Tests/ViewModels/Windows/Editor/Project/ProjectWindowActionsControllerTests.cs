@@ -3,6 +3,7 @@ using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Tests.Infrastructure.Fixtures;
 using ReiEditor.Tests.Infrastructure.Headless;
+using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.ViewModels.Controls;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 using ReiEditor.ViewModels.Windows.Editor.Project.Services;
@@ -83,22 +84,31 @@ public sealed class ProjectWindowActionsControllerTests : IDisposable
         var selection = new ProjectAssetSelectionHandler(null, _ => { });
         var operations = new ProjectAssetOperationsHandler(null, null, null, null, null, null);
         var opener = new TestTextEditorFileOpener();
+        var scenes = new TestSceneManagementService();
+        var openedScenes = new List<string>();
+        scenes.OnOpen = id => { openedScenes.Add(id); return Task.CompletedTask; };
         var controller = new ProjectWindowActionsController(
-            browser, selection, operations, opener, null, () => _items, _ => { }, _ => { });
+            browser, selection, operations, opener, null, () => _items, _ => { }, _ => { }, scenes);
         var actions = controller.CreateAssetItemActions((_, _) => { }, _ => { });
         var explorer = new TestFileExplorerProvider();
         var directoryItem = new ProjectAssetItemViewModel(
             "Folder", folder, ProjectAssetType.Directory, null, actions, new ContextMenuViewModel(), explorer);
         var fileItem = new ProjectAssetItemViewModel(
             "Asset.cpp", file, ProjectAssetType.Script, new AssetInfo(new AssetMeta("asset-id"), file), actions, new ContextMenuViewModel(), explorer);
+        var sceneItem = new ProjectAssetItemViewModel(
+            "Other.scene", Path.Combine(root, "Other.scene"), ProjectAssetType.Scene,
+            new AssetInfo(new AssetMeta("scene-id"), Path.Combine(root, "Other.scene")), actions, new ContextMenuViewModel(), explorer);
+        _items.Add(sceneItem);
         _items.Add(directoryItem);
         _items.Add(fileItem);
 
         actions.OpenAction(directoryItem);
         actions.OpenAction(fileItem);
+        actions.OpenAction(sceneItem);
 
         Assert.Equal(folder, browser.ActiveDirectoryPath.Value);
         Assert.Equal(new[] { file }, opener.OpenedPaths);
+        Assert.Equal(new[] { "scene-id" }, openedScenes);
         browser.Reset();
     }
 }

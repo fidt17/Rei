@@ -6,12 +6,16 @@ using MsBox.Avalonia.Enums;
 using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.Services.FileSystem;
+using ReiEditor.Models.Services.Logging.Loggers;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.ViewModels.Windows.Editor.Project.Assets;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Project.Services;
 
 public class ProjectWindowActionsController
 {
+    private readonly ISceneManagementService? _scenes;
+    private readonly ILogger<ProjectWindowActionsController>? _logger;
     private readonly ProjectDirectoryBrowser _directoryBrowser;
     private readonly ProjectAssetSelectionHandler _assetSelectionHandler;
     private readonly ProjectAssetOperationsHandler _assetOperationsHandler;
@@ -29,8 +33,12 @@ public class ProjectWindowActionsController
         ISettingsWindowService? settingsWindowService,
         Func<IReadOnlyList<ProjectAssetItemViewModel>> activeItemsProvider,
         Action<ProjectAssetCommandResult> commandResultHandler,
-        Action<ProjectAssetBatchCommandResult> batchCommandResultHandler)
+        Action<ProjectAssetBatchCommandResult> batchCommandResultHandler,
+        ISceneManagementService? scenes = null,
+        ILogger<ProjectWindowActionsController>? logger = null)
     {
+        _scenes = scenes;
+        _logger = logger;
         _directoryBrowser = directoryBrowser;
         _assetSelectionHandler = assetSelectionHandler;
         _assetOperationsHandler = assetOperationsHandler;
@@ -46,11 +54,19 @@ public class ProjectWindowActionsController
         return new ProjectAssetItemActions(selectionRequestedAction, contextMenuSelectionRequestedAction, DeleteAsset, DuplicateAsset, RenameAsset, MoveAsset, OpenAsset);
     }
 
-    private void OpenAsset(ProjectAssetItemViewModel item)
+    private async void OpenAsset(ProjectAssetItemViewModel item)
     {
         if (item.IsDirectory)
         {
             _directoryBrowser.OpenDirectory(item.FullPath);
+            return;
+        }
+
+        if (item.AssetType == ProjectAssetType.Scene)
+        {
+            if (_scenes == null) return;
+            try { await _scenes.OpenScene(item.AssetId); }
+            catch (Exception error) { _logger?.LogException(error); }
             return;
         }
 
@@ -60,7 +76,7 @@ public class ProjectWindowActionsController
         if (result != TextEditorOpenResult.InvalidCustomEditorPath) return;
         if (_settingsWindowService == null) return;
 
-        Dispatcher.UIThread.InvokeAsync(async () =>
+        _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
             var prompt = MessageBoxManager.GetMessageBoxStandard(
                 "Text Editor",

@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Engine.Api;
@@ -42,6 +43,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
     private readonly Observable<bool> _isEngineStarting = new(false);
     
     private readonly IEngineApi _engineApi;
+    private readonly IActiveProjectService _activeProject;
     private readonly ILogger<EngineRunner> _logger;
     private readonly IEngineLogger _engineLogger;
     private readonly IEngineInputService _engineInputService;
@@ -65,9 +67,11 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         IResourceService resourceService, 
         IClientDllManager clientDllManager,
         IEditorProceduresService editorProceduresService,
+        IActiveProjectService activeProject,
         IEngineSceneSyncEventSource? sceneEvents = null)
     {
         _engineApi = engineApi;
+        _activeProject = activeProject;
         _logger = logger;
         _engineLogger = engineLogger;
         _engineInputService = engineInputService;
@@ -128,7 +132,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             _shutdownListener.SubscribeToClient();
             _sceneEvents?.Connect();
             _engineWindowController.SetupWindow();
-            _engineApi.Start(enginePtr);
+            _engineApi.Start(enginePtr, _activeProject.GetActiveProject().LastSceneId);
         }
         catch (Exception e)
         {

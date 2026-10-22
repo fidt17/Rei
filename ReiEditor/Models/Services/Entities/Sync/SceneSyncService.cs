@@ -18,15 +18,17 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
     private readonly IEngineSceneSyncEventSource _source;
     private readonly ISceneManagementService _scenes;
     private readonly IEngineSelectionSyncService _selection;
+    private readonly IEntitySyncService _entities;
     private readonly ILogger<SceneSyncService> _logger;
     private bool _scheduled;
     private bool _disposed;
 
-    public SceneSyncService(IEngineSceneSyncEventSource source, ISceneManagementService scenes, IEngineSelectionSyncService selection, ILogger<SceneSyncService> logger)
+    public SceneSyncService(IEngineSceneSyncEventSource source, ISceneManagementService scenes, IEngineSelectionSyncService selection, ILogger<SceneSyncService> logger, IEntitySyncService entities)
     {
         _source = source;
         _scenes = scenes;
         _selection = selection;
+        _entities = entities;
         _logger = logger;
         _source.Received += Receive;
         _source.ConnectionReset += ClearQueue;
@@ -74,15 +76,27 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             SceneSyncPacket packet;
             lock (_gate)
             {
-                if (_disposed || scene == null || !_packets.TryDequeue(out packet!)) break;
+                if (_disposed || !_packets.TryDequeue(out packet!)) break;
             }
-            try { Apply(scene, packet); }
+            try
+            {
+                var previousScene = scene;
+                if (packet.SceneAssetId != null && packet.SceneAssetId != scene?.AssetId)
+                {
+                    if (!packet.IsSnapshot) continue;
+                    scene = _scenes.SynchronizeRuntimeScene(packet.SceneAssetId, packet.SceneName ?? packet.SceneAssetId);
+                }
+                if (scene == null) continue;
+                Apply(scene, packet);
+                if (!ReferenceEquals(scene, previousScene))
+                    foreach (var entity in scene.Entities) _entities.UpdateEntityState(entity);
+            }
             catch (Exception error) { _logger.LogException(error); }
         }
 
         lock (_gate)
         {
-            _scheduled = !_disposed && _packets.Count > 0 && _scenes.CurrentScene.Value != null;
+            _scheduled = !_disposed && _packets.Count > 0;
             if (!_scheduled) return;
         }
         Dispatcher.UIThread.Post(DrainQueue);

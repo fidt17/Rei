@@ -96,6 +96,21 @@ internal sealed class McpEditorAutomationService : IMcpEditorAutomationService
         return new ReiProjectSaveResult(true, DateTimeOffset.UtcNow, "Project saved.");
     }
 
+    public ReiOperationInfo StartOpenScene(Func<Task> openScene)
+    {
+        if (!_engineRunner.IsActive.Value || _engineRunner.IsEngineStarting.Value || _buildService.BuildInProgress.Value ||
+            _assetsService.SaveInProcess.Value || _assetImporter.IsImporting.Value)
+            throw new ReiMcpOperationException("scene_open_unavailable", "Scene requires running engine without build, save, or import in progress.");
+        return _operationCoordinator.Start(ReiOperationKinds.OPEN_SCENE, async context =>
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            context.Report(0.1, "Opening scene.");
+            await openScene();
+            context.Report(1, "Scene opened.");
+            return "Scene opened without restarting engine.";
+        });
+    }
+
     public ReiOperationInfo StartAssetRefresh()
     {
         if (_engineRunner.IsPlaymodeActive.Value || _engineRunner.IsEngineStarting.Value)

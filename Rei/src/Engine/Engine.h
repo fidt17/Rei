@@ -32,7 +32,7 @@ namespace rei::internal::engine
         REI_API ~Engine();
         Engine(const Engine& e) = delete;
 
-        REI_API void Start();
+        REI_API void Start(const std::string& sceneId = {});
         REI_API void Shutdown(i32 exitCode);
 
         REI_API bool IsPlaymode() const;

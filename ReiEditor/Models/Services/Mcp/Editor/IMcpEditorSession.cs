@@ -27,6 +27,7 @@ internal interface IMcpEditorSession
     Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value);
     Task<ReiProjectSaveResult> SaveProjectAsync();
     ReiOperationInfo StartAssetRefresh();
+    ReiOperationInfo OpenScene(string scene);
     ReiOperationInfo StartBuild(ReiBuildOptions options);
     ReiOperationInfo StartPlaymode();
     ReiOperationInfo StopPlaymode();

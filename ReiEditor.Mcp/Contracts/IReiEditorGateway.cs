@@ -32,6 +32,7 @@ public interface IReiEditorGateway
     Task<ReiDataAssetPropertyMutationResult> SetDataAssetPropertyAsync(string assetId, string propertyName, object? value, CancellationToken cancellationToken);
     Task<ReiProjectSaveResult> SaveProjectAsync(CancellationToken cancellationToken);
     Task<ReiOperationInfo> StartAssetRefreshAsync(CancellationToken cancellationToken);
+    Task<ReiOperationInfo> OpenSceneAsync(string scene, CancellationToken cancellationToken);
     Task<ReiOperationInfo> StartBuildAsync(ReiBuildOptions options, CancellationToken cancellationToken);
     Task<ReiOperationInfo> StartPlaymodeAsync(CancellationToken cancellationToken);
     Task<ReiOperationInfo> StopPlaymodeAsync(CancellationToken cancellationToken);

@@ -41,9 +41,9 @@ namespace rei::external
         }
     }
 
-    REI_EXTERN_API inline void Start(internal::engine::Engine* engine)
+    REI_EXTERN_API inline void Start(internal::engine::Engine* engine, const char* lastSceneId = nullptr)
     {
-        engine->Start();
+        engine->Start(lastSceneId != nullptr ? lastSceneId : "");
     }
 
     REI_EXTERN_API inline i32 Shutdown(internal::engine::Engine* engine, const i32 exitCode)

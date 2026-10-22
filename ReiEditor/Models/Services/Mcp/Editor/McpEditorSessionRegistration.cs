@@ -57,6 +57,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IAssetRuntimeInspectionService _runtimeInspection;
     private readonly IEngineProfilingService _profiling;
     private readonly IMcpEntitySelectionService _entitySelection;
+    private readonly IEditorThreadDispatcher _dispatcher;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -79,7 +80,8 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         ISelectionService selectionService,
         IAssetRuntimeInspectionService runtimeInspection,
         IEngineProfilingService profiling,
-        IMcpEntitySelectionService entitySelection)
+        IMcpEntitySelectionService entitySelection,
+        IEditorThreadDispatcher dispatcher)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
@@ -100,6 +102,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _runtimeInspection = runtimeInspection;
         _profiling = profiling;
         _entitySelection = entitySelection;
+        _dispatcher = dispatcher;
         _automationService = automationService;
         _sessionLease = sessionAccessor.Attach(this);
     }
@@ -381,6 +384,27 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
                         $"Editor could not create {typeInfo.ObjectName} at {normalizedProjectPath}.");
         var details = CreateDataAssetDetails(asset, typeInfo);
         return new ReiDataAssetCreationResult(true, details, "DataAsset created. Save project after further edits.");
+    }
+
+    public ReiOperationInfo OpenScene(string scene)
+    {
+        if (string.IsNullOrWhiteSpace(scene)) throw new ReiMcpOperationException("invalid_scene", "Scene asset ID or project-relative path is required.");
+        if (!_assetRegistry.TryGetById(scene, out var info))
+        {
+            var root = Path.GetFullPath(_resourceService.GetProjectPath());
+            var path = Path.GetFullPath(Path.Combine(root, scene));
+            if (Path.IsPathRooted(scene) || !path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                throw new ReiMcpOperationException("invalid_scene", "Scene path must stay inside Project directory.");
+            if (!_assetRegistry.TryGetByPath(path, out info))
+                throw new ReiMcpOperationException("asset_not_found", $"Scene {scene} does not exist.");
+        }
+        if (!FileExtensions.HasAnyExtension(info.FullPath, new[] { FileExtensions.SCENE }))
+            throw new ReiMcpOperationException("invalid_scene", "Asset must be a scene.");
+        return _automationService.StartOpenScene(() => _dispatcher.InvokeTaskAsync(async () =>
+        {
+            await _sceneManagementService.OpenScene(info.Meta.AssetId);
+            return true;
+        }, CancellationToken.None));
     }
 
     public ReiAssetSelection SelectAsset(string assetId)

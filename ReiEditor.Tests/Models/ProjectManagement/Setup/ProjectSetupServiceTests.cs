@@ -51,6 +51,7 @@ public sealed class ProjectSetupServiceTests
             CreateCalls.Add((name, projectPath));
             return OnCreate?.Invoke() ?? Task.FromResult(CreatedScene);
         }
+        public Task OpenScene(string assetId) => throw new NotSupportedException();
         public Task LoadScene(Scene scene)
         {
             calls.Add("load:" + scene.AssetId);
@@ -59,6 +60,7 @@ public sealed class ProjectSetupServiceTests
             return OnLoad();
         }
         public Task ReloadCurrentScene() => throw new NotSupportedException();
+        public Scene? SynchronizeRuntimeScene(string assetId, string name) => throw new NotSupportedException();
         public BuildScenesConfiguration GetBuildConfiguration() => Configuration;
         public void SetBuildSceneId(Scene scene, int id) => Configuration.Scenes[id] = scene.AssetId;
     }

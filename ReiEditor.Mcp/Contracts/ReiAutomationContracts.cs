@@ -14,6 +14,7 @@ public static class ReiOperationStatuses
 public static class ReiOperationKinds
 {
     public const string REFRESH_ASSETS = "refresh_assets";
+    public const string OPEN_SCENE = "open_scene";
     public const string BUILD_PROJECT = "build_project";
     public const string START_PLAYMODE = "start_playmode";
     public const string STOP_PLAYMODE = "stop_playmode";

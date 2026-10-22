@@ -20,7 +20,7 @@ public interface IEngineApi
     bool HasExport(string name) => false;
 
     IntPtr CreateEngine(string resourcesDir, EngineRunMode mode);
-    void Start(IntPtr enginePtr);
+    void Start(IntPtr enginePtr, string? lastSceneId = null);
     void Shutdown(IntPtr enginePtr, int exitCode);
     void DestroyEngine(IntPtr enginePtr);
 	
@@ -30,6 +30,7 @@ public interface IEngineApi
     void AddEditorInputCallback(IntPtr callback);
     void SetSceneSyncCallback(SceneSyncCallbackDelegate? callback);
     void RequestSceneSync();
+    bool LoadEditorScene(string requestJson);
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 

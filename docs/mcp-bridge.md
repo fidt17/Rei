@@ -46,6 +46,7 @@ Parameter names below match MCP input schema. `—` means no parameters. Results
 | Tool | Parameters | Result / effect |
 | --- | --- | --- |
 | `rei_editor_get_state` | — | Project, scene, engine, import/build flags and active operation. |
+| `rei_editor_open_scene` | `scene` | Scene asset ID or path relative to Project directory. Returns `open_scene` operation ID. Uses current Editor data and native SceneManager; no save, project build, engine/window/DLL restart. Requires running engine without startup/build/save/import. Native loading failure leaves Editor and engine empty; another scene can then be opened. |
 | `rei_editor_get_selection_state` | `source` | Independent entity ID set from `editor` or native `runtime`. Status: `ok`, `engine_unavailable`, `read_failed`. Unavailable: `selectedIds=null`; empty selection: `[]`. No loading, save, or Editor fallback. |
 | `rei_editor_set_entity_selection` | `entityIds` | Replaces selection through Editor SelectionService; `[]` clears it. Validates all IDs before mutation, removes duplicates, keeps first ID as primary. Returns Editor selection; read runtime separately to verify sync. No scene save. |
 | `rei_editor_set_entity_parent` | `entityId`, `parentId`, `order` | Moves through Editor EntityManagementService; `parentId=0` means root. Requires running engine; validates entity IDs, non-negative insertion index and parent cycles. Returns accepted request; runtime result must be read independently. No scene save. |

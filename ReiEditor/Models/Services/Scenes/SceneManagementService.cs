@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.FileSystem;
@@ -26,6 +28,8 @@ public class SceneManagementService : ISceneManagementService, IDisposable
     private readonly IBehaviourComponentsService _behaviourComponentsService;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IEngineRunner _engineRunner;
+    private readonly IEngineSceneLoader _sceneLoader;
+    private readonly SemaphoreSlim _loadGate = new(1, 1);
 
     public SceneManagementService(
         ILogger<SceneManagementService> logger,
@@ -35,7 +39,8 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         ISelectionService selectionService, 
         IBehaviourComponentsService behaviourComponentsService,
         IBehaviourRegistry behaviourRegistry,
-        IEngineRunner engineRunner)
+        IEngineRunner engineRunner,
+        IEngineSceneLoader sceneLoader)
     {
         _logger = logger;
         _assets = assets;
@@ -45,6 +50,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         _behaviourComponentsService = behaviourComponentsService;
         _behaviourRegistry = behaviourRegistry;
         _engineRunner = engineRunner;
+        _sceneLoader = sceneLoader;
 
         _engineRunner.IsActive.Subscribe(HandleEngineIsRunningValueChangedEvent, invoke: false);
     }
@@ -88,44 +94,76 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         return null;
     }
 
-    public Task LoadScene(Scene scene)
-    {
-        _logger.Log($"Loading scene name={scene.Name}, id={scene.AssetId}");
-		
-        foreach (var sceneEntity in scene.Entities)
-        {
-            _behaviourComponentsService.RefreshComponents(sceneEntity);
-        }
+    public Task OpenScene(string assetId) => LoadSceneCore(() => _assets.Load<Scene>(assetId));
 
-        SceneTransformDataApplier.Apply(scene, _behaviourRegistry);
-        scene.RebuildHierarchy();
-        scene.NormalizeTransformOrders();
-        
-        _projectService.GetActiveProject().SetLastScene(scene.AssetId);
-        _currentScene.SetAndInvoke(scene);
-        _selectionService.ResetSelection();
-		
-        return Task.CompletedTask;
+    public Task LoadScene(Scene scene) => LoadSceneCore(() => Task.FromResult<Scene?>(scene));
+
+    private async Task LoadSceneCore(Func<Task<Scene?>> readScene)
+    {
+        await _loadGate.WaitAsync();
+        try
+        {
+            var scene = await readScene();
+            if (scene == null) throw new InvalidOperationException("Could not read scene asset.");
+            _logger.Log($"Loading scene name={scene.Name}, id={scene.AssetId}");
+            foreach (var sceneEntity in scene.Entities)
+                _behaviourComponentsService.RefreshComponents(sceneEntity);
+            SceneTransformDataApplier.Apply(scene, _behaviourRegistry);
+            scene.RebuildHierarchy();
+            scene.NormalizeTransformOrders();
+
+            if (_engineRunner.IsActive.Value)
+            {
+                _currentScene.SetAndInvoke(null);
+                _selectionService.ResetSelection();
+                if (_engineRunner.IsActive.Value && !await _sceneLoader.LoadSceneAsync(scene))
+                    throw new InvalidOperationException($"Could not load scene {scene?.AssetId} in engine.");
+            }
+            _projectService.GetActiveProject().SetLastScene(scene.AssetId);
+            _currentScene.SetAndInvoke(scene);
+            _selectionService.ResetSelection();
+        }
+        catch
+        {
+            _currentScene.SetAndInvoke(null);
+            _selectionService.ResetSelection();
+            if (_engineRunner.IsActive.Value) await _sceneLoader.LoadSceneAsync(null);
+            throw;
+        }
+        finally
+        {
+            _loadGate.Release();
+        }
     }
 
-    public async Task ReloadCurrentScene()
+    public Scene? SynchronizeRuntimeScene(string assetId, string name)
     {
-        if (_currentScene.Value == null)
+        if (_engineRunner.ActiveMode != EngineRunMode.PlayMode || _loadGate.CurrentCount == 0) return null;
+        if (_currentScene.Value?.AssetId == assetId) return _currentScene.Value;
+        _selectionService.ResetSelection(sendToEngine: false);
+        Scene? scene = null;
+        if (!string.IsNullOrEmpty(assetId))
+        {
+            scene = new Scene(name);
+            scene.SetAssetInfo(new AssetInfo(new AssetMeta(assetId), ""));
+        }
+        _currentScene.SetAndInvoke(scene);
+        return scene;
+    }
+
+    public Task ReloadCurrentScene()
+    {
+        if (string.IsNullOrEmpty(_projectService.GetActiveProject().LastSceneId))
         {
             _logger.LogError("Cannot reload scene because current scene is missing");
-            return;
+            return Task.CompletedTask;
         }
-		
-        _assets.Unload(_currentScene.Value.AssetId);
-        var scene = await _assets.Load<Scene>(_currentScene.Value.AssetId);
-        
-        if (scene == null)
+        return LoadSceneCore(async () =>
         {
-            _logger.LogError($"Could not load scene id={_currentScene.Value.AssetId}");
-            return;
-        }
-        
-        await LoadScene(scene);
+            var assetId = _projectService.GetActiveProject().LastSceneId;
+            _assets.Unload(assetId);
+            return await _assets.Load<Scene>(assetId);
+        });
     }
 
     public BuildScenesConfiguration GetBuildConfiguration()
@@ -144,6 +182,10 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         if (isRunning) return;
         if (_engineRunner.ActiveMode != EngineRunMode.PlayMode) return;
 
-        Task.Run(ReloadCurrentScene);
+        _ = Task.Run(async () =>
+        {
+            try { await ReloadCurrentScene(); }
+            catch (Exception error) { _logger.LogException(error); }
+        });
     }
 }

@@ -21,6 +21,7 @@ using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Path;
 using ReiEditor.ViewModels.Common;
@@ -111,7 +112,9 @@ public class ProjectWindowViewModel : BaseViewModel
         IShaderCreationWindowService shaderCreationWindowService,
         ISelectionService selectionService,
         IProjectAssetFocusService projectAssetFocusService,
-        ISceneAssetDragSessionService sceneAssetDragSessionService)
+        ISceneAssetDragSessionService sceneAssetDragSessionService,
+        ISceneManagementService? scenes = null,
+        ILogger<ProjectWindowActionsController>? actionsLogger = null)
     {
         _resourceService = resourceService;
         _assetRegistry = assetRegistry;
@@ -129,7 +132,7 @@ public class ProjectWindowViewModel : BaseViewModel
         _assetItemBuilder = new ProjectAssetItemBuilder(assetRegistry, assetSearchService, fileExplorerProvider);
         _assetSelectionHandler = new ProjectAssetSelectionHandler(selectionService, TrackSearchSelection);
         _assetOperationsHandler = new ProjectAssetOperationsHandler(storageProvider, assetOperationsService, projectAssetDeleteCommand, projectAssetDuplicateCommand, projectAssetMoveCommand, projectAssetRenameCommand);
-        _actionsController = new ProjectWindowActionsController(_directoryBrowser, _assetSelectionHandler, _assetOperationsHandler, textEditorFileOpener, settingsWindowService, () => ActiveItems, ApplyCommandResult, ApplyBatchCommandResult);
+        _actionsController = new ProjectWindowActionsController(_directoryBrowser, _assetSelectionHandler, _assetOperationsHandler, textEditorFileOpener, settingsWindowService, () => ActiveItems, ApplyCommandResult, ApplyBatchCommandResult, scenes, actionsLogger);
 
         SetupContextMenus();
         _directoryBrowser.BuildTree(resourceService);

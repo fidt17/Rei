@@ -44,13 +44,13 @@ public class EngineApi : IEngineApi
         return ptr;
     }
 
-    private delegate void StartEngineDelegate(IntPtr enginePtr);
-    public void Start(IntPtr enginePtr)
+    private delegate void StartEngineDelegate(IntPtr enginePtr, [MarshalAs(UnmanagedType.LPUTF8Str)] string? lastSceneId);
+    public void Start(IntPtr enginePtr, string? lastSceneId = null)
     {
         IsEngineRunning = false;
         try
         {
-            Invoke(typeof(StartEngineDelegate), "Start", enginePtr);
+            Invoke(typeof(StartEngineDelegate), "Start", enginePtr, lastSceneId);
         }
         catch (Exception)
         {
@@ -91,6 +91,9 @@ public class EngineApi : IEngineApi
     }
 
     public void RequestSceneSync() => Invoke(typeof(IEngineApi.VoidCallbackDelegate), "RequestSceneSync");
+
+    private delegate int LoadEditorSceneDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string requestJson);
+    public bool LoadEditorScene(string requestJson) => IsEngineRunning && Invoke<int>(typeof(LoadEditorSceneDelegate), "LoadEditorScene", requestJson) == 1;
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);

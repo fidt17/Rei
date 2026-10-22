@@ -161,6 +161,11 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.SetDataAssetPropertyAsync(assetId, propertyName, value, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_open_scene", Title = "Open Rei scene", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Opens scene by asset ID or path relative to Project directory through SceneManagementService and native SceneManager. Returns operation ID. Unloads current scene; failed native load leaves empty scene. Does not save, build project, or restart engine/window/DLL. Poll get_operation; inspect Editor and runtime independently.")]
+    public Task<ReiOperationInfo> OpenScene([Description("Scene asset ID or Project-relative .scene path.")] string scene, CancellationToken cancellationToken) =>
+        Execute(() => _gateway.OpenSceneAsync(scene, cancellationToken));
+
     [McpServerTool(Name = "rei_editor_save_project", Title = "Save Rei project", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Synchronizes current scene from engine and saves dirty project assets. Rejected during play mode, build, or another save.")]
     public Task<ReiProjectSaveResult> SaveProject(CancellationToken cancellationToken)

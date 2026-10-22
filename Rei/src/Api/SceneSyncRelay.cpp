@@ -2,6 +2,7 @@
 #include "../Rei.h"
 #include "SceneSyncRelay.h"
 #include "Modules/Components/EntityInfo.h"
+#include "Modules/Scenes/SceneManager.h"
 #include "Modules/Editor/Components/SelectedTag.h"
 #include "rei_behaviours/transformation/Transform.h"
 
@@ -10,6 +11,8 @@ namespace rei::api
     void SceneSyncRelay::Capture(const std::shared_ptr<ecs::World>& world)
     {
         if (_callback == nullptr) return;
+        const auto sceneAssetId = GetSceneManager().GetActiveSceneId();
+        if (sceneAssetId != _sceneAssetId) _sendSnapshot = true;
         ECS_WORLD(world);
         std::map<i32, EntityState> entities;
         std::vector<i32> selected;
@@ -48,9 +51,11 @@ namespace rei::api
             }
         }
         const nlohmann::json packet = {
+            {"SceneAssetId", sceneAssetId}, {"SceneName", GetSceneManager().GetActiveSceneName()},
             {"IsSnapshot", _sendSnapshot}, {"Entities", changed},
             {"RemovedEntityIds", removed}, {"SelectedEntityIds", selected}
         };
+        _sceneAssetId = sceneAssetId;
         _entities = std::move(entities);
         _selected = std::move(selected);
         _sendSnapshot = false;

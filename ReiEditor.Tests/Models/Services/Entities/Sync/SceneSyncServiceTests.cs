@@ -47,6 +47,7 @@ public sealed class SceneSyncServiceTests
     }
 
     private readonly Source _source = new();
+    private readonly TestEntitySyncService _entities = new();
     private readonly TestSceneManagementService _scenes = new();
     private readonly TestEntityApi _api = new();
     private readonly TestLogger<SceneSyncService> _logger = new();
@@ -248,7 +249,7 @@ public sealed class SceneSyncServiceTests
         Assert.Empty(_scene.Entities);
     }
 
-    private SceneSyncService Create() => new(_source, _scenes, new EngineSelectionSyncService(_selection), _logger);
+    private SceneSyncService Create() => new(_source, _scenes, new EngineSelectionSyncService(_selection), _logger, _entities);
     private int[] Selected() => _selection.SelectedItems.OfType<IEntitySelectable>().Select(item => item.Entity.Id).Order().ToArray();
     private static SceneEntityState State(int id, int parent = 0, int order = 0) => new(id, $"entity-{id}", parent, order);
     private static SceneSyncPacket Packet(bool snapshot, SceneEntityState[] entities, int[]? removed = null, int[]? selected = null) => new()
@@ -256,4 +257,89 @@ public sealed class SceneSyncServiceTests
         IsSnapshot = snapshot, Entities = entities,
         RemovedEntityIds = removed ?? Array.Empty<int>(), SelectedEntityIds = selected ?? Array.Empty<int>()
     };
+
+    [AvaloniaFact]
+    public void PacketFromPreviousSceneCannotReplaceCurrentHierarchy()
+    {
+        _scene.AddEntity(new GameEntity(7, "current scene"));
+        using var service = Create();
+        var packet = Packet(true, new[] { State(1) });
+        packet.SceneAssetId = "previous-scene";
+        _source.Send(packet);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("current scene", Assert.Single(_scene.Entities).Name);
+        Assert.Empty(_api.Selections);
+    }
+
+    [AvaloniaFact]
+    public void RuntimeSceneSnapshotReplacesModelAndLoadsNativeValuesOnce()
+    {
+        _scene.AddEntity(new GameEntity(1, "old entity"));
+        var changes = 0;
+        _scenes.OnSynchronizeRuntimeScene = (id, name) =>
+        {
+            changes++;
+            var scene = new Scene(name);
+            scene.SetAssetInfo(new ReiEditor.Models.Services.Assets.AssetInfo(new ReiEditor.Models.Services.Assets.Meta.AssetMeta(id), ""));
+            _scenes.Scene.Value = scene;
+            return scene;
+        };
+        var hydrated = new List<int>();
+        _entities.OnUpdate = entity => { hydrated.Add(entity.Id); entity.AddBehaviour(new BehaviourComponent(42)); };
+        using var service = Create();
+        var snapshot = Packet(true, new[] { new SceneEntityState(1, "game parent", 0, 0), State(2, 1) });
+        snapshot.SceneAssetId = "game-scene";
+        snapshot.SceneName = "Game scene";
+        _source.Send(snapshot);
+        Dispatcher.UIThread.RunJobs();
+        var runtime = _scenes.Scene.Value!;
+        Assert.NotSame(_scene, runtime);
+        Assert.Equal("game-scene", runtime.AssetId);
+        Assert.Equal("Game scene", runtime.Name);
+        Assert.Equal(new[] { 1, 2 }, hydrated);
+        Assert.Equal(42, Assert.Single(runtime.GetById(1)!.Behaviours).Id);
+        Assert.Equal(1, runtime.Hierarchy.GetNode(runtime.GetById(2)!)!.Parent!.Content.Id);
+        var delta = Packet(false, new[] { new SceneEntityState(1, "renamed in game", 0, 0) });
+        delta.SceneAssetId = "game-scene";
+        _source.Send(delta);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("renamed in game", runtime.GetById(1)!.Name);
+        Assert.Equal(1, changes);
+        Assert.Equal(2, hydrated.Count);
+        Assert.Empty(_api.Selections);
+    }
+
+    [AvaloniaFact]
+    public void RuntimeDeltaCannotChangeSceneBeforeSnapshot()
+    {
+        using var service = Create();
+        _scenes.OnSynchronizeRuntimeScene = (_, _) => throw new InvalidOperationException("A delta cannot select a different scene.");
+        var delta = Packet(false, new[] { State(9) });
+        delta.SceneAssetId = "other";
+        _source.Send(delta);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(_scene.Entities);
+        Assert.Empty(_logger.Entries);
+    }
+
+    [AvaloniaFact]
+    public void RuntimeCanRecoverFromEmptyScene()
+    {
+        using var service = Create();
+        _scenes.Scene.Value = null;
+        _scenes.OnSynchronizeRuntimeScene = (id, name) =>
+        {
+            var scene = new Scene(name);
+            scene.SetAssetInfo(new ReiEditor.Models.Services.Assets.AssetInfo(new ReiEditor.Models.Services.Assets.Meta.AssetMeta(id), ""));
+            _scenes.Scene.Value = scene;
+            return scene;
+        };
+        _entities.OnUpdate = _ => { };
+        var packet = Packet(true, new[] { State(3) });
+        packet.SceneAssetId = "recovered";
+        _source.Send(packet);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("recovered", _scenes.Scene.Value!.AssetId);
+        Assert.Equal(3, Assert.Single(_scenes.Scene.Value.Entities).Id);
+    }
 }

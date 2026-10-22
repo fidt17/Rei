@@ -133,6 +133,9 @@ internal sealed class McpEditorGateway : IReiEditorGateway
         return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().SaveProjectAsync(), cancellationToken);
     }
 
+    public Task<ReiOperationInfo> OpenSceneAsync(string scene, CancellationToken cancellationToken) =>
+        _dispatcher.InvokeAsync(() => GetRequiredSession().OpenScene(scene), cancellationToken);
+
     public Task<ReiOperationInfo> StartAssetRefreshAsync(CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeAsync(() => GetRequiredSession().StartAssetRefresh(), cancellationToken);

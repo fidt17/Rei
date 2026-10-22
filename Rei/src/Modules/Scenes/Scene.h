@@ -7,6 +7,7 @@ namespace rei::scenes
     {
     public:
         explicit Scene(resources::BinaryReader& reader);
+        explicit Scene(const nlohmann::json& data);
 
         const std::string& GetName() const;
         const std::vector<SceneEntity>& GetEntities() const;

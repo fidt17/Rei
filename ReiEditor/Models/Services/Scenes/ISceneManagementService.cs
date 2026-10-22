@@ -9,8 +9,10 @@ public interface ISceneManagementService : IAsyncInitializable
     IObservable<Scene?> CurrentScene { get; }
 
     Task<Scene?> CreateScene(string name, string projectPath);
+    Task OpenScene(string assetId);
     Task LoadScene(Scene scene);
     Task ReloadCurrentScene();
+    Scene? SynchronizeRuntimeScene(string assetId, string name);
 	
     BuildScenesConfiguration GetBuildConfiguration();
     void SetBuildSceneId(Scene scene, int id);

@@ -3,16 +3,14 @@
 
 namespace rei::scenes
 {
-    Scene::Scene(resources::BinaryReader& reader)
+    Scene::Scene(resources::BinaryReader& reader) : Scene(nlohmann::json::parse(reader.GetStr()))
     {
-        using namespace nlohmann;
-        
-        const auto str = reader.GetStr();
-        json data = json::parse(str);
+    }
 
+    Scene::Scene(const nlohmann::json& data)
+    {
         _name = data.at("Name");
-
-        json entities = data.at("Entities");
+        const auto& entities = data.at("Entities");
         for (const auto& e : entities)
         {
             _entities.emplace_back(e);

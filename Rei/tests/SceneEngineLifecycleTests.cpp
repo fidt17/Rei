@@ -2,6 +2,7 @@
 #include "support/NativeRenderPipelineFixture.h"
 #include "Modules/Scenes/SceneManager.h"
 #include "Api/AssetApi.h"
+#include "Api/EditorApi.h"
 
 using namespace rei;
 using namespace rei::tests;
@@ -41,6 +42,7 @@ namespace
             {"0", "build-scenes", JsonAsset({{"Scenes", {{"0", "empty-scene"}, {"1", "scene-b"}, {"2", "missing-dependency"},
                 {"3", "malformed-scene"}, {"4", "unknown-behaviour"}, {"5", "failed-init"}, {"6", "duplicate-ids"}, {"7", "missing-payload"},
                 {"8", "missing-behaviour-id"}, {"9", "failed-assets"}}}})},
+            {"cached-config", "cached config", JsonAsset({{"DataAssetTypeId", 7201}, {"SerializedData", SerializedField("Number", 73)}})},
             {"scene-b", "B", JsonAsset({{"Name", "B"}, {"Entities", SwitchingEntities("B", 91)}})},
             {"missing-dependency", "missing dependency", JsonAsset({{"Name", "invalid"}, {"Entities", json::array({
                 SceneObject(7, "dependent", json::array({SceneBehaviour(PROBE_TRANSFORM),
@@ -382,4 +384,118 @@ TEST_CASE("SCENE-03 Shutdown destroys orphan runtime asset consumers before unlo
                 entry.find("Failed to load asset name=runtime_asset_") != std::string::npos;
         }));
     }, 20000, 1024);
+}
+
+TEST_CASE("SCENE-05 Editor API loads prepared dependencies and fails on missing files without rebuilding", "[native][engine-integration][scene][regression][isolated]")
+{
+    Isolated([]
+    {
+        const auto mode = GENERATE(EditorMode, PlayMode);
+        NativeEngineFixture fixture(mode, "scene-switch", SwitchingScenes);
+        fixture.Start();
+        fixture.WaitForNextFrames();
+        const auto initial = ReadScene(fixture);
+        const auto engine = fixture.Engine.get();
+        const auto sourcePath = fixture.Resources.Files.File("cached-config.asset");
+        { std::ofstream file(sourcePath); file << json{{"DataAssetTypeId", 7201}, {"SerializedData", SerializedField("Number", 999)}}.dump(); }
+        auto entities = SwitchingEntities("Editor B", 91);
+        entities[1]["Behaviours"][1]["SerializedData"]["Asset"] = json{{"Value", SerializedField("Id", "cached-config")}};
+        nlohmann::json request = {{"SceneId", "outside-build-config"}, {"Scene", {{"Name", "Editor B"}, {"Entities", entities}}}};
+        bool dependencyUnloaded = false;
+        fixture.OnEngineThread([&]
+        {
+            dependencyUnloaded = GetAssetManager().InspectLoadedAsset("cached-config").at("status") == "unloaded";
+        });
+        REQUIRE(dependencyUnloaded);
+        // Source exists, but a missing prepared binary must fail instead of rebuilding it.
+        const auto packPath = fixture.Resources.Files.File("pack.bin");
+        const auto backupPath = fixture.Resources.Files.File("pack.backup");
+        std::filesystem::rename(packPath, backupPath);
+        CHECK(LoadEditorScene(request.dump().c_str()) == 0);
+        CHECK(ReadScene(fixture).EntityCount == 0);
+        CHECK(fixture.Engine->IsRunning());
+        CHECK(std::filesystem::exists(sourcePath));
+        CHECK_FALSE(std::filesystem::exists(packPath));
+        std::filesystem::rename(backupPath, packPath);
+        const auto loaded = LoadEditorScene(request.dump().c_str());
+        std::string diagnostics;
+        if (loaded == 0)
+            for (const auto& entry : common::logging::GetRecentLogEntriesSnapshot()) diagnostics += "\n" + entry;
+        INFO(diagnostics);
+        REQUIRE(loaded == 1);
+        fixture.WaitForNextFrames();
+        const auto current = ReadScene(fixture);
+        CHECK(current.ParentName == "Editor B parent");
+        CHECK(current.Number == 91);
+        CHECK(current.ParentResolved);
+        CHECK(current.TargetResolved);
+        CHECK(current.Window == initial.Window);
+        CHECK(fixture.Engine.get() == engine);
+        i32 dependencyNumber = 0;
+        bool previousAlive = true;
+        std::string activeScene;
+        fixture.OnEngineThread([&]
+        {
+            dependencyNumber = GetInternalWorld()->GetRegistry()->Get<ProbeA>(current.Parent).Asset.Get()->Number;
+            previousAlive = GetInternalWorld()->GetRegistry()->IsAlive(initial.Parent);
+            activeScene = GetSceneManager().GetActiveSceneId();
+        });
+        CHECK(dependencyNumber == 73);
+        CHECK_FALSE(previousAlive);
+        CHECK(activeScene == "outside-build-config");
+        request["Scene"]["Entities"] = nlohmann::json::array({nlohmann::json::object()});
+        CHECK(LoadEditorScene(request.dump().c_str()) == 0);
+        CHECK(ReadScene(fixture).EntityCount == 0);
+        CHECK(fixture.Engine->IsRunning());
+        request["Scene"]["Entities"] = SwitchingEntities("Recovered", 29);
+        CHECK(LoadEditorScene(request.dump().c_str()) == 1);
+        CHECK(ReadScene(fixture).Number == 29);
+        request["Scene"] = nullptr;
+        CHECK(LoadEditorScene(request.dump().c_str()) == 0);
+        CHECK(ReadScene(fixture).EntityCount == 0);
+        CHECK(fixture.App->Starts == 1);
+        CHECK(fixture.App->Shutdowns == 0);
+        fixture.Stop();
+        CHECK(LoadEditorScene(request.dump().c_str()) == 0);
+    }, 30000, 1024);
+}
+
+TEST_CASE("SCENE-05 Project LastSceneId selects Editor scene and preserves game scene zero", "[native][engine-integration][scene][regression][isolated]")
+{
+    Isolated([]
+    {
+        const auto mode = GENERATE(EditorMode, PlayMode);
+        const bool isEditor = GENERATE(false, true);
+        const i32 selection = GENERATE(0, 1, 2); // Empty LastSceneId, valid selection, missing asset.
+        NativeEngineFixture fixture(mode, "scene-switch", [&](TemporaryDirectory& files)
+        {
+            PrepareEngineResources(files, "scene-switch", SwitchingEntities("A", 11), {
+                {"editor-only", "Editor scene", JsonAsset({{"Name", "Selected"}, {"Entities", SwitchingEntities("Selected", 37)}})}
+            });
+            const auto scenePath = files.File("Editor.scene");
+            { std::ofstream file(scenePath); file << json{{"Name", "Source"}, {"Entities", SwitchingEntities("Source", 999)}}.dump(); }
+            { std::ofstream file(files.File("map.json")); file << json{{"Assets", json::array({
+                {{"Id", "editor-only"}, {"AssetPath", scenePath.string()}}
+            })}}.dump(); }
+        }, isEditor);
+        fixture.LastSceneId = selection == 0 ? "" : selection == 1 ? "editor-only" : "missing-editor-scene";
+        std::string startedScene;
+        fixture.App->StartAction = [&] { startedScene = GetSceneManager().GetActiveSceneId(); };
+        fixture.Start();
+        const auto current = ReadScene(fixture);
+        if (isEditor && selection == 2)
+        {
+            CHECK(startedScene.empty());
+            CHECK(current.EntityCount == 0);
+        }
+        else
+        {
+            const bool useLastScene = isEditor && selection == 1;
+            CHECK(startedScene == (useLastScene ? "editor-only" : "empty-scene"));
+            CHECK(current.ParentName == (useLastScene ? "Selected parent" : "A parent"));
+            CHECK(current.Number == (useLastScene ? 37 : 11));
+        }
+        CHECK(fixture.Engine->IsRunning());
+        fixture.Stop();
+    }, 60000, 1024);
 }

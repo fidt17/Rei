@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Dll;
@@ -20,6 +21,18 @@ namespace ReiEditor.Tests.Models.Services.Engine.Playmode;
 [Trait("Area", "Engine")]
 public sealed class EngineRunnerTests
 {
+    [Theory]
+    [InlineData(EngineRunMode.EditorMode)]
+    [InlineData(EngineRunMode.PlayMode)]
+    public async Task StartupUsesActiveProjectLastSceneId(EngineRunMode mode)
+    {
+        await using var context = new TestContext();
+        context.Project.Project.SetLastScene("selected-scene");
+        Assert.True(context.Start(mode));
+        await context.AwaitStarted();
+        Assert.Contains("start", context.Calls);
+    }
+
     [Fact]
     public async Task StopReturnsToCallerWhileNativeShutdownStillWaits()
     {
@@ -81,9 +94,10 @@ public sealed class EngineRunnerTests
             context.Touch("callback");
             _started = Marshal.GetDelegateForFunctionPointer<IEngineApi.VoidCallbackDelegate>(callback);
         }
-        public override void Start(IntPtr enginePtr)
+        public override void Start(IntPtr enginePtr, string? lastSceneId = null)
         {
             Assert.Equal(new IntPtr(123), enginePtr);
+            Assert.Equal(context.Project.Project.LastSceneId, lastSceneId);
             context.Touch("start");
             Running = true;
             _started!();
@@ -197,7 +211,9 @@ public sealed class EngineRunnerTests
             Api = new(this);
             Dll = new(this);
             Shutdown = new(this);
-            Runner = new(Api, Logger, new TestEngineLogger(this), new TestEngineInput(this), new TestWindowController(this), Shutdown, Project.Resources, Dll, Procedures, sceneEvents: Events);
+            var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
+            activeProject.OpenProject(Project.Project);
+            Runner = new(Api, Logger, new TestEngineLogger(this), new TestEngineInput(this), new TestWindowController(this), Shutdown, Project.Resources, Dll, Procedures, activeProject, sceneEvents: Events);
             Runner.EngineStartedEvent += () => Started.TrySetResult();
             Runner.EngineStartFailedEvent += () => Failed.TrySetResult();
             Procedures.ProcedureFinishedEvent += _ => ProcedureFinished.TrySetResult();

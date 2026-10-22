@@ -54,7 +54,7 @@ public sealed class AssetBuildCachePipelineTests
         }
 
         public IntPtr CreateEngine(string resourcesDir, EngineRunMode mode) => throw new NotSupportedException();
-        public void Start(IntPtr enginePtr) => throw new NotSupportedException();
+        public void Start(IntPtr enginePtr, string? lastSceneId = null) => throw new NotSupportedException();
         public void Shutdown(IntPtr enginePtr, int exitCode) => throw new NotSupportedException();
         public void DestroyEngine(IntPtr enginePtr) => throw new NotSupportedException();
         public void AddLogCallback(IntPtr ptr) => throw new NotSupportedException();
@@ -63,6 +63,7 @@ public sealed class AssetBuildCachePipelineTests
         public void AddEditorInputCallback(IntPtr callback) => throw new NotSupportedException();
         public void SetSceneSyncCallback(IEngineApi.SceneSyncCallbackDelegate? callback) => throw new NotSupportedException();
         public void RequestSceneSync() => throw new NotSupportedException();
+        public bool LoadEditorScene(string requestJson) => throw new NotSupportedException();
         public Task<IntPtr> CreateEngineWindow() => throw new NotSupportedException();
         public IntPtr GetWindowHandle(IntPtr windowPtr) => throw new NotSupportedException();
         public void ResizeWindow(IntPtr windowPtr, int width, int height) => throw new NotSupportedException();

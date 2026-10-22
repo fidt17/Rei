@@ -16,6 +16,7 @@ public sealed class McpEntityParentTests
         public ReiAutomationState GetState() => throw new NotSupportedException();
         public Task<ReiProjectSaveResult> SaveProjectAsync() => throw new NotSupportedException();
         public ReiOperationInfo StartAssetRefresh() => throw new NotSupportedException();
+        public ReiOperationInfo StartOpenScene(Func<Task> openScene) => throw new NotSupportedException();
         public ReiOperationInfo StartBuild(ReiBuildOptions options) => throw new NotSupportedException();
         public ReiOperationInfo StartPlaymode() => throw new NotSupportedException();
         public ReiOperationInfo StopPlaymode() => throw new NotSupportedException();
@@ -76,5 +77,5 @@ public sealed class McpEntityParentTests
         Assert.Empty(_entities.ParentCalls);
     }
 
-    private McpEditorSessionRegistration Create() => new(new McpEditorSessionAccessor(), null!, _scenes, null!, null!, _entities, null!, null!, null!, null!, null!, null!, null!, null!, null!, _automation, null!, null!, null!, null!, null!);
+    private McpEditorSessionRegistration Create() => new(new McpEditorSessionAccessor(), null!, _scenes, null!, null!, _entities, null!, null!, null!, null!, null!, null!, null!, null!, null!, _automation, null!, null!, null!, null!, null!, null!);
 }

@@ -26,8 +26,10 @@ public sealed class EntityManagementServiceTests
         public ReiEditor.Utils.Common.IObservable<Scene?> CurrentScene { get; } = new Observable<Scene?>(scene);
         public Task InitializeAsync() => Task.CompletedTask;
         public Task<Scene?> CreateScene(string name, string projectPath) => throw new NotSupportedException();
+        public Task OpenScene(string assetId) => throw new NotSupportedException();
         public Task LoadScene(Scene scene) => throw new NotSupportedException();
         public Task ReloadCurrentScene() => throw new NotSupportedException();
+        public Scene? SynchronizeRuntimeScene(string assetId, string name) => throw new NotSupportedException();
         public BuildScenesConfiguration GetBuildConfiguration() => throw new NotSupportedException();
         public void SetBuildSceneId(Scene scene, int id) => throw new NotSupportedException();
     }

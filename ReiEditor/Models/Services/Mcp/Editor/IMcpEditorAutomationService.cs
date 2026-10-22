@@ -10,6 +10,7 @@ internal interface IMcpEditorAutomationService
     ReiEngineInfo GetEngineInfo();
     Task<ReiProjectSaveResult> SaveProjectAsync();
     ReiOperationInfo StartAssetRefresh();
+    ReiOperationInfo StartOpenScene(System.Func<Task> openScene);
     ReiOperationInfo StartBuild(ReiBuildOptions options);
     ReiOperationInfo StartPlaymode();
     ReiOperationInfo StopPlaymode();

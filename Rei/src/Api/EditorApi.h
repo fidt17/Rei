@@ -2,6 +2,8 @@
 #include "EditorInputEvent.h"
 #include "EditorEventsRelay.h"
 #include "SceneSyncRelay.h"
+#include <future>
+#include "Modules/Scenes/SceneManager.h"
 #include "Engine/Engine.h"
 #include "Modules/Editor/TransformationControls/TransformationControl.h"
 
@@ -41,6 +43,40 @@ REI_EXTERN_API inline void SetSceneSyncCallback(const SceneSyncCallbackDelegate 
 REI_EXTERN_API inline void RequestSceneSync()
 {
     rei::GetEngine().ExecuteOnMainThread([] { rei::GetSceneSyncRelay().RequestSnapshot(); });
+}
+
+REI_EXTERN_API inline i32 LoadEditorScene(const char* requestJson)
+{
+    if (requestJson == nullptr || !rei::GetEngine().IsRunning()) return 0;
+    auto completion = std::make_shared<std::promise<i32>>();
+    auto result = completion->get_future();
+    rei::GetEngine().ExecuteOnMainThread([request = std::string(requestJson), completion]
+    {
+        i32 loaded = 0;
+        try
+        {
+            const auto data = nlohmann::json::parse(request);
+            if (data.at("Scene").is_null()) rei::GetSceneManager().UnloadCurrentScene();
+            else loaded = rei::GetSceneManager().LoadScene(data.at("SceneId").get<std::string>(), data.at("Scene")) ? 1 : 0;
+        }
+        catch (const std::exception& error)
+        {
+            rei::GetSceneManager().UnloadCurrentScene();
+            LOG_ERROR("Failed to open Editor scene. {}", error.what())
+        }
+        catch (...)
+        {
+            rei::GetSceneManager().UnloadCurrentScene();
+            LOG_ERROR("Failed to open Editor scene. Unknown exception")
+        }
+        rei::GetSceneSyncRelay().RequestSnapshot();
+        completion->set_value(loaded);
+    });
+    while (result.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
+    {
+        if (!rei::GetEngine().IsRunning()) return 0;
+    }
+    return result.get();
 }
 
 typedef void (*EditorInputCallbackDelegate)(const rei::api::EditorInputEvent& inputEvent);

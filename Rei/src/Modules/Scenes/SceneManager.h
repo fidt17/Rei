@@ -13,7 +13,11 @@ namespace rei::scenes
     public:
         explicit SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager);
 
+        REI_API bool LoadScene(const std::string& assetId);
         REI_API bool LoadScene(i32 id);
+        REI_API bool LoadScene(const std::string& assetId, const nlohmann::json& sceneData);
+        REI_API const std::string& GetActiveSceneId() const { return _activeScene.Id; }
+        REI_API std::string GetActiveSceneName() const;
         REI_API void UnloadCurrentScene();
         void Shutdown();
         
@@ -28,5 +32,6 @@ namespace rei::scenes
         std::shared_ptr<EntityManager> _entityManager;
         
         void CreateSceneEntities();
+        bool LoadScene(const std::function<assets::AssetRef<Scene>()>& load);
     };
 }

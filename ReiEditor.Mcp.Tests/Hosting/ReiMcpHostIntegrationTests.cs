@@ -194,6 +194,13 @@ public sealed class ReiMcpHostIntegrationTests
             return Task.FromResult(new ReiProjectSaveResult(true, NOW, "Project saved."));
         }
 
+        public string? OpenedScene { get; private set; }
+        public Task<ReiOperationInfo> OpenSceneAsync(string scene, CancellationToken cancellationToken)
+        {
+            OpenedScene = scene;
+            return Task.FromResult(CreateOperation("scene-1", ReiOperationKinds.OPEN_SCENE));
+        }
+
         public Task<ReiOperationInfo> StartAssetRefreshAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(CreateOperation("refresh-1", ReiOperationKinds.REFRESH_ASSETS));
@@ -312,7 +319,11 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(28, tools.Count);
+        Assert.Equal(29, tools.Count);
+        var opened = await client.CallToolAsync("rei_editor_open_scene", new Dictionary<string, object?> { ["scene"] = "Scenes/Other.scene" });
+        Assert.False(opened.IsError ?? false);
+        Assert.Equal("Scenes/Other.scene", gateway.OpenedScene);
+
         Assert.Contains(tools, x => x.Name == "rei_editor_get_state");
         Assert.Contains(tools, x => x.Name == "rei_editor_list_entities");
         Assert.Contains(tools, x => x.Name == "rei_editor_get_entity");
@@ -327,6 +338,7 @@ public sealed class ReiMcpHostIntegrationTests
         Assert.Contains(tools, x => x.Name == "rei_editor_set_data_asset_property");
         Assert.Contains(tools, x => x.Name == "rei_editor_save_project");
         Assert.Contains(tools, x => x.Name == "rei_editor_refresh_assets");
+        Assert.Contains(tools, x => x.Name == "rei_editor_open_scene");
         Assert.Contains(tools, x => x.Name == "rei_editor_start_build");
         Assert.Contains(tools, x => x.Name == "rei_editor_start_playmode");
         Assert.Contains(tools, x => x.Name == "rei_editor_stop_playmode");

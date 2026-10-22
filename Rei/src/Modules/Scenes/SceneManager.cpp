@@ -40,16 +40,44 @@ namespace rei::scenes
         _entityManager->ResolveTransformParents();
     }
 
+    std::string SceneManager::GetActiveSceneName() const
+    {
+        return _activeScene.IsLoaded() ? _activeScene->GetName() : "";
+    }
+
+    bool SceneManager::LoadScene(const std::string& assetId)
+    {
+        return LoadScene([&] { return _assetManager->GetById<Scene>(assetId); });
+    }
+
     bool SceneManager::LoadScene(const i32 id)
+    {
+        return LoadScene([&]
+        {
+            REI_THROW_IF(!_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
+            REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
+            return _assetManager->GetById<Scene>(_buildScenesConfig->GetScene(id).Id);
+        });
+    }
+
+    bool SceneManager::LoadScene(const std::string& assetId, const nlohmann::json& sceneData)
+    {
+        return LoadScene([&]
+        {
+            REI_THROW_IF(assetId.empty(), "Scene asset ID is missing")
+            return _assetManager->CreateAssetWithId<Scene>(assetId, sceneData);
+        });
+    }
+
+    bool SceneManager::LoadScene(const std::function<assets::AssetRef<Scene>()>& load)
     {
         UnloadCurrentScene();
         try
         {
-            REI_THROW_IF(!_buildScenesConfig.IsLoaded(), "Build Scenes Config is not loaded")
-            REI_THROW_IF(!_buildScenesConfig->Has(id), "Scene with id [" + STRING(id) + "] is missing from build scenes")
-
-            _activeScene.Id = _buildScenesConfig->GetScene(id).Id;
-            if (_assetManager->Load(_activeScene) && _sceneAssetPreloader.Preload(CollectSceneAssetDependencies()))
+            auto scene = load();
+            _activeScene.Id = std::move(scene.Id);
+            _activeScene.Record = std::move(scene.Record);
+            if (_activeScene.IsLoaded() && _sceneAssetPreloader.Preload(CollectSceneAssetDependencies()))
             {
                 CreateSceneEntities();
                 LOG("Loaded scene {}", _activeScene->GetName())
@@ -58,11 +86,11 @@ namespace rei::scenes
         }
         catch (const std::exception& exception)
         {
-            LOG_ERROR("Failed to load scene {}. {}", id, exception.what())
+            LOG_ERROR("Failed to load scene. {}", exception.what())
         }
         catch (...)
         {
-            LOG_ERROR("Failed to load scene {}. Unknown exception", id)
+            LOG_ERROR("Failed to load scene. Unknown exception")
         }
 
         UnloadCurrentScene();

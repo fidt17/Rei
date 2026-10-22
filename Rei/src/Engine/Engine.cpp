@@ -102,7 +102,7 @@ namespace rei::internal::engine
         return mainWindow;
     }
 
-    void Engine::Start()
+    void Engine::Start(const std::string& sceneId)
     {
         try
         {
@@ -114,7 +114,8 @@ namespace rei::internal::engine
             _time->Reset();
             _runEngine.store(true);
             _internalWorld->Configure(_app, _mainRenderer, _mainThread, _entityManager);
-            _sceneManager->LoadScene(0);
+            if (IsEditor() && !sceneId.empty()) _sceneManager->LoadScene(sceneId);
+            else _sceneManager->LoadScene(0);
             _app->OnStart();
 
             LOG_DEBUG("Invoking start event")
