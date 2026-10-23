@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -10,6 +11,7 @@ using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Common;
+using ReiEditor.Utils.Common.Procedures;
 
 namespace ReiEditor.Models.Services.Scenes;
 
@@ -29,6 +31,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IEngineRunner _engineRunner;
     private readonly IEngineSceneLoader _sceneLoader;
+    private readonly IEditorProceduresService _procedures;
     private readonly SemaphoreSlim _loadGate = new(1, 1);
 
     public SceneManagementService(
@@ -40,7 +43,8 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         IBehaviourComponentsService behaviourComponentsService,
         IBehaviourRegistry behaviourRegistry,
         IEngineRunner engineRunner,
-        IEngineSceneLoader sceneLoader)
+        IEngineSceneLoader sceneLoader,
+        IEditorProceduresService procedures)
     {
         _logger = logger;
         _assets = assets;
@@ -51,6 +55,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         _behaviourRegistry = behaviourRegistry;
         _engineRunner = engineRunner;
         _sceneLoader = sceneLoader;
+        _procedures = procedures;
 
         _engineRunner.IsActive.Subscribe(HandleEngineIsRunningValueChangedEvent, invoke: false);
     }
@@ -101,8 +106,10 @@ public class SceneManagementService : ISceneManagementService, IDisposable
     private async Task LoadSceneCore(Func<Task<Scene?>> readScene)
     {
         await _loadGate.WaitAsync();
+        var procedure = new Procedure(ProcedureTags.LOADING_SCENE);
         try
         {
+            _procedures.TrackProcedure(procedure);
             var scene = await readScene();
             if (scene == null) throw new InvalidOperationException("Could not read scene asset.");
             _logger.Log($"Loading scene name={scene.Name}, id={scene.AssetId}");
@@ -132,6 +139,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         }
         finally
         {
+            procedure.Complete();
             _loadGate.Release();
         }
     }

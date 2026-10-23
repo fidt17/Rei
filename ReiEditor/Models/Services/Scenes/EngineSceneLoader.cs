@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -41,9 +42,12 @@ public sealed class EngineSceneLoader : IEngineSceneLoader
     {
         try
         {
-            var request = CreateRequest(scene);
+            // Apply the status bar layout before the engine thread stops pumping its window messages.
+            // NativeControlHost resizes that window synchronously during layout.
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             return await Task.Run(() =>
             {
+                var request = CreateRequest(scene);
                 var loaded = false;
                 return _native.TryInvoke(api => loaded = api.LoadEditorScene(request)) && loaded;
             });

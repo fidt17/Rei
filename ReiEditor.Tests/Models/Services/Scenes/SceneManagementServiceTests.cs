@@ -1,4 +1,9 @@
+using Avalonia.Headless.XUnit;
+using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Utils.Common.Procedures;
+using ReiEditor.ViewModels.Windows.Editor.StatusBar;
 using ReiEditor.Models.ProjectManagement;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets;
@@ -19,6 +24,7 @@ namespace ReiEditor.Tests.Models.Services.Scenes;
 /// <summary>Verifies scene loading, persisted transforms, build configuration and reload behavior.</summary>
 [Trait("Category", "Unit")]
 [Trait("Area", "SceneManagement")]
+[Collection(HeadlessCollection.NAME)]
 public sealed class SceneManagementServiceTests
 {
     private sealed class SceneLoader : IEngineSceneLoader
@@ -69,6 +75,7 @@ public sealed class SceneManagementServiceTests
     }
 
     private readonly TestAssets _assets = new();
+    private readonly EditorProceduresService _procedures = new();
     private readonly TestLogger<SceneManagementService> _logger = new();
     private readonly TestBehaviourComponentsService _components = new();
     private readonly TestBehaviourRegistry _registry = new();
@@ -76,6 +83,65 @@ public sealed class SceneManagementServiceTests
     private readonly SceneLoader _loader = new();
     private readonly Project _project = new();
     private readonly SelectionService _selection = new(new TestEntityApi());
+
+    [Theory]
+    [InlineData("success")]
+    [InlineData("missing")]
+    [InlineData("native-failure")]
+    [InlineData("native-exception")]
+    public async Task LoadingProcedureKeepsStatusThroughReadNativeLoadAndFailureCleanup(string outcome)
+    {
+        using var service = CreateService();
+        using var status = new StatusBarViewModel(_procedures);
+        _runner.Active.Value = true;
+        var read = new TaskCompletionSource<Asset?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var nativeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var native = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _assets.OnLoad = _ => read.Task;
+        _loader.Load = async scene =>
+        {
+            if (scene == null)
+            {
+                cleanupStarted.SetResult();
+                return await cleanup.Task;
+            }
+            nativeStarted.SetResult();
+            return await native.Task;
+        };
+
+        var loading = service.OpenScene("next");
+        Assert.Equal(ProcedureTags.LOADING_SCENE, Assert.Single(_procedures.ActiveProcedures).Name);
+        Assert.True(status.ShowStatusBar);
+        Assert.Equal("Loading scene...", status.ActiveProcedureText);
+        read.SetResult(outcome == "missing" ? null : SceneWithId("next"));
+        if (outcome != "missing")
+        {
+            await nativeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(_procedures.AnyActiveProcedures());
+            Assert.True(status.ShowStatusBar);
+            if (outcome == "native-exception") native.SetException(new InvalidOperationException("load failed"));
+            else native.SetResult(outcome == "success");
+        }
+        if (outcome == "success")
+        {
+            await loading;
+            Assert.Equal("next", service.CurrentScene.Value?.AssetId);
+        }
+        else
+        {
+            await cleanupStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Null(service.CurrentScene.Value);
+            Assert.True(_procedures.AnyActiveProcedures());
+            Assert.True(status.ShowStatusBar);
+            cleanup.SetResult(false);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => loading);
+        }
+        Assert.False(_procedures.AnyActiveProcedures());
+        Assert.False(status.ShowStatusBar);
+        Assert.Empty(status.ActiveProcedureText);
+    }
 
     [Fact]
     public async Task SceneSelectionUpdatesExistingLastSceneIdWithoutSavingProjectOrGameConfiguration()
@@ -269,7 +335,7 @@ public sealed class SceneManagementServiceTests
     {
         var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
         activeProject.OpenProject(_project);
-        return new(_logger, _assets, activeProject, _assets, _selection, _components, _registry, _runner, loader ?? _loader);
+        return new(_logger, _assets, activeProject, _assets, _selection, _components, _registry, _runner, loader ?? _loader, _procedures);
     }
 
     private static Scene SceneWithId(string id)
@@ -356,7 +422,7 @@ public sealed class SceneManagementServiceTests
         Assert.Same(second, service.CurrentScene.Value);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public async Task SerializationFailureClearsEditorAndNativeAndAllowsRecovery()
     {
         var native = new NativeApi();
