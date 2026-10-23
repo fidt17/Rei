@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <fstream>
+#include <type_traits>
 
 namespace rei::resources
 {
@@ -33,13 +34,9 @@ namespace rei::resources
         {
             const i32 count = GetI32();
             ValidateLength(count, sizeof(T));
-            std::vector<T> vec;
-            vec.reserve(count);
-
-            for (i32 i = 0; i < count; ++i)
-            {
-                vec.emplace_back(GetByType<T>());
-            }
+            static_assert(std::is_trivially_copyable_v<T>, "Binary vectors require trivially copyable elements");
+            std::vector<T> vec(count);
+            if (count > 0) ReadData(reinterpret_cast<char*>(vec.data()), static_cast<i64>(count) * sizeof(T));
 
             return vec;
         }

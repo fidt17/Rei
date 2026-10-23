@@ -31,6 +31,47 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("Rei.dll")]
+    [InlineData("assimp-vc143-mt.dll")]
+    public async Task StaleRuntimeWithNewerTimestampCannotBeSavedAsSuccessfulBuild(string fileName)
+    {
+        await PrepareCompleteBuildFiles();
+        var runtime = Path.Combine(_output.GetLiveOutput().ClientOutputDirectoryPath, fileName);
+        await File.WriteAllTextAsync(runtime, "stale runtime from another build");
+        File.SetLastWriteTimeUtc(runtime, DateTime.UtcNow.AddDays(1));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true));
+
+        Assert.Contains("do not match configured engine", error.Message);
+        Assert.False(File.Exists(GetStatePath()));
+    }
+
+    [Theory]
+    [InlineData("Rei.dll")]
+    [InlineData("assimp-vc143-mt.dll")]
+    public async Task PersistedStaleRuntimeSnapshotStillRequestsRebuild(string fileName)
+    {
+        await PrepareCompleteBuildFiles();
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        var runtime = Path.Combine(_output.GetLiveOutput().ClientOutputDirectoryPath, fileName);
+        await File.WriteAllTextAsync(runtime, "stale runtime from another build");
+        File.SetLastWriteTimeUtc(runtime, DateTime.UtcNow.AddDays(1));
+        var document = JObject.Parse(await File.ReadAllTextAsync(GetStatePath()));
+        var recordedOutput = document["EngineOutputFiles"]!.Children<JObject>()
+            .Single(entry => entry.Value<string>("RelativePath") == fileName);
+        recordedOutput["Size"] = new FileInfo(runtime).Length;
+        recordedOutput["ContentHash"] = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(runtime))).ToLowerInvariant();
+        await File.WriteAllTextAsync(GetStatePath(), document.ToString());
+
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+
+        Assert.True(state.ShouldBuildSolution);
+        Assert.False(state.ShouldBuildAssets);
+        Assert.Contains("do not match configured engine", state.Reason);
+    }
+
+    [Theory]
     [InlineData(".h")]
     [InlineData(".hpp")]
     [InlineData(".inl")]
@@ -313,8 +354,8 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
         var live = _output.GetLiveOutput();
         Directory.CreateDirectory(live.ClientOutputDirectoryPath);
         await File.WriteAllTextAsync(live.ClientDllPath, "client");
-        await File.WriteAllTextAsync(Path.Combine(live.ClientOutputDirectoryPath, "Rei.dll"), "engine");
-        await File.WriteAllTextAsync(Path.Combine(live.ClientOutputDirectoryPath, "assimp-vc143-mt.dll"), "assimp");
+        foreach (var fileName in new[] { "Rei.dll", "assimp-vc143-mt.dll" })
+            File.Copy(Path.Combine(_engine.GetEngineDebugIncludeDir(), fileName), Path.Combine(live.ClientOutputDirectoryPath, fileName));
         Directory.CreateDirectory(live.ResourcesDirectoryPath);
         await File.WriteAllTextAsync(Path.Combine(live.ResourcesDirectoryPath, "assets.bin"), "assets");
         await File.WriteAllTextAsync(Path.Combine(live.ResourcesDirectoryPath, "map.bin"), "map");

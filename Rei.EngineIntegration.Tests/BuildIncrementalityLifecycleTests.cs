@@ -11,6 +11,33 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class BuildIncrementalityLifecycleTests(ITestOutputHelper output)
 {
     [EngineFact]
+    public async Task NewerStaleEngineDllIsReplacedBeforeRestartWithoutRebuildingAssets()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        await engine.StartAsync();
+        var runtime = Path.Combine(engine.ProjectDirectory, "bin", "x64EditorDebug", "EngineFixture", "Rei.dll");
+        var expected = SHA256.HashData(await File.ReadAllBytesAsync(runtime));
+        var archive = Path.Combine(engine.ProjectDirectory, "bin", "Resources", "assets.bin");
+        var archiveTimestamp = File.GetLastWriteTimeUtc(archive);
+        await engine.CloseEditorAsync();
+
+        await engine.RestartAsync(async _ =>
+        {
+            await File.WriteAllTextAsync(runtime, "stale DLL with a newer timestamp");
+            File.SetLastWriteTimeUtc(runtime, DateTime.UtcNow.AddDays(1));
+        });
+
+        Assert.Equal(expected, SHA256.HashData(await File.ReadAllBytesAsync(runtime)));
+        Assert.Equal(archiveTimestamp, File.GetLastWriteTimeUtc(archive));
+        await WaitForConfigAsync(engine);
+        await AssertPropertyAsync(engine, "_floatValue", 12.5);
+        var logs = await engine.CloseEditorAsync();
+        Assert.Contains("Build Complete", logs);
+        Assert.Contains("Shutdown complete", logs);
+    }
+
+    [EngineFact]
     public async Task RestartAndSingleSourceEditPreserveUnchangedObjectsAndFailedBuildKeepsLiveDll()
     {
         await using var engine = new EngineIntegrationHarness();

@@ -10,6 +10,41 @@ using rei::resources::BinaryReader;
 using rei::resources::BinaryWriter;
 using namespace rei::tests;
 
+TEST_CASE("BIN-01 Large packed vectors preserve every element and following record", "[native][binary][coverage]")
+{
+    struct PackedVertex
+    {
+        f32 Position[3];
+        f32 Normal[3];
+        f32 Uv[2];
+    };
+    constexpr i32 COUNT = 32769;
+    TemporaryDirectory directory;
+    const auto path = directory.Write("large-vector.bin", {});
+    BinaryWriter writer(path.string(), 0);
+    writer.WriteI32(COUNT);
+    for (i32 i = 0; i < COUNT; ++i)
+        writer.Write(PackedVertex{{static_cast<f32>(i), -1, 2}, {0, 1, 0}, {0.25f, 0.75f}});
+    writer.WriteU32(0x89ABCDEF);
+    writer.Close();
+
+    BinaryReader reader(path.string());
+    const auto values = reader.GetVector<PackedVertex>();
+    REQUIRE(values.size() == COUNT);
+    for (i32 i = 0; i < COUNT; ++i)
+    {
+        REQUIRE(values[i].Position[0] == static_cast<f32>(i));
+        REQUIRE(values[i].Position[1] == -1);
+        REQUIRE(values[i].Normal[1] == 1);
+        REQUIRE(values[i].Uv[1] == 0.75f);
+    }
+    CHECK(reader.GetPosition() == sizeof(i32) + static_cast<i64>(COUNT) * sizeof(PackedVertex));
+    CHECK(reader.GetU32() == 0x89ABCDEF);
+    reader.SetPosition(0);
+    CHECK(reader.GetVector<PackedVertex>().size() == COUNT);
+    CHECK(reader.GetU32() == 0x89ABCDEF);
+}
+
 namespace
 {
     void CheckRejectedWithoutAllocatorException(const std::string& operation, const std::function<void()>& action)

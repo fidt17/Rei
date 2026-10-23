@@ -5,6 +5,34 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class PreparedBenchmarkProjectTests
 {
     [Fact]
+    public async Task FingerprintSupportsFilesLargerThanByteArrayLimitAndReadsTheirTail()
+    {
+        await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);
+        var source = CreateSource(owner.RunDirectory);
+        var relative = Path.Combine(".rei_tmp", "assets.bin");
+        var file = Path.Combine(source, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        try
+        {
+            await using (var stream = File.Create(file)) stream.SetLength((long)int.MaxValue + 1);
+            var before = await PreparedBenchmarkProject.FingerprintInputsAsync(source);
+            await using (var stream = File.OpenWrite(file))
+            {
+                stream.Seek(-1, SeekOrigin.End);
+                stream.WriteByte(1);
+            }
+            var after = await PreparedBenchmarkProject.FingerprintInputsAsync(source);
+            Assert.NotEqual(before[relative], after[relative]);
+            Assert.Equal(before.Keys, after.Keys);
+            foreach (var (path, hash) in before.Where(entry => entry.Key != relative)) Assert.Equal(hash, after[path]);
+        }
+        finally
+        {
+            Directory.Delete(owner.RunDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task UnchangedSourceReusesOwnedProjectAndRetainsBuiltAssetsAfterDispose()
     {
         await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);

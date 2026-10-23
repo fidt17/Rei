@@ -12,8 +12,7 @@ namespace rei::render
 
         for (i32 i = 0; i < meshCount; i++)
         {
-            Mesh mesh(reader);
-            _meshes.push_back(mesh);
+            _meshes.emplace_back(reader);
         }
         BuildBounds();
     }

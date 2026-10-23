@@ -121,8 +121,8 @@
     </PostBuildEvent>
     
     <PreBuildEvent>
-      <Command>"%SystemRoot%\System32\xcopy.exe" /y /d "{2}\Rei.dll" "$(TargetDir)"
-"%SystemRoot%\System32\xcopy.exe" /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      <Command>"%SystemRoot%\System32\xcopy.exe" /y "{2}\Rei.dll" "$(TargetDir)"
+"%SystemRoot%\System32\xcopy.exe" /y "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PreBuildEvent>
     
@@ -154,8 +154,8 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>"%SystemRoot%\System32\xcopy.exe" /y /d "{2}\Rei.dll" "$(TargetDir)"
-"%SystemRoot%\System32\xcopy.exe" /y /d "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
+      <Command>"%SystemRoot%\System32\xcopy.exe" /y "{2}\Rei.dll" "$(TargetDir)"
+"%SystemRoot%\System32\xcopy.exe" /y "{2}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -190,8 +190,8 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>"%SystemRoot%\System32\xcopy.exe" /y /d "{3}\Rei.dll" "$(TargetDir)"
-"%SystemRoot%\System32\xcopy.exe" /y /d "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
+      <Command>"%SystemRoot%\System32\xcopy.exe" /y "{3}\Rei.dll" "$(TargetDir)"
+"%SystemRoot%\System32\xcopy.exe" /y "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -226,8 +226,8 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>"%SystemRoot%\System32\xcopy.exe" /y /d "{3}\Rei.dll" "$(TargetDir)"
-"%SystemRoot%\System32\xcopy.exe" /y /d "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
+      <Command>"%SystemRoot%\System32\xcopy.exe" /y "{3}\Rei.dll" "$(TargetDir)"
+"%SystemRoot%\System32\xcopy.exe" /y "{3}\assimp-vc143-mt.dll" "$(TargetDir)"
       </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>

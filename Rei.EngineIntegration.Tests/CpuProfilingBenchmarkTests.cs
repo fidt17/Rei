@@ -32,6 +32,8 @@ public sealed class CpuProfilingBenchmarkTests(ITestOutputHelper output)
         var before = await ExternalProjectCopy.FingerprintAsync(source);
         Directory.CreateDirectory(engine.RunDirectory);
         await File.WriteAllTextAsync(Path.Combine(engine.RunDirectory, "cpu-source-manifest.json"), JsonSerializer.Serialize(new { source, hashes = before }));
+        using var samplingCancellation = new CancellationTokenSource();
+        var sampling = engine.SampleProcessResourcesAsync(samplingCancellation.Token);
         try
         {
             await engine.StartAsync();
@@ -42,9 +44,14 @@ public sealed class CpuProfilingBenchmarkTests(ITestOutputHelper output)
             await CpuProfilingBenchmark.CaptureAsync(engine);
             Assert.Equal(processId, engine.ProcessId);
             foreach (var (path, timestamp) in outputs) Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
+            var shutdown = System.Diagnostics.Stopwatch.StartNew();
+            await engine.CloseEditorAsync();
+            await engine.RecordTimingAsync("close-editor", shutdown.Elapsed);
         }
         finally
         {
+            samplingCancellation.Cancel();
+            await sampling;
             await engine.DisposeAsync();
             var after = await ExternalProjectCopy.FingerprintAsync(source);
             Assert.Equal(before.ToArray(), after.ToArray());

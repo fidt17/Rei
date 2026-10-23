@@ -17,15 +17,19 @@ internal static class PreparedBenchmarkProject
         {
             var relative = Path.GetRelativePath(source, file);
             if (relative.StartsWith("bin" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) continue;
-            byte[] content;
+            byte[] hash;
             if (Path.GetExtension(file).Equals(".rei", StringComparison.OrdinalIgnoreCase))
             {
                 var project = JsonNode.Parse(await File.ReadAllTextAsync(file))!.AsObject();
                 project.Remove("LastEditTime"); // Bookkeeping timestamp is not a build or scene input.
-                content = Encoding.UTF8.GetBytes(project.ToJsonString());
+                hash = SHA256.HashData(Encoding.UTF8.GetBytes(project.ToJsonString()));
             }
-            else content = await File.ReadAllBytesAsync(file);
-            result.Add(relative, Convert.ToHexString(SHA256.HashData(content)));
+            else
+            {
+                await using var stream = File.OpenRead(file);
+                hash = await SHA256.HashDataAsync(stream);
+            }
+            result.Add(relative, Convert.ToHexString(hash));
         }
         return result;
     }

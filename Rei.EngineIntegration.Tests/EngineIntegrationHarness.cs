@@ -89,6 +89,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         LaunchCount++;
         _stdout = CaptureOutputAsync(_editor.StandardOutput, Path.Combine(RunDirectory, $"stdout-{LaunchCount}.log"));
         _stderr = CaptureOutputAsync(_editor.StandardError, Path.Combine(RunDirectory, $"stderr-{LaunchCount}.log"));
+        await RecordTimingAsync("editor-launched", startup.Elapsed);
         using var timeout = new CancellationTokenSource(StartupTimeout);
         var endpoint = new Uri($"http://127.0.0.1:{port}/mcp");
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
@@ -97,6 +98,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         {
             Endpoint = endpoint, TransportMode = HttpTransportMode.StreamableHttp
         }), cancellationToken: timeout.Token);
+        await RecordTimingAsync("mcp-ready", startup.Elapsed);
         await WaitUntilAsync(async () =>
         {
             var state = await CallAsync("rei_editor_get_state");
@@ -243,6 +245,30 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
     public Task RecordTimingAsync(string phase, TimeSpan elapsed) =>
         AppendDiagnosticAsync("timings.jsonl",
             JsonSerializer.Serialize(new { phase, milliseconds = elapsed.TotalMilliseconds, launch = LaunchCount, processId = ProcessId }));
+
+    internal async Task SampleProcessResourcesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (_editor is { HasExited: false } editor)
+                {
+                    editor.Refresh();
+                    await AppendDiagnosticAsync("process-resources.jsonl", JsonSerializer.Serialize(new
+                    {
+                        utc = DateTimeOffset.UtcNow, launch = LaunchCount, processId = editor.Id,
+                        workingSetBytes = editor.WorkingSet64, privateBytes = editor.PrivateMemorySize64,
+                        peakWorkingSetBytes = editor.PeakWorkingSet64, totalCpuMs = editor.TotalProcessorTime.TotalMilliseconds,
+                        threadCount = editor.Threads.Count, handleCount = editor.HandleCount
+                    }));
+                }
+                await Task.Delay(1000, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception && _editor is { HasExited: true }) { }
+    }
 
     internal async Task AppendDiagnosticAsync(string fileName, string json)
     {

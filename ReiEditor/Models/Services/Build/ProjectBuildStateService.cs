@@ -143,12 +143,20 @@ public class ProjectBuildStateService : IProjectBuildStateService
         if (!TrackedFileListsMatch(engineInputFiles, state.EngineInputFiles)) return "Engine input artifacts changed.";
 
         var engineOutputFiles = await GetTrackedEngineOutputFiles(buildContext);
+        if (!EngineOutputsMatchInputs(engineInputFiles, engineOutputFiles)) return "Live engine binaries do not match configured engine.";
         if (!TrackedFileListsMatch(engineOutputFiles, state.EngineOutputFiles)) return "Live engine artifacts changed or are stale.";
 
         var sourceFiles = await GetTrackedSourceFiles();
         if (!TrackedFileListsMatch(sourceFiles, state.SourceFiles)) return "Tracked source files changed.";
 
         return null;
+    }
+
+    private static bool EngineOutputsMatchInputs(List<TrackedFileState> inputs, List<TrackedFileState> outputs)
+    {
+        return outputs.Count > 0 && outputs.All(output => inputs.Any(input =>
+            string.Equals(input.RelativePath, output.RelativePath, StringComparison.OrdinalIgnoreCase) &&
+            input.Size == output.Size && input.ContentHash == output.ContentHash));
     }
 
     private async Task<string?> GetAssetsRebuildReason(BuildExecutionContext buildContext, ProjectBuildState state)
@@ -222,6 +230,8 @@ public class ProjectBuildStateService : IProjectBuildStateService
             state.SourceFiles = await GetTrackedSourceFiles();
             state.EngineInputFiles = await GetTrackedEngineInputFiles(configuration);
             state.EngineOutputFiles = await GetTrackedEngineOutputFiles(buildContext);
+            if (!EngineOutputsMatchInputs(state.EngineInputFiles, state.EngineOutputFiles))
+                throw new InvalidOperationException("Built project contains engine binaries that do not match configured engine.");
         }
         else
         {
