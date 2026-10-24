@@ -663,3 +663,138 @@ TEST_CASE("Model builder preserves tight bounds for flat negative-coordinate geo
         CHECK(model.GetMeshes()[0].BVHRoot.Max.z > -5);
     });
 }
+
+TEST_CASE("Model importer joins shared vertices while preserving UV seams", "[native][importers][join-vertices][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        resources::BinaryReader reader(ImportModel(files,
+            "o seam\nv 0 0 5\nv 2 0 5\nv 2 2 5\nv 0 2 5\n"
+            "vt 0 0\nvt 1 0\nvt 1 1\nvt 0.5 0\nvt 0 1\nvn 0 0 1\n"
+            "f 1/1/1 2/2/1 3/3/1\nf 1/4/1 3/3/1 4/5/1\n").string());
+        render::Model model(reader);
+        REQUIRE(model.GetMeshes().size() == 1);
+        const auto& mesh = model.GetMeshes()[0];
+        REQUIRE(mesh.Vertices.size() == 5); // One shared corner joins; the UV seam stays split.
+        REQUIRE(mesh.Indices.size() == 6);
+        const std::array<std::array<Vector3, 3>, 2> positions{{
+            {{{0, 0, 5}, {2, 0, 5}, {2, 2, 5}}},
+            {{{0, 0, 5}, {2, 2, 5}, {0, 2, 5}}}
+        }};
+        const std::array<std::array<glm::vec2, 3>, 2> flippedUvs{{
+            {{{0, 1}, {1, 1}, {1, 0}}},
+            {{{0.5f, 1}, {1, 0}, {0, 0}}}
+        }};
+        for (u32 triangle = 0; triangle < 2; ++triangle)
+        {
+            const auto face = mesh.GetFace(triangle);
+            const auto mapping = MatchTrianglePoints(face, positions[triangle]);
+            for (u32 i = 0; i < 3; ++i)
+            {
+                const auto expected = flippedUvs[triangle][mapping[i]];
+                CHECK(face.Vertices[i].TexCoords.x == Catch::Approx(expected.x));
+                CHECK(face.Vertices[i].TexCoords.y == Catch::Approx(expected.y));
+                CheckVector(Vector3(face.Vertices[i].Normal), {0, 0, 1});
+            }
+        }
+    });
+}
+
+TEST_CASE("Model importer joins coplanar vertices without smoothing hard normals", "[native][importers][join-vertices][binary][isolated]")
+{
+    Isolated([]
+    {
+        const bool suppliedNormals = GENERATE(false, true);
+        CAPTURE(suppliedNormals);
+        std::string obj = "o hard\nv 0 0 0\nv 2 0 0\nv 0 2 0\nv 0 0 2\nv 2 2 0\n";
+        obj += suppliedNormals
+            ? "vn 0 0 1\nvn 0 1 0\nf 1//1 2//1 3//1\nf 1//2 4//2 2//2\nf 2//1 5//1 3//1\n"
+            : "f 1 2 3\nf 1 4 2\nf 2 5 3\n";
+        TemporaryDirectory files;
+        resources::BinaryReader reader(ImportModel(files, obj).string());
+        render::Model model(reader);
+        REQUIRE(model.GetMeshes().size() == 1);
+        const auto& mesh = model.GetMeshes()[0];
+        REQUIRE(mesh.Vertices.size() == 7); // Four on the flat surface, three on the perpendicular face.
+        REQUIRE(mesh.Indices.size() == 9);
+        const std::array<std::array<Vector3, 3>, 3> positions{{
+            {{{0, 0, 0}, {2, 0, 0}, {0, 2, 0}}},
+            {{{0, 0, 0}, {0, 0, 2}, {2, 0, 0}}},
+            {{{2, 0, 0}, {2, 2, 0}, {0, 2, 0}}}
+        }};
+        for (u32 triangle = 0; triangle < 3; ++triangle)
+        {
+            const auto face = mesh.GetFace(triangle);
+            MatchTrianglePoints(face, positions[triangle]);
+            const Vector3 expectedNormal = triangle == 1 ? Vector3(0, 1, 0) : Vector3(0, 0, 1);
+            for (const auto& vertex : face.Vertices) CheckVector(Vector3(vertex.Normal), expectedNormal);
+        }
+    });
+}
+
+TEST_CASE("Joined model vertices preserve packed BVH branches and collider hits", "[native][importers][join-vertices][binary][bvh][isolated]")
+{
+    Isolated([]
+    {
+        constexpr u32 SIDE = 4;
+        std::string obj = "o grid\nvn 0 0 1\n";
+        for (u32 y = 0; y <= SIDE; ++y)
+            for (u32 x = 0; x <= SIDE; ++x)
+                obj += std::format("v {} {} 5\n", x, y);
+        for (u32 y = 0; y < SIDE; ++y)
+        {
+            for (u32 x = 0; x < SIDE; ++x)
+            {
+                const u32 a = y * (SIDE + 1) + x + 1;
+                const u32 b = a + 1;
+                const u32 d = a + SIDE + 1;
+                const u32 c = d + 1;
+                obj += std::format("f {}//1 {}//1 {}//1\nf {}//1 {}//1 {}//1\n", a, b, c, a, c, d);
+            }
+        }
+        TemporaryDirectory files;
+        const auto packed = ImportModel(files, obj);
+        resources::BinaryReader reader(packed.string());
+        auto model = std::make_unique<render::Model>(reader);
+        REQUIRE(reader.GetPosition() == static_cast<i64>(std::filesystem::file_size(packed)));
+        REQUIRE(model->GetMeshes().size() == 1);
+        const auto& mesh = model->GetMeshes()[0];
+        REQUIRE(mesh.Vertices.size() == 25);
+        REQUIRE(mesh.Indices.size() == 96);
+        REQUIRE(mesh.BVHRoot.Left != nullptr);
+        REQUIRE(mesh.BVHRoot.Right != nullptr);
+        CheckVector(Vector3(model->GetBounds().Min), {0, 0, 5});
+        CheckVector(Vector3(model->GetBounds().Max), {4, 4, 5});
+
+        assets::AssetRegistry registry;
+        assets::AssetRef<render::Model> ref("joined-grid");
+        registry.CreateAssetRecord(ref, "grid", model.release(), static_cast<i32>(reader.GetPosition()), assets::AssetState::Loaded);
+        registry.SetRefCount(ref.Id, 1);
+        physics::ModelCollider collider;
+        collider.SetModel(ref);
+        const auto transformed = GetTransformationMatrix({10, -2, 3}, glm::quat(1, 0, 0, 0), {2, 3, 1});
+        for (u32 y = 0; y < SIDE; ++y)
+        {
+            for (u32 x = 0; x < SIDE; ++x)
+            {
+                for (const auto offset : {glm::vec2(0.75f, 0.25f), glm::vec2(0.25f, 0.75f)})
+                {
+                    const f32 px = static_cast<f32>(x) + offset.x;
+                    const f32 py = static_cast<f32>(y) + offset.y;
+                    Vector3 point;
+                    REQUIRE(collider.Intersect(Ray({px, py, 0}, {0, 0, 1}), glm::mat4(1), point));
+                    CheckVector(point, {px, py, 5});
+                    REQUIRE(collider.Intersect(Ray({10 + 2 * px, -2 + 3 * py, 0}, {0, 0, 1}), transformed, point));
+                    CheckVector(point, {10 + 2 * px, -2 + 3 * py, 8});
+                }
+            }
+        }
+        for (const auto x : {-0.25f, 4.25f})
+        {
+            Vector3 point(91, 92, 93);
+            CHECK_FALSE(collider.Intersect(Ray({x, 2, 0}, {0, 0, 1}), glm::mat4(1), point));
+            CheckVector(point, {91, 92, 93});
+        }
+    });
+}

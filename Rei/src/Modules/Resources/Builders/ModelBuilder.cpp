@@ -88,7 +88,7 @@ void ModelBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::ve
 void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::resources::BinaryWriter& writer) const
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(assetPath.string(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
+    const aiScene* scene = importer.ReadFile(assetPath.string(), aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices);
 
     std::vector<rei::render::Mesh> meshes;
     ProcessNode(scene->mRootNode, scene, meshes);

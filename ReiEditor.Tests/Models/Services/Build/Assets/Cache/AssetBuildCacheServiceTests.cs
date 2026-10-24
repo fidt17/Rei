@@ -67,6 +67,7 @@ public sealed class AssetBuildCacheServiceTests
     [InlineData("{\"CacheKey\":\"engine-new|1\",\"Entries\":{\"old-model\":{}}}")]
     [InlineData("{\"CacheKey\":\"engine-new|2\",\"Entries\":{\"old-model\":{}}}")]
     [InlineData("{\"CacheKey\":\"engine-new|3\",\"Entries\":{\"old-model\":{}}}")]
+    [InlineData("{\"CacheKey\":\"engine-new|4\",\"Entries\":{\"old-model\":{}}}")]
     [InlineData("{\"CacheKey\":\"old|1\",\"Entries\":{}}")]
     public async Task TestLoadOrCreateManifestRecoversInvalidOrVersionChangedState(string json)
     {
