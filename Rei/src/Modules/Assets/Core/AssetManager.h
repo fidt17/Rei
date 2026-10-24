@@ -71,7 +71,6 @@ namespace rei::assets
         AssetPostLoadHandler _postLoadHandler = {};
 
         u32 _runtimeAssetCounter = 0;
-        mutable std::mutex _assetsMutex;
         std::atomic<bool> _isUnloadingAllAssets = false;
 
         template <typename T>

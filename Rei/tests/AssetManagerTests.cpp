@@ -2,6 +2,7 @@
 #include "support/AssetTestSupport.h"
 #include "Modules/Assets/Types/TextAsset.h"
 #include <barrier>
+#include <condition_variable>
 
 using namespace rei;
 using namespace rei::assets;
@@ -182,8 +183,9 @@ TEST_CASE("ASM-02 Wrong type preserves original loaded payload and rejects new a
         CHECK_FALSE(wrong.IsLoaded());
         CHECK(original.Get() == payload);
         CHECK(fixture.Assets->GetLoadedAssetCount() == 1);
-        CHECK(probe.State->Constructed == 1);
-        CHECK(probe.State->Destroyed == 1);
+        CHECK(probe.State->Attempts == 0); // Reject the wrong type before reading its packed bytes.
+        CHECK(probe.State->Constructed == 0);
+        CHECK(probe.State->Destroyed == 0);
         CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
     });
 }
@@ -316,5 +318,85 @@ TEST_CASE("ASM-01 GetByPath packages owned text and cleans its temporary file", 
         fixture.Assets->DeleteTmpFiles();
         CHECK_FALSE(std::filesystem::exists(packed));
         CHECK(std::filesystem::exists(path)); // Source is never deleted by manager.
+    });
+}
+
+TEST_CASE("ASM-03 Unrelated packed assets keep parallel reads", "[native][assets][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteAssetPack(files, {{"a", "first", IntegerAsset(1)}, {"b", "second", IntegerAsset(2)}}); });
+        std::mutex mutex;
+        std::condition_variable changed;
+        i32 entered = 0;
+        probe.State->OnConstruct = [&](i32)
+        {
+            std::unique_lock lock(mutex);
+            ++entered;
+            changed.notify_all();
+            if (!changed.wait_for(lock, std::chrono::seconds(1), [&] { return entered == 2; }))
+                throw std::runtime_error("Unrelated asset reads were serialized");
+        };
+        auto first = std::async(std::launch::async, [&] { return fixture.Assets->GetById<AssetProbe>("a"); });
+        auto second = std::async(std::launch::async, [&] { return fixture.Assets->GetById<AssetProbe>("b"); });
+        auto a = first.get();
+        auto b = second.get();
+        REQUIRE(a.IsLoaded());
+        REQUIRE(b.IsLoaded());
+        CHECK(a->Value == 1);
+        CHECK(b->Value == 2);
+        CHECK(probe.State->Attempts == 2);
+        CHECK(fixture.Assets->GetLoadedAssetsSize() == 8);
+        probe.State->OnConstruct = {};
+    });
+}
+
+TEST_CASE("ASM-03 Failed concurrent read releases waiters and permits reload", "[native][assets][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture([](TemporaryDirectory& files) { WriteAssetPack(files, {{"shared", "shared", IntegerAsset(43)}}); });
+        std::atomic<bool> failOnce = true;
+        probe.State->OnConstruct = [&](i32)
+        {
+            if (!failOnce.exchange(false)) return;
+            // Give other callers time to request the same not-yet-published payload.
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            throw std::runtime_error("First read failed");
+        };
+        std::barrier start(4);
+        std::array<AssetRef<AssetProbe>, 4> refs;
+        std::array<bool, 4> loaded{};
+        std::vector<std::future<void>> workers;
+        for (i32 i = 0; i < 4; ++i) workers.push_back(std::async(std::launch::async, [&, i]
+        {
+            start.arrive_and_wait();
+            refs[i].Id = "shared";
+            loaded[i] = fixture.Assets->Load(refs[i]);
+        }));
+        for (auto& worker : workers) worker.get();
+        REQUIRE(std::count(loaded.begin(), loaded.end(), true) == 3);
+        CHECK(probe.State->Attempts == 2); // One failed constructor, one shared successful read.
+        CHECK(probe.State->Constructed == 1);
+        CHECK(probe.State->PostLoads == 3);
+        AssetProbe* payload = nullptr;
+        for (i32 i = 0; i < 4; ++i)
+        {
+            if (!loaded[i]) continue;
+            REQUIRE(refs[i].IsLoaded());
+            CHECK(refs[i]->Value == 43);
+            if (payload == nullptr) payload = refs[i].Get();
+            CHECK(refs[i].Get() == payload);
+        }
+        for (auto& ref : refs) ref.Reset();
+        CHECK(probe.State->Destroyed == 1);
+        CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
+        auto reloaded = fixture.Assets->GetById<AssetProbe>("shared");
+        REQUIRE(reloaded.IsLoaded());
+        CHECK(reloaded->Value == 43);
+        CHECK(probe.State->Attempts == 3);
+        probe.State->OnConstruct = {};
     });
 }

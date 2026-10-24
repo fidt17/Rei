@@ -50,6 +50,8 @@ namespace rei::assets
         REI_API void ResetRuntimeTracking();
 
     private:
+        friend class AssetManager;
+
         REI_API void MarkPendingDestroy(const std::string& id);
         REI_API void TransitionToUnloadedAndReleasePayload(const std::string& id);
         REI_API bool ReleaseRecordOrUnloadInPlace(const std::string& id);

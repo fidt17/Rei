@@ -10,7 +10,6 @@ namespace rei::assets
     AssetRef<T> AssetManager::GetById(const std::string& id)
     {
         auto asset = AssetRef<T>(id);
-        asset.Record = _registry->FindRecord<T>(id);
         
         Load(asset);
 
@@ -22,11 +21,15 @@ namespace rei::assets
     {
         AssetRef<T> ref(path);
         ref.Record = _registry->FindRecord<T>(ref.Id);
-        if (ref.IsLoaded())
+        if (ref.Record != nullptr)
         {
-            _registry->IncrementRefCount(ref.Id);
-            BindOwnership(ref);
-            return ref;
+            std::lock_guard loadLock(ref.Record->LoadMutex);
+            if (ref.IsLoaded())
+            {
+                _registry->IncrementRefCount(ref.Id);
+                BindOwnership(ref);
+                return ref;
+            }
         }
 
         std::string filePath = path;
@@ -181,23 +184,16 @@ namespace rei::assets
             return false;
         }
 
-        if (ref.IsLoaded())
-        {
-            if (incrementRefCount && !ref.HasOwnership())
-            {
-                _registry->IncrementRefCount(ref.Id);
-            }
-            return true;
-        }
-
         ref.Record = _registry->FindRecord<T>(ref.Id);
-        if (ref.IsLoaded())
+        if (ref.Record != nullptr)
         {
-            if (incrementRefCount && !ref.HasOwnership())
+            // Also guard cached acquisitions until the first load publishes its refcount.
+            std::lock_guard loadLock(ref.Record->LoadMutex);
+            if (ref.IsLoaded())
             {
-                _registry->IncrementRefCount(ref.Id);
+                if (incrementRefCount && !ref.HasOwnership()) _registry->IncrementRefCount(ref.Id);
+                return true;
             }
-            return true;
         }
 
         try
@@ -224,7 +220,10 @@ namespace rei::assets
     template <typename T>
     void AssetManager::LoadAndCreateRecord(AssetRef<T>& ref, const std::string& name, const std::string& path, const i64 offset, const bool incrementRefCount)
     {
-        ref.Record = _registry->FindRecord<T>(ref.Id);
+        ref.Record = _registry->GetOrCreateRecord(ref.Id, name, typeid(T));
+        REI_THROW_IF(ref.Record == nullptr, "Cannot load asset with a different registered type")
+        // Lock one asset before opening its file; unrelated dependencies stay parallel.
+        std::lock_guard loadLock(ref.Record->LoadMutex);
         if (ref.IsLoaded())
         {
             if (incrementRefCount && !ref.HasOwnership())
@@ -246,20 +245,6 @@ namespace rei::assets
         reader.Close();
 
         const auto assetSize = static_cast<i32>(loadedAssetSize);
-        {
-            std::lock_guard lock(_assetsMutex);
-            ref.Record = _registry->FindRecord<T>(ref.Id);
-            if (ref.IsLoaded())
-            {
-                delete loadedAssetPtr;
-                if (incrementRefCount && !ref.HasOwnership())
-                {
-                    _registry->IncrementRefCount(ref.Id);
-                }
-                return;
-            }
-        }
-
         _registry->CreateAssetRecord<T>(ref, name, loadedAssetPtr, assetSize, AssetState::Loaded);
         _registry->SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
         const auto totalMs = timer.ElapsedMs();

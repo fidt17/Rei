@@ -68,6 +68,7 @@ namespace rei::tests
         std::mutex Mutex;
         std::vector<std::thread::id> PostLoadThreads;
         std::function<void()> OnPostLoad;
+        std::function<void(i32)> OnConstruct;
     };
 
     inline std::shared_ptr<AssetProbeState> CurrentAssetProbe;
@@ -90,6 +91,7 @@ namespace rei::tests
         {
             if (!State) throw std::logic_error("AssetProbeScope is required");
             ++State->Attempts;
+            if (State->OnConstruct) State->OnConstruct(Value);
             if (Value == -99) throw std::runtime_error("probe constructor failure");
             ++State->Constructed;
         }

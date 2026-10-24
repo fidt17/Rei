@@ -237,6 +237,7 @@ TEST_CASE("ASM-02 Concurrent first publication shares one payload and balanced a
         CHECK(refs[0].Record == refs[1].Record);
         CHECK(refs[0].Get() == refs[1].Get());
         CHECK(ConcurrentAsset::Live == 1);
+        CHECK(ConcurrentAsset::Entered == 1); // Shared bytes must be read and constructed once.
         CHECK(fixture.Assets->GetLoadedAssetsSize() == 4);
         fixture.Assets->Release(refs[0]);
         CHECK(refs[1].IsLoaded());
