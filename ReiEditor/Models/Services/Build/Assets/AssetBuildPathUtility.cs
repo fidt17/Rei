@@ -14,8 +14,7 @@ public static class AssetBuildPathUtility
         FileExtensions.VS_SOLUTION
     };
 
-    // Match native dispatch: uppercase extensions are treated as text assets.
-    public static bool IsModelPath(string path) => Path.GetExtension(path) is FileExtensions.OBJ or FileExtensions.FBX;
+    public static bool IsModelPath(string path) => FileExtensions.HasAnyExtension(path, FileExtensions.ModelAssetExtensions);
 
     public static bool ShouldBuildPath(string path)
     {

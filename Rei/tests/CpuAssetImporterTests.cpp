@@ -305,18 +305,54 @@ TEST_CASE("IMP-03 Missing text source returns failure and preserves existing des
     });
 }
 
-TEST_CASE("IMP-01 Asset extension matching imports uppercase OBJ as model", "[native][importers][binary][coverage][coverage-remaining][isolated]")
+TEST_CASE("IMP-01 Asset extension matching imports OBJ regardless of case", "[native][importers][binary][coverage][coverage-remaining][asset-routing][isolated]")
 {
     Isolated([]
     {
+        const std::string filename = GENERATE(std::string{"model.obj"}, std::string{"MODEL.OBJ"}, std::string{"MiXeD.Name.oBj"});
+        CAPTURE(filename);
         TemporaryDirectory files;
-        const auto source = WriteText(files, "MODEL.OBJ", TRIANGLE_OBJ);
-        const auto target = files.File("uppercase.bin");
-        REQUIRE(resources::AssetBuilder().BuildAsset(source.string(), target.string(), 0) > 0);
+        const auto source = WriteText(files, filename, TRIANGLE_OBJ);
+        const auto target = files.Write("model.bin", {0x11, 0x22, 0x33});
+        const auto end = resources::AssetBuilder().BuildAsset(source.string(), target.string(), 3);
+        REQUIRE(end > 3);
+        resources::BinaryReader reader(target.string(), 3);
+        REQUIRE(reader.GetStr() == filename);
+        reader.SetPosition(3);
+        render::Model model(reader);
+        CHECK(reader.GetPosition() == end);
+        REQUIRE(model.GetMeshes().size() == 1);
+        const auto& mesh = model.GetMeshes()[0];
+        CHECK(mesh.Name == filename + ":0");
+        REQUIRE(mesh.Vertices.size() == 3);
+        CHECK(mesh.Indices == std::vector<u32>{0, 1, 2});
+        REQUIRE(model.GetBounds().IsValid());
+        CheckVector(Vector3(model.GetBounds().Min), {0, 0, 5});
+        CheckVector(Vector3(model.GetBounds().Max), {2, 2, 5});
+        Vector3 point;
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
+        CheckVector(point, {0.5f, 0.5f, 5});
+        const auto bytes = ReadBytes(target);
+        REQUIRE(bytes.size() == end);
+        CHECK(std::vector<u8>(bytes.begin(), bytes.begin() + 3) == std::vector<u8>{0x11, 0x22, 0x33});
+    });
+}
+
+TEST_CASE("Asset extension matching leaves unknown and compound extensions as text", "[native][importers][binary][asset-routing][isolated]")
+{
+    Isolated([]
+    {
+        const std::string filename = GENERATE(std::string{"MODEL.OBJ.BAK"}, std::string{"model.ObjBackup"}, std::string{"settings.ASSET"}, std::string{"NOTES"});
+        CAPTURE(filename);
+        TemporaryDirectory files;
+        const std::string text = "Keep Case and .OBJ contents unchanged";
+        const auto source = WriteText(files, filename, text);
+        const auto target = files.File("text.bin");
+        const auto end = resources::AssetBuilder().BuildAsset(source.string(), target.string(), 0);
+        REQUIRE(end == static_cast<i64>(sizeof(i32) + text.size()));
         resources::BinaryReader reader(target.string());
-        CHECK(reader.GetStr() == "MODEL.OBJ");
-        // Check header first; parsing raw fallback text as a Model would turn
-        // this routing assertion into an unrelated malformed-binary failure.
+        CHECK(assets::TextAsset(reader).GetValue() == text);
+        CHECK(reader.GetPosition() == end);
     });
 }
 

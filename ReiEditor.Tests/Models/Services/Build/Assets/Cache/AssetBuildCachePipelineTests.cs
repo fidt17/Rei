@@ -179,13 +179,13 @@ public sealed class AssetBuildCachePipelineTests
         using var directory = new TemporaryDirectory();
         var assets = new[]
         {
-            await CreateAsset(directory, "first", "first.obj", new byte[] { 10 }),
+            await CreateAsset(directory, "first", "first.OBJ", new byte[] { 10 }),
             await CreateAsset(directory, "texture", "texture.png", new byte[] { 20 }),
-            await CreateAsset(directory, "second", "second.fbx", new byte[] { 30 }),
-            await CreateAsset(directory, "third", "third.obj", new byte[] { 40 }),
-            await CreateAsset(directory, "fourth", "fourth.fbx", new byte[] { 50 }),
+            await CreateAsset(directory, "second", "second.FBX", new byte[] { 30 }),
+            await CreateAsset(directory, "third", "third.oBj", new byte[] { 40 }),
+            await CreateAsset(directory, "fourth", "fourth.FbX", new byte[] { 50 }),
             await CreateAsset(directory, "fifth", "fifth.obj", new byte[] { 60 }),
-            await CreateAsset(directory, "text", "text.OBJ", new byte[] { 70 })
+            await CreateAsset(directory, "text", "text.txt", new byte[] { 70 })
         };
         var engine = new TestEngineApi();
         for (var i = 0; i < assets.Length; i++) engine.Outputs[assets[i].FullPath] = new byte[] { (byte)(i + 1), (byte)(i + 100) };

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <cctype>
 #include <regex>
 #include "AssetBuilder.h"
 
@@ -57,7 +58,8 @@ namespace rei::resources
         ADD_TO_MAP(".ttf", FontBuilder().BuildFontAsset)
         ADD_TO_MAP(".otf", FontBuilder().BuildFontAsset)
 
-        const auto extension = filePath.extension().string();
+        auto extension = filePath.extension().string();
+        for (auto& character : extension) character = static_cast<char>(std::tolower(static_cast<u8>(character)));
         
         if (map.find(extension) == map.end())
         {
