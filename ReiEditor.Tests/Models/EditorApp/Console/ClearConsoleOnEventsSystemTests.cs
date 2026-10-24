@@ -39,19 +39,19 @@ public sealed class ClearConsoleOnEventsSystemTests
     {
         public event Action EngineStartedEvent = delegate { };
         public event Action EngineStartFailedEvent = delegate { };
-        public Observable<bool> PlaymodeActive { get; } = new(false);
+        public Observable<bool> Starting { get; } = new(false);
         public ReiEditor.Utils.Common.IObservable<bool> IsActive => throw new NotSupportedException();
         public ReiEditor.Utils.Common.IObservable<bool> IsEditorActive => throw new NotSupportedException();
-        public ReiEditor.Utils.Common.IObservable<bool> IsPlaymodeActive => PlaymodeActive;
-        public ReiEditor.Utils.Common.IObservable<bool> IsEngineStarting => throw new NotSupportedException();
-        public EngineRunMode ActiveMode => throw new NotSupportedException();
+        public ReiEditor.Utils.Common.IObservable<bool> IsPlaymodeActive => throw new NotSupportedException();
+        public ReiEditor.Utils.Common.IObservable<bool> IsEngineStarting => Starting;
+        public EngineRunMode ActiveMode { get; set; } = EngineRunMode.PlayMode;
         public bool StartEngine(EngineRunMode mode) { EngineStartedEvent?.Invoke(); return true; }
         public Task StopEngine() { EngineStartFailedEvent?.Invoke(); return Task.CompletedTask; }
     }
 
     /// <summary>Entering build or playmode clears console while false state changes do not.</summary>
     [Fact]
-    public void ActiveBuildAndPlaymodeTransitionsClearConsole()
+    public void BuildAndPlaymodeStartClearConsoleBeforeWork()
     {
         var console = new TestConsoleService();
         var build = new TestBuildService();
@@ -60,8 +60,8 @@ public sealed class ClearConsoleOnEventsSystemTests
 
         build.InProgress.Value = true;
         build.InProgress.Value = false;
-        runner.PlaymodeActive.Value = true;
-        runner.PlaymodeActive.Value = false;
+        runner.Starting.Value = true;
+        runner.Starting.Value = false;
 
         Assert.Equal(2, console.ClearCalls);
     }
@@ -71,17 +71,17 @@ public sealed class ClearConsoleOnEventsSystemTests
     [InlineData(true, false)]
     [InlineData(false, true)]
     [InlineData(true, true)]
-    public void InitiallyActiveStateClearsConsoleOnConstruction(bool buildActive, bool playmodeActive)
+    public void InitiallyActiveStateClearsConsoleOnConstruction(bool buildActive, bool engineStarting)
     {
         var console = new TestConsoleService();
         var build = new TestBuildService();
         var runner = new TestEngineRunner();
         build.InProgress.Value = buildActive;
-        runner.PlaymodeActive.Value = playmodeActive;
+        runner.Starting.Value = engineStarting;
 
         using var system = new ClearConsoleOnEventsSystem(build, console, runner);
 
-        Assert.Equal((buildActive ? 1 : 0) + (playmodeActive ? 1 : 0), console.ClearCalls);
+        Assert.Equal((buildActive ? 1 : 0) + (engineStarting ? 1 : 0), console.ClearCalls);
     }
 
     /// <summary>Disposal removes both state subscriptions.</summary>
@@ -95,8 +95,33 @@ public sealed class ClearConsoleOnEventsSystemTests
         system.Dispose();
 
         build.InProgress.Value = true;
-        runner.PlaymodeActive.Value = true;
+        runner.Starting.Value = true;
 
         Assert.Equal(0, console.ClearCalls);
+    }
+
+    [Fact]
+    public void PlaymodeReadinessPreservesLogsWrittenDuringStartup()
+    {
+        var console = new EditorConsoleService();
+        var runner = new TestEngineRunner();
+        using var system = new ClearConsoleOnEventsSystem(new TestBuildService(), console, runner);
+        console.Log(new(LogScopeEnum.Editor, LogLevelEnum.Info, DateTime.UtcNow, "old", ""));
+        runner.Starting.Value = true;
+        Assert.Empty(console.Logs);
+        console.Log(new(LogScopeEnum.Engine, LogLevelEnum.Info, DateTime.UtcNow, "startup complete", ""));
+        runner.Starting.Value = false;
+        Assert.Equal("startup complete", Assert.Single(console.Logs).Message);
+    }
+
+    [Fact]
+    public void EditorStartPreservesBuildSummary()
+    {
+        var console = new EditorConsoleService();
+        var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+        using var system = new ClearConsoleOnEventsSystem(new TestBuildService(), console, runner);
+        console.Log(new(LogScopeEnum.Editor, LogLevelEnum.Info, DateTime.UtcNow, "build summary", ""));
+        runner.Starting.Value = true;
+        Assert.Equal("build summary", Assert.Single(console.Logs).Message);
     }
 }

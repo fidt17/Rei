@@ -183,14 +183,37 @@ public sealed class AssetBuilderTests
         Assert.Null(serializer.SerializedMap);
     }
 
+    [Fact]
+    public async Task BuildSummaryKeepsTotalsWithoutPerAssetRowsForColdAndWarmBuilds()
+    {
+        using var directory = new TemporaryDirectory();
+        var asset = await CreateAsset(directory, "asset", "example.mat", new byte[] { 1 });
+        var engine = new TestEngineApi();
+        engine.Outputs[asset.FullPath] = new byte[] { 1, 2, 3 };
+        var logger = new TestLogger<AssetBuilder>();
+        var builder = CreateBuilder(new[] { asset }, new TestEngineSessionFactory(engine), new TestBinarySerializer(), logger);
+        var context = new BuildExecutionContext(directory.GetPath("build"));
+
+        await builder.BuildAssets(context);
+        var cold = Assert.Single(logger.Entries);
+        Assert.Contains("assets=1, rebuilt=1, size=3 bytes, duration=", cold.Message);
+        Assert.EndsWith(" ms", cold.Message);
+        Assert.DoesNotContain(asset.FullPath, cold.Message);
+        Assert.DoesNotContain('\n', cold.Message);
+
+        await builder.BuildAssets(context);
+        Assert.Equal(2, logger.Entries.Count);
+        Assert.Contains("assets=1, rebuilt=0, size=3 bytes, duration=", logger.Entries[^1].Message);
+    }
+
     /// <summary>Creates builder with real registry and cache pipeline.</summary>
-    private static AssetBuilder CreateBuilder(IEnumerable<AssetInfo> assets, TestEngineSessionFactory factory, TestBinarySerializer serializer)
+    private static AssetBuilder CreateBuilder(IEnumerable<AssetInfo> assets, TestEngineSessionFactory factory, TestBinarySerializer serializer, TestLogger<AssetBuilder>? logger = null)
     {
         var registry = new AssetRegistry(new TestLogger<AssetRegistry>());
         registry.RegisterNewAssets(assets);
         var cache = new AssetBuildCacheService(new TestLogger<AssetBuildCacheService>(), new TestEngineSettingsProvider());
         var pipeline = new AssetBuildCachePipeline(new TestLogger<AssetBuildCachePipeline>(), cache);
-        return new AssetBuilder(serializer, factory, registry, pipeline, new TestLogger<AssetBuilder>());
+        return new AssetBuilder(serializer, factory, registry, pipeline, logger ?? new TestLogger<AssetBuilder>());
     }
 
     /// <summary>Creates source asset containing known bytes.</summary>

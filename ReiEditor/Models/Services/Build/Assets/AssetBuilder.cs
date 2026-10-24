@@ -61,26 +61,7 @@ public class AssetBuilder : IAssetBuilder
 
     private void LogBuildSummary(AssetsBuildCacheReport report)
     {
-        var msg = new StringBuilder();
-        msg.AppendLine();
-        msg.AppendLine($"--- Asset build summary ---");
-        msg.AppendLine($"Asset build completed in {report.TotalBuildMs} ms");
-        msg.AppendLine($"Asset build size: {report.TotalBytes} bytes");
-
-        if (report.BuiltAssets.Count == 0)
-        {
-            msg.AppendLine("Asset build: no assets rebuilt");
-            _logger.Log(msg.ToString());
-            return;
-        }
-
-        msg.AppendLine("Asset build details:");
-        foreach (var built in report.BuiltAssets)
-        {
-            msg.AppendLine($"  {built.AssetPath} | {built.BuildMs} ms | {built.SizeBytes} bytes");
-        }
-        
-        _logger.Log(msg.ToString());
+        _logger.Log($"Asset build summary: assets={report.TotalAssets}, rebuilt={report.BuiltAssets.Count}, size={report.TotalBytes} bytes, duration={report.TotalBuildMs} ms");
     }
 
     private static bool ShouldBuild(AssetInfo assetInfo) => AssetBuildPathUtility.ShouldBuildPath(assetInfo.FullPath);

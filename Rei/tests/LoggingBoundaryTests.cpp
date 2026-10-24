@@ -123,3 +123,75 @@ TEST_CASE("Logger subscriber can log and read snapshots reentrantly", "[native][
         CHECK(snapshot.back() == "INFO | inner");
     });
 }
+
+
+TEST_CASE("Logger concurrent callbacks preserve snapshot order without blocking other writers", "[native][logging][isolated]")
+{
+    Isolated([]
+    {
+        Logger logger("Ordering");
+        std::atomic<bool> entered = false, release = false;
+        std::vector<std::string> events;
+        logger.NewLogEvent.append([&](const auto& message)
+        {
+            if (std::string(message.Message) == "first")
+            {
+                entered = true;
+                while (!release) std::this_thread::yield();
+            }
+            events.emplace_back(message.Message);
+        });
+        std::thread first([&] { logger.Log(Info, "first"); });
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (!entered && std::chrono::steady_clock::now() < deadline) std::this_thread::yield();
+        const bool callbackEntered = entered;
+        logger.Log(Info, "second");
+        release = true;
+        first.join();
+        REQUIRE(callbackEntered);
+        CHECK(events == std::vector<std::string>{"first", "second"});
+        const auto snapshot = GetRecentLogEntriesSnapshot();
+        REQUIRE(snapshot.size() >= 2);
+        CHECK(snapshot[snapshot.size() - 2] == "INFO | first");
+        CHECK(snapshot.back() == "INFO | second");
+    });
+}
+
+TEST_CASE("Logger registers a native callback once per logger and permits a new logger", "[native][logging][isolated]")
+{
+    Isolated([]
+    {
+        static i32 calls = 0;
+        calls = 0;
+        const Logger::Callback callback = [](const LogMessage&) { ++calls; };
+        Logger first("First");
+        first.AddCallback(callback);
+        first.AddCallback(callback);
+        first.AddCallback(nullptr);
+        first.Log(Info, "once");
+        CHECK(calls == 1);
+        Logger replacement("Replacement");
+        replacement.AddCallback(callback);
+        replacement.Log(Info, "new-logger");
+        CHECK(calls == 2);
+    });
+}
+
+TEST_CASE("Logger info environment level suppresses debug but preserves info", "[native][logging][isolated]")
+{
+    Isolated([]
+    {
+        for (const auto value : {"info", "INFO"})
+        {
+            REQUIRE(_putenv_s("REI_LOG_LEVEL", value) == 0);
+            Log::Initialize();
+            const auto logger = Log::GetLogger();
+            CHECK(logger->GetMinLogLevel() == Info);
+            std::vector<std::string> events;
+            logger->NewLogEvent.append([&](const auto& message) { events.emplace_back(message.Message); });
+            logger->Log(Debug, "hidden");
+            logger->Log(Info, "visible");
+            CHECK(events == std::vector<std::string>{"visible"});
+        }
+    });
+}

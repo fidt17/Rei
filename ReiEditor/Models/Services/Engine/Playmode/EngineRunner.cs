@@ -105,6 +105,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             _engineCompletion = completion.Task;
             _startNotification = Task.CompletedTask;
             BeginStartProcedure();
+            ActiveMode = mode;
             _isEngineStarting.Value = true;
             Task.Run(() => RunEngine(mode, completion));
             return true;
@@ -123,7 +124,6 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
                 return;
             }
 
-            ActiveMode = mode;
             enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
             lock (_nativeCallLock) _enginePtr = enginePtr;
             _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));

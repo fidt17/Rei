@@ -1,6 +1,5 @@
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets.Meta;
-using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -8,7 +7,6 @@ using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Build.Solution;
 using ReiEditor.Models.Services.Engine.Settings;
-using ReiEditor.Models.Services.Logging;
 using ReiEditor.Tests.Infrastructure.Fixtures;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 
@@ -32,7 +30,7 @@ public sealed class BuildServiceTests
     }
 
     // One recorder captures ordering across the pipeline interfaces; each interface has only its test-required members enabled.
-    private sealed class TestPipeline : IBuildPreparationService, ISolutionBuilder, IAssetBuilder, IProjectBuildStateService, IEditorConsoleService
+    private sealed class TestPipeline : IBuildPreparationService, ISolutionBuilder, IAssetBuilder, IProjectBuildStateService
     {
         public List<string> Calls { get; } = new();
         public Func<string, Task> OnStage { get; set; } = _ => Task.CompletedTask;
@@ -42,11 +40,6 @@ public sealed class BuildServiceTests
         public List<(BuildConfigurationEnum Configuration, BuildExecutionContext Context, bool Solution, bool Assets)> Evaluations { get; } = new();
         public List<(BuildConfigurationEnum Configuration, BuildExecutionContext Context, bool Solution, bool Assets)> Saves { get; } = new();
         public List<(BuildConfigurationEnum Configuration, BuildExecutionContext Context)> Failures { get; } = new();
-        public event Action<LogMessage> NewLogEvent { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
-        public event Action LogsClearedEvent { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
-        public ReiEditor.Utils.Common.IObservable<int> LogsCount => throw new NotSupportedException();
-        public IEnumerable<LogMessage> Logs => throw new NotSupportedException();
-
         public Task Stage(string stage) { Calls.Add(stage); return OnStage(stage); }
         public Task Prepare(CancellationToken cancellationToken) => Stage("prepare");
         public Task Build(BuildConfigurationEnum configuration, bool cleanBuild = false, string? outputDirectory = null, CancellationToken cancellationToken = default)
@@ -76,8 +69,6 @@ public sealed class BuildServiceTests
             Saves.Add((configuration, buildContext, buildSolution, buildAssets));
             return Stage("persist");
         }
-        public void ClearConsole() => Calls.Add("clear");
-        public void Log(LogMessage message) => throw new NotSupportedException();
     }
 
     private sealed class TestContext : IAsyncDisposable
@@ -122,7 +113,7 @@ public sealed class BuildServiceTests
                 assets.RegisterNewAssets(new[] { new AssetInfo(new AssetMeta("tracked"), assetPath) });
                 stateService = new ProjectBuildStateService(Project.Resources, assets, new TestEngineSettingsProvider(engine), output, new TestLogger<ProjectBuildStateService>());
             }
-            Service = new(Project.Resources, Pipeline, Pipeline, Pipeline, stateService, Logger, Pipeline, importer, sources, Procedures);
+            Service = new(Project.Resources, Pipeline, Pipeline, Pipeline, stateService, Logger, importer, sources, Procedures);
         }
 
         public async ValueTask DisposeAsync()
@@ -189,7 +180,7 @@ public sealed class BuildServiceTests
 
         Assert.True(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug, true, true, true, execution, true, true, progress, cancellation.Token));
 
-        Assert.Equal(new[] { "import", "prepare", "evaluate", "started", "solution", "assets", "persist", "clear" }, context.Pipeline.Calls);
+        Assert.Equal(new[] { "import", "prepare", "evaluate", "started", "solution", "assets", "persist" }, context.Pipeline.Calls);
         var solution = context.Pipeline.SolutionRequest!.Value;
         Assert.Equal((BuildConfigurationEnum.EditorDebug, true, execution.SolutionOutputDirectory, cancellation.Token), solution);
         var assets = context.Pipeline.AssetRequest!.Value;
@@ -328,7 +319,6 @@ public sealed class BuildServiceTests
         Assert.Equal(canceledStage, context.Pipeline.Calls[^2]);
         Assert.Equal("failed", context.Pipeline.Calls[^1]);
         Assert.Single(context.Pipeline.Failures);
-        Assert.DoesNotContain("clear", context.Pipeline.Calls);
         Assert.False(context.Service.IsBuildReady.Value);
         Assert.False(context.Service.BuildInProgress.Value);
         Assert.Empty(context.Procedures.ActiveProcedures);
@@ -390,7 +380,6 @@ public sealed class BuildServiceTests
         Assert.Equal(save.Configuration, failure.Configuration);
         Assert.Same(save.Context, failure.Context);
         Assert.Equal(new[] { "persist", "failed" }, context.Pipeline.Calls.TakeLast(2));
-        Assert.DoesNotContain("clear", context.Pipeline.Calls);
         Assert.False(context.Service.IsBuildReady.Value);
         Assert.False(context.Service.BuildInProgress.Value);
         Assert.Empty(context.Procedures.ActiveProcedures);

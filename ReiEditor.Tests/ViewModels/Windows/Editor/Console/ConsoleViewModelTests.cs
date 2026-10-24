@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.Services.Logging;
 using ReiEditor.Tests.Infrastructure.Headless;
@@ -102,7 +103,8 @@ public sealed class ConsoleViewModelTests
         vm.LogCollectionUpdated += () => updated++;
         console.Log(Message(LogLevelEnum.Info));
         console.Log(Message(LogLevelEnum.Error));
-        Assert.Equal(2, updated);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, updated);
         Assert.True(vm.ClearEditorConsoleCommand.CanExecute(null));
         var first = vm.FilteredLogs[0];
         var second = vm.FilteredLogs[1];
@@ -118,6 +120,7 @@ public sealed class ConsoleViewModelTests
         vm.ConsoleFilter.InfoEnabled = true;
         Assert.Equal(2, vm.FilteredLogs.Count);
         vm.ClearEditorConsoleCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
         Assert.Empty(vm.FilteredLogs);
         Assert.Empty(vm.Details);
         Assert.False(vm.HasDetails);
@@ -136,12 +139,14 @@ public sealed class ConsoleViewModelTests
         disposedVm.LogCollectionUpdated += () => disposedUpdates++;
         liveVm.LogCollectionUpdated += () => liveUpdates++;
         console.Log(Message(LogLevelEnum.Info));
+        Dispatcher.UIThread.RunJobs();
         disposedVm.FilteredLogs[0].Expand = true;
         var details = disposedVm.Details;
         disposedVm.Dispose();
         var rows = disposedVm.FilteredLogs.ToArray();
 
         console.Log(Message(LogLevelEnum.Error));
+        Dispatcher.UIThread.RunJobs();
         Assert.Equal(rows, disposedVm.FilteredLogs);
         Assert.Equal(details, disposedVm.Details);
         Assert.Equal(1, disposedUpdates);
@@ -149,6 +154,7 @@ public sealed class ConsoleViewModelTests
         Assert.Equal(2, liveVm.FilteredLogs.Count);
 
         console.ClearConsole();
+        Dispatcher.UIThread.RunJobs();
         Assert.Equal(rows, disposedVm.FilteredLogs);
         Assert.Equal(details, disposedVm.Details);
         Assert.Equal(1, disposedUpdates);
@@ -161,16 +167,97 @@ public sealed class ConsoleViewModelTests
         var console = new EditorConsoleService();
         using var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
         console.Log(Message(LogLevelEnum.Info));
+        Dispatcher.UIThread.RunJobs();
         vm.FilteredLogs[0].Expand = true;
         var mutationThreads = new List<bool>();
         vm.FilteredLogs.CollectionChanged += (_, _) => mutationThreads.Add(Avalonia.Threading.Dispatcher.UIThread.CheckAccess());
 
         await Task.Run(console.ClearConsole);
+        Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(new[] { true }, mutationThreads);
         Assert.Empty(vm.FilteredLogs);
         Assert.False(vm.HasDetails);
         Assert.Empty(vm.Details);
+    }
+
+    [AvaloniaFact]
+    public void ParallelBurstUpdatesUiOnceInHistoryOrderWithoutBlockingProducers()
+    {
+        var console = new EditorConsoleService();
+        using var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        var updates = 0;
+        vm.LogCollectionUpdated += () => updates++;
+        var commandUpdates = 0;
+        vm.ClearEditorConsoleCommand.CanExecuteChanged += (_, _) => commandUpdates++;
+        // UI is occupied until producers finish. A synchronous Dispatcher.Invoke would deadlock.
+        var burst = Task.Run(() => Parallel.For(0, 2000, i => console.Log(
+            new(LogScopeEnum.Engine, LogLevelEnum.Debug, DateTime.UtcNow, $"asset-{i}", ""))));
+        Assert.True(burst.Wait(TimeSpan.FromSeconds(5)));
+        Assert.Empty(vm.FilteredLogs);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(console.Logs.Select(x => x.Message), vm.FilteredLogs.Select(x => x.Message));
+        Assert.Equal(1, updates);
+        Assert.Equal(1, commandUpdates);
+    }
+
+    [AvaloniaFact]
+    public void ClearBeforePendingUiUpdateDoesNotRestoreOldRowsEvenWhenCountMatches()
+    {
+        var console = new EditorConsoleService();
+        using var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        console.Log(Message(LogLevelEnum.Info));
+        Dispatcher.UIThread.RunJobs();
+        vm.FilteredLogs[0].Expand = true;
+        console.Log(Message(LogLevelEnum.Debug));
+        console.ClearConsole();
+        console.Log(new(LogScopeEnum.Editor, LogLevelEnum.Warning, DateTime.UtcNow, "new", ""));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("new", Assert.Single(vm.FilteredLogs).Message);
+        Assert.False(vm.HasDetails);
+    }
+
+    [AvaloniaFact]
+    public void DisposedViewDoesNotApplyPendingBatch()
+    {
+        var console = new EditorConsoleService();
+        var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        console.Log(Message(LogLevelEnum.Info));
+        vm.Dispose();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Empty(vm.FilteredLogs);
+    }
+
+    [AvaloniaFact]
+    public void ClearResetsDetailsWhenSameMessageObjectIsLoggedAgain()
+    {
+        var console = new EditorConsoleService();
+        using var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        var message = Message(LogLevelEnum.Info);
+        console.Log(message);
+        Dispatcher.UIThread.RunJobs();
+        vm.FilteredLogs[0].Expand = true;
+        console.ClearConsole();
+        console.Log(message);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Single(vm.FilteredLogs);
+        Assert.False(vm.HasDetails);
+    }
+
+    [AvaloniaFact]
+    public void FilterRebuildAfterClearDoesNotResetNewDetailsWhenPendingBatchRuns()
+    {
+        var console = new EditorConsoleService();
+        using var vm = new ConsoleEditorWindowViewModel(console, new TestPreferences());
+        console.Log(Message(LogLevelEnum.Info));
+        Dispatcher.UIThread.RunJobs();
+        console.ClearConsole();
+        console.Log(Message(LogLevelEnum.Info));
+        vm.ConsoleFilter.DebugEnabled = false;
+        vm.FilteredLogs[0].Expand = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Single(vm.FilteredLogs);
+        Assert.True(vm.HasDetails);
     }
 
     private static LogMessage Message(LogLevelEnum level) => new(LogScopeEnum.Editor, level, new DateTime(2026, 1, 2, 3, 4, 5), "message", "detail");

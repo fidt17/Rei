@@ -70,4 +70,62 @@ public sealed class EditorConsoleServiceTests
 
         Assert.Equal(0, clearedCount);
     }
+
+    [Fact]
+    public async Task ConcurrentWritersPublishInStorageOrderAndClearCannotReviveEarlierMessages()
+    {
+        var service = new EditorConsoleService();
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var published = new List<string>();
+        var counts = new List<int>();
+        service.LogsCount.Subscribe(counts.Add, invoke: false);
+        service.NewLogEvent += message =>
+        {
+            if (message.Message == "first")
+            {
+                entered.Set();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(5)));
+            }
+            published.Add(message.Message);
+        };
+        service.LogsClearedEvent += () => published.Add("cleared");
+        LogMessage Message(string text) => new(LogScopeEnum.Engine, LogLevelEnum.Debug, DateTime.UtcNow, text, "");
+        var first = Task.Run(() => service.Log(Message("first")));
+        try
+        {
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+            await Task.Run(() => service.Log(Message("second"))).WaitAsync(TimeSpan.FromSeconds(2));
+            service.ClearConsole();
+            service.Log(Message("current"));
+            Assert.Equal("current", Assert.Single(service.Logs).Message);
+        }
+        finally
+        {
+            release.Set();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        Assert.Equal(new[] { "first", "second", "cleared", "current" }, published);
+        Assert.Equal(new[] { 1, 2, 0, 1 }, counts);
+        Assert.Equal(1, service.LogsCount.Value);
+    }
+
+    [Fact]
+    public void SubscriberCanLogAndClearReentrantlyWithoutChangingNotificationOrder()
+    {
+        var service = new EditorConsoleService();
+        var published = new List<string>();
+        service.NewLogEvent += message =>
+        {
+            published.Add(message.Message);
+            if (message.Message != "outer") return;
+            service.ClearConsole();
+            service.Log(new(LogScopeEnum.Editor, LogLevelEnum.Info, DateTime.UtcNow, "inner", ""));
+        };
+        service.LogsClearedEvent += () => published.Add("cleared");
+        service.Log(new(LogScopeEnum.Editor, LogLevelEnum.Info, DateTime.UtcNow, "outer", ""));
+        Assert.Equal(new[] { "outer", "cleared", "inner" }, published);
+        Assert.Equal("inner", Assert.Single(service.Logs).Message);
+    }
 }

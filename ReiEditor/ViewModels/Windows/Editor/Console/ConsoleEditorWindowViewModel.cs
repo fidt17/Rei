@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using Avalonia.Threading;
 using DynamicData;
 using ReiEditor.Models.EditorApp.Console;
@@ -45,6 +46,11 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
     private ConsoleLogMessageViewModel? _currentlyExpandedLog;
 	
     private readonly IEditorConsoleService _consoleService;
+    private int _updateQueued;
+    private int _processedLogsCount;
+    private int _clearRequested;
+    private LogMessage? _lastLog;
+    private bool _disposed;
 
 #pragma warning disable CS8618
     public ConsoleEditorWindowViewModel() { }
@@ -60,32 +66,58 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 		
         ConsoleFilter = new ConsoleFilterViewModel(editorConsolePreferencesService);
         ConsoleFilter.FilterChangedEvent += HandleFilterChangedEvent;
+        ScheduleUpdate();
     }
 
     public override void Dispose()
     {
+        _disposed = true;
         base.Dispose();
         _consoleService.NewLogEvent -= HandleNewLogEvent;
         _consoleService.LogsClearedEvent -= HandleLogsClearedEvent;
-        ClearEditorConsoleCommand.Dispose();
 
         ConsoleFilter.FilterChangedEvent -= HandleFilterChangedEvent;
         ConsoleFilter.Dispose();
     }
 
-    private void HandleNewLogEvent(LogMessage message)
+    private void HandleNewLogEvent(LogMessage message) => ScheduleUpdate();
+
+    private void HandleLogsClearedEvent()
     {
-        Dispatcher.UIThread.Invoke(() =>
-        {
-            if (ConsoleFilter.IsValidLog(message))
-            {
-                FilteredLogs.Add(CreateLogVm(message));
-            }
-            LogCollectionUpdated?.Invoke();
-        });
+        Interlocked.Exchange(ref _clearRequested, 1);
+        ScheduleUpdate();
     }
 
-    private void HandleLogsClearedEvent() => Dispatcher.UIThread.Invoke(ClearLogs);
+    private void ScheduleUpdate()
+    {
+        if (Interlocked.Exchange(ref _updateQueued, 1) != 0) return;
+        Dispatcher.UIThread.Post(FlushLogs, DispatcherPriority.Background);
+    }
+
+    private void FlushLogs()
+    {
+        Interlocked.Exchange(ref _updateQueued, 0);
+        if (_disposed) return;
+
+        var clearRequested = Interlocked.Exchange(ref _clearRequested, 0) != 0;
+        var logs = _consoleService.Logs.ToArray();
+        var cleared = clearRequested || logs.Length < _processedLogsCount ||
+            (_processedLogsCount > 0 && !ReferenceEquals(logs[_processedLogsCount - 1], _lastLog));
+        if (cleared)
+        {
+            ClearLogs();
+            _processedLogsCount = 0;
+        }
+
+        if (!cleared && logs.Length == _processedLogsCount) return;
+
+        var added = logs.Skip(_processedLogsCount).Where(ConsoleFilter.IsValidLog).Select(CreateLogVm);
+        FilteredLogs.AddRange(added);
+        _processedLogsCount = logs.Length;
+        _lastLog = logs.LastOrDefault();
+        ClearEditorConsoleCommand.NotifyCanExecuteChanged();
+        LogCollectionUpdated?.Invoke();
+    }
 
     private void ClearLogs()
     {
@@ -101,11 +133,14 @@ public class ConsoleEditorWindowViewModel : BaseViewModel
 
     private void RebuildLogCollection()
     {
+        Interlocked.Exchange(ref _clearRequested, 0);
         ClearLogs();
 		
-        var logs = ConsoleFilter.FilterMessages(_consoleService.Logs).Select(CreateLogVm);
-        FilteredLogs.AddRange(logs);
-		
+        var logs = _consoleService.Logs.ToArray();
+        FilteredLogs.AddRange(ConsoleFilter.FilterMessages(logs).Select(CreateLogVm));
+        _processedLogsCount = logs.Length;
+        _lastLog = logs.LastOrDefault();
+        ClearEditorConsoleCommand.NotifyCanExecuteChanged();
         LogCollectionUpdated?.Invoke();
     }
 

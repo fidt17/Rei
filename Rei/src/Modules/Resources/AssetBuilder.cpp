@@ -9,7 +9,7 @@
 #include "Builders/FontBuilder.h"
 #include "Builders/ModelBuilder.h"
 #include "Builders/TextureBuilder.h"
-#include "Common/Time/ScopedTimer.h"
+#include "Common/Time/Stopwatch.h"
 
 namespace rei::resources
 {
@@ -35,7 +35,7 @@ namespace rei::resources
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR("{}", e.what())
+            LOG_ERROR("Asset build failed path={} error={}", file, e.what())
         }
 
         return 0;
@@ -45,7 +45,8 @@ namespace rei::resources
     {
         const i64 offset = writer.GetPosition();
 
-        LOG("Building asset: {}", filePath.string())
+        time::Stopwatch stopwatch;
+        stopwatch.Start();
 
         #define ADD_TO_MAP(x, y) map[x] = [&](const std::filesystem::path& p, BinaryWriter& w) { y(p, w); };
         std::map<std::string, std::function<void(const std::filesystem::path&, BinaryWriter&)>> map;
@@ -68,7 +69,7 @@ namespace rei::resources
         }
 
         const i64 bytesWritten = writer.GetPosition() - offset;
-        LOG("Total Size: {} bytes", bytesWritten)
+        LOG_DEBUG("Asset built path={} size={} bytes duration={:.2f} ms", filePath.string(), bytesWritten, stopwatch.ElapsedMs())
 
         return writer.GetPosition();
     }

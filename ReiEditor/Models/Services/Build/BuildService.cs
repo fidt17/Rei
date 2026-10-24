@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Scripting;
@@ -31,7 +30,6 @@ public class BuildService : IBuildService, IAsyncDisposable
     private readonly IBuildPreparationService _buildPreparationService;
     private readonly ISolutionBuilder _solutionBuilder;
     private readonly IProjectBuildStateService _projectBuildStateService;
-    private readonly IEditorConsoleService _editorConsoleService;
     private readonly SourceFilesUtility _sourceFilesUtility;
     private readonly ILogger<BuildService> _logger;
     private readonly IEditorProceduresService _editorProceduresService;
@@ -43,7 +41,6 @@ public class BuildService : IBuildService, IAsyncDisposable
         ISolutionBuilder solutionBuilder,
         IProjectBuildStateService projectBuildStateService,
         ILogger<BuildService> logger,
-        IEditorConsoleService editorConsoleService,
         IAssetImporter assetImporter,
         SourceFilesUtility sourceFilesUtility,
         IEditorProceduresService editorProceduresService)
@@ -54,7 +51,6 @@ public class BuildService : IBuildService, IAsyncDisposable
         _solutionBuilder = solutionBuilder;
         _projectBuildStateService = projectBuildStateService;
         _logger = logger;
-        _editorConsoleService = editorConsoleService;
         _assetImporter = assetImporter;
         _sourceFilesUtility = sourceFilesUtility;
         _editorProceduresService = editorProceduresService;
@@ -167,7 +163,6 @@ public class BuildService : IBuildService, IAsyncDisposable
             buildProcedure.Complete();
         }
 
-        _editorConsoleService.ClearConsole();
         _logger.Log($"Build Complete in {stopwatch.Elapsed.TotalSeconds:.00} seconds.");
         _isBuildReady.Value = true;
         return true;

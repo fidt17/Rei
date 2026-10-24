@@ -530,3 +530,54 @@ TEST_CASE("sRGB importer rejects undecodable input without publishing texture by
         CHECK(std::filesystem::file_size(target) == 0);
     });
 }
+
+
+TEST_CASE("Asset build logs keep texture context together and errors identify their source", "[native][logging][importers][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        const auto logger = common::logging::Log::GetLogger();
+        logger->SetMinLogLevel(common::logging::Debug);
+        struct Entry
+        {
+            common::logging::LogLevelEnum Level;
+            std::string Message;
+        };
+        std::vector<Entry> entries;
+        const auto handle = logger->NewLogEvent.append([&](const auto& message)
+        {
+            entries.push_back({message.Level, message.Message});
+        });
+        for (u32 channels = 1; channels <= 4; ++channels)
+        {
+            entries.clear();
+            const auto source = files.Write("pixels-" + std::to_string(channels) + ".png", PngBytes(channels));
+            const auto target = files.Write("texture.bin", {1, 2, 3});
+            const auto end = resources::AssetBuilder().BuildAsset(source.string(), target.string(), 3);
+            REQUIRE(end == 3 + 16 + 4 * channels);
+            REQUIRE(entries.size() == 2);
+            for (const auto& entry : entries)
+            {
+                CHECK(entry.Level == common::logging::Debug);
+                CHECK(entry.Message.find(source.string()) != std::string::npos);
+            }
+            const auto& texture = entries[0].Message;
+            CHECK(texture.find("width=2 height=2 channels=" + std::to_string(channels)) != std::string::npos);
+            const std::array formats{"RED", "RG", "RGB", "RGBA"};
+            CHECK(texture.find(std::string("format=") + formats[channels - 1] + " ") != std::string::npos);
+            CHECK(texture.find("pixels=" + std::to_string(4 * channels) + " bytes") != std::string::npos);
+            CHECK(entries[1].Message.find("size=" + std::to_string(16 + 4 * channels) + " bytes duration=") != std::string::npos);
+            CHECK(entries[1].Message.ends_with(" ms"));
+        }
+
+        entries.clear();
+        const auto invalid = files.Write("broken.png", {1, 2, 3});
+        CHECK(resources::AssetBuilder().BuildAsset(invalid.string(), files.File("broken.bin").string(), 0) == 0);
+        REQUIRE(entries.size() == 1);
+        CHECK(entries[0].Level == common::logging::Error);
+        CHECK(entries[0].Message.find("Asset build failed path=" + invalid.string()) != std::string::npos);
+        CHECK(entries[0].Message.find("Failed to load texture") != std::string::npos);
+        logger->NewLogEvent.remove(handle);
+    });
+}

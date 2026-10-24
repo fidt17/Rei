@@ -10,10 +10,7 @@
 typedef void (*LogCallbackDelegate)(const rei::common::logging::LogMessage& msg);
 REI_EXTERN_API inline void AddLogCallback(const LogCallbackDelegate callback)
 {
-    rei::common::logging::Log::GetLogger()->NewLogEvent.append([=](const rei::common::logging::LogMessage& msg)
-    {
-        callback(msg);
-    });
+    rei::common::logging::Log::GetLogger()->AddCallback(callback);
 }
 
 typedef void (*EngineStartCallbackDelegate)();

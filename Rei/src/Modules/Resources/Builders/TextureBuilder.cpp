@@ -41,18 +41,7 @@ void rei::resources::TextureBuilder::BuildTextureAsset(const std::filesystem::pa
 
     stbi_image_free(data);
 
-    LOG("Width: {}", width)
-    LOG("Height: {}", height)
-    LOG("Number of channels: {}", nrChannels)
-
-    if (format == GL_RGB)
-    {
-        LOG("Format: RGB");
-    }
-    else
-    {
-        LOG("Format: RGBA");
-    }
-
-    LOG("Length: {}", length)
+    const char* formatName = format == GL_RED ? "RED" : format == GL_RG ? "RG" : format == GL_RGB ? "RGB" : "RGBA";
+    LOG_DEBUG("Texture built path={} width={} height={} channels={} format={} storedFormat={} pixels={} bytes",
+        assetPath.string(), width, height, nrChannels, formatName, storedFormat, length)
 }

@@ -2,6 +2,7 @@
 #include "windows.h"
 #include <deque>
 #include <mutex>
+#include <sstream>
 
 namespace rei::common::logging
 {
@@ -52,14 +53,16 @@ namespace rei::common::logging
         if (!_enabled) return;
         if (logLevel < _minLogLevel) return;
 
+        std::unique_lock messageLock(_messageMutex);
         std::string snapshotLine;
         {
             const std::lock_guard lock(_consoleWriteMutex);
             UpdateConsoleColor(logLevel);
+            std::ostringstream output;
 
             if (logLevel == Error)
             {
-                std::cout << "\n";
+                output << "\n";
             }
 
             const auto now = std::chrono::system_clock::now();
@@ -84,16 +87,21 @@ namespace rei::common::logging
                 break;
             }
 
-            std::cout << "[" << std::put_time(&localTime, "%H:%M:%S") << "]"
+            output << "[" << std::put_time(&localTime, "%H:%M:%S") << "]"
                       << "[" << level << "] "
                       << message;
 
             if (!details.empty())
             {
-                std::cout << "\nDetails: " << details << "\n";
+                output << "\nDetails: " << details << "\n";
             }
 
-            std::cout << "\n";
+            output << "\n";
+
+            const auto text = output.str();
+            DWORD written = 0;
+            // One OS write prevents the CRT buffer from splitting a record around managed console output.
+            WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), text.data(), static_cast<DWORD>(text.size()), &written, nullptr);
 
             snapshotLine = std::string(level) + " | " + message;
             if (!details.empty())
@@ -112,8 +120,50 @@ namespace rei::common::logging
             _recentLogs.push_back(std::move(snapshotLine));
         }
 
-        const auto logMessage = LogMessage("Engine", logLevel, message.c_str(), details.c_str());
-        NewLogEvent(logMessage);
+        _pendingMessages.push_back({logLevel, message, details});
+        if (_publishing) return;
+        _publishing = true;
+        messageLock.unlock();
+        PublishPendingMessages();
+    }
+
+    void Logger::PublishPendingMessages() const
+    {
+        try
+        {
+            while (true)
+            {
+                PendingMessage pending;
+                {
+                    const std::lock_guard lock(_messageMutex);
+                    if (_pendingMessages.empty())
+                    {
+                        _publishing = false;
+                        return;
+                    }
+                    pending = std::move(_pendingMessages.front());
+                    _pendingMessages.pop_front();
+                }
+
+                const auto logMessage = LogMessage(_loggerScope.c_str(), pending.Level, pending.Message.c_str(), pending.Details.c_str());
+                NewLogEvent(logMessage);
+            }
+        }
+        catch (...)
+        {
+            const std::lock_guard lock(_messageMutex);
+            _publishing = false;
+            throw;
+        }
+    }
+
+    void Logger::AddCallback(const Callback callback)
+    {
+        if (callback == nullptr) return;
+        const std::lock_guard lock(_messageMutex);
+        if (std::find(_callbacks.begin(), _callbacks.end(), callback) != _callbacks.end()) return;
+        _callbacks.push_back(callback);
+        NewLogEvent.append(callback);
     }
 
     void Logger::Enable()

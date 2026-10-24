@@ -222,6 +222,10 @@ namespace rei::common::logging
         {
             return Debug;
         }
+        if (value == "info" || value == "INFO")
+        {
+            return Info;
+        }
         if (value == "warning" || value == "WARNING" || value == "warn" || value == "WARN")
         {
             return Warning;

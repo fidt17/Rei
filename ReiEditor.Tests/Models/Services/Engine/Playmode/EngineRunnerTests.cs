@@ -27,10 +27,13 @@ public sealed class EngineRunnerTests
     public async Task StartupUsesActiveProjectLastSceneId(EngineRunMode mode)
     {
         await using var context = new TestContext();
+        EngineRunMode? startingMode = null;
+        context.Runner.IsEngineStarting.Subscribe(starting => { if (starting) startingMode = context.Runner.ActiveMode; });
         context.Project.Project.SetLastScene("selected-scene");
         Assert.True(context.Start(mode));
         await context.AwaitStarted();
         Assert.Contains("start", context.Calls);
+        Assert.Equal(mode, startingMode);
     }
 
     [Fact]
