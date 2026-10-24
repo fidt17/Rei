@@ -333,6 +333,7 @@ namespace rei
 
     void EntityManager::InitBehaviour(const ecs::Entity e, Behaviour& b) const
     {
+        _behaviourRegistry.ResolveBehaviourDependencies(e, b.GetBehaviourId());
         b.LoadAssets(GetAssetManager());
         b.Init();
 

@@ -34,7 +34,7 @@ namespace rei
 
                     T& t = GET(e, T);
 
-                    t = T(id, e);
+                    t.Behaviour::Initialize(id, e);
 
                     if (!data.empty())
                     {

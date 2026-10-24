@@ -92,6 +92,34 @@ public sealed class BehaviourRegistrySourceGeneratorTests : IDisposable
         Assert.DoesNotContain("SetAssetReleaseHandler", write.Data);
     }
 
+    [Fact]
+    public async Task ResolvesDefaultAssetReferencesInScalarsCollectionsAndNestedObjects()
+    {
+        var registry = new TestSerializableObjectsRegistry();
+        var assetRef = Property(SerializedTypeEnum.Custom, "AssetRef<Texture>", "Texture");
+        registry.Objects.Add(new SerializableObjectInfo("game", "Settings", false, new ObjectFile<string>("", "Settings.h"),
+            new() { ["Icon"] = assetRef }, "Settings.h"));
+        var behaviour = Behaviour("game", "Player", 7, "Player.h", new()
+        {
+            ["Portrait"] = assetRef,
+            ["Frames"] = Property(SerializedTypeEnum.Collection, "vector<AssetRef<Texture>>", "AssetRef<Texture>",
+                SerializedTypeEnum.Custom, "AssetRef<Texture>", "Texture"),
+            ["Settings"] = Property(SerializedTypeEnum.Custom, "game::Settings")
+        }, []);
+        var resources = new TestResourceService(_project.Resources);
+        var generator = new BehaviourRegistrySourceGenerator(resources, registry);
+
+        await generator.GenerateBehaviourRegistrySourceFile(new() { [7] = behaviour }, registry.GetObjects(), []);
+
+        var source = Assert.Single(resources.Writes).Data;
+        var resolve = source[(source.IndexOf("void game::Player::ResolveDependencies()", StringComparison.Ordinal))..];
+        Assert.Contains("rei::assets::SyncAfterExternalChange(Portrait);", resolve);
+        Assert.Contains("for (auto& itemValue : Frames)", resolve);
+        Assert.Contains("rei::assets::SyncAfterExternalChange(itemValue);", resolve);
+        Assert.Contains("Settings.ResolveDependencies();", resolve);
+        Assert.DoesNotContain("data.contains", resolve);
+    }
+
     /// <summary>Creates behaviour definition for generated source scenarios.</summary>
     private static BehaviourAssetInfo Behaviour(
         string ns,

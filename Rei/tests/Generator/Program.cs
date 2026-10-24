@@ -19,6 +19,7 @@ var objects = new List<SerializableObjectInfo>
     Object("rei::render", "RendererSettings", new() { ["_exposure"] = Scalar(SerializedTypeEnum.Float, "f32"), ["_toneMapping"] = Scalar(SerializedTypeEnum.Enum, "rei::render::ToneMappingMode"), ["_maxPointLights"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["_maxSpotLights"] = Scalar(SerializedTypeEnum.Integer, "i32") }, Path.Combine(reiRoot, "resources", "rei_data_assets", "render", "RendererSettings.h")),
     Object("rei::tests", "ProbeNested", new() { ["Value"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Label"] = Scalar(SerializedTypeEnum.String, "std::string") }),
     Object("rei::tests", "ProbeAssetOwner", new() { ["Asset"] = Custom("rei::assets::AssetRef<rei::tests::ProbeDataAsset>"), ["Assets"] = Collection("rei::assets::AssetRef<rei::tests::ProbeDataAsset>", SerializedTypeEnum.Custom) }),
+    Object("rei::tests", "ProbeDefaultAssets", new() { ["Asset"] = Custom("rei::assets::AssetRef<rei::tests::ProbeDataAsset>"), ["Assets"] = Collection("rei::assets::AssetRef<rei::tests::ProbeDataAsset>", SerializedTypeEnum.Custom) }),
     Object("rei::tests", "ProbeDataAsset", new() { ["Number"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Label"] = Scalar(SerializedTypeEnum.String, "std::string"), ["Settings"] = Custom("rei::tests::ProbeNested"), ["Values"] = Collection("i32", SerializedTypeEnum.Integer) }),
     Object("rei::math", "Vector3", new() { ["x"] = Scalar(SerializedTypeEnum.Float, "f32"), ["y"] = Scalar(SerializedTypeEnum.Float, "f32"), ["z"] = Scalar(SerializedTypeEnum.Float, "f32") }, Path.Combine(reiRoot, "src", "Common", "Math", "Vector3.h")),
     Object("rei::math", "Vector2", new() { ["x"] = Scalar(SerializedTypeEnum.Float, "f32"), ["y"] = Scalar(SerializedTypeEnum.Float, "f32") }, Path.Combine(reiRoot, "src", "Common", "Math", "Vector2.h")),
@@ -41,7 +42,13 @@ var behaviours = new Dictionary<int, BehaviourAssetInfo>
     }),
     [7102] = Behaviour("ProbeB", 7102, new() { ["Number"] = Scalar(SerializedTypeEnum.Integer, "i32") }),
     [7103] = Behaviour("ProbeC", 7103, new(), ["ProbeB"]),
-    [7104] = Behaviour("ProbeD", 7104, new(), ["ProbeB"])
+    [7104] = Behaviour("ProbeD", 7104, new(), ["ProbeB"]),
+    [7105] = Behaviour("ProbeWithDefaultAssets", 7105, new()
+    {
+        ["Asset"] = Custom("rei::assets::AssetRef<rei::tests::ProbeDataAsset>"),
+        ["Assets"] = Collection("rei::assets::AssetRef<rei::tests::ProbeDataAsset>", SerializedTypeEnum.Custom),
+        ["Settings"] = Custom("rei::tests::ProbeDefaultAssets")
+    })
 };
 var transformHeader = Path.Combine(reiRoot, "resources", "rei_behaviours", "transformation", "Transform.h");
 behaviours.Add(7199, new BehaviourAssetInfo("rei", "Transform", 7199, new ObjectFile<string>("", transformHeader), new()

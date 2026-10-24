@@ -434,3 +434,176 @@ TEST_CASE("REF-03 Handles can outlive AssetManager without retaining its payload
         CHECK(probe.State->Destroyed == 1);
     });
 }
+
+
+namespace
+{
+    constexpr i32 DEFAULT_ASSET_BEHAVIOUR = 7105;
+
+    void DefaultAssetPack(TemporaryDirectory& files)
+    {
+        WriteAssetPack(files, {
+            {"default-asset", "default", JsonAsset({{"DataAssetTypeId", 7201}, {"SerializedData", SerializedField("Number", 11)}})},
+            {"scene-asset", "scene", JsonAsset({{"DataAssetTypeId", 7201}, {"SerializedData", SerializedField("Number", 29)}})}
+        });
+    }
+
+    nlohmann::json DefaultAssetData(const std::string& id)
+    {
+        const auto ref = SerializedField("Id", id);
+        auto data = SerializedField("Asset", ref);
+        data.update(SerializedField("Assets", nlohmann::json::array({ref})));
+        const auto nested = data;
+        data.update(SerializedField("Settings", nested));
+        return data;
+    }
+
+    struct AssetLoadTrace
+    {
+        std::vector<std::string> Loads;
+        std::shared_ptr<common::logging::Logger> Logger = common::logging::Log::GetLogger();
+        decltype(Logger->NewLogEvent)::Handle Handle = Logger->NewLogEvent.append([this](const common::logging::LogMessage& message)
+        {
+            const std::string text(message.Message);
+            if (text.starts_with("Loading asset ")) Loads.push_back(text);
+        });
+
+        ~AssetLoadTrace() { Logger->NewLogEvent.remove(Handle); }
+        i32 Count(const std::string& id) const
+        {
+            return static_cast<i32>(std::ranges::count_if(Loads, [&](const auto& text) { return text.ends_with("id=" + id); }));
+        }
+    };
+
+    void CheckDefaultAssetRefs(ProbeWithDefaultAssets& behaviour, const i32 number)
+    {
+        REQUIRE(behaviour.Asset.IsLoaded());
+        CHECK(behaviour.Asset.Get()->Number == number);
+        REQUIRE(behaviour.Assets.size() == 1);
+        CHECK(behaviour.Assets.front().Get() == behaviour.Asset.Get());
+        CHECK(behaviour.Settings.Asset.Get() == behaviour.Asset.Get());
+        REQUIRE(behaviour.Settings.Assets.size() == 1);
+        CHECK(behaviour.Settings.Assets.front().Get() == behaviour.Asset.Get());
+    }
+}
+
+TEST_CASE("REF-04 Component creation loads serialized assets without reading discarded defaults", "[native][assets][behaviour][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture(DefaultAssetPack);
+        AssetLoadTrace loads;
+        for (i32 id = 1; id <= 3; ++id)
+        {
+            fixture.Manager->Create(SceneEntity(SceneObject(id, "serialized", nlohmann::json::array({
+                SceneBehaviour(DEFAULT_ASSET_BEHAVIOUR, DefaultAssetData("scene-asset"))
+            }))));
+            fixture.World->RefreshAll();
+            auto& behaviour = fixture.Registry->Get<ProbeWithDefaultAssets>(fixture.Manager->GetBySceneId(id));
+            CheckDefaultAssetRefs(behaviour, 29);
+            CHECK(behaviour.GetBehaviourId() == DEFAULT_ASSET_BEHAVIOUR);
+            CHECK(behaviour.GetEntity() == fixture.Manager->GetBySceneId(id));
+        }
+        CHECK(loads.Count("default-asset") == 0);
+        CHECK(loads.Count("scene-asset") == 1);
+        for (const auto entity : LiveSceneEntities(fixture))
+        {
+            fixture.Registry->DestroyEntity(entity);
+        }
+        fixture.World->Refresh();
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("REF-04 Missing serialized fields load scalar collection and nested defaults before Init", "[native][assets][behaviour][regression][isolated]")
+{
+    Isolated([]
+    {
+        for (const auto& data : {nlohmann::json(), nlohmann::json::object(), SerializedField("Unknown", 7)})
+        {
+            BehaviourFixture fixture(DefaultAssetPack);
+            AssetLoadTrace loads;
+            const auto entity = fixture.Entity();
+            bool initialized = false;
+            fixture.Events->Action = [&](const i32 id, const std::string& stage, const ecs::Entity current)
+            {
+                if (id != DEFAULT_ASSET_BEHAVIOUR || stage != "Init") return;
+                initialized = true;
+                CheckDefaultAssetRefs(fixture.Registry->Get<ProbeWithDefaultAssets>(current), 11);
+            };
+            fixture.Manager->AddBehaviour(entity, DEFAULT_ASSET_BEHAVIOUR, data);
+            CHECK(initialized);
+            CHECK(loads.Count("default-asset") == 1);
+            CHECK(loads.Count("scene-asset") == 0);
+            fixture.Manager->GetBehaviourRegistry().DeleteBehaviour(entity, DEFAULT_ASSET_BEHAVIOUR);
+            CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+        }
+    });
+}
+
+TEST_CASE("REF-04 Explicit empty and missing asset IDs never fall back to defaults", "[native][assets][behaviour][regression][isolated]")
+{
+    Isolated([]
+    {
+        for (const std::string id : {"", "missing-asset"})
+        {
+            BehaviourFixture fixture(DefaultAssetPack);
+            AssetLoadTrace loads;
+            const auto entity = fixture.Entity();
+            fixture.Manager->AddBehaviour(entity, DEFAULT_ASSET_BEHAVIOUR, DefaultAssetData(id));
+            const auto& behaviour = fixture.Registry->Get<ProbeWithDefaultAssets>(entity);
+            CHECK(behaviour.Asset.Id == id);
+            CHECK_FALSE(behaviour.Asset.IsLoaded());
+            CHECK_FALSE(behaviour.Assets.front().IsLoaded());
+            CHECK_FALSE(behaviour.Settings.Asset.IsLoaded());
+            CHECK_FALSE(behaviour.Settings.Assets.front().IsLoaded());
+            CHECK(loads.Count("default-asset") == 0);
+            CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+            fixture.Manager->GetBehaviourRegistry().DeleteBehaviour(entity, DEFAULT_ASSET_BEHAVIOUR);
+        }
+    });
+}
+
+TEST_CASE("REF-04 Required component waits for its scene data before loading defaults", "[native][assets][behaviour][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture(DefaultAssetPack);
+        AssetLoadTrace loads;
+        fixture.Manager->GetBehaviourRegistry().RegisterComponent<ProbeC>(PROBE_C,
+            [](ecs::Entity) { return nlohmann::json(); }, [](ecs::Entity, const nlohmann::json&) {}, nullptr, {DEFAULT_ASSET_BEHAVIOUR});
+        fixture.Manager->Create(SceneEntity(SceneObject(1, "required", nlohmann::json::array({
+            SceneBehaviour(PROBE_C), SceneBehaviour(DEFAULT_ASSET_BEHAVIOUR, DefaultAssetData("scene-asset"))
+        }))));
+        fixture.World->RefreshAll();
+        const auto entity = fixture.Manager->GetBySceneId(1);
+        CheckDefaultAssetRefs(fixture.Registry->Get<ProbeWithDefaultAssets>(entity), 29);
+        CHECK(loads.Count("default-asset") == 0);
+        CHECK(loads.Count("scene-asset") == 1);
+        for (const auto entity : LiveSceneEntities(fixture))
+        {
+            fixture.Registry->DestroyEntity(entity);
+        }
+        fixture.World->Refresh();
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("REF-04 Cloning shares final assets and releases them after the last component", "[native][assets][behaviour][regression][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture(DefaultAssetPack);
+        AssetLoadTrace loads;
+        const auto source = fixture.Manager->CreateNewEntity("source");
+        fixture.Manager->AddBehaviour(source, DEFAULT_ASSET_BEHAVIOUR, DefaultAssetData("scene-asset"));
+        const auto clone = fixture.Manager->Instantiate(source, "clone", false);
+        CheckDefaultAssetRefs(fixture.Registry->Get<ProbeWithDefaultAssets>(clone), 29);
+        CHECK(loads.Count("default-asset") == 0);
+        CHECK(loads.Count("scene-asset") == 1);
+        fixture.Manager->GetBehaviourRegistry().DeleteBehaviour(source, DEFAULT_ASSET_BEHAVIOUR);
+        CheckDefaultAssetRefs(fixture.Registry->Get<ProbeWithDefaultAssets>(clone), 29);
+        fixture.Manager->GetBehaviourRegistry().DeleteBehaviour(clone, DEFAULT_ASSET_BEHAVIOUR);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}

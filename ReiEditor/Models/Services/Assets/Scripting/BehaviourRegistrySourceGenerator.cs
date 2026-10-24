@@ -398,7 +398,14 @@ public class BehaviourRegistrySourceGenerator
     {
         if (propertyData.Type == SerializedTypeEnum.Collection)
         {
-            if (IsCollectionOfComponentRef(propertyData))
+            if (IsCollectionOfAssetRef(propertyData))
+            {
+                str.AppendLine($"    for (auto& itemValue : {propertyName})");
+                str.AppendLine("    {");
+                str.AppendLine("        rei::assets::SyncAfterExternalChange(itemValue);");
+                str.AppendLine("    }");
+            }
+            else if (IsCollectionOfComponentRef(propertyData))
             {
                 str.AppendLine($"    for (auto& itemValue : {propertyName})");
                 str.AppendLine("    {");
@@ -413,6 +420,12 @@ public class BehaviourRegistrySourceGenerator
                 str.AppendLine("    }");
             }
 
+            return;
+        }
+
+        if (IsAssetRefProperty(propertyData))
+        {
+            str.AppendLine($"    rei::assets::SyncAfterExternalChange({propertyName});");
             return;
         }
 
@@ -459,7 +472,7 @@ public class BehaviourRegistrySourceGenerator
     {
         return propertyData.ItemType == SerializedTypeEnum.Custom &&
                propertyData.ItemSourceType != null &&
-               (IsSerializableObjectType(propertyData.ItemSourceType, objects) || GetSourceTypeBaseName(propertyData.ItemSourceType) == "AssetRef");
+               IsSerializableObjectType(propertyData.ItemSourceType, objects);
     }
 
     private static bool IsSerializableObjectProperty(SerializableObjectInfo.SerializedPropertyData propertyData, IReadOnlyCollection<SerializableObjectInfo> objects)

@@ -46,6 +46,10 @@ namespace rei
         virtual REI_API void Disable();
 
     private:
+        friend class BehaviourRegistry;
+
+        REI_API void Initialize(i32 id, ecs::Entity e);
+
         i32 _id{};
         ecs::Entity _entity{-1, 0};
         ecs::ComponentRef<Transform> _transform;

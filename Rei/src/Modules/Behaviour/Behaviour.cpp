@@ -6,11 +6,16 @@
 
 namespace rei
 {
-    Behaviour::Behaviour(const i32 id, const ecs::Entity e):
-        _id(id),
-        _entity(e),
-        _transform(rei::ecs::ComponentRef<Transform>(GetInternalWorld()->GetRegistry(), e))
+    Behaviour::Behaviour(const i32 id, const ecs::Entity e)
     {
+        Initialize(id, e);
+    }
+
+    void Behaviour::Initialize(const i32 id, const ecs::Entity e)
+    {
+        _id = id;
+        _entity = e;
+        _transform = ecs::ComponentRef<Transform>(GetInternalWorld()->GetRegistry(), e);
     }
 
     i32 Behaviour::GetBehaviourId() const

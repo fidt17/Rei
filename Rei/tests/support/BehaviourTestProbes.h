@@ -70,6 +70,13 @@ namespace rei::tests
         SERIALIZE std::vector<assets::AssetRef<ProbeDataAsset>> Assets;
     };
 
+    struct ProbeDefaultAssets
+    {
+        SERIALIZABLE_BODY(ProbeDefaultAssets)
+        SERIALIZE assets::AssetRef<ProbeDataAsset> Asset = assets::AssetRef<ProbeDataAsset>("default-asset");
+        SERIALIZE std::vector<assets::AssetRef<ProbeDataAsset>> Assets = {assets::AssetRef<ProbeDataAsset>("default-asset")};
+    };
+
     // Explicit metadata in Generator/Program.cs selects these public test fields.
     // Production generator supplies all REI_GET/REI_SET/ResolveDependencies bodies.
 #define REI_TEST_PROBE_BODY(TYPE) \
@@ -105,6 +112,14 @@ namespace rei::tests
 
     struct ProbeC : ProbeBehaviour { REI_TEST_PROBE_BODY(ProbeC) };
     struct ProbeD : ProbeBehaviour { REI_TEST_PROBE_BODY(ProbeD) };
+
+    struct ProbeWithDefaultAssets : ProbeBehaviour
+    {
+        REI_TEST_PROBE_BODY(ProbeWithDefaultAssets)
+        SERIALIZE assets::AssetRef<ProbeDataAsset> Asset = assets::AssetRef<ProbeDataAsset>("default-asset");
+        SERIALIZE std::vector<assets::AssetRef<ProbeDataAsset>> Assets = {assets::AssetRef<ProbeDataAsset>("default-asset")};
+        SERIALIZE ProbeDefaultAssets Settings;
+    };
 #undef REI_TEST_PROBE_BODY
 }
 
