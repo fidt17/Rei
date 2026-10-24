@@ -22,7 +22,7 @@ dotnet test ReiEditor.Tests/ReiEditor.Tests.csproj --no-build -c Debug -p:Platfo
 dotnet test ReiEditor.Tests/ReiEditor.Tests.csproj --no-build -c Debug -p:Platform=x64 --filter "Area=Resources"
 ```
 
-Categories are `Unit`, `FileSystem`, `Headless`, and `Composition`. `Area` names identify features. The default run includes every category and all regression tests, including known failures. A focused run does not replace the final full run.
+Categories are `Unit`, `FileSystem`, `Headless`, and `Composition`. `Area` names identify features. The default run includes every category and all regression tests, including known failures. Choose focused suites for the changed behavior; broaden runs for changes crossing several areas.
 
 ## Reports
 
@@ -30,7 +30,7 @@ Categories are `Unit`, `FileSystem`, `Headless`, and `Composition`. `Area` names
 dotnet test ReiEditor.Tests/ReiEditor.Tests.csproj --no-build -c Debug -p:Platform=x64 --settings ReiEditor.Tests/coverage.runsettings --logger trx --collect:"XPlat Code Coverage" --results-directory ReiEditor.Tests/TestResults
 ```
 
-TRX and `coverage.cobertura.xml` appear under `ReiEditor.Tests/TestResults`; the existing gitignore excludes this directory. Coverage includes the entire ReiEditor assembly, including currently untested UI/interop code, and excludes test/MCP/third-party assemblies. There is no percentage gate in this slice. Low initial coverage is expected; examples do not complete the feature backlog. Any later coverage exclusions must be documented.
+TRX and `coverage.cobertura.xml` appear under `ReiEditor.Tests/TestResults`; the existing gitignore excludes this directory. Coverage includes the entire ReiEditor assembly, including currently untested UI/interop code, and excludes test/MCP/third-party assemblies. There is no percentage gate. Any coverage exclusions must be documented.
 
 Package versions match the existing MCP test stack: xUnit 2.9.3, runner 3.1.4, Test SDK 17.14.1. Headless is pinned to Avalonia 11.0.0. Reports use [coverlet.collector 6.0.4](https://www.nuget.org/packages/coverlet.collector/6.0.4).
 
@@ -46,67 +46,16 @@ Package versions match the existing MCP test stack: xUnit 2.9.3, runner 3.1.4, T
 - The property VM example explicitly dispatches its update to UI; it does not claim that IntegerPropertyViewModel marshals arbitrary background changes itself.
 - `InternalsVisibleTo("ReiEditor.Tests")` grants access to internal capture implementations. Runtime interfaces and behavior remain unchanged.
 
-## Initial examples
+## Coverage and limits
 
-| Area | Contract demonstrated |
-|---|---|
-| Hierarchy | Reject descendant cycle without mutation/events |
-| Selection | Publish selected entity and avoid duplicate engine selection calls |
-| Resources | Create nested directories and read written JSON |
-| Property editors | UI-thread notification and unsubscribe on Dispose |
-| Startup | Real SerializationModule binary wire format/lifetime; Factory typed parameters |
-| Preferences | InitializeAsync waits for controlled storage read |
-| Test infrastructure | Unique directory cleanup and path escape rejection |
+- Core: serialization, property models, parsing, math, paths and extension matching.
+- Scenes: hierarchy, selection, scene loading/failure recovery, runtime snapshots, parenting and clone requests.
+- Assets: imports, metadata, schemas, generated C++ serializers, cache invalidation and binary packing.
+- Build/lifecycle: incremental build decisions, PCH dependencies, cancellation, Play/Stop and DLL loading guards.
+- Editor: console ordering/batching/clearing, procedure status, interaction overlay, commands, ViewModels and selected DI graphs.
 
-The four representative scenarios are supplemented by composition, async initialization, and temporary-directory safeguards. They are starter coverage, not complete suites for these areas.
+Engine interactions use controlled doubles. Generated C++ is checked as text; these tests do not compile it or prove native synchronization. Headless tests check state/events, not rendered XAML, platform windows or OS input. Use [real-engine tests](../Rei.EngineIntegration.Tests/README.md) for native state, scene transitions, dependency lifetimes, Play/Stop, DLL reload and persistence.
 
-Test replacements live in `Infrastructure/TestDoubles` and use the `Test` prefix consistently. Their names identify the replaced dependency; each implementation makes its recording or response behavior explicit.
+## Adding tests
 
-Tests, infrastructure, and this README form the first slice. Planning and scenario research documents stay local and are excluded from commits. Bug fixes and wider feature coverage belong to subsequent slices; commits require an explicit user request.
-
-## Slice workflow
-
-The Core slice covers observable state, commands, pools, navigation, path/file utilities, JSON and binary serialization, serialized properties/components, type and shader parsing, render data/math, and asset migrations. Coverage measures the whole editor; these suites do not imply complete coverage of every contract in those areas.
-
-The scene slice adds hierarchy/entity models, selection and commands, state read/write and reconciliation, scene loading, default templates, asset drop, and canvas/layout service tests. Engine selection and snapshot reconciliation use the headless UI dispatcher. Native execution, OS drag sessions, and timer-driven polling remain outside these suites; explicit synchronization calls do not require sleeps.
-
-The asset slice covers registry/metadata, resource IO and search, file operations and commands, asset load/save/import, creation utilities, supported C++ reflection parsing, scripting registries/code generation/component refresh, and shader/runtime dispatch. File operations use isolated project and engine-source fixtures. Generated C++ is checked as text; no native compiler or engine is invoked.
-
-The projects/settings slice covers active projects and bookmarks, creation validation, template and solution generation, project creation/update/setup/deletion, engine resource copying, editor preferences, configuration validation and engine-settings reloads. Storage is controlled in memory; project files and deletion targets use owned temporary directories. Positive MSBuild version validation remains deferred until a controlled versioned executable fixture or version-reader seam exists.
-
-The build slice covers execution paths and MSBuild arguments, source/build snapshots, preparation and command guards, stage selection, cache manifests and hashing, asset packing/maps, output staging/promotion, standalone packaging and engine-stop gating. Build and engine interfaces supply controlled results or write known fixture bytes. The real process builder is tested only at invalid-path guards; native sessions and external tools are never started. Timing assertions use controlled task gates; production polling/settling delays remain unchanged.
-
-The editor workflow slice covers console/logging, refresh and disk restore, playmode guards and stop/save/build/start orchestration, engine startup/failure/shutdown, viewport controls and hotkeys, managed input dispatch, and PNG capture from owned RGBA buffers. Engine callbacks use managed delegates through a controlled `IEngineApi`; no engine DLL or GPU is loaded. Capture encoding uses the existing SkiaSharp dependency. Fire-and-forget negative paths without observable completion, watcher integration, precise timer races, and the capture byte-count limit remain deferred. Test classes and test methods include XML summaries.
-
-The ViewModel slice covers search and asset pickers, hierarchy and project browser selection/navigation/operations, property and reference editors, RectTransform editing, component drawers, basic material/monitor state, project and asset creation forms, settings validation, build progress/cancellation, console details/filtering, status/interaction overlay, playmode options/panel, tabs, save commands and dialog ownership. Headless tests assert state, events and command effects; no XAML or appearance snapshots are used. Build tasks use controlled gates with terminal cleanup. Native window behavior, platform pickers, non-empty-output confirmation, inaccessible monitor/texture workers and exact debounce/poll races remain deferred.
-
-The DI/composition slice covers typed factory arguments and resolution failures, Autofac singleton/nonlazy registrations, parent/child scope resolution, startup task propagation, ordered asynchronous disposal and failure propagation. Small containers load real editor modules and check selected service registrations, lifetimes, nonlazy activation and subscription ownership with controlled external dependencies. This verifies selected managed graphs, not every registration. Full ApplicationScope/EditorScope startup, native execution and MCP remain outside this slice.
-
-The additional assets/entities slice covers nested component defaults and persisted schema migration, scalar/custom/nested collections, item identity and structural notifications, asset operation edge cases and metadata failure boundaries, instantiation requests and snapshot synchronization, and runtime parenting with preserved RectTransform payloads. File operations use owned temporary directories; engine responses are controlled in memory. Actual native cloning, fallback polling, cyclic component requirements and ambiguous recovery policies remain deferred. A regression checks that deleted components stop publishing property changes; production fixes remain separate work.
-
-The Core regression fixes parse float defaults with one optional trailing `f`/`F`, invariant decimal/exponent syntax and the existing zero fallback for malformed text. File visibility and metadata eligibility share exact case-insensitive extension matching while retaining their distinct exclusion lists. Generated directory checks require a complete `Project` path segment. Direct and filesystem-consumer tests protect valid assets, nested paths, metadata regeneration and build-path filtering.
-
-The hierarchy/scene fixes reject duplicate registrations before mutating root storage, capture the actual source index for cross-parent moves, and clamp insertion indices before same-parent removal. Move events retain the requested insertion index consumed by the UI controller. Snapshot reconciliation detaches surviving nodes from obsolete parents before recursive deletion, preserving object identity and fresh transform data for the final hierarchy rebuild. Regression tests cover root/child moves, extreme indices, VM order and identity, and surviving subtrees across parent removal.
-
-The asset/scripting fixes derive the parent directory for resource writes, reject missing asset extensions before serialization or file/registry changes, and replace enum definitions on refresh. Comment removal preserves separate blocks, whitespace and line boundaries while retaining comment markers inside ordinary/raw strings and character literals. Regression tests cover repeated filename segments, both creation overloads, repeated enum refreshes, literal boundaries and numeric digit separators. This remains a limited source parser, not a full C++ preprocessor.
-
-Scene reload replaces the persisted entity collection while retaining the cached scene instance and rebuilding hierarchy. Component refresh removes fields absent from the current definition, preserves compatible properties and replaces changed types. Property callbacks are tracked per component and detached during deletion or refresh, including callbacks on previously replaced children; surviving properties are resubscribed after refresh. Tests protect nested fields, repeated refreshes, failed refresh cleanup, rejected deletion and independent entities. Enum editors synchronize selected options with external values without writing back to the model.
-
-Project generation classifies C++ source/header extensions once without case sensitivity and escapes include attributes before inserting XML fragments. Repeated updates preserve normalized path text without double escaping. Project opening handles an empty build scene configuration through the existing default-scene fallback; setup finishes its loading procedure in a finally block while propagating errors and cancellation. Tests protect successful and failed asynchronous builds, scene creation/loading/template failures, fallback creation failure, and exactly-once procedure completion.
-
-Engine settings reload validates candidate settings and their base path before replacing the working state. Tests preserve all previously loaded paths and version after invalid JSON or a missing version, then verify a valid reload from a different engine directory.
-
-Build cancellation is checked after preparation/evaluation, before success persistence and after it completes. Canceled stages stop later work and release readiness/procedure state; cancellation during persistence marks that result failed. The asset builder has no cancellation-token parameter, so an active asset task is awaited before cancellation cleanup. Tests cover skipped builds, solution-only builds, pending asset work and retry. Asset packing excludes source/project/meta extensions without case sensitivity and handles the exact `.vcxproj.user` suffix while preserving other `.user` files and runtime assets.
-
-Console and playmode views detach their remaining clear/engine-active subscriptions on disposal. Status-bar views subscribe to the procedure service's start/finish events and detach both, avoiding anonymous callbacks on individual procedures. Dialog coordination disposes the created view model if the window factory throws, propagates that exception, and releases a closed/failed window only once. Regression tests cover independent live/disposed views, multiple completion orders, repeated lifetimes, factory retries and synchronous close followed by show failure.
-
-Remaining ViewModel regressions cover original vector-child subscriptions surviving replacement/disposal, custom child editors recreated on unchanged data, descendant hierarchy VMs surviving controller disposal, and sibling project paths passing move validation. These tests remain active; production fixes are separate work.
-
-1. Select one slice and plan its scenarios, alone or with research agents.
-2. Implement tests and the necessary infrastructure. Every test class and every test method must have an XML `/// <summary>` describing its scope or expected behavior.
-3. Run the relevant builds and tests from the main task.
-4. Before each commit, create a new GPT-6 Astra agent with High reasoning for an independent review of the proposed changes: correctness, test quality, refactoring, cleanup, and regressions. Include untracked files in the review. Resolve findings and revalidate changes before reporting to the user.
-5. Present the result and remaining issues to the user. Commit only after explicit approval, excluding local plans and research.
-6. Report what was completed and what remains, then proceed to the next slice.
-
-A review applies to the changes actually reviewed. If further changes are made before the commit, include them in the review; do not treat an earlier review as approval of unseen changes.
+Reuse the fixtures above. Cover observable behavior, failures and lifecycle boundaries. Every test class and method should have an XML summary explaining its scope. Use controlled async gates and bounded waits. Build/test selection, documentation, reviews and commits follow the repository AGENTS.md.

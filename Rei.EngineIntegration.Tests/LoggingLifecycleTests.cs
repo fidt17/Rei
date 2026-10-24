@@ -5,6 +5,7 @@ namespace Rei.EngineIntegration.Tests;
 
 [Collection(EngineLifecycleCollection.NAME)]
 [Trait("Category", "EngineIntegration")]
+[Trait("Suite", "Lifecycle")]
 [Trait("Area", "Logging")]
 public sealed class LoggingLifecycleTests(ITestOutputHelper output)
 {

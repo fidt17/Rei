@@ -328,8 +328,6 @@ TEST_CASE("GL10 RGBA texture upload preserves row orientation and alpha", "[nati
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, output.data());
         REQUIRE(output == input);
         REQUIRE(TextureSize(texture.GetId()) == std::array<i32, 2>{2, 2});
-        const auto id = texture.GetId();
-        glDeleteTextures(1, &id); // Texture has no native Dispose/destructor API.
     });
 }
 
@@ -348,8 +346,6 @@ TEST_CASE("GL11 odd RGB row upload preserves tightly packed source bytes", "[nat
         std::vector<u8> output(expected.size());
         texture.Use();
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, output.data());
-        const auto id = texture.GetId();
-        glDeleteTextures(1, &id);
         REQUIRE(output == expected);
     });
 }
@@ -370,7 +366,6 @@ TEST_CASE("GL12 texture PostLoad is idempotent and binds requested sampler unit"
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &bound);
         REQUIRE(unit == GL_TEXTURE3);
         REQUIRE(bound == static_cast<i32>(id));
-        glDeleteTextures(1, &id);
         REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }
@@ -386,9 +381,7 @@ TEST_CASE("GL13 releasing texture asset deletes real driver texture", "[native][
         const auto id = texture->GetId();
         REQUIRE(glIsTexture(id) == GL_TRUE);
         fixture.Assets->Release(texture);
-        const bool deleted = glIsTexture(id) == GL_FALSE;
-        if (!deleted) glDeleteTextures(1, &id);
-        REQUIRE(deleted);
+        REQUIRE(glIsTexture(id) == GL_FALSE);
     });
 }
 
@@ -650,8 +643,6 @@ TEST_CASE("GL26 odd single-channel upload preserves tight rows", "[native][cover
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         std::vector<u8> actual(expected.size());
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, actual.data());
-        const auto id = texture.GetId();
-        glDeleteTextures(1, &id);
         REQUIRE(actual == expected);
     });
 }
@@ -670,8 +661,6 @@ TEST_CASE("GL27 odd two-channel upload preserves tight rows", "[native][coverage
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         std::vector<u8> actual(expected.size());
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_UNSIGNED_BYTE, actual.data());
-        const auto id = texture.GetId();
-        glDeleteTextures(1, &id);
         REQUIRE(actual == expected);
     });
 }
@@ -713,8 +702,6 @@ TEST_CASE("GL29 Texture creates complete mip chain with documented repeat and fi
             glGetTexParameteriv(GL_TEXTURE_2D, parameter, &value);
             REQUIRE(value == expected);
         }
-        const auto id = texture.GetId();
-        glDeleteTextures(1, &id);
         REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }

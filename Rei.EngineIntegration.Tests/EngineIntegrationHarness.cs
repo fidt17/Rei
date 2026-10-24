@@ -59,7 +59,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         }
     }
 
-    public async Task StartAsync(bool recordLoadTimings = false)
+    public async Task StartAsync()
     {
         if (_editor != null) throw new InvalidOperationException("Editor already started. Use RestartAsync.");
         var startup = Stopwatch.StartNew();
@@ -87,8 +87,6 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
         start.Environment["REI_STARTUP_PROJECT"] = startupProject;
         start.Environment["REI_MCP_ENABLED"] = "true";
         start.Environment["REI_MCP_PORT"] = port.ToString();
-        if (recordLoadTimings)
-            start.Environment["REI_LOAD_TIMINGS_PATH"] = Path.Combine(RunDirectory, $"load-timings-{LaunchCount + 1}.jsonl");
         _editor = Process.Start(start) ?? throw new InvalidOperationException("Editor failed to start.");
         LaunchCount++;
         _stdout = CaptureOutputAsync(_editor.StandardOutput, Path.Combine(RunDirectory, $"stdout-{LaunchCount}.log"));

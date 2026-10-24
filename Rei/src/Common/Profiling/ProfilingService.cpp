@@ -6,8 +6,6 @@
 #include <atomic>
 #include <cstring>
 #include <optional>
-#include <cstdlib>
-#include <fstream>
 
 namespace rei::profiling
 {
@@ -27,26 +25,6 @@ namespace rei::profiling
                 default: return "idle";
             }
         }
-    }
-
-    bool IsLoadTimingEnabled()
-    {
-        static const bool enabled = []
-        {
-            const auto path = std::getenv("REI_LOAD_TIMINGS_PATH");
-            return path != nullptr && path[0] != '\0';
-        }();
-        return enabled;
-    }
-
-    void WriteLoadTiming(const std::string& json)
-    {
-        if (!IsLoadTimingEnabled()) return;
-        static std::ofstream output(std::getenv("REI_LOAD_TIMINGS_PATH"), std::ios::app);
-        static std::mutex outputMutex;
-        const std::scoped_lock lock(outputMutex);
-        output << "{\"timestampNs\":" << ProfilingService::ReadClock() << ",\"data\":" << json << "}\n";
-        output.flush();
     }
 
     u64 ProfilingService::ReadClock()

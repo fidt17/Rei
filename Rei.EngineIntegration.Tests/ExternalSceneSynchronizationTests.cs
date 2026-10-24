@@ -4,6 +4,7 @@ namespace Rei.EngineIntegration.Tests;
 
 [Collection(EngineLifecycleCollection.NAME)]
 [Trait("Category", "EngineIntegration")]
+[Trait("Suite", "Lifecycle")]
 [Trait("Area", "SceneSync")]
 public sealed class ExternalSceneSynchronizationTests(ITestOutputHelper output)
 {

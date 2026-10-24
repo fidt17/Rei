@@ -1,7 +1,5 @@
 #include "pch.h"
 #include "AssetRegistry.h"
-#include "Common/Time/Stopwatch.h"
-#include "Common/Profiling/ProfilingService.h"
 
 #include <algorithm>
 
@@ -81,34 +79,21 @@ namespace rei::assets
 
     void AssetRegistry::CollectPendingDestroyRecords(std::vector<std::shared_ptr<AssetRecord>>& recordsToDestroy)
     {
-        time::Stopwatch timer;
-        timer.Start();
-        i32 visited = 0;
-        f32 lockMs = 0;
+        std::scoped_lock lock(_recordsMutex);
+        auto it = _records.begin();
+        while (it != _records.end())
         {
-            std::scoped_lock lock(_recordsMutex);
-            lockMs = timer.ElapsedMs();
-            auto it = _records.begin();
-            while (it != _records.end())
+            const auto& record = it->second;
+            const bool readyForDestroy = record->State == AssetState::PendingDestroy && record.use_count() == 1;
+            if (!readyForDestroy)
             {
-                ++visited;
-                const auto& record = it->second;
-                const bool readyForDestroy = record->State == AssetState::PendingDestroy && record.use_count() == 1;
-                if (!readyForDestroy)
-                {
-                    ++it;
-                    continue;
-                }
-
-                recordsToDestroy.push_back(record);
-                it = _records.erase(it);
+                ++it;
+                continue;
             }
+
+            recordsToDestroy.push_back(record);
+            it = _records.erase(it);
         }
-        const auto totalMs = timer.ElapsedMs();
-        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
-            {"stage", "registry.scan"}, {"visited", visited}, {"collected", recordsToDestroy.size()},
-            {"lockMs", lockMs}, {"totalMs", totalMs}
-        }).dump());
     }
 
     i32 AssetRegistry::GetRecordCount() const

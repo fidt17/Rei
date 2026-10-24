@@ -14,12 +14,6 @@ namespace rei::assets
     }
 
     template <typename T>
-    void ClearAssetRefCollection(std::vector<AssetRef<T>>& collection)
-    {
-        collection.clear();
-    }
-
-    template <typename T>
     void SetAssetRefCollection(std::vector<AssetRef<T>>& collection, const nlohmann::json& data)
     {
         const auto& items = data.get_ref<const nlohmann::json::array_t&>();

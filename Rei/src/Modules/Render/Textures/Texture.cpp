@@ -1,16 +1,12 @@
 #include "pch.h"
 #include "Common/Profiling/ProfileMarkers.h"
-#include "Common/Time/Stopwatch.h"
 #include "Texture.h"
 
-#include "stb_image.h"
 #include "glad/glad.h"
 #include <utility>
 
 rei::render::Texture::Texture(resources::BinaryReader& reader)
 {
-    rei::time::Stopwatch timer;
-    timer.Start();
     _width = reader.GetI32();
     _height = reader.GetI32();
     _format = reader.GetI32();
@@ -18,11 +14,6 @@ rei::render::Texture::Texture(resources::BinaryReader& reader)
     if (_format == GL_RGB8 || _format == GL_RGBA8) _colorSpace = TextureColorSpace::Linear;
 
     _rawData = reader.GetVector<u8>();
-    const auto totalMs = timer.ElapsedMs();
-    if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
-        {"stage", "texture.read"}, {"width", _width}, {"height", _height}, {"bytes", _rawData.size()},
-        {"readMs", totalMs}, {"totalMs", totalMs}
-    }).dump());
 }
 
 rei::render::Texture::Texture(const i32 width, const i32 height, const i32 format, std::vector<u8> rawData, const TextureColorSpace colorSpace)
@@ -69,25 +60,14 @@ rei::render::Texture::~Texture()
 void rei::render::Texture::ReleaseTexture()
 {
     if (_id == 0) return;
-    rei::time::Stopwatch timer;
-    timer.Start();
     glDeleteTextures(1, &_id);
     _id = 0;
-    const auto totalMs = timer.ElapsedMs();
-    if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
-        {"stage", "texture.release"}, {"width", _width}, {"height", _height}, {"totalMs", totalMs}
-    }).dump());
 }
 
 void rei::render::Texture::PostLoad()
 {
-    if (_id != 0)
-    {
-        return;
-    }
+    if (_id != 0) return;
 
-    rei::time::Stopwatch timer;
-    timer.Start();
     glGenTextures(1, &_id);
     glBindTexture(GL_TEXTURE_2D, _id);
 
@@ -99,9 +79,7 @@ void rei::render::Texture::PostLoad()
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, _width, _height, 0, format, GL_UNSIGNED_BYTE, _rawData.data());
     glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
-    const auto uploadMs = timer.ElapsedMs();
     glGenerateMipmap(GL_TEXTURE_2D);
-    const auto mipmapMs = timer.ElapsedMs();
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -110,11 +88,6 @@ void rei::render::Texture::PostLoad()
 
     _rawData.clear();
     _rawData.shrink_to_fit();
-    const auto totalMs = timer.ElapsedMs();
-    if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
-        {"stage", "texture.gpu"}, {"width", _width}, {"height", _height},
-        {"uploadMs", uploadMs}, {"mipmapMs", mipmapMs - uploadMs}, {"cleanupMs", totalMs - mipmapMs}, {"totalMs", totalMs}
-    }).dump());
 }
 
 void rei::render::Texture::Use(const i32 idx) const

@@ -90,7 +90,7 @@ Parameter names below match MCP input schema. `—` means no parameters. Results
 | `rei_editor_get_profiling_snapshot` | `source="runtime"`, `view="recent"`, `expectedSessionId=null`, `limit=256` | Copies completed-frame native CPU aggregates. Views: `recent`, `last_capture`; limit `1..256`. Does not enable recording. |
 | `rei_editor_start_profiling_capture` | `frameCount` | Requests `1..3600` frames; returns status and session/capture ids. No scene/asset edits or save. |
 
-Annotations: read tools are read-only. Mutations are idempotent except `create_data_asset` and `start_profiling_capture`. `capture_frame` is read-only but non-idempotent. `save_project`, `refresh_assets` and `start_build` are marked destructive. All tools have `OpenWorld=false`.
+Annotations: read tools are read-only. Mutations are idempotent except `create_data_asset`, `set_entity_parent`, `open_scene` and `start_profiling_capture`. `capture_frame` is read-only but non-idempotent. `save_project`, `refresh_assets` and `start_build` are marked destructive. All tools have `OpenWorld=false`.
 
 ## Property writes and persistence
 
@@ -128,7 +128,7 @@ At least one of `buildSolution` / `buildAssets` must be enabled. Clean solution 
 
 ## Async operations
 
-Refresh, build and Play/Stop return an operation id immediately. Poll `get_operation` until terminal status:
+Open-scene, refresh, build and Play/Stop return an operation id immediately. Poll `get_operation` until terminal status:
 
 ```text
 queued -> running -> succeeded | failed | canceled

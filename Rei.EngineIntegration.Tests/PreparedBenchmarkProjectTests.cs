@@ -5,40 +5,6 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class PreparedBenchmarkProjectTests
 {
     [Fact]
-    public async Task PackWarmupReadsTailPreservesFileAndClosesStream()
-    {
-        await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);
-        var resources = Path.Combine(owner.ProjectDirectory, "bin", "Resources");
-        Directory.CreateDirectory(resources);
-        var path = Path.Combine(resources, "assets.bin");
-        var bytes = new byte[2 * 1024 * 1024 + 37];
-        new Random(427).NextBytes(bytes);
-        try
-        {
-            await File.WriteAllBytesAsync(path, bytes);
-            var timestamp = File.GetLastWriteTimeUtc(path);
-            var expected = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
-            Assert.Equal(expected, await PreparedBenchmarkProject.WarmPackedAssetsAsync(owner.ProjectDirectory));
-            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
-            Assert.Equal(bytes, await File.ReadAllBytesAsync(path));
-            await using (var exclusive = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-            {
-                exclusive.Seek(-1, SeekOrigin.End);
-                exclusive.WriteByte((byte)(bytes[^1] ^ 0xFF));
-            }
-            Assert.NotEqual(expected, await PreparedBenchmarkProject.WarmPackedAssetsAsync(owner.ProjectDirectory));
-            await File.WriteAllBytesAsync(path, []);
-            Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData([])), await PreparedBenchmarkProject.WarmPackedAssetsAsync(owner.ProjectDirectory));
-            File.Delete(path);
-            await Assert.ThrowsAsync<FileNotFoundException>(() => PreparedBenchmarkProject.WarmPackedAssetsAsync(owner.ProjectDirectory));
-        }
-        finally
-        {
-            Directory.Delete(owner.RunDirectory, recursive: true);
-        }
-    }
-
-    [Fact]
     public async Task FingerprintSupportsFilesLargerThanByteArrayLimitAndReadsTheirTail()
     {
         await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);

@@ -3,8 +3,6 @@
 
 #include "BuildScenesConfig.h"
 #include "Scene.h"
-#include "Common/Time/Stopwatch.h"
-#include "Common/Profiling/ProfilingService.h"
 
 #include <unordered_set>
 #include "Modules/Assets/Core/AssetManager.h"
@@ -12,8 +10,6 @@
 
 namespace rei::scenes
 {
-    class Scene;
-
     SceneManager::SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager)
         : _buildScenesConfig(assetManager->GetById<BuildScenesConfig>("0")),
           _assetManager(assetManager),
@@ -27,8 +23,6 @@ namespace rei::scenes
         REI_THROW_IF(!_activeScene.IsLoaded(), "Active scene is not loaded")
         
         LOG_D(std::format("count={}", STRING(_activeScene->GetEntities().size())), "Creating scene entities")
-        time::Stopwatch timer;
-        timer.Start();
         std::unordered_set<i32> entityIds;
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {
@@ -38,19 +32,9 @@ namespace rei::scenes
         {
             _entityManager->Create(sceneEntity);
         }
-        const auto createMs = timer.ElapsedMs();
         GetInternalWorld()->RefreshAll();
-        const auto refreshMs = timer.ElapsedMs();
         _entityManager->ResolveDependencies();
-        const auto dependenciesMs = timer.ElapsedMs();
         _entityManager->ResolveTransformParents();
-        const auto totalMs = timer.ElapsedMs();
-        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
-            {"stage", "scene.entities"}, {"sceneId", _activeScene.Id}, {"count", _activeScene->GetEntities().size()},
-            {"createMs", createMs}, {"refreshMs", refreshMs - createMs},
-            {"resolveDependenciesMs", dependenciesMs - refreshMs}, {"resolveParentsMs", totalMs - dependenciesMs},
-            {"totalMs", totalMs}
-        }).dump());
     }
 
     std::string SceneManager::GetActiveSceneName() const
@@ -84,28 +68,13 @@ namespace rei::scenes
 
     bool SceneManager::LoadScene(const std::function<assets::AssetRef<Scene>()>& load)
     {
-        time::Stopwatch timer;
-        timer.Start();
-        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({{"stage", "scene.load.begin"}}).dump());
         UnloadCurrentScene();
-        const auto unloadMs = timer.ElapsedMs();
         try
         {
-            auto scene = load();
-            _activeScene = std::move(scene);
-            const auto sceneDataMs = timer.ElapsedMs();
-            auto dependencies = _activeScene.IsLoaded() ? CollectSceneAssetDependencies() : std::vector<assets::AssetDependency>{};
-            const auto collectMs = timer.ElapsedMs();
-            if (_activeScene.IsLoaded() && _sceneAssetPreloader.Preload(dependencies))
+            _activeScene = load();
+            if (_activeScene.IsLoaded() && _sceneAssetPreloader.Preload(CollectSceneAssetDependencies()))
             {
-                const auto preloadMs = timer.ElapsedMs();
                 CreateSceneEntities();
-                const auto totalMs = timer.ElapsedMs();
-                if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
-                    {"stage", "scene.load"}, {"sceneId", _activeScene.Id}, {"name", _activeScene->GetName()}, {"success", true},
-                    {"unloadMs", unloadMs}, {"sceneDataMs", sceneDataMs - unloadMs}, {"collectMs", collectMs - sceneDataMs},
-                    {"preloadMs", preloadMs - collectMs}, {"entitiesMs", totalMs - preloadMs}, {"totalMs", totalMs}
-                }).dump());
                 LOG("Loaded scene {}", _activeScene->GetName())
                 return true;
             }
@@ -120,25 +89,13 @@ namespace rei::scenes
         }
 
         UnloadCurrentScene();
-        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
-            {"stage", "scene.load"}, {"success", false}, {"totalMs", timer.ElapsedMs()}
-        }).dump());
         return false;
     }
 
     void SceneManager::UnloadCurrentScene()
     {
-        const auto id = _activeScene.Id;
-        time::Stopwatch timer;
-        timer.Start();
         _entityManager->DestroySceneEntities();
-        const auto entitiesMs = timer.ElapsedMs();
         _activeScene = {};
-        const auto totalMs = timer.ElapsedMs();
-        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
-            {"stage", "scene.unload"}, {"sceneId", id}, {"entitiesMs", entitiesMs},
-            {"sceneDataMs", totalMs - entitiesMs}, {"totalMs", totalMs}
-        }).dump());
     }
 
     void SceneManager::Shutdown()

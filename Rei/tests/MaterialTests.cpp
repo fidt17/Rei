@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "catch_amalgamated.hpp"
+#include "support/AssetTestSupport.h"
 #include "Modules/Render/Material/Material.h"
 #include "glad/glad.h"
 #include "Common/Profiling/ProfileMarkers.h"
@@ -29,6 +30,7 @@ TEST_CASE("Material setters stage final values without a graphics context", "[ma
     rei::assets::AssetRef<rei::render::Shader> shader("unit-shader");
     shader.Record = std::make_shared<rei::assets::AssetRecord>();
     shader.Record->Id = shader.Id;
+    shader.Record->Type = typeid(rei::render::Shader);
     shader.Record->State = rei::assets::AssetState::Loaded;
     shader.Record->Value = std::make_shared<rei::render::Shader>();
     Material material(shader);
@@ -162,10 +164,12 @@ namespace
         rei::assets::AssetRef<rei::render::Shader> result("binding-test");
         result.Record = std::make_shared<rei::assets::AssetRecord>();
         result.Record->Id = result.Id;
+        result.Record->Type = typeid(rei::render::Shader);
         result.Record->State = rei::assets::AssetState::Loaded;
         auto shader = std::make_shared<rei::render::Shader>();
         shader->PostLoad();
         result.Record->Value = shader;
+        REQUIRE(result.IsLoaded());
         return result;
     }
 }
@@ -258,39 +262,40 @@ TEST_CASE("Material cached bindings apply final writes, type changes and alterna
     REQUIRE(GlBindingSpy::Values.at(reloadedLocation)[0] == 12);
 }
 
-TEST_CASE("Material texture writes stay on CPU and keep deterministic sampler slots", "[material][material-binding]")
+TEST_CASE("Material texture writes stay on CPU and keep deterministic sampler slots", "[material][material-binding][isolated]")
 {
-    GlBindingSpy spy;
-    auto shader = MakeBindingShader();
-    Material material(shader);
-    rei::assets::AssetRef<rei::render::Texture> texture("binding-texture");
-    texture.Record = std::make_shared<rei::assets::AssetRecord>();
-    texture.Record->Id = texture.Id;
-    texture.Record->State = rei::assets::AssetState::Loaded;
-    texture.Record->Value = std::make_shared<rei::render::Texture>(1, 1, GL_RGBA, std::vector<u8>{255, 255, 255, 255});
-    // Auto-assign normally resolves dependencies. Cached bindings must not invoke it from a setter.
-    GlFunctionOverride<rei::assets::AssetRef<rei::render::Texture>::AssignHandler> assignHandler(
-        rei::assets::AssetRef<rei::render::Texture>::AssignHandlerFunc,
-        +[](auto&, const auto&) { FAIL("Texture setter invoked asset loading"); });
-    material.SetTexture("zTexture", texture);
-    material.SetTexture("aTexture", texture);
-    REQUIRE(GlBindingSpy::LocationQueries == 0);
-    REQUIRE(GlBindingSpy::Values.empty());
-    material.Use();
-    const auto first = shader->GetLocation("aTexture");
-    const auto second = shader->GetLocation("zTexture");
-    REQUIRE(GlBindingSpy::Values.at(first)[0] == 0);
-    REQUIRE(GlBindingSpy::Values.at(second)[0] == 1);
-    material.ClearProperty("aTexture");
-    material.Use();
-    REQUIRE(GlBindingSpy::Values.at(second)[0] == 0);
-    material.SetFloat("zTexture", 0.75f);
-    material.Use();
-    REQUIRE(GlBindingSpy::Values.at(second)[0] == 0.75f);
-    material.SetTexture("zTexture", texture);
-    material.Use();
-    REQUIRE(GlBindingSpy::Values.at(second)[0] == 0);
-    REQUIRE(material.REI_GET().at("Properties").at("zTexture").at("Id") == texture.Id);
+    rei::tests::Isolated([]
+    {
+        GlBindingSpy spy;
+        auto shader = MakeBindingShader();
+        rei::tests::BehaviourFixture fixture;
+        const rei::assets::AssetPostLoadHandler::ScopedPostLoadSuppression suppressPostLoad(true);
+        auto texture = fixture.Assets->CreateAssetWithId<rei::render::Texture>("binding-texture", 1, 1, GL_RGBA, std::vector<u8>{255, 255, 255, 255});
+        Material material(shader);
+        // Auto-assign normally resolves dependencies. Cached bindings must not invoke it from a setter.
+        GlFunctionOverride<rei::assets::AssetRef<rei::render::Texture>::AssignHandler> assignHandler(
+            rei::assets::AssetRef<rei::render::Texture>::AssignHandlerFunc,
+            +[](auto&, const auto&) { FAIL("Texture setter invoked asset loading"); });
+        material.SetTexture("zTexture", texture);
+        material.SetTexture("aTexture", texture);
+        REQUIRE(GlBindingSpy::LocationQueries == 0);
+        REQUIRE(GlBindingSpy::Values.empty());
+        material.Use();
+        const auto first = shader->GetLocation("aTexture");
+        const auto second = shader->GetLocation("zTexture");
+        REQUIRE(GlBindingSpy::Values.at(first)[0] == 0);
+        REQUIRE(GlBindingSpy::Values.at(second)[0] == 1);
+        material.ClearProperty("aTexture");
+        material.Use();
+        REQUIRE(GlBindingSpy::Values.at(second)[0] == 0);
+        material.SetFloat("zTexture", 0.75f);
+        material.Use();
+        REQUIRE(GlBindingSpy::Values.at(second)[0] == 0.75f);
+        material.SetTexture("zTexture", texture);
+        material.Use();
+        REQUIRE(GlBindingSpy::Values.at(second)[0] == 0);
+        REQUIRE(material.REI_GET().at("Properties").at("zTexture").at("Id") == texture.Id);
+    });
 }
 
 TEST_CASE("Shader profiling counts issued GL calls and restores upload phases", "[profiling][render-profiling][material-binding]")

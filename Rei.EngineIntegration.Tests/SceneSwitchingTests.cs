@@ -6,6 +6,7 @@ namespace Rei.EngineIntegration.Tests;
 
 [Collection(EngineLifecycleCollection.NAME)]
 [Trait("Category", "EngineIntegration")]
+[Trait("Suite", "Lifecycle")]
 [Trait("Area", "SceneSwitching")]
 public sealed class SceneSwitchingTests(ITestOutputHelper output)
 {
