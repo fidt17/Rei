@@ -35,6 +35,8 @@ internal static class CpuProfilingBenchmark
         "Rei/resources/rei_behaviours/render/SpriteRenderer.h", "Rei/resources/rei_behaviours/render/SpriteRenderer.cpp",
         "Rei/src/Modules/Physics/Collider.h", "Rei/src/Modules/Physics/ModelCollider.h", "Rei/src/Modules/Physics/ModelCollider.cpp",
         "Rei/src/Common/Math/Bounds.h", "Rei/src/Modules/Render/Model/Model.h", "Rei/src/Modules/Render/Model/Model.cpp",
+        "Rei/src/Modules/Render/Mesh/Face.h", "Rei/src/Modules/Render/Mesh/Mesh.h", "Rei/src/Modules/Render/Mesh/Mesh.cpp",
+        "Rei/src/Modules/Render/Mesh/MeshBVHNode.h", "Rei/src/Modules/Render/Mesh/MeshBVHNode.cpp",
         "Rei/src/Common/Profiling/GpuTimer.h", "Rei/src/Modules/Render/RenderScenario/DefaultRenderScenario.h",
         "Rei/src/Common/Profiling/ProfileMarkers.h", "Rei/src/Common/Profiling/ProfilingService.h", "Rei/src/Common/Profiling/ProfilingService.cpp",
         "Rei/src/Modules/Render/Shaders/Shader.h", "Rei/src/Modules/Render/Shaders/Shader.cpp",

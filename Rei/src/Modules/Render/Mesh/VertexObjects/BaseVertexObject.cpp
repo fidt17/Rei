@@ -8,9 +8,7 @@ void rei::render::BaseVertexObject::AddFace(const u32 a, const u32 b, const u32 
     _indices.push_back(c);
     
     Face f;
-    f.Vertices.push_back(_vertices[a]);
-    f.Vertices.push_back(_vertices[b]);
-    f.Vertices.push_back(_vertices[c]);
+    f.Vertices = {_vertices[a], _vertices[b], _vertices[c]};
     
     _faces.push_back(f);    
 }

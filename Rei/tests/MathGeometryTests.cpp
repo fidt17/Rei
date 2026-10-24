@@ -148,14 +148,20 @@ TEST_CASE("PHY-02 Triangle misses parallel behind and outside rays", "[native][m
     }
 }
 
-TEST_CASE("PHY-02 Degenerate and nontriangle faces reject without output mutation", "[native][math][physics][coverage][coverage-next]")
+TEST_CASE("PHY-02 Degenerate triangles reject without output mutation", "[native][math][physics][coverage][coverage-next]")
 {
-    for (const i32 count : {0, 1, 2, 3, 4})
+    for (const bool collinear : {false, true})
     {
         rei::render::Face face;
-        face.Vertices.resize(count); // Coincident vertices also exercise degenerate triangle.
+        if (collinear)
+        {
+            face.Vertices[1].Position = {1, 0, 0};
+            face.Vertices[2].Position = {2, 0, 0};
+        }
         Vector3 point(11, 12, 13);
         CHECK_FALSE(FaceRayIntersection(face, Ray({}, {0, 0, 1}), glm::mat4(1), point));
+        CheckVector(point, {11, 12, 13});
+        CHECK_FALSE(FaceRayIntersection(face, Ray({}, {0, 0, 1}), point, 1));
         CheckVector(point, {11, 12, 13});
     }
 }

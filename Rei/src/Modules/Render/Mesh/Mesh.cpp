@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Common/Profiling/ProfileMarkers.h"
+#include "Common/Time/Stopwatch.h"
 #include "Mesh.h"
 
 #include "glad/glad.h"
@@ -11,11 +12,8 @@ namespace
         for (auto& face : faces)
         {
             const i32 verticesCount = reader.GetI32();
-            face.Vertices.reserve(verticesCount);
-            for (i32 i = 0; i < verticesCount; i++)
-            {
-                face.Vertices.emplace_back(reader.GetByType<rei::render::Vertex>());
-            }
+            REI_THROW_IF(verticesCount != static_cast<i32>(face.Vertices.size()), "Packed mesh face must contain 3 vertices")
+            face.Vertices = reader.GetByType<decltype(face.Vertices)>();
         }
     }
 
@@ -54,15 +52,25 @@ namespace
 rei::render::Mesh::Mesh(resources::BinaryReader& reader)
     : VAO(0), VBO(0), EBO(0)
 {
+    rei::time::Stopwatch timer;
+    timer.Start();
+    const auto start = reader.GetPosition();
     Name = reader.GetStr();
     Vertices = reader.GetVector<Vertex>();
     Indices = reader.GetVector<u32>();
+    const auto buffersMs = timer.ElapsedMs();
 
     Faces = std::vector<Face>(reader.GetI32());
     ReadFaceVertices(Faces, reader);
-    
+    const auto facesMs = timer.ElapsedMs();
     ReadBVHNode(reader, BVHRoot);
     _didSetupBvh = true;
+    const auto totalMs = timer.ElapsedMs();
+    if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
+        {"stage", "mesh.read"}, {"name", Name}, {"bytes", reader.GetPosition() - start},
+        {"vertices", Vertices.size()}, {"triangles", Indices.size() / 3}, {"faces", Faces.size()},
+        {"buffersMs", buffersMs}, {"facesMs", facesMs - buffersMs}, {"bvhMs", totalMs - facesMs}, {"totalMs", totalMs}
+    }).dump());
 }
 
 rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<u32>& indices, const std::vector<Face>& faces)
@@ -78,6 +86,8 @@ rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, c
 void rei::render::Mesh::SetupOpenGlObjects()
 {
     if (_didSetupOpenGlObjects) return;
+    rei::time::Stopwatch timer;
+    timer.Start();
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -105,6 +115,11 @@ void rei::render::Mesh::SetupOpenGlObjects()
 
     glBindVertexArray(0);
     _didSetupOpenGlObjects = true;
+    const auto totalMs = timer.ElapsedMs();
+    if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
+        {"stage", "mesh.gpu"}, {"name", Name}, {"bytes", Vertices.size() * sizeof(Vertex) + Indices.size() * sizeof(u32)},
+        {"totalMs", totalMs}
+    }).dump());
 }
 
 void rei::render::Mesh::SetupBVH()

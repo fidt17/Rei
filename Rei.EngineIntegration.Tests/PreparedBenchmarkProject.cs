@@ -50,9 +50,20 @@ internal static class PreparedBenchmarkProject
             var entry = JsonSerializer.Deserialize<Entry>(await File.ReadAllTextAsync(index))!;
             if (string.Equals(entry.Source, source, StringComparison.OrdinalIgnoreCase) &&
                 entry.Hashes.Count == hashes.Count && hashes.All(hash => entry.Hashes.TryGetValue(hash.Key, out var value) && value == hash.Value) &&
-                Directory.Exists(Path.Combine(entry.RunDirectory, "project")) && File.Exists(Path.Combine(entry.RunDirectory, "storage", "preferences.json")))
-                return new EngineIntegrationHarness(keepBuildOutputs: true, sourceProjectDirectory: source,
+                hashes.Keys.All(relative => File.Exists(Path.Combine(entry.RunDirectory, "project", relative))) &&
+                File.Exists(Path.Combine(entry.RunDirectory, "storage", "preferences.json")))
+            {
+                var prepared = new EngineIntegrationHarness(keepBuildOutputs: true, sourceProjectDirectory: source,
                     startupTimeout: startupTimeout, preparedRunDirectory: entry.RunDirectory);
+                // Previous scene cycles change LastSceneId in the owned copy. Restore the source's startup input.
+                var projectFile = Directory.GetFiles(source, "*.rei").Single();
+                var sourceProject = JsonNode.Parse(await File.ReadAllTextAsync(projectFile))!;
+                var preparedFile = Path.Combine(prepared.ProjectDirectory, Path.GetFileName(projectFile));
+                var preparedProject = JsonNode.Parse(await File.ReadAllTextAsync(preparedFile))!;
+                preparedProject["LastSceneId"] = sourceProject["LastSceneId"]?.DeepClone();
+                await File.WriteAllTextAsync(preparedFile, preparedProject.ToJsonString());
+                return prepared;
+            }
         }
         var engine = new EngineIntegrationHarness(keepBuildOutputs: true, sourceProjectDirectory: source, startupTimeout: startupTimeout);
         Directory.CreateDirectory(engine.RunDirectory);

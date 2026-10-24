@@ -28,6 +28,8 @@ namespace rei::tests
     // (x - origin.x) + (y - origin.y) <= 2. No production intersection oracle.
     inline render::Face Triangle(const math::Vector3& origin = {0, 0, 5})
     {
-        return {{{glm::vec3(origin)}, {glm::vec3(origin + math::Vector3(2, 0, 0))}, {glm::vec3(origin + math::Vector3(0, 2, 0))}}};
+        render::Face face;
+        face.Vertices = {render::Vertex{glm::vec3(origin)}, render::Vertex{glm::vec3(origin + math::Vector3(2, 0, 0))}, render::Vertex{glm::vec3(origin + math::Vector3(0, 2, 0))}};
+        return face;
     }
 }

@@ -26,9 +26,9 @@ namespace
     {
         static_assert(sizeof(Vertex) == 32);
         AppendVector(bytes, Vector3(vertex.Position));
-        AppendVector(bytes, {0, 0, -1});
-        AppendFloat(bytes, 0);
-        AppendFloat(bytes, 0);
+        AppendVector(bytes, Vector3(vertex.Normal));
+        AppendFloat(bytes, vertex.TexCoords.x);
+        AppendFloat(bytes, vertex.TexCoords.y);
     }
 
     void AppendFaces(std::vector<u8>& bytes, const std::vector<Face>& faces)
@@ -138,6 +138,69 @@ namespace
         // Binary loading deliberately skips PostLoad: actual ModelCollider and
         // serialized BVH run on CPU. This does not claim GL/rendering coverage.
     }
+}
+
+TEST_CASE("PHY-03 Packed triangles preserve vertex attributes and following stream data", "[native][physics][bvh][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        auto face = Triangle();
+        for (u32 i = 0; i < face.Vertices.size(); ++i)
+        {
+            face.Vertices[i].Normal = {static_cast<f32>(i), -1, 0.5f};
+            face.Vertices[i].TexCoords = {static_cast<f32>(i) / 2, -0.25f};
+        }
+        auto bytes = MeshBytes("attributes", {face}, NodeBytes({0, 0, 4}, {2, 2, 6}, {face}));
+        constexpr u32 SENTINEL = 0x78563412;
+        AppendInteger(bytes, SENTINEL, 4);
+        resources::BinaryReader reader(files.Write("attributes.bin", bytes).string());
+        Mesh mesh(reader);
+        REQUIRE(reader.GetPosition() == static_cast<i64>(bytes.size() - 4));
+        REQUIRE(reader.GetU32() == SENTINEL);
+        REQUIRE(mesh.Faces.size() == 1);
+        REQUIRE(mesh.BVHRoot.Faces.size() == 1);
+        for (u32 i = 0; i < face.Vertices.size(); ++i)
+        {
+            for (const auto* actual : {&mesh.Vertices[i], &mesh.Faces[0].Vertices[i], &mesh.BVHRoot.Faces[0].Vertices[i]})
+            {
+                CheckVector(Vector3(actual->Position), Vector3(face.Vertices[i].Position));
+                CheckVector(Vector3(actual->Normal), Vector3(face.Vertices[i].Normal));
+                CHECK(actual->TexCoords.x == Catch::Approx(face.Vertices[i].TexCoords.x));
+                CHECK(actual->TexCoords.y == Catch::Approx(face.Vertices[i].TexCoords.y));
+            }
+        }
+    });
+}
+
+TEST_CASE("PHY-03 Nontriangle vertex counts reject before reading mesh or BVH payload", "[native][physics][bvh][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        for (const bool inBvh : {false, true})
+        {
+            for (const i32 count : {-1, 0, 1, 2, 4, 2147483647})
+            {
+                CAPTURE(inBvh, count);
+                std::vector<u8> bytes;
+                AppendString(bytes, "invalid-face");
+                AppendInteger(bytes, 0, 4); // Vertices.
+                AppendInteger(bytes, 0, 4); // Indices.
+                if (inBvh)
+                {
+                    AppendInteger(bytes, 0, 4); // No mesh faces.
+                    AppendVector(bytes, {});
+                    AppendVector(bytes, {1, 1, 1});
+                }
+                AppendInteger(bytes, 1, 4); // One face, in mesh or BVH.
+                AppendInteger(bytes, count, 4);
+                resources::BinaryReader reader(files.Write("invalid-face.bin", bytes).string());
+                CHECK_THROWS_WITH(Mesh(reader), Catch::Matchers::ContainsSubstring("Packed mesh face must contain 3 vertices"));
+                reader.Close();
+            }
+        }
+    });
 }
 
 TEST_CASE("PHY-03 Serialized split BVH preserves faces children and analytic hits", "[native][physics][bvh][binary][coverage][coverage-remaining][isolated]")
@@ -265,7 +328,7 @@ TEST_CASE("PHY-03 One analytic triangle survives runtime serialized packed and r
         {
             return FaceRayIntersection(triangle, ray, matrix, point);
         });
-        Mesh runtime("analytic", triangle.Vertices, {0, 1, 2}, faces);
+        Mesh runtime("analytic", std::vector<Vertex>(triangle.Vertices.begin(), triangle.Vertices.end()), {0, 1, 2}, faces);
         runtime.BVHRoot.BuildBVH(runtime.BVHRoot, faces);
         CheckAnalyticTriangleAtStage("runtime BVH", [&](const Ray& ray, const glm::mat4& matrix, Vector3& point)
         {

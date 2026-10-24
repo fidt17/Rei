@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include "Common/Profiling/ProfilingService.h"
 #include "Common/Time/Stopwatch.h"
 #include "Modules/Resources/AssetBuilder.h"
 
@@ -235,8 +236,12 @@ namespace rei::assets
 
         LOG_DEBUG("Loading asset name={}, id={}", name, ref.Id)
         
+        time::Stopwatch timer;
+        timer.Start();
         auto reader = resources::BinaryReader(path, offset);
+        const auto openMs = timer.ElapsedMs();
         auto* loadedAssetPtr = new T(reader);
+        const auto constructMs = timer.ElapsedMs();
         const i64 loadedAssetSize = reader.GetPosition() - offset;
         reader.Close();
 
@@ -257,6 +262,11 @@ namespace rei::assets
 
         _registry->CreateAssetRecord<T>(ref, name, loadedAssetPtr, assetSize, AssetState::Loaded);
         _registry->SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
+        const auto totalMs = timer.ElapsedMs();
+        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
+            {"stage", "asset.read"}, {"id", ref.Id}, {"name", name}, {"bytes", loadedAssetSize},
+            {"openMs", openMs}, {"constructMs", constructMs - openMs}, {"publishMs", totalMs - constructMs}, {"totalMs", totalMs}
+        }).dump());
     }
 
     template <typename T>

@@ -70,12 +70,13 @@ rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
     for (u32 i = 0; i < mesh->mNumFaces; i++)
     {
         const aiFace ai_face = mesh->mFaces[i];
+        REI_THROW_IF(ai_face.mNumIndices != 3, "Imported mesh face must contain 3 vertices")
         auto& face = faces.emplace_back();
         for (u32 j = 0; j < ai_face.mNumIndices; j++)
         {
             auto idx = ai_face.mIndices[j];
             indices.push_back(idx);
-            face.Vertices.push_back(vertices[idx]);
+            face.Vertices[j] = vertices[idx];
         }
     }
 

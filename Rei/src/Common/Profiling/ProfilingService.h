@@ -9,6 +9,10 @@
 
 namespace rei::profiling
 {
+    // Opt-in JSONL diagnostics, separate from frame captures. Path belongs to the caller.
+    REI_API bool IsLoadTimingEnabled();
+    REI_API void WriteLoadTiming(const std::string& json);
+
     constexpr u32 MAX_METRICS = 256;
     constexpr u32 MAX_DEPTH = 64;
     constexpr u32 MAX_CAPTURE_FRAMES = 3600;

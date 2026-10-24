@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "SceneAssetPreloader.h"
+#include "Common/Time/Stopwatch.h"
+#include "Common/Profiling/ProfilingService.h"
 
 namespace rei::scenes
 {
@@ -27,6 +29,8 @@ namespace rei::scenes
 
     bool SceneAssetPreloader::Preload(const std::vector<assets::AssetDependency>& dependencies) const
     {
+        time::Stopwatch timer;
+        timer.Start();
         const auto uniqueDependencies = GetUniqueDependencies(dependencies);
         if (uniqueDependencies.empty())
         {
@@ -74,7 +78,14 @@ namespace rei::scenes
             loadFuture.get();
         }
 
+        const auto workersMs = timer.ElapsedMs();
         const bool didFlushDeferredPostLoads = _assetManager->FlushDeferredPostLoads();
+        const auto totalMs = timer.ElapsedMs();
+        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
+            {"stage", "scene.preload"}, {"dependencies", uniqueDependencies.size()}, {"workers", workerCount},
+            {"workersMs", workersMs}, {"postLoadMs", totalMs - workersMs}, {"totalMs", totalMs},
+            {"success", didFlushDeferredPostLoads && !hasDependencyLoadFailure.load()}
+        }).dump());
         if (!didFlushDeferredPostLoads)
         {
             LOG_ERROR("Failed to run one or more deferred post-load actions while preloading scene dependencies")

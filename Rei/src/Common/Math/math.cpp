@@ -226,15 +226,6 @@ namespace rei::math
 
     namespace
     {
-        bool IsTriangle(const render::Face& face)
-        {
-            if (face.Vertices.size() == 3) return true;
-#if DEBUG
-            LOG_WARNING("Only triangle faces are supported for intersection detection")
-#endif
-            return false;
-        }
-
         bool IntersectTriangle(const std::array<Vector3, 3>& triangle, const Ray& ray, Vector3& out_intersectionPoint, const f32 determinantScale)
         {
             constexpr f32 EPSILON = 1e-6f;
@@ -264,7 +255,6 @@ namespace rei::math
 
     bool FaceRayIntersection(const render::Face& face, const Ray& ray, const glm::mat4& modelMatrix, Vector3& out_intersectionPoint)
     {
-        if (!IsTriangle(face)) return false;
         const std::array triangle{
             Vector3(glm::vec3(modelMatrix * glm::vec4(face.Vertices[0].Position, 1))),
             Vector3(glm::vec3(modelMatrix * glm::vec4(face.Vertices[1].Position, 1))),
@@ -275,7 +265,6 @@ namespace rei::math
 
     bool FaceRayIntersection(const render::Face& face, const Ray& localRay, Vector3& out_intersectionPoint, const f32 determinantScale)
     {
-        if (!IsTriangle(face)) return false;
         const std::array triangle{
             Vector3(face.Vertices[0].Position),
             Vector3(face.Vertices[1].Position),

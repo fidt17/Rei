@@ -12,7 +12,12 @@ namespace Rei.EngineIntegration.Tests;
 public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
 {
     [ExternalBenchmarkFact]
-    public async Task IsolatedExternalProjectRecordsSceneUnloadReloadAndNativeAssetResidency()
+    public Task IsolatedExternalProjectRecordsSceneUnloadReloadAndNativeAssetResidency() => RecordSceneCycleAsync(recordLoadTimings: false);
+
+    [ExternalBenchmarkFact]
+    public Task IsolatedExternalProjectRecordsDetailedSceneLoadTimings() => RecordSceneCycleAsync(recordLoadTimings: true);
+
+    private async Task RecordSceneCycleAsync(bool recordLoadTimings)
     {
         var source = Path.GetFullPath(Environment.GetEnvironmentVariable("REI_PROFILE_PROJECT")!);
         CpuProfilingBenchmark.RequireCurrentEngineBuild();
@@ -23,7 +28,7 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
         var sampling = engine.SampleProcessResourcesAsync(cancellation.Token);
         try
         {
-            await engine.StartAsync();
+            await engine.StartAsync(recordLoadTimings);
             var initial = (await engine.CallAsync("rei_editor_get_state")).GetProperty("scene").Clone();
             var initialId = initial.GetProperty("id").GetString()!;
             var scenes = Directory.EnumerateFiles(Path.Combine(engine.ProjectDirectory, "Project"), "*.scene", SearchOption.AllDirectories)
@@ -64,8 +69,14 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
                     }));
                 }
                 await transition;
-                Assert.True(longestUiResponse < TimeSpan.FromSeconds(2), $"Editor UI blocked for {longestUiResponse}. Artifacts: {engine.RunDirectory}");
-                Assert.True(loadingResponses > 0, $"Editor UI did not answer while loading. Artifacts: {engine.RunDirectory}");
+                // The timing benchmark records UI response without making it a performance gate.
+                if (!recordLoadTimings)
+                {
+                    Assert.True(longestUiResponse < TimeSpan.FromSeconds(2), $"Editor UI blocked for {longestUiResponse}. Artifacts: {engine.RunDirectory}");
+                    // Fast transitions can finish between UI polls; only sustained work needs a loading response.
+                    if (elapsed.Elapsed >= TimeSpan.FromSeconds(2))
+                        Assert.True(loadingResponses > 0, $"Editor UI did not answer while loading. Artifacts: {engine.RunDirectory}");
+                }
                 await engine.AppendDiagnosticAsync("scene-transitions.jsonl", JsonSerializer.Serialize(new
                 {
                     phase, sceneId = id, startedUtc = started, completedUtc = DateTimeOffset.UtcNow,
@@ -76,6 +87,44 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
             var close = Stopwatch.StartNew();
             await engine.CloseEditorAsync();
             await engine.RecordTimingAsync("close-editor-after-scene-cycle", close.Elapsed);
+            if (recordLoadTimings)
+            {
+                var timings = File.ReadLines(Path.Combine(engine.RunDirectory, $"load-timings-{engine.LaunchCount}.jsonl"))
+                    .Select(line =>
+                    {
+                        using var document = JsonDocument.Parse(line);
+                        return document.RootElement.Clone();
+                    }).ToArray();
+                Assert.NotEmpty(timings);
+                Assert.True(timings.Zip(timings.Skip(1)).All(pair =>
+                    pair.First.GetProperty("timestampNs").GetUInt64() <= pair.Second.GetProperty("timestampNs").GetUInt64()));
+                var measurements = timings.Select(entry => entry.GetProperty("data")).ToArray();
+                foreach (var measurement in measurements)
+                    foreach (var property in measurement.EnumerateObject().Where(property => property.Name.EndsWith("Ms", StringComparison.Ordinal)))
+                        Assert.True(double.IsFinite(property.Value.GetDouble()) && property.Value.GetDouble() >= 0, measurement.ToString());
+                var loads = measurements.Where(entry => entry.GetProperty("stage").GetString() == "scene.load").ToArray();
+                Assert.Equal(4, loads.Length); // Startup, unload, reload, second unload.
+                Assert.All(loads, load => Assert.True(load.GetProperty("success").GetBoolean()));
+                foreach (var id in new[] { initialId, control.Id })
+                    Assert.Equal(2, loads.Count(load => load.GetProperty("sceneId").GetString() == id));
+                var expectedModels = assets.Values.Count(name => Path.GetExtension(name).Equals(".obj", StringComparison.OrdinalIgnoreCase));
+                foreach (var stage in new[] { "mesh.read", "model.read", "mesh.gpu", "model.release" })
+                    Assert.True(measurements.Count(entry => entry.GetProperty("stage").GetString() == stage) >= expectedModels * 2, stage);
+                Assert.Contains(measurements, entry => entry.GetProperty("stage").GetString() == "registry.scan");
+                foreach (var stage in new[] { "texture.read", "texture.gpu", "texture.release" })
+                    Assert.Contains(measurements, entry => entry.GetProperty("stage").GetString() == stage);
+                var summary = measurements.GroupBy(entry => entry.GetProperty("stage").GetString()!)
+                    .ToDictionary(group => group.Key, group => new
+                    {
+                        count = group.Count(),
+                        milliseconds = group.SelectMany(entry => entry.EnumerateObject())
+                            .Where(property => property.Name.EndsWith("Ms", StringComparison.Ordinal))
+                            .GroupBy(property => property.Name)
+                            .ToDictionary(values => values.Key, values => values.Sum(value => value.Value.GetDouble()))
+                    });
+                await File.WriteAllTextAsync(Path.Combine(engine.RunDirectory, $"load-timing-summary-{engine.LaunchCount}.json"),
+                    JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
+            }
 
             async Task CaptureAsync(string phase, string sceneId, double transitionMs)
             {

@@ -1,11 +1,15 @@
 #include "pch.h"
 #include "Model.h"
+#include "Common/Time/Stopwatch.h"
+#include "Common/Profiling/ProfilingService.h"
 
 namespace rei::render
 {
 
     Model::Model(resources::BinaryReader& reader)
     {
+        time::Stopwatch timer;
+        timer.Start();
         _name = reader.GetStr();
 
         const i32 meshCount = reader.GetI32();
@@ -14,7 +18,13 @@ namespace rei::render
         {
             _meshes.emplace_back(reader);
         }
+        const auto meshesMs = timer.ElapsedMs();
         BuildBounds();
+        const auto totalMs = timer.ElapsedMs();
+        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
+            {"stage", "model.read"}, {"name", _name}, {"meshes", _meshes.size()},
+            {"meshesMs", meshesMs}, {"boundsMs", totalMs - meshesMs}, {"totalMs", totalMs}
+        }).dump());
     }
 
     Model::Model(std::string name, Mesh mesh)
@@ -45,10 +55,19 @@ namespace rei::render
 
     Model::~Model()
     {
+        time::Stopwatch timer;
+        timer.Start();
         for (auto& value : _meshes)
         {
             value.Dispose();
         }
+        const auto gpuMs = timer.ElapsedMs();
+        // Clear here to measure CPU destruction separately from the OpenGL calls above.
+        _meshes.clear();
+        const auto totalMs = timer.ElapsedMs();
+        if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
+            {"stage", "model.release"}, {"name", _name}, {"gpuMs", gpuMs}, {"cpuMs", totalMs - gpuMs}, {"totalMs", totalMs}
+        }).dump());
     }
 
     void Model::PostLoad()

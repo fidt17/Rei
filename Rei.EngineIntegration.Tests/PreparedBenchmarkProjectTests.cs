@@ -126,6 +126,68 @@ public sealed class PreparedBenchmarkProjectTests
         }
     }
 
+    [Fact]
+    public async Task MissingCopiedInputCreatesNewOwnedProject()
+    {
+        await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);
+        var source = CreateSource(owner.RunDirectory);
+        var index = Path.Combine(owner.RunDirectory, "index");
+        var owned = new HashSet<string>();
+        try
+        {
+            await using var first = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            owned.Add(first.RunDirectory);
+            await first.PrepareProjectAsync(Path.Combine(owner.RunDirectory, "engine.rei_engine"), "msbuild.exe");
+            File.Delete(Path.Combine(first.ProjectDirectory, "asset.txt"));
+            await using var second = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            owned.Add(second.RunDirectory);
+            Assert.NotEqual(first.RunDirectory, second.RunDirectory);
+            await second.PrepareProjectAsync(Path.Combine(owner.RunDirectory, "engine.rei_engine"), "msbuild.exe");
+            Assert.Equal("original source", await File.ReadAllTextAsync(Path.Combine(second.ProjectDirectory, "asset.txt")));
+            Assert.Equal("original source", await File.ReadAllTextAsync(Path.Combine(source, "asset.txt")));
+        }
+        finally
+        {
+            foreach (var directory in owned) if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            Directory.Delete(owner.RunDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ReusedCopyRestoresStartupSceneWithoutChangingSourceOrBuildPaths()
+    {
+        await using var owner = new EngineIntegrationHarness(keepBuildOutputs: true);
+        var source = CreateSource(owner.RunDirectory);
+        var sourceFile = Path.Combine(source, "Fixture.rei");
+        var sourceProject = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(sourceFile))!;
+        sourceProject["LastSceneId"] = "initial";
+        await File.WriteAllTextAsync(sourceFile, sourceProject.ToJsonString());
+        var index = Path.Combine(owner.RunDirectory, "index");
+        string? run = null;
+        try
+        {
+            var before = await ExternalProjectCopy.FingerprintAsync(source);
+            await using var first = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            run = first.RunDirectory;
+            await first.PrepareProjectAsync(Path.Combine(owner.RunDirectory, "engine.rei_engine"), "msbuild.exe");
+            var copiedFile = Path.Combine(first.ProjectDirectory, "Fixture.rei");
+            var copied = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(copiedFile))!;
+            copied["LastSceneId"] = "control";
+            await File.WriteAllTextAsync(copiedFile, copied.ToJsonString());
+            await using var second = await PreparedBenchmarkProject.OpenAsync(source, indexDirectory: index);
+            Assert.Equal(first.RunDirectory, second.RunDirectory);
+            var restored = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(copiedFile))!;
+            Assert.Equal("initial", restored["LastSceneId"]!.GetValue<string>());
+            Assert.Equal(copied["ProjectSolutionPath"]!.GetValue<string>(), restored["ProjectSolutionPath"]!.GetValue<string>());
+            Assert.Equal(before.ToArray(), (await ExternalProjectCopy.FingerprintAsync(source)).ToArray());
+        }
+        finally
+        {
+            if (run != null && Directory.Exists(run)) Directory.Delete(run, recursive: true);
+            Directory.Delete(owner.RunDirectory, recursive: true);
+        }
+    }
+
     private static string CreateSource(string root)
     {
         var source = Path.Combine(root, "source");
