@@ -22,6 +22,13 @@ REI_EXTERN_API inline void AddEngineStartCallback(const EngineStartCallbackDeleg
     });
 }
 
+typedef void (*SceneLoadProgressCallbackDelegate)(i32 percent);
+REI_EXTERN_API inline void AddSceneLoadProgressCallback(const SceneLoadProgressCallbackDelegate callback)
+{
+    if (callback == nullptr) return;
+    rei::GetSceneManager().LoadProgressEvent.append([=](const i32 percent) { callback(percent); });
+}
+
 typedef void (*ShutdownCallbackDelegate)(i32 exitCode);
 REI_EXTERN_API inline void AddShutdownCallback(const ShutdownCallbackDelegate callback)
 {

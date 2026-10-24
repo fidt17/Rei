@@ -110,6 +110,7 @@ public class SceneManagementService : ISceneManagementService, IDisposable
         try
         {
             _procedures.TrackProcedure(procedure);
+            procedure.ReportProgress(0);
             var scene = await readScene();
             if (scene == null) throw new InvalidOperationException("Could not read scene asset.");
             _logger.Log($"Loading scene name={scene.Name}, id={scene.AssetId}");
@@ -123,12 +124,13 @@ public class SceneManagementService : ISceneManagementService, IDisposable
             {
                 _currentScene.SetAndInvoke(null);
                 _selectionService.ResetSelection();
-                if (_engineRunner.IsActive.Value && !await _sceneLoader.LoadSceneAsync(scene))
+                if (_engineRunner.IsActive.Value && !await _sceneLoader.LoadSceneAsync(scene, percent => procedure.ReportProgress(percent / 100d)))
                     throw new InvalidOperationException($"Could not load scene {scene?.AssetId} in engine.");
             }
             _projectService.GetActiveProject().SetLastScene(scene.AssetId);
             _currentScene.SetAndInvoke(scene);
             _selectionService.ResetSelection();
+            procedure.ReportProgress(1);
         }
         catch
         {

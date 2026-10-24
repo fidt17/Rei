@@ -83,11 +83,13 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
         _sceneEvents = sceneEvents;
 
         _startCallbackDelegate = HandleEngineStartedEvent;
+        _engineApi.SceneLoadProgressChanged += HandleSceneLoadProgress;
     }
 
     public async ValueTask DisposeAsync()
     {
         await StopEngine();
+        _engineApi.SceneLoadProgressChanged -= HandleSceneLoadProgress;
     }
 
     public bool StartEngine(EngineRunMode mode)
@@ -271,6 +273,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
                 _isEngineStarting.Value = false;
                 
                 EngineStartedEvent?.Invoke();
+                _startProcedure?.ReportProgress(1);
             }
             catch (Exception e)
             {
@@ -282,6 +285,8 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             }
         });
     }
+
+    private void HandleSceneLoadProgress(int percent) => _startProcedure?.ReportProgress(Math.Min(percent, 99) / 100d);
 
     private void BeginStartProcedure()
     {

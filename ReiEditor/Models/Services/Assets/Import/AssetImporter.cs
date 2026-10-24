@@ -122,15 +122,26 @@ public class AssetImporter : IAssetImporter
         
         try
         {
+            var paths = Directory.GetFiles(_resourceService.GetProjectPath(), "*.*", SearchOption.AllDirectories);
+            var totalWork = paths.Length + 6;
+            var completed = 0;
+            void ReportCompleted() => procedure.ReportProgress((double)++completed / totalWork);
             await _metaFilesService.DeleteInvalidMetaFiles();
-            
-            assets = await ImportAssets();
+            ReportCompleted();
+            assets = await ImportAssets(paths, ReportCompleted);
             _assetRegistry.UpdateRegistry(assets);
-            
+            ReportCompleted();
             await _behaviourRegistry.RefreshBehaviours();
+            ReportCompleted();
             await _shaderRegistry.RefreshShaders();
+            ReportCompleted();
             await ImportScenes();
-            if (!_importFailed && _sourceFilesUtility.AreSourceFilesValid) _importedFingerprint = await GetImportFingerprint();
+            ReportCompleted();
+            if (!_importFailed && _sourceFilesUtility.AreSourceFilesValid)
+            {
+                _importedFingerprint = await GetImportFingerprint();
+                ReportCompleted();
+            }
         }
         catch (Exception e)
         {
@@ -157,6 +168,9 @@ public class AssetImporter : IAssetImporter
 
         try
         {
+            var totalWork = targetFiles.Count + 4;
+            var completed = 0;
+            void ReportCompleted() => procedure.ReportProgress((double)++completed / totalWork);
             foreach (var assetPath in targetFiles)
             {
                 try
@@ -194,15 +208,18 @@ public class AssetImporter : IAssetImporter
                     _importFailed = true;
                     _logger.LogException(e);
                 }
+                finally { ReportCompleted(); }
             }
 
             _assetRegistry.RegisterNewAssets(importedAssets);
+            ReportCompleted();
 
             if (targetFiles.Any(f => Path.GetExtension(f) == FileExtensions.SCENE))
             {
                 await ImportScenes();
             }
 
+            ReportCompleted();
             bool requiresScriptRegistryRefresh = false;
             foreach (var targetFile in targetFiles)
             {
@@ -221,11 +238,13 @@ public class AssetImporter : IAssetImporter
                 await _behaviourRegistry.RefreshBehaviours();
             }
 
+            ReportCompleted();
             var isAnyShader = targetFiles.Any(x => Path.GetExtension(x).Equals(FileExtensions.RSHADER, StringComparison.OrdinalIgnoreCase));
             if (isAnyShader)
             {
                 await _shaderRegistry.RefreshShaders();
             }
+            if (!_importFailed) ReportCompleted();
         }
         catch (Exception e)
         {
@@ -248,6 +267,7 @@ public class AssetImporter : IAssetImporter
         
         var procedure = new Procedure(ProcedureTags.IMPORT_ASSETS);
         _editorProceduresService.TrackProcedure(procedure);
+        procedure.ReportProgress(0);
         
         return procedure;
     }
@@ -264,13 +284,11 @@ public class AssetImporter : IAssetImporter
         ImportedAssetsEvent?.Invoke();
     }
 
-    private async Task<List<AssetInfo>> ImportAssets()
+    private async Task<List<AssetInfo>> ImportAssets(IReadOnlyList<string> paths, Action onFileCompleted)
     {
         _logger.Log("Importing assets...");
-        var projectRoot = _resourceService.GetProjectPath();
-
         var importedAssets = new List<AssetInfo>();
-        foreach (var assetPath in Directory.EnumerateFiles(projectRoot, "*.*", SearchOption.AllDirectories))
+        foreach (var assetPath in paths)
         {
             try
             {
@@ -300,6 +318,7 @@ public class AssetImporter : IAssetImporter
                 _importFailed = true;
                 _logger.LogException(e);
             }
+            finally { onFileCompleted(); }
         }
 
         return importedAssets;

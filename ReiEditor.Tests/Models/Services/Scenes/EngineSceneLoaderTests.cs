@@ -62,4 +62,26 @@ public sealed class EngineSceneLoaderTests
         Assert.Equal(outcome == "loaded", await loading);
         Assert.Equal(outcome == "exception" ? 1 : 0, logger.Entries.Count);
     }
+
+    /// <summary>Native progress arrives while loading; subscriptions disappear after success, failure or exception.</summary>
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NativeProgressIsForwardedOnlyDuringTheLoad(bool throws)
+    {
+        var values = new List<int>();
+        var api = new NativeApi();
+        api.Load = () =>
+        {
+            api.EmitSceneLoadProgress(0);
+            api.EmitSceneLoadProgress(43);
+            if (throws) throw new InvalidOperationException("failed");
+            api.EmitSceneLoadProgress(100);
+            return true;
+        };
+        var loader = new EngineSceneLoader(api, new TestLogger<EngineSceneLoader>());
+        Assert.Equal(!throws, await loader.LoadSceneAsync(null, values.Add));
+        api.EmitSceneLoadProgress(79);
+        Assert.Equal(throws ? new[] { 0, 43 } : new[] { 0, 43, 100 }, values);
+    }
 }

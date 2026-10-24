@@ -166,3 +166,34 @@ TEST_CASE("PRE-01 PreloadById reads bytes without implicitly running PostLoad", 
         CHECK(probe.State->Destroyed == 1);
     });
 }
+
+TEST_CASE("Preload progress covers unique reads and owner-thread GPU work", "[native][scene-progress][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture([](TemporaryDirectory& files)
+        {
+            WriteAssetPack(files, {{"a", "first", IntegerAsset(31)}, {"b", "second", IntegerAsset(47)}});
+        });
+        const auto owner = std::this_thread::get_id();
+        const scenes::SceneAssetPreloader preloader(fixture.Assets);
+        std::array<AssetRef<AssetProbe>, 2> refs;
+        std::vector<f32> values;
+        REQUIRE(preloader.Preload({
+            {"a", [&](const auto&) { refs[0] = fixture.Assets->GetById<AssetProbe>("a"); return refs[0].IsLoaded(); }},
+            {"a", [&](const auto&) { FAIL("Duplicate dependency loaded"); return false; }},
+            {"b", [&](const auto&) { refs[1] = fixture.Assets->GetById<AssetProbe>("b"); return refs[1].IsLoaded(); }}
+        }, [&](const f32 progress)
+        {
+            values.push_back(progress);
+            if (progress <= 0.5f) CHECK(probe.State->PostLoads == 0);
+            else CHECK(std::this_thread::get_id() == owner);
+            if (progress == 1) CHECK(probe.State->PostLoads == 2);
+        }));
+        CHECK(values == std::vector<f32>{0, 0.25f, 0.5f, 0.75f, 1});
+        values.clear();
+        REQUIRE(preloader.Preload({}, [&](const f32 progress) { values.push_back(progress); }));
+        CHECK(values == std::vector<f32>{0, 1});
+    });
+}

@@ -79,15 +79,15 @@ public class AssetBuilder : IAssetBuilder
 
         var assets = _assetRegistry.GetAllAssets()
             .Where(ShouldBuild)
-            .OrderBy(asset => asset.Meta.AssetId);
+            .OrderBy(asset => asset.Meta.AssetId).ToArray();
 
-        var buildResult = _assetBuildCachePipeline.BuildAssets(
+        var buildResult = await Task.Run(() => _assetBuildCachePipeline.BuildAssets(
             engineApi,
             assets,
             buildContext.AssetCacheDirectoryPath,
             assetsBinPath,
             forceRebuild,
-            onAssetBuilding);
+            onAssetBuilding));
         LogBuildSummary(buildResult.Report);
 
         await SerializeAssetMap(buildResult.Map, buildContext.BuildFolder, "map");

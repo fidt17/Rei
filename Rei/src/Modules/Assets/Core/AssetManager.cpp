@@ -13,10 +13,10 @@ namespace rei::assets
         UnloadAllAssets();
     }
 
-    bool AssetManager::FlushDeferredPostLoads()
+    bool AssetManager::FlushDeferredPostLoads(const std::function<void(f32)>& onProgress)
     {
         LOG_DEBUG("Flushing deferred post loads");
-        return _postLoadHandler.Flush();
+        return _postLoadHandler.Flush(onProgress);
     }
 
     void AssetManager::UnloadAllAssets()

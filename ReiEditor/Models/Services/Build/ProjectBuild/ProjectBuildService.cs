@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Build.Assets;
+using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.FileSystem;
@@ -25,6 +27,7 @@ public class ProjectBuildService : IProjectBuildService
     private static readonly string[] REQUIRED_RESOURCES_FILE_PATTERNS = { "*.bin" };
 
     private readonly IBuildStarter _buildStarter;
+    private readonly IEditorProceduresService _procedures;
     private readonly IEditorModeStarter _editorModeStarter;
     private readonly IFileExplorerProvider _fileExplorerProvider;
     private readonly ProjectBuildConfigurationUtility _configurationUtility;
@@ -39,7 +42,8 @@ public class ProjectBuildService : IProjectBuildService
         ProjectBuildConfigurationUtility configurationUtility,
         ProjectBuildOutputPathUtility outputPathUtility,
         IEngineSettingsProvider engineSettingsProvider,
-        ILogger<ProjectBuildService> logger)
+        ILogger<ProjectBuildService> logger,
+        IEditorProceduresService procedures)
     {
         _buildStarter = buildStarter;
         _editorModeStarter = editorModeStarter;
@@ -48,6 +52,7 @@ public class ProjectBuildService : IProjectBuildService
         _outputPathUtility = outputPathUtility;
         _engineSettingsProvider = engineSettingsProvider;
         _logger = logger;
+        _procedures = procedures;
     }
 
     public async Task<ProjectBuildResult> BuildAsync(
@@ -56,6 +61,9 @@ public class ProjectBuildService : IProjectBuildService
         CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
+        var procedure = new Procedure(ProcedureTags.BUILD_EXECUTABLE);
+        _procedures.TrackProcedure(procedure);
+        procedure.ReportProgress(0);
 
         void PostProgress(ProjectBuildProgress p)
         {
@@ -74,10 +82,8 @@ public class ProjectBuildService : IProjectBuildService
                 var stepNumber = i + 1;
                 PostProgress(new ProjectBuildProgress(steps[i].Status, stepNumber, totalSteps));
                 var result = await steps[i].ExecuteAsync(cancellationToken, stepNumber, totalSteps);
-                if (result.HasValue)
-                {
-                    return result.Value;
-                }
+                if (result.HasValue) return result.Value;
+                procedure.ReportProgress((double)stepNumber / totalSteps);
             }
 
             return new ProjectBuildResult(true, false, string.Empty);
@@ -94,6 +100,7 @@ public class ProjectBuildService : IProjectBuildService
         finally
         {
             stopwatch.Stop();
+            procedure.Complete();
         }
     }
 

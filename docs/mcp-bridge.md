@@ -134,6 +134,8 @@ Open-scene, refresh, build and Play/Stop return an operation id immediately. Pol
 queued -> running -> succeeded | failed | canceled
 ```
 
+Scene-open, asset-refresh and build progress follows the same procedures as the status bar, as a fraction from 0 to 1. Progress counts completed work/stages, not elapsed time; unknown stages can hold the last value. Procedure updates reserve 1 for the operation result.
+
 Only one conflicting automation operation can run per Editor session. Last 20 completed operations remain available; each retains up to 1000 log records independently of console clearing.
 
 Cancellation is cooperative: non-cancelable import phases finish first; build propagates cancellation to supported phases. Canceled Play startup schedules engine stop if startup already began.

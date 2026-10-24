@@ -172,21 +172,30 @@ public class AssetsService : IAssetsService
         try
         {
             var project = _activeProject.GetActiveProject();
+            var dirtyAssets = _assetRegistry.GetDirtyAssets().ToArray();
+            var totalWork = dirtyAssets.Length + 2;
+            var completed = 0;
+            var failed = false;
+            saveProcedure.ReportProgress(0);
             project.SetProjectLastEditTime(DateTime.Now);
-            await _resourceService.Write(_serializer.Serialize(project), project.ProjectFilePath);
+            if (!await _resourceService.Write(_serializer.Serialize(project), project.ProjectFilePath)) failed = true;
+            saveProcedure.ReportProgress((double)++completed / totalWork);
 
-            foreach (var asset in _assetRegistry.GetDirtyAssets())
+            foreach (var asset in dirtyAssets)
             {
                 try
                 {
                     var data = _serializer.Serialize(asset);
-                    await _resourceService.Write(data, asset.FullPath);
+                    if (!await _resourceService.Write(data, asset.FullPath)) failed = true;
                 }
                 catch (Exception e)
                 {
+                    failed = true;
                     _logger.LogException(e);
                 }
+                saveProcedure.ReportProgress((double)++completed / totalWork);
             }
+            if (!failed) saveProcedure.ReportProgress(1);
         }
         catch (Exception e)
         {

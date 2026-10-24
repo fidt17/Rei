@@ -1,3 +1,6 @@
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using ReiEditor.Tests.Infrastructure.Headless;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -18,6 +21,7 @@ using ReiEditor.Tests.Infrastructure.TestDoubles;
 namespace ReiEditor.Tests.Models.Services.Build.Assets;
 
 /// <summary>Verifies complete asset builder packing, map output, session selection, and disposal.</summary>
+[Collection(HeadlessCollection.NAME)]
 [Trait("Category", "FileSystem")]
 [Trait("Area", "Build")]
 public sealed class AssetBuilderTests
@@ -25,14 +29,17 @@ public sealed class AssetBuilderTests
     /// <summary>Writes configured bytes instead of invoking native asset builder.</summary>
     private sealed class TestEngineApi : IEngineApi
     {
+        public event Action<int>? SceneLoadProgressChanged { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
         public Dictionary<string, byte[]> Outputs { get; } = new(StringComparer.Ordinal);
         public List<string> BuiltPaths { get; } = new();
         public Exception? ExceptionToThrow { get; set; }
+        public Action? BeforeBuild { get; set; }
         public bool IsEngineRunning => false;
 
         public long BuildAsset(string assetPath, string destinationFile, long offset)
         {
             BuiltPaths.Add(assetPath);
+            BeforeBuild?.Invoke();
             if (ExceptionToThrow != null) throw ExceptionToThrow;
             var bytes = Outputs[assetPath];
             File.WriteAllBytes(destinationFile, bytes);
@@ -223,5 +230,35 @@ public sealed class AssetBuilderTests
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         await File.WriteAllBytesAsync(path, bytes);
         return new AssetInfo(new AssetMeta(id), path);
+    }
+
+    /// <summary>Native conversion leaves UI responsive and retains its engine session until workers finish.</summary>
+    [AvaloniaFact]
+    public async Task NativeAssetBuildKeepsUiResponsiveAndSessionAlive()
+    {
+        using var directory = new TemporaryDirectory();
+        var asset = await CreateAsset(directory, "a", "image.png", new byte[] { 1 });
+        var engine = new TestEngineApi();
+        engine.Outputs[asset.FullPath] = new byte[] { 2 };
+        var factory = new TestEngineSessionFactory(engine);
+        var builder = CreateBuilder(new[] { asset }, factory, new TestBinarySerializer());
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var release = new ManualResetEventSlim();
+        engine.BeforeBuild = () =>
+        {
+            Assert.False(Dispatcher.UIThread.CheckAccess());
+            entered.SetResult();
+            Assert.True(release.Wait(TimeSpan.FromSeconds(5)));
+        };
+        var build = builder.BuildAssets(new BuildExecutionContext(directory.GetPath("build")));
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(build.IsCompleted);
+            await Dispatcher.UIThread.InvokeAsync(() => Assert.Equal(0, factory.DisposeCalls));
+        }
+        finally { release.Set(); }
+        await build.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(1, factory.DisposeCalls);
     }
 }

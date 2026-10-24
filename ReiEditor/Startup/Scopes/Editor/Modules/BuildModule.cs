@@ -31,7 +31,6 @@ public class BuildModule : Module
         builder.RegisterSingleton<ProjectBuildService>().As<IProjectBuildService>();
         builder.RegisterType<ProjectBuildConfigurationUtility>();
         builder.RegisterType<ProjectBuildOutputPathUtility>();
-        builder.RegisterNonLazy<BuildProcedureTracker>();
         
         builder.RegisterType<BuildProjectCommand>();
         builder.RegisterType<OpenBuildProjectWindowCommand>();

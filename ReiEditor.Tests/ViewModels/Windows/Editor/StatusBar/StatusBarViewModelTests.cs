@@ -1,3 +1,6 @@
+using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
+using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.ViewModels.Windows.Editor.StatusBar;
@@ -5,7 +8,8 @@ using ReiEditor.ViewModels.Windows.Editor.StatusBar;
 namespace ReiEditor.Tests.ViewModels.Windows.Editor.StatusBar;
 
 /// <summary>Verifies active procedure display, completion order and disposal boundaries.</summary>
-[Trait("Category", "Unit")]
+[Collection(HeadlessCollection.NAME)]
+[Trait("Category", "Headless")]
 [Trait("Area", "StatusBar")]
 public sealed class StatusBarViewModelTests
 {
@@ -13,6 +17,8 @@ public sealed class StatusBarViewModelTests
     private sealed class TestProcedure(string name) : IProcedure
     {
         public event Action? FinishedEvent;
+        public event Action? ProgressChangedEvent { add { } remove { } }
+        public double? Progress => null;
         public string Name { get; } = name;
         public bool Finished { get; private set; }
         public int SubscriberCount => FinishedEvent?.GetInvocationList().Length ?? 0;
@@ -26,7 +32,7 @@ public sealed class StatusBarViewModelTests
     }
 
     /// <summary>Latest procedure wins; any completion selects the newest remaining procedure, then clears status.</summary>
-    [Theory]
+    [AvaloniaTheory]
     [InlineData(true)]
     [InlineData(false)]
     public void CompletionOrderPreservesRemainingProcedure(bool newestFirst)
@@ -49,7 +55,7 @@ public sealed class StatusBarViewModelTests
     }
 
     /// <summary>Disposal prevents notifications from procedures already tracked by the view model.</summary>
-    [Fact]
+    [AvaloniaFact]
     public void DisposeDetachesRunningProcedureCompletion()
     {
         var service = new EditorProceduresService();
@@ -65,7 +71,7 @@ public sealed class StatusBarViewModelTests
     }
 
     /// <summary>Disposal detaches every running procedure while another status view continues to follow completion order.</summary>
-    [Theory]
+    [AvaloniaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void DisposedViewStaysUnchangedWhileLiveViewTracksProcedures(bool newestFirst)
@@ -94,7 +100,7 @@ public sealed class StatusBarViewModelTests
     }
 
     /// <summary>Repeated creation and disposal leave no view-owned callbacks on a pending procedure.</summary>
-    [Fact]
+    [AvaloniaFact]
     public void RepeatedViewLifetimesDoNotRetainProcedureSubscriptions()
     {
         var service = new EditorProceduresService();
@@ -114,5 +120,34 @@ public sealed class StatusBarViewModelTests
         }
         pending.Complete();
         Assert.False(service.AnyActiveProcedures());
+    }
+
+    /// <summary>Background reports reach UI, preserve the spinner-only fallback, and never show premature 100%.</summary>
+    [AvaloniaFact]
+    public async Task WorkerProgressUpdatesTextAndResumesPreviousProcedure()
+    {
+        var service = new EditorProceduresService();
+        using var vm = new StatusBarViewModel(service);
+        var first = new Procedure("Load");
+        service.TrackProcedure(first);
+        Assert.Equal("Load...", vm.ActiveProcedureText);
+        var allChangesOnUi = true;
+        vm.PropertyChanged += (_, _) => allChangesOnUi &= Dispatcher.UIThread.CheckAccess();
+        await Task.Run(() => first.ReportProgress(0.37));
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        Assert.Equal("Load... 37%", vm.ActiveProcedureText);
+        var second = new Procedure("Other");
+        service.TrackProcedure(second);
+        await Task.Run(() => first.ReportProgress(0.9999));
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        Assert.Equal("Other...", vm.ActiveProcedureText);
+        second.Complete();
+        Assert.Equal("Load... 99%", vm.ActiveProcedureText);
+        first.ReportProgress(1);
+        Assert.Equal("Load... 100%", vm.ActiveProcedureText);
+        vm.Dispose();
+        first.Complete();
+        Assert.Equal("Load... 100%", vm.ActiveProcedureText);
+        Assert.True(allChangesOnUi);
     }
 }

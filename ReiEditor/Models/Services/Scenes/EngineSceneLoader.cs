@@ -38,7 +38,7 @@ public sealed class EngineSceneLoader : IEngineSceneLoader
             }
         });
 
-    public async Task<bool> LoadSceneAsync(Scene? scene)
+    public async Task<bool> LoadSceneAsync(Scene? scene, Action<int>? onProgress = null)
     {
         try
         {
@@ -49,7 +49,12 @@ public sealed class EngineSceneLoader : IEngineSceneLoader
             {
                 var request = CreateRequest(scene);
                 var loaded = false;
-                return _native.TryInvoke(api => loaded = api.LoadEditorScene(request)) && loaded;
+                return _native.TryInvoke(api =>
+                {
+                    api.SceneLoadProgressChanged += onProgress;
+                    try { loaded = api.LoadEditorScene(request); }
+                    finally { api.SceneLoadProgressChanged -= onProgress; }
+                }) && loaded;
             });
         }
         catch (Exception error)

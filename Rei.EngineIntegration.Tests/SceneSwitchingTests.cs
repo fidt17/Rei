@@ -325,4 +325,91 @@ public sealed class SceneSwitchingTests(ITestOutputHelper output)
         await File.WriteAllTextAsync(path, scene.ToJsonString());
         await File.WriteAllTextAsync(path + ".meta", JsonSerializer.Serialize(new { AssetId = id, Data = new { } }));
     }
+
+    [EngineFact]
+    public async Task SceneProgressMatchesNativeWorkWhileUiRespondsAndRecoversAfterFailure()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
+        await PrepareAsync(engine.ProjectDirectory);
+        await WriteNewConfigAsync(engine.ProjectDirectory);
+        var path = Path.Combine(engine.ProjectDirectory, "Project/Scripts/ReiApp.cpp");
+        var source = await File.ReadAllTextAsync(path);
+        var samplesPath = Path.Combine(engine.ProjectDirectory, "scene-progress.jsonl");
+        var gatePath = Path.Combine(engine.ProjectDirectory, "scene-progress.gate");
+        var hook = """
+                rei::GetSceneManager().LoadProgressEvent.append([](const i32 percent)
+                {
+                    {
+                        std::ofstream output(R"(__SAMPLES__)", std::ios::app);
+                        output << nlohmann::json{{"percent", percent}, {"nativePercent", rei::GetSceneManager().GetLoadProgressPercent()}}.dump() << std::endl;
+                    }
+                    if (percent == 40)
+                    {
+                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
+                        while (std::filesystem::exists(R"(__GATE__)") && std::chrono::steady_clock::now() < deadline)
+                            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    }
+                });
+        """.Replace("__SAMPLES__", samplesPath).Replace("__GATE__", gatePath);
+        source = source.Replace("#include <fstream>", "#include <fstream>\n#include <filesystem>\n#include <chrono>\n#include <thread>");
+        const string ANCHOR = "_probe.StartupSceneId = rei::GetSceneManager().GetActiveSceneId();";
+        Assert.Contains(ANCHOR, source);
+        source = source.Replace(ANCHOR, ANCHOR + "\n" + hook);
+        await File.WriteAllTextAsync(path, source);
+        await engine.StartAsync();
+        await File.WriteAllTextAsync(gatePath, "hold scene loading");
+        var started = await engine.CallAsync("rei_editor_open_scene", new() { ["scene"] = SCENE_B });
+        var operationId = started.GetProperty("id").GetString()!;
+        try
+        {
+            await engine.WaitUntilAsync(async () =>
+            {
+                if (!File.Exists(samplesPath)) return false;
+                var samples = await ReadSamplesAsync();
+                return samples.Length > 0 && samples[^1].GetProperty("nativePercent").GetInt32() == 40;
+            });
+            var operation = await engine.CallAsync("rei_editor_get_operation", new() { ["operationId"] = operationId });
+            Assert.Equal("running", operation.GetProperty("status").GetString());
+            Assert.InRange(Math.Abs(operation.GetProperty("progress").GetDouble() - 0.4), 0, 0.0001);
+            var editor = await engine.CallAsync("rei_editor_get_state");
+            Assert.Equal("project_loading", editor.GetProperty("status").GetString());
+            Assert.Equal(JsonValueKind.Null, editor.GetProperty("scene").ValueKind);
+        }
+        finally { File.Delete(gatePath); }
+        await AwaitOperationAsync(operationId, "succeeded");
+        var loaded = await ReadSamplesAsync();
+        Assert.Equal(0, loaded[0].GetProperty("nativePercent").GetInt32());
+        Assert.Equal(100, loaded[^1].GetProperty("nativePercent").GetInt32());
+        Assert.All(loaded, sample => Assert.Equal(sample.GetProperty("percent").GetInt32(), sample.GetProperty("nativePercent").GetInt32()));
+        var loadedCount = loaded.Length;
+        var failed = await engine.CallAsync("rei_editor_open_scene", new() { ["scene"] = SCENE_BAD });
+        var failedId = failed.GetProperty("id").GetString()!;
+        await AwaitOperationAsync(failedId, "failed");
+        var failureSamples = (await ReadSamplesAsync()).Skip(loadedCount).ToArray();
+        Assert.NotEmpty(failureSamples);
+        Assert.Equal(0, failureSamples[0].GetProperty("nativePercent").GetInt32());
+        Assert.DoesNotContain(failureSamples, sample => sample.GetProperty("nativePercent").GetInt32() == 100);
+        Assert.True((await engine.CallAsync("rei_editor_get_operation", new() { ["operationId"] = failedId })).GetProperty("progress").GetDouble() < 1);
+        await engine.RunOperationAsync("rei_editor_open_scene", new() { ["scene"] = SCENE_B });
+        Assert.Equal(100, (await ReadSamplesAsync())[^1].GetProperty("nativePercent").GetInt32());
+        await engine.RunOperationAsync("rei_editor_start_playmode");
+        await engine.RunOperationAsync("rei_editor_open_scene", new() { ["scene"] = SCENE_B });
+        Assert.Equal(100, (await ReadSamplesAsync())[^1].GetProperty("nativePercent").GetInt32());
+        await engine.RunOperationAsync("rei_editor_stop_playmode");
+
+        async Task<JsonElement[]> ReadSamplesAsync() => (await File.ReadAllLinesAsync(samplesPath))
+            .Where(line => !string.IsNullOrWhiteSpace(line)).Select(line => { using var document = JsonDocument.Parse(line); return document.RootElement.Clone(); }).ToArray();
+        async Task AwaitOperationAsync(string id, string status)
+        {
+            await engine.WaitUntilAsync(async () =>
+            {
+                var current = await engine.CallAsync("rei_editor_get_operation", new() { ["operationId"] = id });
+                if (current.GetProperty("status").GetString() is "queued" or "running") return false;
+                Assert.Equal(status, current.GetProperty("status").GetString());
+                return true;
+            }, TimeSpan.FromSeconds(30));
+        }
+    }
 }

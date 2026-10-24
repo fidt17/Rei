@@ -289,4 +289,22 @@ public sealed class AssetsServiceTests
         Assert.False(context.Service.SaveInProcess.Value);
         Assert.Empty(context.Procedures.ActiveProcedures);
     }
+
+    /// <summary>Saving known writes reports intermediate work, withholds 100% after a failed write, and cleans its procedure.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SaveProgressReflectsActualWritesAndFailure(bool failWrite)
+    {
+        using var context = new TestContext();
+        var values = new List<double>();
+        context.Procedures.ProcedureProgressChangedEvent += procedure => values.Add(procedure.Progress!.Value);
+        context.Resources.OnWrite = (_, _) => Task.FromResult(!failWrite);
+        await context.Service.SaveProject();
+        Assert.Equal(0, values[0]);
+        Assert.Contains(values, value => value > 0 && value < 1);
+        Assert.Equal(!failWrite, values.Contains(1));
+        Assert.Empty(context.Procedures.ActiveProcedures);
+        Assert.False(context.Service.SaveInProcess.Value);
+    }
 }

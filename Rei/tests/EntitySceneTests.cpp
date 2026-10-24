@@ -442,3 +442,39 @@ TEST_CASE("SCENE-03 Repeated unload releases only the manager scene reference", 
         CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
     });
 }
+
+TEST_CASE("Scene progress restarts from zero and reserves 100 for successful creation", "[native][scene-progress][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture([](TemporaryDirectory& files)
+        {
+            WriteScenes(files, json::array());
+        });
+        scenes::SceneManager manager(fixture.Assets, fixture.Manager);
+        std::vector<i32> values;
+        manager.LoadProgressEvent.append([&](const i32 percent)
+        {
+            CHECK(manager.GetLoadProgressPercent() == percent);
+            values.push_back(percent);
+        });
+        const auto checkSuccess = [&]
+        {
+            REQUIRE(manager.LoadScene(0));
+            REQUIRE(values.size() > 3);
+            CHECK(values.front() == 0);
+            CHECK(values.back() == 100);
+            CHECK(std::is_sorted(values.begin(), values.end()));
+            CHECK(std::adjacent_find(values.begin(), values.end()) == values.end());
+        };
+        checkSuccess();
+        values.clear();
+        CHECK_FALSE(manager.LoadScene("missing-scene"));
+        REQUIRE_FALSE(values.empty());
+        CHECK(values.front() == 0);
+        CHECK(values.back() < 100);
+        CHECK(manager.GetActiveSceneId().empty());
+        values.clear();
+        checkSuccess();
+    });
+}

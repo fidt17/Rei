@@ -1,6 +1,8 @@
 using System.Globalization;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Build.Assets.Cache;
 using ReiEditor.Models.Services.Serialization.Assets;
@@ -97,6 +99,7 @@ public sealed class ProjectBuildServiceTests
         public TestLogger<ProjectBuildService> Logger { get; } = new();
         public ProjectBuildOutputPathUtility Paths { get; }
         public ProjectBuildService Service { get; }
+        public EditorProceduresService Procedures { get; } = new();
         public string EngineIncludePath { get; }
         public string ProjectFilePath { get; }
         public string OutputPath => Fixture.Directory.GetPath("package");
@@ -135,7 +138,7 @@ public sealed class ProjectBuildServiceTests
                 new ProjectBuildConfigurationUtility(active, new TestLogger<ProjectBuildConfigurationUtility>()),
                 Paths,
                 new TestEngineSettingsProvider(EngineIncludePath),
-                Logger);
+                Logger, Procedures);
         }
 
         public void CreateBuildArtifacts(string? mapJson = null)
@@ -221,6 +224,10 @@ public sealed class ProjectBuildServiceTests
         Directory.CreateDirectory(context.OutputPath);
         File.WriteAllText(Path.Combine(context.OutputPath, "stale.txt"), "stale");
         var progress = new List<ProjectBuildProgress>();
+        var percentages = new List<double>();
+        IProcedure? procedure = null;
+        context.Procedures.ProcedureStartedEvent += value => procedure = value;
+        context.Procedures.ProcedureProgressChangedEvent += value => percentages.Add(value.Progress!.Value);
         context.Build.OnBuild = request =>
         {
             if (request.BuildAssets)
@@ -239,6 +246,14 @@ public sealed class ProjectBuildServiceTests
         var after = DateTime.UtcNow.AddSeconds(1);
 
         Assert.True(result.IsSuccess);
+        Assert.NotNull(procedure);
+        Assert.Equal(ProcedureTags.BUILD_EXECUTABLE, procedure.Name);
+        Assert.True(procedure.Finished);
+        Assert.Empty(context.Procedures.ActiveProcedures);
+        Assert.Equal(0, percentages[0]);
+        Assert.Equal(1, percentages[^1]);
+        Assert.Contains(percentages, value => value > 0 && value < 1);
+        Assert.True(percentages.SequenceEqual(percentages.Order()));
         Assert.False(result.IsCancelled);
         Assert.Equal(new[] { "solution", "assets", "explorer", "editor" }, context.Calls);
         Assert.Equal(context.OutputPath, Assert.Single(context.Explorer.OpenedDirectories));
@@ -278,6 +293,8 @@ public sealed class ProjectBuildServiceTests
     {
         using var context = new TestContext();
         context.Build.OnBuild = _ => Task.FromResult(false);
+        IProcedure? procedure = null;
+        context.Procedures.ProcedureStartedEvent += value => procedure = value;
 
         var result = await context.Service.BuildAsync(
             new ProjectBuildRequest(BuildConfigurationEnum.Debug, context.OutputPath, false, string.Empty),
@@ -288,6 +305,10 @@ public sealed class ProjectBuildServiceTests
         Assert.False(result.IsCancelled);
         Assert.Contains("Build failed", result.ErrorMessage);
         Assert.Equal(new[] { "solution" }, context.Calls);
+        Assert.NotNull(procedure);
+        Assert.True(procedure.Finished);
+        Assert.True(procedure.Progress < 1);
+        Assert.Empty(context.Procedures.ActiveProcedures);
         Assert.False(Directory.Exists(context.OutputPath));
     }
 

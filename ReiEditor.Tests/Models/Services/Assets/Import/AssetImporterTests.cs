@@ -345,4 +345,27 @@ public sealed class AssetImporterTests
         Assert.Equal(1, context.Shaders.RefreshCount);
         Assert.Empty(context.Procedures.ActiveProcedures);
     }
+
+    /// <summary>Full and targeted imports count files and leave progress incomplete after a registry failure.</summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ImportProgressReflectsFilesAndRegistryCompletion(bool targeted, bool failRefresh)
+    {
+        using var context = new TestContext();
+        var image = await context.File("image.png");
+        var shader = await context.File("shader.rshader");
+        var values = new List<double>();
+        context.Procedures.ProcedureProgressChangedEvent += procedure => values.Add(procedure.Progress!.Value);
+        if (failRefresh) context.Shaders.OnRefresh = () => Task.FromException(new InvalidOperationException("refresh failed"));
+        if (targeted) await context.Importer.ReimportPaths(new[] { image, shader });
+        else await context.Importer.ReimportAll();
+        Assert.Equal(0, values[0]);
+        Assert.Contains(values, value => value > 0 && value < 1);
+        Assert.Equal(values.OrderBy(value => value), values);
+        Assert.Equal(!failRefresh, values.Contains(1));
+        Assert.Empty(context.Procedures.ActiveProcedures);
+    }
 }

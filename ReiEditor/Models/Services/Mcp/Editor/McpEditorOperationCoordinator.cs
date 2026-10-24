@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Mcp.Contracts;
 using ReiEditor.Models.EditorApp.Console;
+using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.Models.Services.Logging;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -33,6 +35,7 @@ internal sealed class McpEditorOperationCoordinator : IMcpEditorOperationCoordin
     private readonly object _sync = new();
     private readonly Dictionary<string, OperationState> _operations = new(StringComparer.OrdinalIgnoreCase);
     private readonly IEditorConsoleService _consoleService;
+    private readonly IEditorProceduresService _procedures;
     private readonly ILogger<McpEditorOperationCoordinator> _logger;
 
     private OperationState? _activeOperation;
@@ -40,10 +43,13 @@ internal sealed class McpEditorOperationCoordinator : IMcpEditorOperationCoordin
 
     public McpEditorOperationCoordinator(
         IEditorConsoleService consoleService,
-        ILogger<McpEditorOperationCoordinator> logger)
+        ILogger<McpEditorOperationCoordinator> logger,
+        IEditorProceduresService procedures)
     {
         _consoleService = consoleService;
         _logger = logger;
+        _procedures = procedures;
+        _procedures.ProcedureProgressChangedEvent += HandleProcedureProgress;
         _consoleService.NewLogEvent += HandleNewLog;
     }
 
@@ -58,7 +64,28 @@ internal sealed class McpEditorOperationCoordinator : IMcpEditorOperationCoordin
         }
 
         _consoleService.NewLogEvent -= HandleNewLog;
+        _procedures.ProcedureProgressChangedEvent -= HandleProcedureProgress;
         activeOperation?.CancellationTokenSource.Cancel();
+    }
+
+    private void HandleProcedureProgress(IProcedure procedure)
+    {
+        if (procedure.Progress is not { } progress) return;
+        lock (_sync)
+        {
+            if (_activeOperation is not { Status: ReiOperationStatuses.RUNNING } operation) return;
+            var matches = operation.Kind switch
+            {
+                ReiOperationKinds.OPEN_SCENE => procedure.Name == ProcedureTags.LOADING_SCENE,
+                ReiOperationKinds.BUILD_PROJECT => procedure.Name == ProcedureTags.BUILD_PROJECT,
+                ReiOperationKinds.REFRESH_ASSETS => procedure.Name == ProcedureTags.IMPORT_ASSETS,
+                _ => false
+            };
+            if (!matches) return;
+            // Reserve completion for the operation result, including build promotion/cancellation.
+            operation.Progress = Math.Max(operation.Progress, Math.Min(progress, 0.99));
+            operation.Message = procedure.Name;
+        }
     }
 
     public ReiOperationInfo? GetActiveOperation()
@@ -136,7 +163,7 @@ internal sealed class McpEditorOperationCoordinator : IMcpEditorOperationCoordin
         lock (_sync)
         {
             if (state.Status != ReiOperationStatuses.RUNNING) return;
-            state.Progress = Math.Clamp(progress, 0, 1);
+            state.Progress = Math.Max(state.Progress, Math.Clamp(progress, 0, 1));
             state.Message = string.IsNullOrWhiteSpace(message) ? state.Message : message.Trim();
         }
     }

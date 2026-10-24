@@ -48,21 +48,22 @@ namespace rei::assets
         _deferredPostLoadActions.push_back(std::move(action));
     }
 
-    bool AssetPostLoadHandler::Flush()
+    bool AssetPostLoadHandler::Flush(const std::function<void(f32)>& onProgress)
     {
         std::vector<DeferredPostLoadAction> deferredActions;
         {
             std::scoped_lock lock(_deferredPostLoadMutex);
-            if (_deferredPostLoadActions.empty()) return true;
-
             deferredActions.swap(_deferredPostLoadActions);
             _deferredPostLoadIds.clear();
         }
 
         bool allSucceeded = true;
+        u64 completed = 0;
+        if (onProgress && deferredActions.empty()) onProgress(1);
         for (const auto& action : deferredActions)
         {
             if (!action()) allSucceeded = false;
+            if (onProgress) onProgress(static_cast<f32>(++completed) / deferredActions.size());
         }
 
         return allSucceeded;

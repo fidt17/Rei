@@ -14,7 +14,10 @@ public class EngineApi : IEngineApi
 {
     private delegate IntPtr ActionDelegate();
     
+    public event Action<int>? SceneLoadProgressChanged;
     public bool IsEngineRunning { get; private set; }
+
+    private readonly IEngineApi.IntCallbackDelegate _sceneLoadProgressCallback;
     
     private IntPtr? _dllPtr;
 
@@ -24,6 +27,11 @@ public class EngineApi : IEngineApi
     public EngineApi(ILogger<EngineApi> logger)
     {
         _logger = logger;
+        _sceneLoadProgressCallback = percent =>
+        {
+            try { SceneLoadProgressChanged?.Invoke(percent); }
+            catch (Exception error) { _logger.LogException(error); }
+        };
         _logInvokingMethods = false;
     }
 
@@ -40,6 +48,7 @@ public class EngineApi : IEngineApi
     {
         var ptr = Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine", resourcesDir, mode);
         if (ptr == IntPtr.Zero) throw new Exception("Could not create engine");
+        Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddSceneLoadProgressCallback", Marshal.GetFunctionPointerForDelegate(_sceneLoadProgressCallback));
         
         return ptr;
     }

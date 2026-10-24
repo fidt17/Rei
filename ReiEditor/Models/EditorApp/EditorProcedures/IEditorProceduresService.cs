@@ -8,6 +8,7 @@ public interface IEditorProceduresService
 {
 	event Action<IProcedure> ProcedureStartedEvent;
     event Action<IProcedure> ProcedureFinishedEvent;
+    event Action<IProcedure> ProcedureProgressChangedEvent;
 
 	IEnumerable<IProcedure> ActiveProcedures { get; }
 	

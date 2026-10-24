@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include "BuildScenesConfig.h"
 #include "Scene.h"
 #include "SceneAssetPreloader.h"
@@ -11,6 +12,10 @@ namespace rei::scenes
     class SceneManager
     {
     public:
+        // Percent of completed scene-load work. Notifications may originate on asset workers.
+        REI_EVENT(i32) LoadProgressEvent;
+        REI_API i32 GetLoadProgressPercent() const { return _loadProgressPercent.load(); }
+
         explicit SceneManager(const std::shared_ptr<assets::AssetManager>& assetManager, const std::shared_ptr<EntityManager>& entityManager);
 
         REI_API bool LoadScene(const std::string& assetId);
@@ -31,6 +36,9 @@ namespace rei::scenes
         assets::AssetRef<Scene> _activeScene;
         std::shared_ptr<EntityManager> _entityManager;
         
+        std::atomic<i32> _loadProgressPercent = 0;
+
+        void ReportLoadProgress(i32 percent);
         void CreateSceneEntities();
         bool LoadScene(const std::function<assets::AssetRef<Scene>()>& load);
     };

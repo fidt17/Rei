@@ -1,3 +1,4 @@
+using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.EditorApp.EditorProcedures;
@@ -186,7 +187,6 @@ public sealed class BuildServiceTests
         var assets = context.Pipeline.AssetRequest!.Value;
         Assert.Same(execution, assets.Context);
         Assert.True(assets.Force);
-        Assert.Same(progress, assets.Progress);
         Assert.Equal((BuildConfigurationEnum.EditorDebug, execution, true, true), Assert.Single(context.Pipeline.Saves));
         Assert.True(context.Service.IsBuildReady.Value);
         Assert.False(context.Service.BuildInProgress.Value);
@@ -473,5 +473,43 @@ public sealed class BuildServiceTests
             await build.WaitAsync(TimeSpan.FromSeconds(5));
             await disposal.WaitAsync(TimeSpan.FromSeconds(5));
         }
+    }
+
+    /// <summary>Asset counts advance one build procedure; persistence failure never reports successful completion.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BuildProgressCoversAssetsAndStopsBelowOneOnFailure(bool failPersistence)
+    {
+        await using var context = new TestContext();
+        var values = new List<double>();
+        var callers = new List<int>();
+        IProcedure? tracked = null;
+        context.Procedures.ProcedureStartedEvent += procedure => tracked = procedure;
+        context.Procedures.ProcedureProgressChangedEvent += procedure => values.Add(procedure.Progress!.Value);
+        context.Pipeline.OnStage = stage =>
+        {
+            if (stage == "assets")
+            {
+                Assert.Single(context.Procedures.ActiveProcedures);
+                var callback = context.Pipeline.AssetRequest!.Value.Progress!;
+                callback(new AssetBuildProgressInfo(1, 4, "a"));
+                var before = tracked!.Progress;
+                callback(new AssetBuildProgressInfo(3, 4, "b"));
+                Assert.True(tracked.Progress > before);
+                Assert.True(tracked.Progress < 1);
+            }
+            if (stage == "persist" && failPersistence) throw new InvalidOperationException("persist failed");
+            return Task.CompletedTask;
+        };
+        var success = await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug,
+            onAssetBuilding: progress => callers.Add(progress.CurrentAssetIndex));
+        Assert.Equal(!failPersistence, success);
+        Assert.Equal(new[] { 1, 3 }, callers);
+        Assert.NotNull(tracked);
+        Assert.True(tracked.Finished);
+        Assert.Empty(context.Procedures.ActiveProcedures);
+        Assert.Equal(values.OrderBy(value => value), values);
+        Assert.Equal(!failPersistence, tracked.Progress == 1);
     }
 }

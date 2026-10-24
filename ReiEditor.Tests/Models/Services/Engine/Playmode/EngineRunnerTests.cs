@@ -83,6 +83,7 @@ public sealed class EngineRunnerTests
     private sealed class TestRunnerApi(TestContext context) : Infrastructure.TestDoubles.TestEngineApi
     {
         private IEngineApi.VoidCallbackDelegate? _started;
+        public Action? BeforeStarted { get; set; }
         public bool Running { get; private set; }
         public override bool IsEngineRunning => Running;
         public (string Resources, EngineRunMode Mode)? Creation { get; private set; }
@@ -103,6 +104,7 @@ public sealed class EngineRunnerTests
             Assert.Equal(context.Project.Project.LastSceneId, lastSceneId);
             context.Touch("start");
             Running = true;
+            BeforeStarted?.Invoke();
             _started!();
             context.Release.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
         }
@@ -413,5 +415,25 @@ public sealed class EngineRunnerTests
 
         Assert.Empty(context.Calls);
         Assert.Empty(context.Procedures.ActiveProcedures);
+    }
+
+    /// <summary>Startup consumes native scene work but reaches 100 only after the engine start callback.</summary>
+    [Fact]
+    public async Task StartupProgressReservesCompletionForEngineReadiness()
+    {
+        await using var context = new TestContext();
+        var values = new ConcurrentQueue<double>();
+        context.Procedures.ProcedureProgressChangedEvent += procedure => values.Enqueue(procedure.Progress!.Value);
+        context.Api.BeforeStarted = () =>
+        {
+            context.Api.EmitSceneLoadProgress(0);
+            context.Api.EmitSceneLoadProgress(37);
+            context.Api.EmitSceneLoadProgress(100);
+            Assert.Equal(0.99, Assert.Single(context.Procedures.ActiveProcedures).Progress);
+        };
+        Assert.True(context.Start(EngineRunMode.EditorMode));
+        await context.AwaitStarted();
+        await context.ProcedureFinished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(new[] { 0d, 0.37, 0.99, 1 }, values);
     }
 }

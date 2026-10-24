@@ -9,6 +9,8 @@ namespace ReiEditor.Tests.Infrastructure.TestDoubles;
 /// <summary>Rejects all engine operations by default; focused subclasses override only explicitly supported managed responses.</summary>
 internal abstract class TestEngineApi : IEngineApi
 {
+    public event Action<int>? SceneLoadProgressChanged;
+    public void EmitSceneLoadProgress(int percent) => SceneLoadProgressChanged?.Invoke(percent);
     public virtual bool IsEngineRunning => throw new NotSupportedException();
     public virtual IntPtr CreateEngine(string resourcesDir, EngineRunMode mode) => throw new NotSupportedException();
     public virtual void Start(IntPtr enginePtr, string? lastSceneId = null) => throw new NotSupportedException();

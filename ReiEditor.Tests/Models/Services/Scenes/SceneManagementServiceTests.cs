@@ -30,7 +30,8 @@ public sealed class SceneManagementServiceTests
     private sealed class SceneLoader : IEngineSceneLoader
     {
         public Func<Scene?, Task<bool>> Load { get; set; } = _ => Task.FromResult(true);
-        public Task<bool> LoadSceneAsync(Scene? scene) => Load(scene);
+        public Action<int>? Progress;
+        public Task<bool> LoadSceneAsync(Scene? scene, Action<int>? onProgress = null) { Progress = onProgress; return Load(scene); }
     }
 
     private sealed class NativeApi : TestEngineApi, IEngineNativeAccess
@@ -84,7 +85,7 @@ public sealed class SceneManagementServiceTests
     private readonly Project _project = new();
     private readonly SelectionService _selection = new(new TestEntityApi());
 
-    [Theory]
+    [AvaloniaTheory]
     [InlineData("success")]
     [InlineData("missing")]
     [InlineData("native-failure")]
@@ -107,6 +108,7 @@ public sealed class SceneManagementServiceTests
                 cleanupStarted.SetResult();
                 return await cleanup.Task;
             }
+            _loader.Progress?.Invoke(47);
             nativeStarted.SetResult();
             return await native.Task;
         };
@@ -114,11 +116,12 @@ public sealed class SceneManagementServiceTests
         var loading = service.OpenScene("next");
         Assert.Equal(ProcedureTags.LOADING_SCENE, Assert.Single(_procedures.ActiveProcedures).Name);
         Assert.True(status.ShowStatusBar);
-        Assert.Equal("Loading scene...", status.ActiveProcedureText);
+        Assert.Equal("Loading scene... 0%", status.ActiveProcedureText);
         read.SetResult(outcome == "missing" ? null : SceneWithId("next"));
         if (outcome != "missing")
         {
             await nativeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal("Loading scene... 47%", status.ActiveProcedureText);
             Assert.True(_procedures.AnyActiveProcedures());
             Assert.True(status.ShowStatusBar);
             if (outcome == "native-exception") native.SetException(new InvalidOperationException("load failed"));

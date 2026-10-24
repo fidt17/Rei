@@ -18,7 +18,7 @@ namespace rei::scenes
     public:
         explicit SceneAssetPreloader(const std::shared_ptr<assets::AssetManager>& assetManager);
 
-        bool Preload(const std::vector<assets::AssetDependency>& dependencies) const;
+        bool Preload(const std::vector<assets::AssetDependency>& dependencies, const std::function<void(f32)>& onProgress = {}) const;
         
         template <typename T>
         bool PreloadById(const std::string& id) const

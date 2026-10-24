@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/Primitives.h"
 #include <functional>
 #include <mutex>
 #include <string>
@@ -32,7 +33,7 @@ namespace rei::assets
         REI_API static bool IsSuppressedForCurrentThread();
 
         REI_API void Queue(const std::string& id, DeferredPostLoadAction action);
-        REI_API bool Flush();
+        REI_API bool Flush(const std::function<void(f32)>& onProgress = {});
 
     private:
         mutable std::mutex _deferredPostLoadMutex;

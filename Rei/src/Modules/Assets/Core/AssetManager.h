@@ -76,7 +76,7 @@ namespace rei::assets
         template <typename T>
         REI_API void QueueDeferredPostLoad(const AssetRef<T>& ref);
 
-        REI_API bool FlushDeferredPostLoads();
+        REI_API bool FlushDeferredPostLoads(const std::function<void(f32)>& onProgress = {});
         IAssetDataAccessor* FindLoadedAssetDataAccessor(const std::string& id) const;
 
         template <typename T>

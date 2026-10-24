@@ -28,13 +28,20 @@ namespace rei::scenes
         {
             REI_THROW_IF(!entityIds.insert(sceneEntity.GetId()).second, "Duplicate scene entity id: " + STRING(sceneEntity.GetId()))
         }
+        const u64 totalWork = _activeScene->GetEntities().size() + 4;
+        u64 completed = 0;
+        const auto reportCompleted = [&] { ReportLoadProgress(80 + static_cast<i32>(20 * ++completed / totalWork)); };
         for (const auto& sceneEntity : _activeScene->GetEntities())
         {
             _entityManager->Create(sceneEntity);
+            reportCompleted();
         }
         GetInternalWorld()->RefreshAll();
+        reportCompleted();
         _entityManager->ResolveDependencies();
+        reportCompleted();
         _entityManager->ResolveTransformParents();
+        reportCompleted();
     }
 
     std::string SceneManager::GetActiveSceneName() const
@@ -66,17 +73,33 @@ namespace rei::scenes
         });
     }
 
+    void SceneManager::ReportLoadProgress(const i32 percent)
+    {
+        if (_loadProgressPercent.exchange(percent) == percent) return;
+        LoadProgressEvent(percent);
+    }
+
     bool SceneManager::LoadScene(const std::function<assets::AssetRef<Scene>()>& load)
     {
+        // Five work phases: unload, scene data, asset reads, GPU post-load, entities.
+        _loadProgressPercent.store(0);
+        LoadProgressEvent(0);
         UnloadCurrentScene();
+        ReportLoadProgress(20);
         try
         {
             _activeScene = load();
-            if (_activeScene.IsLoaded() && _sceneAssetPreloader.Preload(CollectSceneAssetDependencies()))
+            if (_activeScene.IsLoaded())
             {
-                CreateSceneEntities();
-                LOG("Loaded scene {}", _activeScene->GetName())
-                return true;
+                const auto dependencies = CollectSceneAssetDependencies();
+                ReportLoadProgress(40);
+                if (_sceneAssetPreloader.Preload(dependencies, [this](const f32 progress) { ReportLoadProgress(40 + static_cast<i32>(40 * progress)); }))
+                {
+                    CreateSceneEntities();
+                    LOG("Loaded scene {}", _activeScene->GetName())
+                    ReportLoadProgress(100);
+                    return true;
+                }
             }
         }
         catch (const std::exception& exception)

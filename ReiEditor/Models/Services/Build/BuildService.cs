@@ -115,20 +115,31 @@ public class BuildService : IBuildService, IAsyncDisposable
             {
                 _logger.Log($"Build skipped. {buildStateEvaluation.Reason}");
                 _isBuildReady.Value = true;
+                buildProcedure.ReportProgress(1);
                 return true;
             }
 
+            var totalSteps = 2 + (shouldBuildSolution ? 1 : 0) + (shouldBuildAssets ? 1 : 0);
+            var completedSteps = 1;
+            buildProcedure.ReportProgress((double)completedSteps / totalSteps);
             _projectBuildStateService.MarkBuildStarted(configuration, executionContext);
 
             if (shouldBuildSolution)
             {
                 await _solutionBuilder.Build(configuration, forceCleanSolutionBuild, executionContext.SolutionOutputDirectory, cancellationToken);
+                buildProcedure.ReportProgress((double)++completedSteps / totalSteps);
             }
 
             if (shouldBuildAssets)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await _assetBuilder.BuildAssets(executionContext, forceAssetRebuild, onAssetBuilding);
+                await _assetBuilder.BuildAssets(executionContext, forceAssetRebuild, progress =>
+                {
+                    var fraction = progress.TotalAssets <= 0 ? 0 : Math.Clamp((double)progress.CurrentAssetIndex / progress.TotalAssets, 0, 1);
+                    buildProcedure.ReportProgress((completedSteps + fraction) / totalSteps);
+                    onAssetBuilding?.Invoke(progress);
+                });
+                buildProcedure.ReportProgress((double)++completedSteps / totalSteps);
             }
             cancellationToken.ThrowIfCancellationRequested();
             stopwatch.Stop();
@@ -140,6 +151,7 @@ public class BuildService : IBuildService, IAsyncDisposable
             {
                 throw new Exception("Build was discarded");
             }
+            buildProcedure.ReportProgress(1);
         }
         catch (OperationCanceledException)
         {

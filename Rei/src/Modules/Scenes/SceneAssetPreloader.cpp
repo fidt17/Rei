@@ -25,20 +25,22 @@ namespace rei::scenes
     SceneAssetPreloader::SceneAssetPreloader(const std::shared_ptr<assets::AssetManager>& assetManager)
         : _assetManager(assetManager) { }
 
-    bool SceneAssetPreloader::Preload(const std::vector<assets::AssetDependency>& dependencies) const
+    bool SceneAssetPreloader::Preload(const std::vector<assets::AssetDependency>& dependencies, const std::function<void(f32)>& onProgress) const
     {
+        if (onProgress) onProgress(0);
         const auto uniqueDependencies = GetUniqueDependencies(dependencies);
         if (uniqueDependencies.empty())
         {
+            if (onProgress) onProgress(1);
             LOG_DEBUG("Scene asset dependencies loaded: 0 | ids=[]")
             return true;
         }
         
-        std::vector<std::future<void>> loadFutures;
+        std::mutex progressMutex;
+        u64 completed = 0;
         const u32 hardwareConcurrency = std::thread::hardware_concurrency();
         const std::size_t suggestedWorkerCount = std::max(1u, hardwareConcurrency);
         const std::size_t workerCount = std::min<std::size_t>(suggestedWorkerCount, uniqueDependencies.size());
-        loadFutures.reserve(workerCount);
         
         LOG_D(std::format("workersThreads={}, dependenciesCount={}, ids=[{}]", workerCount, dependencies.size(), JoinDependencyIds(dependencies)), "Loading scene dependencies")
 
@@ -47,10 +49,12 @@ namespace rei::scenes
         std::mutex failedDependencyIdsMutex;
         std::vector<std::string> failedDependencyIds;
         failedDependencyIds.reserve(uniqueDependencies.size());
+        std::vector<std::future<void>> loadFutures;
+        loadFutures.reserve(workerCount);
 
         for (std::size_t i = 0; i < workerCount; ++i)
         {
-            loadFutures.push_back(std::async(std::launch::async, [this, &uniqueDependencies, &nextDependencyIndex, &hasDependencyLoadFailure, &failedDependencyIdsMutex, &failedDependencyIds]
+            loadFutures.push_back(std::async(std::launch::async, [this, &uniqueDependencies, &nextDependencyIndex, &hasDependencyLoadFailure, &failedDependencyIdsMutex, &failedDependencyIds, &progressMutex, &completed, &onProgress]
             {
                 const assets::AssetPostLoadHandler::ScopedPostLoadSuppression postLoadSuppression(true);
 
@@ -60,21 +64,32 @@ namespace rei::scenes
                     if (index >= uniqueDependencies.size()) break;
 
                     const auto& dependency = uniqueDependencies[index];
-                    if (dependency.LoadData(*this)) continue;
-
-                    hasDependencyLoadFailure.store(true);
-                    std::scoped_lock lock(failedDependencyIdsMutex);
-                    failedDependencyIds.push_back(dependency.Id);
+                    if (!dependency.LoadData(*this))
+                    {
+                        hasDependencyLoadFailure.store(true);
+                        std::scoped_lock lock(failedDependencyIdsMutex);
+                        failedDependencyIds.push_back(dependency.Id);
+                    }
+                    if (onProgress)
+                    {
+                        std::scoped_lock lock(progressMutex);
+                        onProgress(0.5f * static_cast<f32>(++completed) / uniqueDependencies.size());
+                    }
                 }
             }));
         }
 
+        std::exception_ptr workerFailure;
         for (auto& loadFuture : loadFutures)
         {
-            loadFuture.get();
+            try { loadFuture.get(); }
+            catch (...) { if (!workerFailure) workerFailure = std::current_exception(); }
         }
+        // Join every worker before callbacks and captured state can leave scope.
+        if (workerFailure) std::rethrow_exception(workerFailure);
 
-        const bool didFlushDeferredPostLoads = _assetManager->FlushDeferredPostLoads();
+        const bool didFlushDeferredPostLoads = _assetManager->FlushDeferredPostLoads(onProgress
+            ? std::function<void(f32)>([&](const f32 progress) { onProgress(0.5f + 0.5f * progress); }) : std::function<void(f32)>{});
         if (!didFlushDeferredPostLoads)
         {
             LOG_ERROR("Failed to run one or more deferred post-load actions while preloading scene dependencies")

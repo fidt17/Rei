@@ -20,6 +20,7 @@ public sealed class EditorInteractionOverlayViewModelTests
     [InlineData(ProcedureTags.SAVE_PROJECT)]
     [InlineData(ProcedureTags.IMPORT_ASSETS)]
     [InlineData(ProcedureTags.BUILD_PROJECT)]
+    [InlineData(ProcedureTags.BUILD_EXECUTABLE)]
     public async Task BlockingProceduresControlInteraction(string tag)
     {
         var service = new EditorProceduresService();
