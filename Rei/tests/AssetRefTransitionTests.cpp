@@ -123,7 +123,7 @@ TEST_CASE("REF-01 Two assigned consumers hold independent acquisitions", "[nativ
     });
 }
 
-TEST_CASE("REF-01 Copy constructor is a non acquiring record view", "[native][assets][coverage][coverage-remaining][isolated]")
+TEST_CASE("REF-01 Copy constructor keeps the resource alive until the last owner is released", "[native][assets][coverage][coverage-remaining][isolated]")
 {
     Isolated([]
     {
@@ -134,8 +134,10 @@ TEST_CASE("REF-01 Copy constructor is a non acquiring record view", "[native][as
         const auto copy = original;
         REQUIRE(copy.Get() == original.Get());
         fixture.Assets->Release(original);
-        CHECK_FALSE(copy.IsLoaded());
-        CHECK(copy.Get() == nullptr);
+        CHECK(copy.IsLoaded());
+        CHECK(copy.Get()->Value == 11);
+        CHECK(probe.State->Destroyed == 0);
+        fixture.Assets->Release(copy);
         CHECK(probe.State->Destroyed == 1);
     });
 }
@@ -296,5 +298,138 @@ TEST_CASE("ABI-02 Data asset dispatch never implicitly loads and propagates malf
         CHECK(asset.Get()->Value == 73);
         REQUIRE(DispatchTrySetAssetData("loaded", "DataAsset", "{\"Value\":91}"));
         CHECK(asset.Get()->Value == 91);
+    });
+}
+
+TEST_CASE("REF-03 Scope exit releases AssetRef without generated code or Services", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture(RefPack);
+        Services::GetInstance()->SetAssetManager(nullptr);
+        {
+            auto ref = fixture.Assets->GetById<AssetProbe>("a");
+            REQUIRE(ref.IsLoaded());
+            REQUIRE(fixture.Assets->Load(ref));
+            REQUIRE(fixture.Assets->Load(ref));
+            CHECK(probe.State->Destroyed == 0);
+        }
+        CHECK(probe.State->Destroyed == 1);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+        CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
+    });
+}
+
+TEST_CASE("REF-03 Ordinary vector copies moves erase and clear preserve only live owners", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture(RefPack);
+        std::vector<AssetRef<AssetProbe>> refs;
+        refs.push_back(fixture.Assets->GetById<AssetProbe>("a"));
+        refs.push_back(fixture.Assets->GetById<AssetProbe>("b"));
+        auto copy = refs;
+        refs.clear();
+        REQUIRE(copy[0].IsLoaded());
+        REQUIRE(copy[1].IsLoaded());
+        CHECK(probe.State->Destroyed == 0);
+        copy.erase(copy.begin());
+        CHECK(probe.State->Destroyed == 1);
+        REQUIRE(copy[0].IsLoaded());
+        CHECK(copy[0].Get()->Value == 29);
+        copy.clear();
+        CHECK(probe.State->Destroyed == 2);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("REF-03 Plain ECS components release references through their normal C++ lifetime", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture(RefPack);
+        struct PlainComponent { AssetRef<AssetProbe> Asset; };
+        const auto first = fixture.Registry->NewEntity();
+        const auto second = fixture.Registry->NewEntity();
+        fixture.Registry->Get<PlainComponent>(first).Asset = fixture.Assets->GetById<AssetProbe>("a");
+        fixture.Registry->Get<PlainComponent>(second).Asset = fixture.Assets->GetById<AssetProbe>("b");
+        fixture.Registry->Del<PlainComponent>(first);
+        CHECK(probe.State->Destroyed == 1);
+        REQUIRE(fixture.Registry->Get<PlainComponent>(second).Asset.IsLoaded());
+        fixture.Registry->Del<PlainComponent>(second);
+        CHECK(probe.State->Destroyed == 2);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+        {
+            auto world = std::make_unique<ecs::World>();
+            const auto entity = world->GetRegistry()->NewEntity();
+            world->GetRegistry()->Get<PlainComponent>(entity).Asset = fixture.Assets->GetById<AssetProbe>("a");
+            CHECK(probe.State->Destroyed == 2);
+        }
+        CHECK(probe.State->Destroyed == 3);
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("REF-03 Stale owners cannot release a payload reloaded after bulk unload", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture(RefPack);
+        auto ref = fixture.Assets->GetById<AssetProbe>("a");
+        auto stale = ref;
+        fixture.Assets->UnloadAllAssets();
+        REQUIRE(probe.State->Destroyed == 1);
+        REQUIRE(fixture.Assets->Load(ref));
+        stale.Reset();
+        REQUIRE(ref.IsLoaded());
+        CHECK(probe.State->Destroyed == 1);
+        ref.Reset();
+        CHECK(probe.State->Destroyed == 2);
+        CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
+    });
+}
+
+TEST_CASE("REF-03 Failed PostLoad payload is released when its handle leaves scope", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture(RefPack);
+        probe.State->ThrowPostLoad = true;
+        {
+            AssetRef<AssetProbe> ref("a");
+            REQUIRE_FALSE(fixture.Assets->Load(ref));
+            REQUIRE(ref.Record->State == AssetState::Failed);
+        }
+        CHECK(probe.State->Destroyed == 1);
+        CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
+        AssetRef<AssetProbe> cleared("a");
+        REQUIRE_FALSE(fixture.Assets->Load(cleared));
+        cleared.Id.clear();
+        SyncAfterExternalChange(cleared);
+        CHECK(cleared.Record == nullptr);
+        CHECK(probe.State->Destroyed == 2);
+        CHECK(fixture.Assets->GetLoadedAssetsSize() == 0);
+    });
+}
+
+TEST_CASE("REF-03 Handles can outlive AssetManager without retaining its payload or calling Services", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        AssetProbeScope probe;
+        BehaviourFixture fixture(RefPack);
+        auto manager = std::make_unique<AssetManager>();
+        auto ref = manager->GetById<AssetProbe>("a");
+        REQUIRE(ref.IsLoaded());
+        manager.reset();
+        CHECK_FALSE(ref.IsLoaded());
+        CHECK(probe.State->Destroyed == 1);
+        ref.Reset();
+        CHECK(probe.State->Destroyed == 1);
     });
 }

@@ -145,7 +145,7 @@ TEST_CASE("PRE-01 Suppressed manager Loads defer one PostLoad per pending asset 
         const scenes::SceneAssetPreloader preloader(fixture.Assets);
         REQUIRE(preloader.Preload({{"flush", [](const auto&) { return true; }}}));
         CHECK(probe.State->PostLoads == 1);
-        for (i32 i = 0; i < 3; ++i) fixture.Assets->Release(ref);
+        fixture.Assets->Release(ref); // Repeated Load on one handle adds no ownership.
         CHECK(probe.State->Destroyed == 1);
     });
 }

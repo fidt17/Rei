@@ -63,6 +63,13 @@ namespace rei::tests
         SERIALIZE std::vector<i32> Values = {1, 2};
     };
 
+    struct ProbeAssetOwner
+    {
+        SERIALIZABLE_BODY(ProbeAssetOwner)
+        SERIALIZE assets::AssetRef<ProbeDataAsset> Asset;
+        SERIALIZE std::vector<assets::AssetRef<ProbeDataAsset>> Assets;
+    };
+
     // Explicit metadata in Generator/Program.cs selects these public test fields.
     // Production generator supplies all REI_GET/REI_SET/ResolveDependencies bodies.
 #define REI_TEST_PROBE_BODY(TYPE) \

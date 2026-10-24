@@ -8,32 +8,14 @@ namespace rei::assets
     template <typename T>
     void SyncAfterExternalChange(AssetRef<T>& ref)
     {
-        const auto boundId = ref.GetBoundId();
-        if (boundId == ref.Id) return;
-
-        auto& assetManager = GetAssetManager();
-
-        if (!boundId.empty())
-        {
-            assetManager.ReleaseById<T>(boundId);
-        }
-
-        ref.Record = nullptr;
-
-        if (!ref.Id.empty())
-        {
-            assetManager.Load(ref);
-        }
+        if (ref.IsLoaded()) return;
+        ref.Reset();
+        if (!ref.Id.empty()) GetAssetManager().Load(ref);
     }
 
     template <typename T>
     void ClearAssetRefCollection(std::vector<AssetRef<T>>& collection)
     {
-        for (const auto& ref : collection)
-        {
-            if (ref.Record == nullptr || ref.Record->Value == nullptr) continue;
-            GetAssetManager().ReleaseById<T>(ref.Record->Id);
-        }
         collection.clear();
     }
 
@@ -48,22 +30,9 @@ namespace rei::assets
             replacement.emplace_back().REI_SET(itemData);
         }
 
-        // Acquire replacements before releasing old refs, including repeated IDs.
-        try
-        {
-            for (auto& ref : replacement)
-            {
-                SyncAfterExternalChange(ref);
-            }
-        }
-        catch (...)
-        {
-            ClearAssetRefCollection(replacement);
-            throw;
-        }
-
+        // Resolve replacements before old refs leave scope, including repeated IDs.
+        for (auto& ref : replacement) SyncAfterExternalChange(ref);
         collection.swap(replacement);
-        ClearAssetRefCollection(replacement);
     }
 
     template <typename T>
@@ -73,19 +42,10 @@ namespace rei::assets
 
         auto& assetManager = GetAssetManager();
 
-        const auto targetBoundId = target.GetBoundId();
-        if (!targetBoundId.empty())
-        {
-            assetManager.ReleaseById<T>(targetBoundId);
-        }
-
-        target.Id = other.Id;
-        target.Record = other.Record;
-
-        if (!target.Id.empty())
-        {
-            assetManager.Load(target);
-        }
+        // Acquire first: source and target can refer to the same loaded payload.
+        AssetRef<T> replacement(other);
+        if (!replacement.Id.empty()) assetManager.Load(replacement);
+        target.Swap(replacement);
     }
 
     template <typename T>

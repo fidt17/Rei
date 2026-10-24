@@ -10,6 +10,9 @@
 
 namespace rei::render
 {
+    class Material;
+    class Texture;
+
     class Renderer
     {
     public:
@@ -31,6 +34,9 @@ namespace rei::render
         std::vector<std::unique_ptr<CustomRenderModule>> _customRenderModules;
         std::unique_ptr<BaseRenderScenario> _renderScenario = nullptr;
 
-        void PrepareAssets() const;
+        assets::AssetRef<Texture> _whiteFallbackTexture;
+        std::vector<assets::AssetRef<Material>> _engineMaterials;
+
+        void PrepareAssets();
     };
 }

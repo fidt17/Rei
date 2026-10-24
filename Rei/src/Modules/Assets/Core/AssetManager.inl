@@ -9,7 +9,7 @@ namespace rei::assets
     AssetRef<T> AssetManager::GetById(const std::string& id)
     {
         auto asset = AssetRef<T>(id);
-        asset.Record = _registry.FindRecord<T>(id);
+        asset.Record = _registry->FindRecord<T>(id);
         
         Load(asset);
 
@@ -20,10 +20,11 @@ namespace rei::assets
     AssetRef<T> AssetManager::GetByPath(const std::string& path)
     {
         AssetRef<T> ref(path);
-        ref.Record = _registry.FindRecord<T>(ref.Id);
+        ref.Record = _registry->FindRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
-            _registry.IncrementRefCount(ref.Id);
+            _registry->IncrementRefCount(ref.Id);
+            BindOwnership(ref);
             return ref;
         }
 
@@ -38,9 +39,10 @@ namespace rei::assets
         i64 _ = resources::AssetBuilder().BuildAsset(filePath, dest, 0);
 
         LoadAndCreateRecord(ref, path, dest, 0, true);
+        BindOwnership(ref);
         if (AssetPostLoadHandler::IsSuppressedForCurrentThread())
         {
-            QueueDeferredPostLoad<T>(ref.Id);
+            QueueDeferredPostLoad<T>(ref);
         }
         else
         {
@@ -58,12 +60,13 @@ namespace rei::assets
         AssetRef<T> asset(id);
         const auto loadedAsset = new T(std::forward<Args>(args)...);
         constexpr i32 runtimeAssetSize = 0;
-        _registry.CreateAssetRecord<T>(asset, id, loadedAsset, runtimeAssetSize, AssetState::Loaded);
-        _registry.SetRefCount(asset.Id, 1);
+        _registry->CreateAssetRecord<T>(asset, id, loadedAsset, runtimeAssetSize, AssetState::Loaded);
+        _registry->SetRefCount(asset.Id, 1);
+        BindOwnership(asset);
         
         if (AssetPostLoadHandler::IsSuppressedForCurrentThread())
         {
-            QueueDeferredPostLoad<T>(asset.Id);
+            QueueDeferredPostLoad<T>(asset);
         }
         else
         {
@@ -94,9 +97,11 @@ namespace rei::assets
             return false;
         }
 
+        BindOwnership(ref);
+
         if (AssetPostLoadHandler::IsSuppressedForCurrentThread())
         {
-            QueueDeferredPostLoad<T>(ref.Id);
+            QueueDeferredPostLoad<T>(ref);
             return true;
         }
 
@@ -125,7 +130,7 @@ namespace rei::assets
         if (id == "") return;
         if (_isUnloadingAllAssets.load()) return;
 
-        const auto releaseResult = _registry.ReleaseAssetWithId(id);
+        const auto releaseResult = _registry->ReleaseAssetWithId(id);
         if (!releaseResult.RefCountReachedZero) return;
         if (releaseResult.MissingLoadedRecord)
         {
@@ -140,7 +145,29 @@ namespace rei::assets
     template <typename T>
     void AssetManager::Release(const AssetRef<T>& ref)
     {
-        ReleaseById<T>(ref.Id);
+        ref._ownership.reset();
+        ref._ownedPayload.reset();
+    }
+
+    template <typename T>
+    void AssetManager::BindOwnership(AssetRef<T>& ref)
+    {
+        if (ref.Record == nullptr || ref.Record->Value == nullptr || ref.HasOwnership()) return;
+
+        const auto record = ref.Record;
+        const std::weak_ptr<AssetRegistry> registry = _registry;
+        const std::weak_ptr<void> payload = record->Value;
+        ref._ownedPayload = payload;
+        ref._ownership = std::shared_ptr<void>(record->Value.get(), [registry, record, payload](void*)
+        {
+            const auto owner = registry.lock();
+            const auto value = payload.lock();
+            if (owner == nullptr || value == nullptr || record->Value != value) return;
+            if (record->State != AssetState::Loaded && record->State != AssetState::Failed) return;
+            const auto result = owner->ReleaseAssetWithId(record->Id);
+            if (result.RefCountReachedZero && !result.MissingLoadedRecord)
+                LOG_DEBUG("Asset unloaded id={} size={}", record->Id, common::logging::utility::FormatSize(result.ReleasedSize))
+        });
     }
 
     template <typename T>
@@ -155,19 +182,19 @@ namespace rei::assets
 
         if (ref.IsLoaded())
         {
-            if (incrementRefCount)
+            if (incrementRefCount && !ref.HasOwnership())
             {
-                _registry.IncrementRefCount(ref.Id);
+                _registry->IncrementRefCount(ref.Id);
             }
             return true;
         }
 
-        ref.Record = _registry.FindRecord<T>(ref.Id);
+        ref.Record = _registry->FindRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
-            if (incrementRefCount)
+            if (incrementRefCount && !ref.HasOwnership())
             {
-                _registry.IncrementRefCount(ref.Id);
+                _registry->IncrementRefCount(ref.Id);
             }
             return true;
         }
@@ -196,12 +223,12 @@ namespace rei::assets
     template <typename T>
     void AssetManager::LoadAndCreateRecord(AssetRef<T>& ref, const std::string& name, const std::string& path, const i64 offset, const bool incrementRefCount)
     {
-        ref.Record = _registry.FindRecord<T>(ref.Id);
+        ref.Record = _registry->FindRecord<T>(ref.Id);
         if (ref.IsLoaded())
         {
-            if (incrementRefCount)
+            if (incrementRefCount && !ref.HasOwnership())
             {
-                _registry.IncrementRefCount(ref.Id);
+                _registry->IncrementRefCount(ref.Id);
             }
             return;
         }
@@ -216,20 +243,20 @@ namespace rei::assets
         const auto assetSize = static_cast<i32>(loadedAssetSize);
         {
             std::lock_guard lock(_assetsMutex);
-            ref.Record = _registry.FindRecord<T>(ref.Id);
+            ref.Record = _registry->FindRecord<T>(ref.Id);
             if (ref.IsLoaded())
             {
                 delete loadedAssetPtr;
-                if (incrementRefCount)
+                if (incrementRefCount && !ref.HasOwnership())
                 {
-                    _registry.IncrementRefCount(ref.Id);
+                    _registry->IncrementRefCount(ref.Id);
                 }
                 return;
             }
         }
 
-        _registry.CreateAssetRecord<T>(ref, name, loadedAssetPtr, assetSize, AssetState::Loaded);
-        _registry.SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
+        _registry->CreateAssetRecord<T>(ref, name, loadedAssetPtr, assetSize, AssetState::Loaded);
+        _registry->SetRefCount(ref.Id, incrementRefCount ? 1 : 0);
     }
 
     template <typename T>
@@ -237,7 +264,7 @@ namespace rei::assets
     {
         if (ref.Record == nullptr)
         {
-            ref.Record = _registry.FindRecord<T>(ref.Id);
+            ref.Record = _registry->FindRecord<T>(ref.Id);
         }
 
         if (!ref.IsLoaded())
@@ -271,13 +298,12 @@ namespace rei::assets
     }
 
     template <typename T>
-    void AssetManager::QueueDeferredPostLoad(const std::string& id)
+    void AssetManager::QueueDeferredPostLoad(const AssetRef<T>& ref)
     {
-        LOG_DEBUG("Deferring post-load for asset id={}", id)
+        LOG_DEBUG("Deferring post-load for asset id={}", ref.Id)
         
-        _postLoadHandler.Queue(id, [this, id]()
+        _postLoadHandler.Queue(ref.Id, [this, ref = AssetRef<T>(ref)]() mutable
         {
-            auto ref = AssetRef<T>(id);
             return RunPostLoad(ref);
         });
     }

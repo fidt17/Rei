@@ -70,6 +70,7 @@ public sealed class SceneSwitchingTests(ITestOutputHelper output)
         });
         await AssertSceneAsync(engine, current, "B parent", 42.125);
         await engine.RunOperationAsync("rei_editor_open_scene", new() { ["scene"] = originalScene });
+        Assert.Equal("unloaded", (await engine.ReadAssetAsync(NEW_CONFIG, "runtime")).GetProperty("status").GetString());
         await engine.RunOperationAsync("rei_editor_open_scene", new() { ["scene"] = SCENE_B });
         current = await ReadNativeAsync(engine);
         await AssertSceneAsync(engine, current, "B parent", 42.125);
@@ -87,6 +88,7 @@ public sealed class SceneSwitchingTests(ITestOutputHelper output)
         Assert.Empty(empty.GetProperty("Entities").EnumerateArray());
         Assert.Equal("", empty.GetProperty("SceneAssetId").GetString());
         Assert.Equal(JsonValueKind.Null, (await engine.CallAsync("rei_editor_get_state")).GetProperty("scene").ValueKind);
+        Assert.Equal("unloaded", (await engine.ReadAssetAsync(NEW_CONFIG, "runtime")).GetProperty("status").GetString());
         AssertIdentity(initial, empty);
         await engine.RunOperationAsync("rei_editor_open_scene", new() { ["scene"] = SCENE_B });
         await AssertSceneAsync(engine, await ReadNativeAsync(engine), "B parent", 42.125);

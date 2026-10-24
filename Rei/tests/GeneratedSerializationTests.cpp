@@ -34,6 +34,69 @@ namespace
     }
 }
 
+TEST_CASE("SER-03 Removing packed components releases their AssetRef fields without changing surviving owners", "[native][serialization][generated][regression][isolated]")
+{
+    const auto firstRemoved = GENERATE(0, 1, 2);
+    Isolated([firstRemoved]
+    {
+        BehaviourFixture fixture;
+        const auto shared = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("shared");
+        std::array<ecs::Entity, 3> entities{ecs::NULL_ENTITY, ecs::NULL_ENTITY, ecs::NULL_ENTITY};
+        std::array<assets::AssetRef<ProbeDataAsset>, 3> views;
+        for (i32 i = 0; i < 3; ++i)
+        {
+            entities[i] = fixture.Entity(100 + i);
+            fixture.Add(entities[i], PROBE_A, false);
+            auto own = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("owner-" + STRING(i));
+            views[i].Id = own.Id;
+            views[i].Record = own.Record;
+            fixture.Manager->GetBehaviourRegistry().SetBehaviourData(entities[i], PROBE_A, Field("Asset", Field("Id", own.Id)));
+            SetAssetCollection(fixture, entities[i], {shared.Id, shared.Id});
+            fixture.Assets->Release(own);
+        }
+        fixture.Assets->Release(shared);
+        REQUIRE(fixture.Assets->GetLoadedAssetCount() == 4);
+
+        fixture.Registry->Del<ProbeA>(entities[firstRemoved]);
+        CHECK_FALSE(views[firstRemoved].IsLoaded());
+        CHECK(shared.IsLoaded());
+        for (i32 i = 0; i < 3; ++i)
+        {
+            if (i == firstRemoved) continue;
+            REQUIRE(views[i].IsLoaded());
+            REQUIRE(fixture.Registry->Get<ProbeA>(entities[i]).Asset.Get() == views[i].Get());
+            fixture.Registry->Del<ProbeA>(entities[i]);
+            CHECK_FALSE(views[i].IsLoaded());
+        }
+        CHECK_FALSE(shared.IsLoaded());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
+TEST_CASE("SER-03 Releasing an asset releases its nested AssetRefs and preserves external owners", "[native][serialization][generated][regression][isolated]")
+{
+    const auto keepExternalOwner = GENERATE(false, true);
+    Isolated([keepExternalOwner]
+    {
+        BehaviourFixture fixture;
+        auto child = fixture.Assets->CreateAssetWithId<ProbeDataAsset>("child");
+        auto retained = keepExternalOwner ? fixture.Assets->GetById<ProbeDataAsset>(child.Id) : assets::AssetRef<ProbeDataAsset>();
+        auto owner = fixture.Assets->CreateAssetWithId<ProbeAssetOwner>("owner");
+        owner->Asset = child;
+        owner->Assets.emplace_back(child.Id);
+        owner->Assets.emplace_back(child.Id);
+        owner->ResolveDependencies();
+        fixture.Assets->Release(child);
+        REQUIRE(child.IsLoaded());
+        fixture.Assets->Release(owner);
+        CHECK_FALSE(owner.IsLoaded());
+        CHECK(child.IsLoaded() == keepExternalOwner);
+        if (keepExternalOwner) fixture.Assets->Release(retained);
+        CHECK_FALSE(child.IsLoaded());
+        CHECK(fixture.Assets->GetLoadedAssetCount() == 0);
+    });
+}
+
 TEST_CASE("SER-01 Generated getter exposes independent native scalar and nested values", "[native][serialization][generated][coverage][coverage-lifecycle][isolated]")
 {
     Isolated([]

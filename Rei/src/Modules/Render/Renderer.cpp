@@ -113,14 +113,16 @@ namespace rei::render
         }
 
         _customRenderModules.clear();
+        _engineMaterials.clear();
+        _whiteFallbackTexture.Reset();
         SetTarget(nullptr);
     }
 
-    void Renderer::PrepareAssets() const
+    void Renderer::PrepareAssets()
     {
         LOG_DEBUG("Preparing engine assets")
 
-        GetAssetManager().CreateAssetWithId<Texture>(
+        _whiteFallbackTexture = GetAssetManager().CreateAssetWithId<Texture>(
             REI_WHITE_FALLBACK_TEXTURE_ID,
             1,
             1,
@@ -131,7 +133,7 @@ namespace rei::render
         auto errorMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_ERROR_MATERIAL_ID,errorShader);
 
         const auto lightSourceShader = GetAssetManager().GetById<Shader>(REI_SHADER_LIGHT_SOURCE_ASSET_ID);
-        GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);
+        auto lightSourceMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_LIGHT_SOURCE_MATERIAL_ID,lightSourceShader);
         
         const auto outlineShader = GetAssetManager().GetById<Shader>(REI_SHADER_ALPHA_OUTLINE_ASSET_ID);
         auto outlineMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_OUTLINE_MATERIAL_ID,outlineShader);
@@ -154,5 +156,8 @@ namespace rei::render
         
         const auto editorGridShader = GetAssetManager().GetById<Shader>(REI_SHADER_EDITOR_GRID_ASSET_ID);
         auto editorGridMaterial = GetAssetManager().CreateAssetWithId<Material>(REI_EDITOR_GRID_MATERIAL_ID,editorGridShader);
+
+        _engineMaterials = {errorMaterial, lightSourceMaterial, outlineMaterial, overlayTextureMaterial,
+                           grayscaleMaterial, inversionMaterial, depthMaterial, colorMaterial, editorGridMaterial};
     }
 }

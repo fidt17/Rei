@@ -185,7 +185,7 @@ namespace rei::render
             {"Id", texture.Id}
         });
         UpdatePropertyBinding(name, _properties.at(name));
-        std::get<TextureBinding>(_propertyBindings.at(name)).Asset.Record = texture.Record;
+        std::get<TextureBinding>(_propertyBindings.at(name)).Asset = texture;
     }
 
     void Material::ClearProperty(const std::string& name)
@@ -222,7 +222,7 @@ namespace rei::render
         if (!_whiteFallback.IsLoaded())
         {
             _whiteFallback.Id = REI_WHITE_FALLBACK_TEXTURE_ID;
-            _whiteFallback.Record = GetAssetManager().GetById<Texture>(_whiteFallback.Id).Record;
+            _whiteFallback = GetAssetManager().GetById<Texture>(_whiteFallback.Id);
         }
         if (!_whiteFallback.IsLoaded()) LOG_ERROR("White fallback texture '{}' is not loaded.", REI_WHITE_FALLBACK_TEXTURE_ID)
         return _whiteFallback;
@@ -302,7 +302,7 @@ namespace rei::render
                 else if constexpr (std::is_same_v<T, TextureBinding>)
                 {
                     auto& texture = value.Asset;
-                    if (!texture.Id.empty() && !texture.IsLoaded()) texture.Record = GetAssetManager().GetById<Texture>(texture.Id).Record;
+                    if (!texture.Id.empty() && !texture.IsLoaded()) texture = GetAssetManager().GetById<Texture>(texture.Id);
                     const auto& resolved = texture.IsLoaded() ? texture : GetWhiteFallbackTexture();
                     if (!resolved.IsLoaded()) return;
                     _shader->SetInt(uniformName, textureSlot);
@@ -351,7 +351,7 @@ namespace rei::render
             if (texture.Id != textureId)
             {
                 texture.Id = std::move(textureId);
-                texture.Record.reset();
+                texture.Reset();
             }
         }
         else

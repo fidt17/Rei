@@ -5,14 +5,11 @@ namespace rei::assets
     template <typename T>
     void AssetRegistry::CreateAssetRecord(AssetRef<T>& assetRef, const std::string& name, T* value, const i32 assetSize, const AssetState state)
     {
+        const auto typedValue = std::shared_ptr<T>(value);
         const auto typeName = common::logging::utility::SimplifyTypeName(typeid(T).name());
         if (assetRef.Id.empty())
         {
             LOG_ERROR("Failed to create asset record for asset with empty id, type={}", typeName)
-            if (value != nullptr)
-            {
-                delete value;
-            }
             return;
         }
 
@@ -20,16 +17,16 @@ namespace rei::assets
         if (record == nullptr)
         {
             LOG_ERROR("Failed to create asset record, id={}, type={}", assetRef.Id, typeName)
-            if (value != nullptr)
-            {
-                delete value;
-            }
             return;
         }
 
+        std::shared_ptr<void> previousValue;
+        std::unique_ptr<IAssetDataAccessor> previousAccessor;
         {
             std::scoped_lock lock(_recordsMutex);
-            const auto typedValue = std::shared_ptr<T>(value);
+            previousValue = std::move(record->Value);
+            previousAccessor = std::move(record->DataAccessor);
+            _loadedAssetsSize += static_cast<i64>(assetSize) - record->AssetSize;
             record->Value = typedValue;
             record->AssetSize = assetSize;
             record->State = value != nullptr ? state : AssetState::Unloaded;
@@ -45,7 +42,9 @@ namespace rei::assets
             }
         }
 
-        AddLoadedAssetsSize(assetSize);
+        // Dependency release and payload destructors can re-enter this registry.
+        previousAccessor.reset();
+        previousValue.reset();
     }
 
     template <typename T>

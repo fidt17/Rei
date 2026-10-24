@@ -36,6 +36,7 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
             var control = scenes.Where(scene => scene.Id != initialId).MinBy(scene => scene.Data["Entities"]!.AsArray().Count)
                 ?? throw new InvalidDataException("Scene cycle benchmark requires a second scene.");
             var assets = ReadDependencies(engine.ProjectDirectory, scenes.Single(scene => scene.Id == initialId).Data);
+            var controlAssets = ReadDependencies(engine.ProjectDirectory, control.Data);
             var phases = new List<object>();
             var session = "";
             double initialTriangles = 0;
@@ -109,6 +110,8 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
                     var state = await engine.ReadAssetAsync(asset.Key, "runtime");
                     Assert.Equal("runtime", state.GetProperty("source").GetString());
                     Assert.Contains(state.GetProperty("status").GetString(), new[] { "loaded", "unloaded", "unsupported" });
+                    if (sceneId == control.Id && IsSceneRenderAsset(asset.Value) && !controlAssets.ContainsKey(asset.Key))
+                        Assert.True(state.GetProperty("status").GetString() == "unloaded", $"Scene render asset retained after unload: {asset.Key} ({asset.Value}).");
                     residency.Add(asset.Key, new { name = asset.Value, status = state.GetProperty("status").GetString() });
                 }
                 using var process = Process.GetProcessById(processId);
@@ -132,6 +135,8 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
             Assert.Equal(before.ToArray(), (await ExternalProjectCopy.FingerprintAsync(source)).ToArray());
         }
     }
+
+    private static bool IsSceneRenderAsset(string name) => Path.GetExtension(name).ToLowerInvariant() is ".obj" or ".mat" or ".jpg" or ".jpeg" or ".png" or ".tga" or ".bmp";
 
     private static SortedDictionary<string, string> ReadDependencies(string project, JsonNode scene)
     {

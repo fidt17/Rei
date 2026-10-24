@@ -23,6 +23,8 @@ namespace rei::assets
         virtual i32 GetAssetSize() = 0;
     };
 
+    class AssetManager;
+
     template <typename T>
     struct AssetRef : public IAssetRef
     {
@@ -42,15 +44,19 @@ namespace rei::assets
 
         REI_API AssetRef(const AssetRef& other)
             : Id(other.Id),
-              Record(other.Record)
+              Record(other.Record),
+              _ownership(other._ownership),
+              _ownedPayload(other._ownedPayload)
         {
         }
+
+        REI_API AssetRef(AssetRef&& other) noexcept = default;
 
         REI_API AssetRef& operator=(const AssetRef& other)
         {
             if (this == &other) return *this;
 
-            if (AssignHandlerFunc != nullptr)
+            if (AssignHandlerFunc != nullptr && !other.HasOwnership() && !other.Id.empty())
             {
                 AssignHandlerFunc(*this, other);
                 return *this;
@@ -58,7 +64,40 @@ namespace rei::assets
 
             Id = other.Id;
             Record = other.Record;
+            _ownedPayload = other._ownedPayload;
+            _ownership = other._ownership;
             return *this;
+        }
+
+        REI_API AssetRef& operator=(AssetRef&& other)
+        {
+            if (this == &other) return *this;
+            if (AssignHandlerFunc != nullptr && !other.HasOwnership() && !other.Id.empty())
+            {
+                AssignHandlerFunc(*this, other);
+                return *this;
+            }
+
+            Id = std::move(other.Id);
+            Record = std::move(other.Record);
+            _ownedPayload = std::move(other._ownedPayload);
+            _ownership = std::move(other._ownership);
+            return *this;
+        }
+
+        REI_API void Swap(AssetRef& other) noexcept
+        {
+            Id.swap(other.Id);
+            Record.swap(other.Record);
+            _ownership.swap(other._ownership);
+            _ownedPayload.swap(other._ownedPayload);
+        }
+
+        REI_API void Reset()
+        {
+            _ownership.reset();
+            _ownedPayload.reset();
+            Record.reset();
         }
 
         REI_API T* operator->()
@@ -79,7 +118,7 @@ namespace rei::assets
 
         REI_API bool IsLoaded() const
         {
-            if (Record == nullptr) return false;
+            if (Record == nullptr || Record->Type != typeid(T)) return false;
 
             const bool hasValue = Record->Value != nullptr;
             return Record->Id == Id && Record->State == AssetState::Loaded && hasValue;
@@ -110,6 +149,18 @@ namespace rei::assets
             if (Record == nullptr) return 0;
 
             return Record->AssetSize;
+        }
+
+    private:
+        friend class AssetManager;
+
+        // Copies share an acquisition;
+        mutable std::shared_ptr<void> _ownership;
+        mutable std::weak_ptr<void> _ownedPayload;
+
+        bool HasOwnership() const
+        {
+            return _ownership != nullptr && Record != nullptr && Record->Value != nullptr && Record->Id == Id && _ownedPayload.lock() == Record->Value;
         }
     };
 

@@ -8,6 +8,11 @@ namespace rei::assets
         _map.Initialize();
     }
 
+    AssetManager::~AssetManager()
+    {
+        UnloadAllAssets();
+    }
+
     bool AssetManager::FlushDeferredPostLoads()
     {
         LOG_DEBUG("Flushing deferred post loads");
@@ -34,7 +39,7 @@ namespace rei::assets
 
         UnloadGuard unloadGuard(_isUnloadingAllAssets);
 
-        const auto assetsToUnload = _registry.ReleaseAllLoadedAssets();
+        const auto assetsToUnload = _registry->ReleaseAllLoadedAssets();
         for (const auto& asset : assetsToUnload)
         {
             const auto typeName = common::logging::utility::SimplifyTypeName(asset.Type.name());
@@ -49,12 +54,12 @@ namespace rei::assets
 
     i64 AssetManager::GetLoadedAssetsSize() const
     {
-        return _registry.GetLoadedAssetsSize();
+        return _registry->GetLoadedAssetsSize();
     }
 
     i32 AssetManager::GetLoadedAssetCount() const
     {
-        const auto records = _registry.GetAllRecords();
+        const auto records = _registry->GetAllRecords();
         i32 loadedCount = 0;
         for (const auto& record : records)
         {
@@ -68,7 +73,7 @@ namespace rei::assets
 
     IAssetDataAccessor* AssetManager::FindLoadedAssetDataAccessor(const std::string& id) const
     {
-        const auto record = _registry.FindRecord(id);
+        const auto record = _registry->FindRecord(id);
         if (record == nullptr || record->State != AssetState::Loaded || record->Value == nullptr) return nullptr;
 
         return record->DataAccessor.get();
@@ -76,7 +81,7 @@ namespace rei::assets
 
     nlohmann::json AssetManager::InspectLoadedAsset(const std::string& id) const
     {
-        const auto record = _registry.FindRecord(id);
+        const auto record = _registry->FindRecord(id);
         if (record == nullptr || record->State != AssetState::Loaded || record->Value == nullptr)
             return {{"status", "unloaded"}, {"values", nullptr}};
         if (record->DataAccessor == nullptr) return {{"status", "unsupported"}, {"values", nullptr}};

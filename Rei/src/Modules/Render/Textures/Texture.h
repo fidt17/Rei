@@ -23,6 +23,12 @@ namespace rei::render
     public:
         REI_API explicit Texture(resources::BinaryReader& reader);
         REI_API Texture(i32 width, i32 height, i32 format, std::vector<u8> rawData, TextureColorSpace colorSpace = TextureColorSpace::Srgb);
+        Texture(const Texture&) = delete;
+        Texture& operator=(const Texture&) = delete;
+        REI_API Texture(Texture&& other) noexcept;
+        REI_API Texture& operator=(Texture&& other) noexcept;
+        REI_API ~Texture();
+
         REI_API void PostLoad();
 
         REI_API void Use(i32 idx = 0) const;
@@ -37,6 +43,8 @@ namespace rei::render
         REI_API std::string GetTag() const;
 
     private:
+        void ReleaseTexture();
+
         u32 _id = 0;
         i32 _width = 0;
         i32 _height = 0;

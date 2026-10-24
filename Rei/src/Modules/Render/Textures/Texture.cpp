@@ -4,6 +4,7 @@
 
 #include "stb_image.h"
 #include "glad/glad.h"
+#include <utility>
 
 rei::render::Texture::Texture(resources::BinaryReader& reader)
 {
@@ -26,6 +27,45 @@ rei::render::Texture::Texture(const i32 width, const i32 height, const i32 forma
       _colorSpace(colorSpace),
       _rawData(std::move(rawData))
 {
+}
+
+rei::render::Texture::Texture(Texture&& other) noexcept
+    : _id(std::exchange(other._id, 0)),
+      _width(other._width),
+      _height(other._height),
+      _format(other._format),
+      _colorSpace(other._colorSpace),
+      _rawData(std::move(other._rawData)),
+      _textureTag(std::move(other._textureTag)),
+      _type(other._type)
+{
+}
+
+rei::render::Texture& rei::render::Texture::operator=(Texture&& other) noexcept
+{
+    if (this == &other) return *this;
+    ReleaseTexture();
+    _id = std::exchange(other._id, 0);
+    _width = other._width;
+    _height = other._height;
+    _format = other._format;
+    _colorSpace = other._colorSpace;
+    _rawData = std::move(other._rawData);
+    _textureTag = std::move(other._textureTag);
+    _type = other._type;
+    return *this;
+}
+
+rei::render::Texture::~Texture()
+{
+    ReleaseTexture();
+}
+
+void rei::render::Texture::ReleaseTexture()
+{
+    if (_id == 0) return;
+    glDeleteTextures(1, &_id);
+    _id = 0;
 }
 
 void rei::render::Texture::PostLoad()

@@ -27,6 +27,7 @@ namespace rei::assets
     public:
 
         explicit AssetManager();
+        REI_API ~AssetManager();
 
         template <typename T>
         REI_API AssetRef<T> GetById(const std::string& id);
@@ -65,7 +66,7 @@ namespace rei::assets
         friend class scenes::SceneAssetPreloader;
 
         AssetsMap _map;
-        AssetRegistry _registry = {};
+        std::shared_ptr<AssetRegistry> _registry = std::make_shared<AssetRegistry>();
         AssetTmpStorage _tmpStorage = {};
         AssetPostLoadHandler _postLoadHandler = {};
 
@@ -74,10 +75,13 @@ namespace rei::assets
         std::atomic<bool> _isUnloadingAllAssets = false;
 
         template <typename T>
-        REI_API void QueueDeferredPostLoad(const std::string& id);
+        REI_API void QueueDeferredPostLoad(const AssetRef<T>& ref);
 
         REI_API bool FlushDeferredPostLoads();
         IAssetDataAccessor* FindLoadedAssetDataAccessor(const std::string& id) const;
+
+        template <typename T>
+        void BindOwnership(AssetRef<T>& ref);
 
         template <typename T>
         REI_API bool LoadInternal(AssetRef<T>& ref, bool incrementRefCount);

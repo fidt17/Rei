@@ -7,6 +7,7 @@
 #include "Modules/Render/Modules/LightingRenderModule.h"
 #include "Modules/Render/Modules/PostProcessingModule.h"
 #include "Modules/Render/RenderScenario/DefaultRenderScenario.h"
+#include "Modules/Render/Renderer.h"
 #include "rei_behaviours/ui/Canvas.h"
 #include "rei_behaviours/ui/Image.h"
 #include "rei_behaviours/ui/RectTransform.h"
@@ -1263,5 +1264,21 @@ TEST_CASE("LIGHT_CACHE01 unchanged objects skip intersections while all selectio
         module.OnBeforeRender();
         verify(1, true);
         REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("REF-04 Renderer owns built-in resources until Dispose", "[native][assets][gl][regression][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeRenderFixture fixture;
+        render::Renderer renderer;
+        renderer.SetTarget(fixture.Gl.Window());
+        for (const auto id : {REI_ERROR_MATERIAL_ID, REI_LIGHT_SOURCE_MATERIAL_ID})
+            REQUIRE(fixture.Scene.Assets->InspectLoadedAsset(id).at("status") == "loaded");
+        REQUIRE(fixture.Scene.Assets->InspectLoadedAsset(REI_WHITE_FALLBACK_TEXTURE_ID).at("status") == "unsupported");
+        renderer.Dispose();
+        for (const auto id : {REI_ERROR_MATERIAL_ID, REI_LIGHT_SOURCE_MATERIAL_ID, REI_WHITE_FALLBACK_TEXTURE_ID})
+            CHECK(fixture.Scene.Assets->InspectLoadedAsset(id).at("status") == "unloaded");
     });
 }

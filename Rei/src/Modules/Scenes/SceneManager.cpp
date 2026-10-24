@@ -75,8 +75,7 @@ namespace rei::scenes
         try
         {
             auto scene = load();
-            _activeScene.Id = std::move(scene.Id);
-            _activeScene.Record = std::move(scene.Record);
+            _activeScene = std::move(scene);
             if (_activeScene.IsLoaded() && _sceneAssetPreloader.Preload(CollectSceneAssetDependencies()))
             {
                 CreateSceneEntities();
@@ -100,17 +99,13 @@ namespace rei::scenes
     void SceneManager::UnloadCurrentScene()
     {
         _entityManager->DestroySceneEntities();
-        if (_activeScene.IsLoaded()) _assetManager->Release(_activeScene);
-        _activeScene.Id.clear();
-        _activeScene.Record.reset();
+        _activeScene = {};
     }
 
     void SceneManager::Shutdown()
     {
         UnloadCurrentScene();
-        if (_buildScenesConfig.IsLoaded()) _assetManager->Release(_buildScenesConfig);
-        _buildScenesConfig.Id.clear();
-        _buildScenesConfig.Record.reset();
+        _buildScenesConfig = {};
     }
 
     std::vector<assets::AssetDependency> SceneManager::CollectSceneAssetDependencies()

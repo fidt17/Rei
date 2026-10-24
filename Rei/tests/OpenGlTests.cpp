@@ -770,3 +770,31 @@ TEST_CASE("GL32 switching mouse source rejects snapshot from different current w
         REQUIRE(present.Height == 13);
     });
 }
+
+TEST_CASE("REF-05 Texture moves transfer the driver handle and release the replaced texture", "[native][assets][gl][regression][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeGlFixture gl;
+        u32 transferred = 0;
+        {
+            render::Texture source(1, 1, GL_RGBA, {255, 255, 255, 255});
+            source.PostLoad();
+            transferred = source.GetId();
+            render::Texture moved(std::move(source));
+            REQUIRE(source.GetId() == 0);
+            REQUIRE(moved.GetId() == transferred);
+            render::Texture target(1, 1, GL_RGBA, {0, 0, 0, 255});
+            target.PostLoad();
+            const auto replaced = target.GetId();
+            target = std::move(moved);
+            CHECK(moved.GetId() == 0);
+            CHECK(glIsTexture(replaced) == GL_FALSE);
+            REQUIRE(glIsTexture(transferred) == GL_TRUE);
+            target = std::move(target);
+            CHECK(target.GetId() == transferred);
+        }
+        CHECK(glIsTexture(transferred) == GL_FALSE);
+        CHECK(glGetError() == GL_NO_ERROR);
+    });
+}

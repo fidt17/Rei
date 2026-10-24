@@ -52,9 +52,10 @@ TEST_CASE("PRE-01 Worker manager Loads finish before owner-thread deferred PostL
             if (fixture.Assets->GetLoadedAssetCount() == 2) ++completePhase;
         };
         const scenes::SceneAssetPreloader preloader(fixture.Assets);
+        std::array<AssetRef<AssetProbe>, 2> owners;
         REQUIRE(preloader.Preload({
-            {"a", [&](const auto&) { return fixture.Assets->GetById<AssetProbe>("a").IsLoaded(); }},
-            {"b", [&](const auto&) { return fixture.Assets->GetById<AssetProbe>("b").IsLoaded(); }}
+            {"a", [&](const auto&) { owners[0] = fixture.Assets->GetById<AssetProbe>("a"); return owners[0].IsLoaded(); }},
+            {"b", [&](const auto&) { owners[1] = fixture.Assets->GetById<AssetProbe>("b"); return owners[1].IsLoaded(); }}
         }));
         CHECK(probe.State->Constructed == 2);
         CHECK(probe.State->PostLoads == 2);
@@ -68,10 +69,10 @@ TEST_CASE("PRE-01 Worker manager Loads finish before owner-thread deferred PostL
         CHECK(b.Get()->Value == 47);
         fixture.Assets->Release(a);
         fixture.Assets->Release(b);
-        CHECK(a.IsLoaded()); // Public Load in callback acquired each payload once.
+        CHECK(a.IsLoaded()); // Worker-owned handles still keep both payloads alive.
         CHECK(b.IsLoaded());
-        fixture.Assets->Release(a);
-        fixture.Assets->Release(b);
+        owners[0].Reset();
+        owners[1].Reset();
         CHECK_FALSE(a.IsLoaded());
         CHECK_FALSE(b.IsLoaded());
         CHECK(probe.State->Destroyed == 2);

@@ -88,6 +88,8 @@ public sealed class BehaviourRegistrySourceGeneratorTests : IDisposable
         Assert.Contains("""if (data.contains("Frames")) { const auto& rawValue = data.at("Frames"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; for (const auto& assetRefItem : assetRefValue)""", write.Data);
         Assert.Contains("""if (data.contains("Portrait")) { const auto& rawValue = data.at("Portrait"); const auto& assetRefValue = rawValue.contains("Value") ? rawValue.at("Value") : rawValue; if (assetRefValue.contains("Id"))""", write.Data);
         Assert.DoesNotContain("Missing", write.Data);
+        Assert.DoesNotContain("ReleaseAssets", write.Data);
+        Assert.DoesNotContain("SetAssetReleaseHandler", write.Data);
     }
 
     /// <summary>Creates behaviour definition for generated source scenarios.</summary>
