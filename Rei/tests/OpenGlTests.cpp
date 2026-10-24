@@ -74,6 +74,11 @@ void main(){result=texture(image,uv);}
             {REI_SHADER_INCLUDE_FRAGMENT_COMMON_ASSET_ID, "fragment", StringBytes("")},
             {"gl-color", "color", StringBytes(MATERIAL_SOURCE)},
             {"gl-texture", "texture", StringBytes(TEXTURE_SOURCE)},
+            {"gl-pixels", "red", TextureBytes(1, 1, GL_RGBA8, {255, 0, 0, 255})},
+            {"gl-next-pixels", "blue", TextureBytes(1, 1, GL_RGBA8, {0, 0, 255, 255})},
+            {"gl-material-a", "first", JsonAsset({{"ShaderAssetId", "gl-texture"}, {"UseDepth", false}, {"Properties", {{"image", {{"Id", "gl-pixels"}}}}}})},
+            {"gl-material-b", "second", JsonAsset({{"ShaderAssetId", "gl-texture"}, {"UseDepth", false}, {"Properties", {{"image", {{"Id", "gl-pixels"}}}}}})},
+            {"gl-material-missing", "missing", JsonAsset({{"ShaderAssetId", "gl-texture"}, {"UseDepth", false}, {"Properties", {{"image", {{"Id", "missing-gl-texture"}}}}}})},
             {REI_WHITE_FALLBACK_TEXTURE_ID, "fallback", TextureBytes(1, 1, GL_RGBA, {255, 255, 255, 255})}
         });
     }
@@ -796,5 +801,118 @@ TEST_CASE("REF-05 Texture moves transfer the driver handle and release the repla
         }
         CHECK(glIsTexture(transferred) == GL_FALSE);
         CHECK(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("GL34 scene preload resolves material textures before first draw", "[native][gl][material][scene-textures][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeGlFixture gl;
+        BehaviourFixture fixture(PrepareGlAssets);
+        render::ShaderGenerator::GetInstance().Initialize();
+        const scenes::SceneAssetPreloader preloader(fixture.Assets);
+        const auto owner = std::this_thread::get_id();
+        bool readOnWorker = false;
+        std::string textureState;
+        RealGlCallTrace calls;
+        REQUIRE(preloader.Preload({{"gl-material-a", [&](const auto& loader)
+        {
+            readOnWorker = std::this_thread::get_id() != owner && glfwGetCurrentContext() == nullptr;
+            const auto loaded = loader.template PreloadById<render::Material>("gl-material-a");
+            textureState = fixture.Assets->InspectLoadedAsset("gl-pixels").at("status").template get<std::string>();
+            return loaded;
+        }}}));
+        REQUIRE(readOnWorker);
+        REQUIRE(textureState == "unsupported"); // Real native record exists; Texture has no JSON accessor.
+        REQUIRE(calls.TextureStorage.size() == 1); // Upload finished on this GL thread before Preload returned.
+        auto material = fixture.Assets->GetById<render::Material>("gl-material-a");
+        auto texture = fixture.Assets->GetById<render::Texture>("gl-pixels");
+        const auto id = texture->GetId();
+        REQUIRE(glIsTexture(id) == GL_TRUE);
+        texture.Reset();
+        render::FrameBuffer target(32, 32);
+        Triangle triangle;
+        const auto allocations = calls.TextureStorage.size();
+        for (i32 i = 0; i < 2; ++i)
+        {
+            ClearTarget();
+            material->Use();
+            triangle.Mesh.Render();
+            RequirePixel(ReadPixel(), {255, 0, 0, 255});
+        }
+        REQUIRE(calls.TextureStorage.size() == allocations);
+        material.Reset();
+        REQUIRE(fixture.Assets->InspectLoadedAsset("gl-pixels").at("status") == "unloaded");
+        REQUIRE(glIsTexture(id) == GL_FALSE);
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("GL35 shared preloaded textures survive dependency changes and scene reload", "[native][gl][material][scene-textures][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeGlFixture gl;
+        BehaviourFixture fixture(PrepareGlAssets);
+        render::ShaderGenerator::GetInstance().Initialize();
+        const scenes::SceneAssetPreloader preloader(fixture.Assets);
+        // Keep a compiled shader while exercising concurrent material loads and texture lifetime.
+        auto shader = fixture.Assets->GetById<render::Shader>("gl-texture");
+        render::FrameBuffer target(32, 32);
+        Triangle triangle;
+        for (i32 cycle = 0; cycle < 3; ++cycle)
+        {
+            REQUIRE(preloader.Preload({assets::CreateTypedAssetDependency<render::Material>("gl-material-a"),
+                assets::CreateTypedAssetDependency<render::Material>("gl-material-b")}));
+            auto first = fixture.Assets->GetById<render::Material>("gl-material-a");
+            auto second = fixture.Assets->GetById<render::Material>("gl-material-b");
+            auto red = fixture.Assets->GetById<render::Texture>("gl-pixels");
+            const auto redId = red->GetId();
+            red.Reset();
+            first->REI_SET({{"Properties", {{"image", {{"Id", "gl-next-pixels"}}}}}});
+            REQUIRE(fixture.Assets->InspectLoadedAsset("gl-next-pixels").at("status") == "unloaded");
+            ClearTarget();
+            first->Use(); // Runtime property edits retain their existing lazy resolution.
+            triangle.Mesh.Render();
+            RequirePixel(ReadPixel(), {0, 0, 255, 255});
+            auto blue = fixture.Assets->GetById<render::Texture>("gl-next-pixels");
+            const auto blueId = blue->GetId();
+            blue.Reset();
+            first.Reset();
+            REQUIRE(glIsTexture(blueId) == GL_FALSE);
+            REQUIRE(glIsTexture(redId) == GL_TRUE);
+            ClearTarget();
+            second->Use();
+            triangle.Mesh.Render();
+            RequirePixel(ReadPixel(), {255, 0, 0, 255});
+            second.Reset();
+            REQUIRE(glIsTexture(redId) == GL_FALSE);
+            REQUIRE(fixture.Assets->InspectLoadedAsset("gl-pixels").at("status") == "unloaded");
+        }
+        REQUIRE(glGetError() == GL_NO_ERROR);
+    });
+}
+
+TEST_CASE("GL36 missing preloaded material texture preserves white fallback", "[native][gl][material][scene-textures][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeGlFixture gl;
+        BehaviourFixture fixture(PrepareGlAssets);
+        render::ShaderGenerator::GetInstance().Initialize();
+        auto fallback = fixture.Assets->GetById<render::Texture>(REI_WHITE_FALLBACK_TEXTURE_ID);
+        const scenes::SceneAssetPreloader preloader(fixture.Assets);
+        REQUIRE(preloader.Preload({assets::CreateTypedAssetDependency<render::Material>("gl-material-missing")}));
+        REQUIRE(fixture.Assets->InspectLoadedAsset("missing-gl-texture").at("status") == "unloaded");
+        auto material = fixture.Assets->GetById<render::Material>("gl-material-missing");
+        render::FrameBuffer target(32, 32);
+        Triangle triangle;
+        ClearTarget();
+        material->Use();
+        triangle.Mesh.Render();
+        RequirePixel(ReadPixel(), {255, 255, 255, 255});
+        REQUIRE(material->REI_GET().at("Properties").at("image").at("Id") == "missing-gl-texture");
+        REQUIRE(glGetError() == GL_NO_ERROR);
     });
 }

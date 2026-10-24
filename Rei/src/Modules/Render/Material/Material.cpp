@@ -34,6 +34,13 @@ namespace rei::render
             }
 
             LoadSerializableFields(data);
+            // Resolve texture dependencies while scene workers suppress GPU PostLoad.
+            for (auto& [name, binding] : _propertyBindings)
+            {
+                auto* texture = std::get_if<TextureBinding>(&binding);
+                if (texture == nullptr || texture->Asset.Id.empty()) continue;
+                texture->Asset = GetAssetManager().GetById<Texture>(texture->Asset.Id);
+            }
         }
         catch (const std::exception& e)
         {

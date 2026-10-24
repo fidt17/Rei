@@ -170,6 +170,15 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
                     workingSetBytes = process.WorkingSet64, privateBytes = process.PrivateMemorySize64,
                     totalCpuMs = process.TotalProcessorTime.TotalMilliseconds
                 });
+                if (recordLoadTimings)
+                {
+                    // Read pixels only after timed captures and resource snapshots.
+                    var existing = Directory.GetFiles(engine.RunDirectory, "frame-*.png").ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    var frame = await engine.CallAsync("rei_editor_capture_frame");
+                    var image = Assert.Single(Directory.GetFiles(engine.RunDirectory, "frame-*.png"), path => !existing.Contains(path));
+                    File.Copy(image, Path.Combine(engine.RunDirectory, $"scene-{phase}.png"), overwrite: true);
+                    await File.WriteAllTextAsync(Path.Combine(engine.RunDirectory, $"scene-{phase}.json"), frame.GetRawText());
+                }
                 await File.WriteAllTextAsync(Path.Combine(engine.RunDirectory, "scene-cycle-results.json"), JsonSerializer.Serialize(new
                 {
                     source, initialScene = initial, controlScene = new { control.Id, control.Path }, phases
