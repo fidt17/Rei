@@ -111,6 +111,15 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
                 foreach (var stage in new[] { "mesh.read", "model.read", "mesh.gpu", "model.release" })
                     Assert.True(measurements.Count(entry => entry.GetProperty("stage").GetString() == stage) >= expectedModels * 2, stage);
                 Assert.Contains(measurements, entry => entry.GetProperty("stage").GetString() == "registry.scan");
+                var loadingScene = false;
+                foreach (var measurement in measurements)
+                {
+                    var stage = measurement.GetProperty("stage").GetString();
+                    if (stage == "scene.load.begin") loadingScene = true;
+                    if (loadingScene) Assert.NotEqual("registry.scan", stage);
+                    if (stage == "scene.load") loadingScene = false;
+                }
+                Assert.False(loadingScene);
                 foreach (var stage in new[] { "texture.read", "texture.gpu", "texture.release" })
                     Assert.Contains(measurements, entry => entry.GetProperty("stage").GetString() == stage);
                 var summary = measurements.GroupBy(entry => entry.GetProperty("stage").GetString()!)

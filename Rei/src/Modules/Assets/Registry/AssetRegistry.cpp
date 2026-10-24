@@ -255,19 +255,9 @@ namespace rei::assets
 
     bool AssetRegistry::ReleaseRecordOrUnloadInPlace(const std::string& id)
     {
-        MarkPendingDestroy(id);
-        FlushPendingDestroy();
-
-        const auto recordAfterDestroyAttempt = FindRecord(id);
-        if (recordAfterDestroyAttempt == nullptr) return true;
-        if (recordAfterDestroyAttempt->State == AssetState::Unloaded) return true;
-
         TransitionToUnloadedAndReleasePayload(id);
-
-        const auto recordAfterUnloadAttempt = FindRecord(id);
-        if (recordAfterUnloadAttempt == nullptr) return true;
-
-        return recordAfterUnloadAttempt->State == AssetState::Unloaded;
+        const auto record = FindRecord(id);
+        return record == nullptr || record->State == AssetState::Unloaded;
     }
 
     void AssetRegistry::AddLoadedAssetsSize(const i32 size)

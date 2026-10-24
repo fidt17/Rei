@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "support/NativeTestSupport.h"
 #include "Modules/Assets/Registry/AssetRegistry.h"
+#include "Common/Profiling/ProfilingService.h"
 #include <algorithm>
 
 using namespace rei::assets;
@@ -31,6 +32,33 @@ namespace
     {
         registry.CreateAssetRecord(ref, "probe", new ProbeAsset{lifetime, value}, size, AssetState::Loaded);
         registry.SetRefCount(ref.Id, 1);
+    }
+
+    std::filesystem::path EnableRegistryTimings()
+    {
+        std::wstring root(32768, L'\0');
+        const auto length = GetEnvironmentVariableW(L"REI_NATIVE_TEST_TEMP_ROOT", root.data(), static_cast<DWORD>(root.size()));
+        REQUIRE(length > 0);
+        REQUIRE(length < root.size());
+        root.resize(length);
+        const auto path = std::filesystem::path(root) / "registry-timings.jsonl";
+        std::filesystem::create_directories(path.parent_path());
+        // The existing timing stream stays open until exit; the parent harness owns cleanup.
+        REQUIRE(_putenv_s("REI_LOAD_TIMINGS_PATH", path.string().c_str()) == 0);
+        REQUIRE(rei::profiling::IsLoadTimingEnabled());
+        return path;
+    }
+
+    std::vector<nlohmann::json> ReadRegistryScans(const std::filesystem::path& path)
+    {
+        std::ifstream input(path);
+        std::vector<nlohmann::json> scans;
+        for (std::string line; std::getline(input, line);)
+        {
+            const auto entry = nlohmann::json::parse(line).at("data");
+            if (entry.at("stage") == "registry.scan") scans.push_back(entry);
+        }
+        return scans;
     }
 }
 
@@ -317,4 +345,111 @@ TEST_CASE("ASR-03 Registry destruction releases payloads exactly once", "[native
         REQUIRE(lifetime->Destroyed == 0);
     }
     CHECK(lifetime->Destroyed == 1);
+}
+
+TEST_CASE("ASR-04 Individual release and reload avoid global scans while bulk unload still collects records", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        const auto timings = EnableRegistryTimings();
+        AssetRegistry registry;
+        const auto targetLifetime = std::make_shared<Lifetime>();
+        const auto unrelatedLifetime = std::make_shared<Lifetime>();
+        const auto pendingLifetime = std::make_shared<Lifetime>();
+        {
+            AssetRef<ProbeAsset> pending("unrelated-pending");
+            registry.CreateAssetRecord(pending, "pending", new ProbeAsset{pendingLifetime, 1}, 12, AssetState::PendingDestroy);
+        }
+        constexpr i32 UNRELATED_COUNT = 64;
+        for (i32 i = 0; i < UNRELATED_COUNT; ++i)
+        {
+            AssetRef<ProbeAsset> ref("unrelated-" + std::to_string(i));
+            Create(registry, ref, unrelatedLifetime);
+        }
+        AssetRef<ProbeAsset> target("target");
+        Create(registry, target, targetLifetime);
+        const auto retained = target;
+        registry.IncrementRefCount(target.Id);
+        CHECK_FALSE(registry.ReleaseAssetWithId(target.Id).RefCountReachedZero);
+        REQUIRE(target.IsLoaded());
+        CHECK(targetLifetime->Destroyed == 0);
+
+        const auto released = registry.ReleaseAssetWithId(target.Id);
+        CHECK(released.RefCountReachedZero);
+        CHECK_FALSE(released.MissingLoadedRecord);
+        CHECK(released.ReleasedSize == 12);
+        CHECK_FALSE(retained.IsLoaded());
+        CHECK(retained.Record->State == AssetState::Unloaded);
+        CHECK(targetLifetime->Destroyed == 1);
+        CHECK(unrelatedLifetime->Destroyed == 0);
+        CHECK(pendingLifetime->Destroyed == 0);
+        REQUIRE(registry.FindRecord("unrelated-pending") != nullptr);
+        CHECK(registry.FindRecord("unrelated-pending")->State == AssetState::PendingDestroy);
+        CHECK(registry.GetLoadedAssetsSize() == (UNRELATED_COUNT + 1) * 12);
+        CHECK(registry.FindRecord("unrelated-0")->State == AssetState::Loaded);
+
+        Create(registry, target, targetLifetime, 25, 99);
+        CHECK(retained.Record == target.Record);
+        REQUIRE(retained.IsLoaded());
+        CHECK(retained.Get()->Value == 99);
+        CHECK(registry.GetLoadedAssetsSize() == (UNRELATED_COUNT + 1) * 12 + 25);
+        CHECK(registry.ReleaseAssetWithId(target.Id).ReleasedSize == 25);
+        CHECK(targetLifetime->Destroyed == 2);
+        CHECK(ReadRegistryScans(timings).empty());
+
+        const auto unloaded = registry.ReleaseAllLoadedAssets();
+        CHECK(unloaded.size() == UNRELATED_COUNT + 1);
+        CHECK(unrelatedLifetime->Destroyed == UNRELATED_COUNT);
+        CHECK(pendingLifetime->Destroyed == 1);
+        CHECK(registry.GetLoadedAssetsSize() == 0);
+        const auto scans = ReadRegistryScans(timings);
+        REQUIRE(scans.size() == 1);
+        CHECK(scans.front().at("visited") == UNRELATED_COUNT + 2);
+        CHECK(scans.front().at("collected") == UNRELATED_COUNT + 1);
+    });
+}
+
+TEST_CASE("ASR-04 Cascading destructors release dependencies and create assets without global scans", "[native][assets][regression][isolated]")
+{
+    Isolated([]
+    {
+        const auto timings = EnableRegistryTimings();
+        AssetRegistry registry;
+        const auto parentLifetime = std::make_shared<Lifetime>();
+        const auto childLifetime = std::make_shared<Lifetime>();
+        const auto createdLifetime = std::make_shared<Lifetime>();
+        AssetRef<ProbeAsset> parent("parent");
+        AssetRef<ProbeAsset> child("child");
+        AssetRef<ProbeAsset> created("created-in-destructor");
+        Create(registry, parent, parentLifetime, 12);
+        Create(registry, child, childLifetime, 25);
+        bool parentWasUnloaded = false;
+        bool childWasUnloaded = false;
+        parentLifetime->OnDestroy = [&]
+        {
+            parentWasUnloaded = registry.FindRecord(parent.Id)->State == AssetState::Unloaded && parent.Get() == nullptr;
+            registry.ReleaseAssetWithId(child.Id);
+        };
+        childLifetime->OnDestroy = [&]
+        {
+            childWasUnloaded = registry.FindRecord(child.Id)->State == AssetState::Unloaded && child.Get() == nullptr;
+            Create(registry, created, createdLifetime, 31, 99);
+        };
+
+        const auto released = registry.ReleaseAssetWithId(parent.Id);
+        CHECK(released.RefCountReachedZero);
+        CHECK(released.ReleasedSize == 12);
+        CHECK(parentWasUnloaded);
+        CHECK(childWasUnloaded);
+        CHECK(parentLifetime->Destroyed == 1);
+        CHECK(childLifetime->Destroyed == 1);
+        REQUIRE(created.IsLoaded());
+        CHECK(created.Get()->Value == 99);
+        CHECK(registry.GetLoadedAssetsSize() == 31);
+        CHECK(ReadRegistryScans(timings).empty());
+        registry.ReleaseAssetWithId(created.Id);
+        CHECK(createdLifetime->Destroyed == 1);
+        CHECK(registry.GetLoadedAssetsSize() == 0);
+        CHECK(ReadRegistryScans(timings).empty());
+    });
 }
