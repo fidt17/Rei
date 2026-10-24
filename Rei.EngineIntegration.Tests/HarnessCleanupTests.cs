@@ -44,7 +44,7 @@ public sealed class HarnessCleanupTests
     public void RejectsPathsOutsideImmediateGuidRuns(string name)
     {
         Assert.Throws<IOException>(() => EngineIntegrationHarness.TrimBuildOutputs(
-            Path.Combine(Path.GetTempPath(), "Rei-engine-tests", name)));
+            Path.Combine(EngineIntegrationHarness.RunsDirectory, name)));
     }
 
     [Fact]

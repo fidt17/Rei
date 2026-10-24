@@ -23,7 +23,9 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
     private McpClient? _client;
     private Task? _stdout;
     private Task? _stderr;
-    public string RunDirectory { get; } = Path.Combine(Path.GetTempPath(), "Rei-engine-tests", Guid.NewGuid().ToString("N"));
+    // MSBuild drops AppData/Temp dependencies; project source tracking also excludes bin paths.
+    internal static string RunsDirectory { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Rei-engine-tests");
+    public string RunDirectory { get; } = Path.Combine(RunsDirectory, Guid.NewGuid().ToString("N"));
     public string ProjectDirectory => Path.Combine(RunDirectory, "project");
 
     public EngineIntegrationHarness(string fixtureName = "DataAssets", bool? keepBuildOutputs = null, string? sourceProjectDirectory = null, TimeSpan? startupTimeout = null, string? preparedRunDirectory = null)
@@ -352,7 +354,7 @@ public sealed class EngineIntegrationHarness : IAsyncDisposable
 
     private static string ValidateOwnedRunDirectory(string runDirectory)
     {
-        var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Rei-engine-tests")).TrimEnd(Path.DirectorySeparatorChar);
+        var root = Path.GetFullPath(RunsDirectory).TrimEnd(Path.DirectorySeparatorChar);
         var run = Path.GetFullPath(runDirectory).TrimEnd(Path.DirectorySeparatorChar);
         if (!Guid.TryParseExact(Path.GetFileName(run), "N", out _) ||
             !string.Equals(Path.GetDirectoryName(run), root, StringComparison.OrdinalIgnoreCase))

@@ -39,7 +39,7 @@ internal static class PreparedBenchmarkProject
         source = Path.GetFullPath(source).TrimEnd(Path.DirectorySeparatorChar);
         ExternalProjectCopy.ValidateSource(source);
         var hashes = await FingerprintInputsAsync(source);
-        indexDirectory ??= Path.Combine(Path.GetTempPath(), "Rei-engine-tests", "benchmark-index");
+        indexDirectory ??= Path.Combine(EngineIntegrationHarness.RunsDirectory, "benchmark-index");
         ExternalProjectCopy.ValidateDestination(source, indexDirectory);
         Directory.CreateDirectory(indexDirectory);
         var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source.ToUpperInvariant())));

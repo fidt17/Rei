@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using Xunit.Abstractions;
 using static Rei.EngineIntegration.Tests.AssetAssertions;
 
@@ -35,6 +36,71 @@ public sealed class BuildIncrementalityLifecycleTests(ITestOutputHelper output)
         var logs = await engine.CloseEditorAsync();
         Assert.Contains("Build Complete", logs);
         Assert.Contains("Shutdown complete", logs);
+    }
+
+    [EngineFact]
+    public async Task PchHeaderEditRebuildsConsumersAndRestartWithoutChangesPreservesObjects()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        var engineFile = Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!;
+        var engineRoot = Path.GetDirectoryName(engineFile)!;
+        var settings = JsonNode.Parse(await File.ReadAllTextAsync(engineFile))!;
+        var overlay = Path.Combine(engine.RunDirectory, "engine");
+        var headers = Path.Combine(overlay, "headers");
+        Directory.CreateDirectory(headers);
+        string RelativeEnginePath(string path) => "\\" + Path.GetRelativePath(overlay, engineRoot + path);
+        foreach (var key in new[] { "RelativeDebugIncludeDir", "RelativeReleaseIncludeDir", "RelativeResourcesDir" })
+            settings[key] = RelativeEnginePath(settings[key]!.GetValue<string>());
+        settings["RelativeSourceIncludes"] = "\\headers;" + string.Join(';', settings["RelativeSourceIncludes"]!.GetValue<string>()
+            .Split(';', StringSplitOptions.RemoveEmptyEntries).Select(RelativeEnginePath));
+        var overlaySettings = Path.Combine(overlay, "ReiEngine.rei_engine");
+        await File.WriteAllTextAsync(overlaySettings, settings.ToJsonString());
+        await engine.PrepareProjectAsync(overlaySettings, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
+        var scripts = Path.Combine(engine.ProjectDirectory, "Project", "Scripts");
+        var engineHeader = Path.Combine(engineRoot, "Rei", "src", "Rei.h").Replace('\\', '/');
+        // Shadow only this fixture's forced include; never edit the shared engine headers.
+        await File.WriteAllTextAsync(Path.Combine(headers, "Rei.h"), $"#pragma once\n#include \"PchValue.inl\"\n#include \"{engineHeader}\"\n");
+        var header = Path.Combine(headers, "PchValue.inl");
+        await File.WriteAllTextAsync(header, "inline constexpr auto PCH_TEST_VALUE = 11;\n");
+        await File.WriteAllTextAsync(Path.Combine(scripts, "PchConsumer.cpp"), "i32 OtherPchValue() { return PCH_TEST_VALUE; }\n");
+        var config = Path.Combine(scripts, "Scripts", "DataAssets", "DataAssetTestConfig.h");
+        await File.WriteAllTextAsync(config, (await File.ReadAllTextAsync(config)).Replace("    public:",
+            "    public:\n        void SetPchTestValues(i32 first, i32 second) { _signedValue = first; _unsignedValue = static_cast<u32>(second); }\n"));
+        var main = Path.Combine(scripts, "ReiApp.cpp");
+        var source = await File.ReadAllTextAsync(main);
+        source = source.Replace("class TestApplication", "#include \"Scripts/DataAssets/DataAssetTestConfig.h\"\ni32 OtherPchValue();\nclass TestApplication")
+            .Replace("rei::GetProfiler().Register(DESCRIPTORS);", "rei::GetProfiler().Register(DESCRIPTORS); auto config = rei::GetAssetManager().GetById<symbols::testing::DataAssetTestConfig>(\"" + CONFIG_ID + "\"); config->SetPchTestValues(PCH_TEST_VALUE, OtherPchValue());");
+        await File.WriteAllTextAsync(main, source);
+        await engine.StartAsync();
+        async Task AssertRuntimeValues(int expected)
+        {
+            await WaitForConfigAsync(engine);
+            var runtime = await engine.ReadAssetAsync(CONFIG_ID, "runtime");
+            var values = runtime.GetProperty("values");
+            Assert.Equal(expected, values.GetProperty("_signedValue").GetInt32());
+            Assert.Equal(expected, values.GetProperty("_unsignedValue").GetInt32());
+        }
+        await AssertRuntimeValues(11);
+        var intermediates = Path.Combine(engine.ProjectDirectory, "bin", "int", "x64EditorDebug");
+        var outputs = Directory.GetFiles(intermediates, "*.obj", SearchOption.AllDirectories)
+            .Append(Path.Combine(intermediates, "ReiProject.pch"))
+            .ToDictionary(path => path, File.GetLastWriteTimeUtc);
+        Assert.True(outputs.Count >= 5, "Expected PCH and four objects, including two value consumers.");
+
+        await engine.RestartAsync(_ => File.WriteAllTextAsync(header, "inline constexpr auto PCH_TEST_VALUE = 22;\n"));
+        await AssertRuntimeValues(22);
+        foreach (var (path, timestamp) in outputs) Assert.NotEqual(timestamp, File.GetLastWriteTimeUtc(path));
+        outputs = outputs.Keys.ToDictionary(path => path, File.GetLastWriteTimeUtc);
+
+        await engine.RestartAsync();
+        foreach (var (path, timestamp) in outputs) Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
+        await AssertRuntimeValues(22);
+        await engine.RunOperationAsync("rei_editor_start_playmode");
+        await WaitForConfigAsync(engine);
+        await AssertPropertyAsync(engine, "_floatValue", 12.5);
+        await engine.RunOperationAsync("rei_editor_stop_playmode");
+        await WaitForConfigAsync(engine);
     }
 
     [EngineFact]
