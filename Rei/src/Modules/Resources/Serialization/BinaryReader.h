@@ -60,5 +60,6 @@ namespace rei::resources
         REI_API void ValidateLength(i32 count, u64 elementSize);
 
         std::ifstream _stream;
+        i64 _fileSize = 0;
     };
 }

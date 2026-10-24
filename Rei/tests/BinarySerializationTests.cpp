@@ -472,3 +472,98 @@ TEST_CASE("BIN-02 Writer reports byte range lock failure after successful open",
         CHECK(ReadBytes(path) == std::vector<u8>{0x11, 0x22, 0x33});
     });
 }
+
+TEST_CASE("BIN-04 Reader keeps the file extent captured at open", "[native][binary][file-size]")
+{
+    TemporaryDirectory directory;
+    const auto path = directory.Write("growing.bin", {2, 0, 0, 0, 0xAB});
+    BinaryReader reader(path.string());
+    {
+        std::ofstream append(path, std::ios::binary | std::ios::app);
+        append.put(static_cast<char>(0xCD));
+        append.close();
+        REQUIRE(append.good());
+    }
+    REQUIRE(std::filesystem::file_size(path) == 6);
+
+    SECTION("vector") { CHECK_THROWS_AS(reader.GetVector<u8>(), std::runtime_error); }
+    SECTION("string") { CHECK_THROWS_AS(reader.GetStr(), std::runtime_error); }
+    SECTION("raw bytes")
+    {
+        i32 count = 0;
+        CHECK_THROWS_AS(std::unique_ptr<u8[]>(reader.GetBytes(count)), std::runtime_error);
+    }
+    CHECK(reader.GetPosition() == 4);
+    CHECK(reader.GetU8() == 0xAB);
+
+    BinaryReader reopened(path.string());
+    CHECK(reopened.GetVector<u8>() == std::vector<u8>{0xAB, 0xCD});
+    CHECK(reopened.GetPosition() == 6);
+}
+
+TEST_CASE("BIN-04 Cached file extent does not hide a truncated read", "[native][binary][file-size]")
+{
+    TemporaryDirectory directory;
+    const auto path = directory.Write("shrinking.bin", {2, 0, 0, 0, 0xAB, 0xCD});
+    BinaryReader reader(path.string());
+    std::filesystem::resize_file(path, 5);
+    REQUIRE(std::filesystem::file_size(path) == 5);
+
+    SECTION("vector") { CHECK_THROWS_AS(reader.GetVector<u8>(), std::runtime_error); }
+    SECTION("string") { CHECK_THROWS_AS(reader.GetStr(), std::runtime_error); }
+    SECTION("raw bytes")
+    {
+        i32 count = 0;
+        CHECK_THROWS_AS(std::unique_ptr<u8[]>(reader.GetBytes(count)), std::runtime_error);
+    }
+}
+
+TEST_CASE("BIN-04 Length checks use absolute offsets across forward and backward seeks", "[native][binary][file-size]")
+{
+    TemporaryDirectory directory;
+    const auto path = directory.Write("offset-records.bin", {
+        1, 0, 0, 0, 0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01,
+        3, 0, 0, 0, 'a', 'b', 'c',
+        2, 0, 0, 0, 0xAB, 0xCD
+    });
+    BinaryReader reader(path.string(), 12);
+    REQUIRE(reader.GetPosition() == 12);
+    REQUIRE(reader.GetStr() == "abc");
+    REQUIRE(reader.GetPosition() == 19);
+    i32 count = 0;
+    const std::unique_ptr<u8[]> bytes(reader.GetBytes(count));
+    REQUIRE(count == 2);
+    CHECK(std::vector<u8>(bytes.get(), bytes.get() + count) == std::vector<u8>{0xAB, 0xCD});
+    CHECK(reader.GetPosition() == 25);
+
+    reader.SetPosition(0);
+    CHECK(reader.GetVector<u64>() == std::vector<u64>{0x0123456789ABCDEF});
+    reader.SetPosition(19);
+    CHECK_THROWS_AS(reader.GetVector<u16>(), std::runtime_error);
+    CHECK(reader.GetPosition() == 23);
+    CHECK(reader.GetU16() == 0xCDAB);
+    reader.SetPosition(19);
+    CHECK(reader.GetVector<u8>() == std::vector<u8>{0xAB, 0xCD});
+    CHECK(reader.GetPosition() == 25);
+}
+
+TEST_CASE("BIN-04 Empty file and zero length payloads preserve end positions", "[native][binary][file-size]")
+{
+    TemporaryDirectory directory;
+    BinaryReader emptyReader(directory.Write("empty.bin", {}).string());
+    CHECK(emptyReader.GetPosition() == 0);
+    CHECK_THROWS_AS(emptyReader.GetU8(), std::runtime_error);
+
+    BinaryReader reader(directory.Write("empty-record.bin", {0xEF, 0xCD, 0xAB, 0x89, 0, 0, 0, 0}).string(), 4);
+    SECTION("vector") { CHECK(reader.GetVector<u64>().empty()); }
+    SECTION("string") { CHECK(reader.GetStr().empty()); }
+    SECTION("raw bytes")
+    {
+        i32 count = -1;
+        const std::unique_ptr<u8[]> bytes(reader.GetBytes(count));
+        CHECK(count == 0);
+    }
+    CHECK(reader.GetPosition() == 8);
+    reader.SetPosition(0);
+    CHECK(reader.GetU32() == 0x89ABCDEF);
+}

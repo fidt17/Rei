@@ -6,8 +6,10 @@ namespace rei::resources
 {
     BinaryReader::BinaryReader(const std::string& path, const i64 pos)
     {
-        _stream.open(path, std::ios::in | std::ios::binary);
+        _stream.open(path, std::ios::in | std::ios::binary | std::ios::ate);
         REI_THROW_IF(_stream.fail(), "Could not open stream for " + path)
+        _fileSize = _stream.tellg();
+        REI_THROW_IF(_fileSize < 0, "Could not inspect binary stream length")
         SetPosition(pos);
     }
 
@@ -51,15 +53,10 @@ namespace rei::resources
         REI_THROW_IF(count < 0, "Negative binary payload length")
         if (count == 0) return;
 
-        const auto position = _stream.tellg();
-        REI_THROW_IF(position == std::streampos(-1), "Could not read binary stream position")
-        _stream.seekg(0, std::ios::end);
-        const auto end = _stream.tellg();
-        const bool endFailed = _stream.fail();
-        _stream.clear();
-        _stream.seekg(position);
-        REI_THROW_IF(endFailed || _stream.fail() || end < position, "Could not inspect binary stream length")
-        REI_THROW_IF(static_cast<u64>(count) > static_cast<u64>(end - position) / elementSize, "Binary payload exceeds remaining data")
+        const i64 position = _stream.tellg();
+        REI_THROW_IF(position < 0, "Could not read binary stream position")
+        REI_THROW_IF(position > _fileSize, "Could not inspect binary stream length")
+        REI_THROW_IF(static_cast<u64>(count) > static_cast<u64>(_fileSize - position) / elementSize, "Binary payload exceeds remaining data")
     }
 
     u8 BinaryReader::GetU8() { return GetByType<u8>(); } 
