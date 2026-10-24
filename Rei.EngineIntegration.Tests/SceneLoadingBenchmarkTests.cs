@@ -28,6 +28,15 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
         var sampling = engine.SampleProcessResourcesAsync(cancellation.Token);
         try
         {
+            await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
+            var warmup = Stopwatch.StartNew();
+            var packHash = await PreparedBenchmarkProject.WarmPackedAssetsAsync(engine.ProjectDirectory);
+            await File.WriteAllTextAsync(Path.Combine(engine.RunDirectory, "scene-cache-policy.json"), JsonSerializer.Serialize(new
+            {
+                policy = "fresh-editor-warm-pack", packHash,
+                packBytes = new FileInfo(Path.Combine(engine.ProjectDirectory, "bin", "Resources", "assets.bin")).Length,
+                warmupMs = warmup.Elapsed.TotalMilliseconds
+            }));
             await engine.StartAsync(recordLoadTimings);
             var initial = (await engine.CallAsync("rei_editor_get_state")).GetProperty("scene").Clone();
             var initialId = initial.GetProperty("id").GetString()!;
@@ -203,9 +212,9 @@ public sealed class SceneLoadingBenchmarkTests(ITestOutputHelper output)
         }
     }
 
-    private static bool IsSceneRenderAsset(string name) => Path.GetExtension(name).ToLowerInvariant() is ".obj" or ".mat" or ".jpg" or ".jpeg" or ".png" or ".tga" or ".bmp";
+    internal static bool IsSceneRenderAsset(string name) => Path.GetExtension(name).ToLowerInvariant() is ".obj" or ".mat" or ".jpg" or ".jpeg" or ".png" or ".tga" or ".bmp";
 
-    private static SortedDictionary<string, string> ReadDependencies(string project, JsonNode scene)
+    internal static SortedDictionary<string, string> ReadDependencies(string project, JsonNode scene)
     {
         var resources = Path.Combine(project, "bin", "Resources");
         var map = JsonNode.Parse(File.ReadAllText(Path.Combine(resources, "map.json")))!["Assets"]!.AsArray()

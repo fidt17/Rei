@@ -11,6 +11,7 @@
 #include "Modules/Window/WindowManager.h"
 #include "Modules/Input/Input.h"
 #include <array>
+#include <limits>
 
 using namespace rei;
 using namespace rei::tests;
@@ -915,4 +916,101 @@ TEST_CASE("GL36 missing preloaded material texture preserves white fallback", "[
         REQUIRE(material->REI_GET().at("Properties").at("image").at("Id") == "missing-gl-texture");
         REQUIRE(glGetError() == GL_NO_ERROR);
     });
+}
+
+TEST_CASE("GL37 packed textures own exact RGB and RGBA bytes after reader closes", "[native][gl][texture][texture-binary][isolated]")
+{
+    IsolatedGl([]
+    {
+        NativeGlFixture gl;
+        TemporaryDirectory files;
+        for (const i32 format : {GL_RGB, GL_RGBA, GL_RGB8, GL_RGBA8})
+        {
+            INFO("Packed format " << format);
+            constexpr i32 WIDTH = 257;
+            constexpr i32 HEIGHT = 3;
+            const bool rgb = format == GL_RGB || format == GL_RGB8;
+            const i32 channels = rgb ? 3 : 4;
+            const i32 internalFormat = format == GL_RGB ? GL_SRGB8 : format == GL_RGBA ? GL_SRGB8_ALPHA8 : format;
+            std::vector<u8> expected(WIDTH * HEIGHT * channels);
+            for (u32 i = 0; i < expected.size(); ++i) expected[i] = static_cast<u8>(i * 37 + i / 256);
+            std::vector<u8> bytes(7, 0xAB); // Packed assets can start at an unaligned file offset.
+            const auto packed = TextureBytes(WIDTH, HEIGHT, format, expected);
+            bytes.insert(bytes.end(), packed.begin(), packed.end());
+            AppendInteger(bytes, 0x89ABCDEF, 4);
+            const auto path = files.Write("texture-" + std::to_string(format) + ".bin", bytes);
+            auto texture = [&]
+            {
+                resources::BinaryReader reader(path.string(), 7);
+                render::Texture loaded(reader);
+                REQUIRE(loaded.GetId() == 0);
+                REQUIRE(loaded.GetWidth() == WIDTH);
+                REQUIRE(loaded.GetHeight() == HEIGHT);
+                REQUIRE(reader.GetPosition() == 7 + packed.size());
+                REQUIRE(reader.GetU32() == 0x89ABCDEF);
+                reader.Close();
+                return loaded;
+            }();
+            u32 id = 0;
+            {
+                render::Texture moved(std::move(texture));
+                moved.PostLoad();
+                id = moved.GetId();
+                REQUIRE(glIsTexture(id) == GL_TRUE);
+                REQUIRE(TextureSize(id) == std::array<i32, 2>{WIDTH, HEIGHT});
+                i32 actualFormat = 0;
+                glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &actualFormat);
+                REQUIRE(actualFormat == internalFormat);
+                glPixelStorei(GL_PACK_ALIGNMENT, 1);
+                std::vector<u8> actual(expected.size());
+                glGetTexImage(GL_TEXTURE_2D, 0, rgb ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, actual.data());
+                REQUIRE(actual == expected);
+                moved.PostLoad();
+                REQUIRE(moved.GetId() == id);
+            }
+            REQUIRE(glIsTexture(id) == GL_FALSE);
+            REQUIRE(glGetError() == GL_NO_ERROR);
+        }
+    });
+}
+
+TEST_CASE("TEX-01 packed texture rejects invalid lengths before consuming payload", "[native][texture][texture-binary][binary]")
+{
+    TemporaryDirectory files;
+    for (const i32 length : {-1, 5, std::numeric_limits<i32>::max()})
+    {
+        INFO("Packed length " << length);
+        auto bytes = TextureBytes(1, 1, GL_RGBA, {});
+        bytes.resize(12);
+        AppendInteger(bytes, static_cast<u32>(length), 4);
+        bytes.push_back(0xAB);
+        const auto path = files.Write("invalid-" + std::to_string(length) + ".bin", bytes);
+        resources::BinaryReader reader(path.string());
+        REQUIRE_THROWS_AS(render::Texture{reader}, std::runtime_error);
+        REQUIRE(reader.GetPosition() == 16);
+        REQUIRE(reader.GetU8() == 0xAB);
+    }
+    for (u32 length = 0; length < 16; ++length)
+    {
+        INFO("Truncated header bytes " << length);
+        auto bytes = TextureBytes(1, 1, GL_RGBA, {});
+        bytes.resize(length);
+        const auto path = files.Write("truncated-" + std::to_string(length) + ".bin", bytes);
+        resources::BinaryReader reader(path.string());
+        REQUIRE_THROWS_AS(render::Texture{reader}, std::runtime_error);
+    }
+}
+
+TEST_CASE("TEX-02 empty packed texture leaves following record readable without uploading", "[native][texture][texture-binary][binary]")
+{
+    TemporaryDirectory files;
+    auto bytes = TextureBytes(0, 0, GL_RGBA, {});
+    AppendInteger(bytes, 0x89ABCDEF, 4);
+    resources::BinaryReader reader(files.Write("empty.bin", bytes).string());
+    const render::Texture texture(reader);
+    REQUIRE(texture.GetId() == 0);
+    REQUIRE(texture.GetWidth() == 0);
+    REQUIRE(texture.GetHeight() == 0);
+    REQUIRE(reader.GetPosition() == 16);
+    REQUIRE(reader.GetU32() == 0x89ABCDEF);
 }

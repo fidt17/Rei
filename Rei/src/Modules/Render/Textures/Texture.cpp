@@ -17,15 +17,11 @@ rei::render::Texture::Texture(resources::BinaryReader& reader)
     // Sized RGB/RGBA formats explicitly mark linear data; legacy RGB/RGBA packs contain sRGB colors.
     if (_format == GL_RGB8 || _format == GL_RGBA8) _colorSpace = TextureColorSpace::Linear;
 
-    i32 length = 0;
-    u8* data = reader.GetBytes(length);
-    const auto readMs = timer.ElapsedMs();
-    _rawData = std::vector<u8>(data, data + length);
-    delete[] data;
+    _rawData = reader.GetVector<u8>();
     const auto totalMs = timer.ElapsedMs();
     if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
-        {"stage", "texture.read"}, {"width", _width}, {"height", _height}, {"bytes", length},
-        {"readMs", readMs}, {"copyMs", totalMs - readMs}, {"totalMs", totalMs}
+        {"stage", "texture.read"}, {"width", _width}, {"height", _height}, {"bytes", _rawData.size()},
+        {"readMs", totalMs}, {"totalMs", totalMs}
     }).dump());
 }
 

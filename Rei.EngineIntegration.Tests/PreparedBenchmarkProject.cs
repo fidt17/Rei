@@ -9,6 +9,17 @@ internal static class PreparedBenchmarkProject
 {
     private sealed record Entry(string Source, string RunDirectory, SortedDictionary<string, string> Hashes);
 
+    internal static async Task<string> WarmPackedAssetsAsync(string projectDirectory)
+    {
+        const int BUFFER_SIZE = 1024 * 1024;
+        await using var input = File.OpenRead(Path.Combine(projectDirectory, "bin", "Resources", "assets.bin"));
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = new byte[BUFFER_SIZE];
+        int read;
+        while ((read = await input.ReadAsync(buffer)) > 0) hash.AppendData(buffer, 0, read);
+        return Convert.ToHexString(hash.GetHashAndReset());
+    }
+
     internal static async Task<SortedDictionary<string, string>> FingerprintInputsAsync(string source)
     {
         ExternalProjectCopy.ValidateSource(source);
