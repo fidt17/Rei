@@ -581,3 +581,49 @@ TEST_CASE("Asset build logs keep texture context together and errors identify th
         logger->NewLogEvent.remove(handle);
     });
 }
+
+
+TEST_CASE("Model builder stores aggregate bounds across all meshes", "[native][importers][model-bounds][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        const auto path = ImportModel(files,
+            "o left\nv -7 -3 -11\nv -4 -3 -11\nv -7 -1 -11\nf 1 2 3\n"
+            "o right\nv 4 6 5\nv 8 6 5\nv 4 9 5\nf 4 5 6\n");
+        resources::BinaryReader raw(path.string());
+        CHECK(raw.GetStr() == "model.obj");
+        REQUIRE(raw.GetI32() == 2);
+        for (i32 mesh = 0; mesh < 2; ++mesh) render::Mesh geometry(raw);
+        REQUIRE(raw.GetU8() == 1);
+        CheckVector(Vector3(raw.GetByType<glm::vec3>()), {-7, -3, -11});
+        CheckVector(Vector3(raw.GetByType<glm::vec3>()), {8, 9, 5});
+        CHECK(raw.GetPosition() == static_cast<i64>(std::filesystem::file_size(path)));
+
+        resources::BinaryReader reader(path.string());
+        render::Model model(reader);
+        REQUIRE(model.GetBounds().IsValid());
+        CheckVector(Vector3(model.GetBounds().Min), {-7, -3, -11});
+        CheckVector(Vector3(model.GetBounds().Max), {8, 9, 5});
+        CHECK(reader.GetPosition() == static_cast<i64>(std::filesystem::file_size(path)));
+    });
+}
+
+TEST_CASE("Model builder preserves tight bounds for flat negative-coordinate geometry", "[native][importers][model-bounds][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        resources::BinaryReader reader(ImportModel(files, "o flat\nv -7 -3 -5\nv -4 -3 -5\nv -7 -1 -5\nf 1 2 3\n").string());
+        render::Model model(reader);
+        REQUIRE(model.GetBounds().IsValid());
+        CheckVector(Vector3(model.GetBounds().Min), {-7, -3, -5});
+        CheckVector(Vector3(model.GetBounds().Max), {-4, -1, -5});
+        CHECK(model.GetBounds().Min.z == -5);
+        CHECK(model.GetBounds().Max.z == -5);
+        REQUIRE(model.GetMeshes().size() == 1);
+        // Physics BVH padding must not enlarge the model's rendering bounds.
+        CHECK(model.GetMeshes()[0].BVHRoot.Min.z < -5);
+        CHECK(model.GetMeshes()[0].BVHRoot.Max.z > -5);
+    });
+}

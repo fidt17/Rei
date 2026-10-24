@@ -238,6 +238,7 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
     [Theory]
     [InlineData(null)]
     [InlineData("engine-1|1")]
+    [InlineData("engine-1|2")]
     public async Task ChangedOrMissingAssetBuilderKeyRebuildsOnlyAssetsAndSurvivesSolutionOnlyBuild(string? key)
     {
         await PrepareCompleteBuildFiles();

@@ -20,7 +20,19 @@ namespace rei::render
             _meshes.emplace_back(reader);
         }
         const auto meshesMs = timer.ElapsedMs();
-        BuildBounds();
+        const auto hasBounds = reader.GetU8();
+        REI_THROW_IF(hasBounds > 1, "Invalid packed model bounds flag")
+        if (hasBounds != 0)
+        {
+            const auto min = reader.GetByType<glm::vec3>();
+            const auto max = reader.GetByType<glm::vec3>();
+            for (u32 axis = 0; axis < 3; ++axis)
+            {
+                REI_THROW_IF(!std::isfinite(min[axis]) || !std::isfinite(max[axis]) || min[axis] > max[axis], "Invalid packed model bounds")
+            }
+            _bounds.Include(min);
+            _bounds.Include(max);
+        }
         const auto totalMs = timer.ElapsedMs();
         if (profiling::IsLoadTimingEnabled()) profiling::WriteLoadTiming(nlohmann::json({
             {"stage", "model.read"}, {"name", _name}, {"meshes", _meshes.size()},

@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "ModelBuilder.h"
+#include "Common/Math/Bounds.h"
 
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
@@ -95,6 +96,7 @@ void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::
     writer.WriteStr(assetPath.filename().generic_string());
 
     writer.WriteI32(static_cast<i32>(meshes.size()));
+    rei::math::Bounds bounds;
     i32 meshCounter = 0;
     for (auto& mesh : meshes)
     {
@@ -104,6 +106,7 @@ void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::
         writer.WriteI32(static_cast<i32>(mesh.Vertices.size()));
         for (const auto& vertex : mesh.Vertices)
         {
+            bounds.Include(vertex.Position);
             writer.Write(vertex);
         }
 
@@ -116,5 +119,12 @@ void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::
 
         mesh.BVHRoot.BuildBVH(mesh);
         WriteBVHNode(mesh.BVHRoot, writer);
+    }
+
+    writer.WriteU8(bounds.IsValid() ? 1 : 0);
+    if (bounds.IsValid())
+    {
+        writer.Write(bounds.Min);
+        writer.Write(bounds.Max);
     }
 }

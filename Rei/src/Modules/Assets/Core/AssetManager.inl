@@ -170,7 +170,9 @@ namespace rei::assets
             if (record->State != AssetState::Loaded && record->State != AssetState::Failed) return;
             const auto result = owner->ReleaseAssetWithId(record->Id);
             if (result.RefCountReachedZero && !result.MissingLoadedRecord)
+            {
                 LOG_DEBUG("Asset unloaded id={} size={}", record->Id, common::logging::utility::FormatSize(result.ReleasedSize))
+            }
         });
     }
 

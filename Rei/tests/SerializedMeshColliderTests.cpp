@@ -66,12 +66,13 @@ namespace
         return bytes;
     }
 
-    std::vector<u8> ModelBytes(const std::vector<std::vector<u8>>& meshes)
+    std::vector<u8> ModelBytes(const std::vector<std::vector<u8>>& meshes, const std::vector<u8>& bounds = {0})
     {
         std::vector<u8> bytes;
         AppendString(bytes, "native-packed-model");
         AppendInteger(bytes, meshes.size(), 4);
         for (const auto& mesh : meshes) bytes.insert(bytes.end(), mesh.begin(), mesh.end());
+        bytes.insert(bytes.end(), bounds.begin(), bounds.end());
         return bytes;
     }
 
@@ -459,4 +460,82 @@ TEST_CASE("PHY-03 BVH local traversal preserves parallel edge hits and singular 
     shear[1][0] = 2; // x' = x + 2y.
     REQUIRE(root.IsRayIntersecting(mesh, Ray({1.5f, 0.5f, 0}, {0, 0, 2}), shear, point));
     CheckVector(point, {1.5f, 0.5f, 5});
+}
+
+
+TEST_CASE("Packed model reads cached bounds and preserves following stream data", "[native][model-bounds][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        std::vector<u8> bounds{1};
+        AppendVector(bounds, {-10, -20, -30});
+        AppendVector(bounds, {10, 20, 30});
+        auto bytes = ModelBytes({SplitMeshBytes()}, bounds);
+        constexpr u32 SENTINEL = 0x78563412;
+        AppendInteger(bytes, SENTINEL, 4);
+        resources::BinaryReader reader(files.Write("cached-bounds.bin", bytes).string());
+        Model model(reader);
+        REQUIRE(model.GetBounds().IsValid());
+        // Deliberately wider than vertex bounds: loading must use the cache, not rescan geometry.
+        CheckVector(Vector3(model.GetBounds().Min), {-10, -20, -30});
+        CheckVector(Vector3(model.GetBounds().Max), {10, 20, 30});
+        CHECK(reader.GetPosition() == static_cast<i64>(bytes.size() - 4));
+        CHECK(reader.GetU32() == SENTINEL);
+        REQUIRE(model.GetMeshes().size() == 1);
+        CHECK(model.GetMeshes()[0].VAO == 0);
+    });
+}
+
+TEST_CASE("Packed model unknown bounds remain conservative for empty and nonempty geometry", "[native][model-bounds][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        for (const auto& meshes : std::vector<std::vector<std::vector<u8>>>{{}, {SplitMeshBytes()}})
+        {
+            const auto bytes = ModelBytes(meshes);
+            resources::BinaryReader reader(files.Write("unknown-bounds.bin", bytes).string());
+            Model model(reader);
+            CHECK_FALSE(model.GetBounds().IsValid());
+            CHECK(model.GetBounds().IntersectsSphere({10000, 10000, 10000}, 1));
+            CHECK(reader.GetPosition() == static_cast<i64>(bytes.size()));
+        }
+    });
+}
+
+TEST_CASE("Packed model rejects missing truncated and malformed bounds metadata", "[native][model-bounds][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        std::vector<u8> complete{1};
+        AppendVector(complete, {-1, -2, -3});
+        AppendVector(complete, {4, 5, 6});
+        REQUIRE(complete.size() == 25);
+        for (size_t size = 0; size < complete.size(); ++size)
+        {
+            CAPTURE(size);
+            const std::vector<u8> truncated(complete.begin(), complete.begin() + size);
+            resources::BinaryReader reader(files.Write("truncated-bounds.bin", ModelBytes({}, truncated)).string());
+            CHECK_THROWS_WITH(Model(reader), Catch::Matchers::ContainsSubstring("Could not read complete binary data"));
+        }
+        for (const u8 flag : {2, 255})
+        {
+            resources::BinaryReader reader(files.Write("bad-flag.bin", ModelBytes({}, {flag})).string());
+            CHECK_THROWS_WITH(Model(reader), Catch::Matchers::ContainsSubstring("Invalid packed model bounds flag"));
+        }
+        const auto nan = std::numeric_limits<f32>::quiet_NaN();
+        const auto infinity = std::numeric_limits<f32>::infinity();
+        for (const auto& [min, max] : std::vector<std::pair<Vector3, Vector3>>{
+            {{2, 0, 0}, {1, 1, 1}}, {{0, 2, 0}, {1, 1, 1}}, {{0, 0, 2}, {1, 1, 1}},
+            {{nan, 0, 0}, {1, 1, 1}}, {{0, 0, 0}, {1, infinity, 1}}, {{0, 0, -infinity}, {1, 1, 1}}})
+        {
+            std::vector<u8> bounds{1};
+            AppendVector(bounds, min);
+            AppendVector(bounds, max);
+            resources::BinaryReader reader(files.Write("invalid-bounds.bin", ModelBytes({}, bounds)).string());
+            CHECK_THROWS_WITH(Model(reader), Catch::Matchers::ContainsSubstring("Invalid packed model bounds"));
+        }
+    });
 }
