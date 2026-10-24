@@ -235,6 +235,38 @@ public sealed class ProjectBuildStateServiceTests : IDisposable
         Assert.True(state.ShouldBuildAssets);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("engine-1|1")]
+    public async Task ChangedOrMissingAssetBuilderKeyRebuildsOnlyAssetsAndSurvivesSolutionOnlyBuild(string? key)
+    {
+        await PrepareCompleteBuildFiles();
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        var document = JObject.Parse(await File.ReadAllTextAsync(GetStatePath()));
+        if (key == null) document.Remove("AssetBuildKey");
+        else document["AssetBuildKey"] = key;
+        await File.WriteAllTextAsync(GetStatePath(), document.ToString());
+
+        var state = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        Assert.False(state.ShouldBuildSolution);
+        Assert.True(state.ShouldBuildAssets);
+        Assert.Contains("Asset builder version changed", state.Reason);
+
+        var solutionOnly = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, false);
+        Assert.False(solutionOnly.ShouldBuildSolution);
+        Assert.False(solutionOnly.ShouldBuildAssets);
+        _service.MarkBuildStarted(BuildConfigurationEnum.EditorDebug, _liveContext);
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, true, false);
+        var stillStale = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        Assert.False(stillStale.ShouldBuildSolution);
+        Assert.True(stillStale.ShouldBuildAssets);
+
+        await _service.SaveSuccessfulBuild(BuildConfigurationEnum.EditorDebug, _liveContext, false, true);
+        var rebuilt = await _service.CalculateState(BuildConfigurationEnum.EditorDebug, _liveContext, true, true);
+        Assert.False(rebuilt.ShouldBuildSolution);
+        Assert.False(rebuilt.ShouldBuildAssets);
+    }
+
     /// <summary>Engine version change invalidates every requested stage.</summary>
     [Fact]
     public async Task TestEngineVersionChangeInvalidatesRequestedStages()

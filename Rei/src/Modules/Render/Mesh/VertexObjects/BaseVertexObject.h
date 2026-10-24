@@ -20,7 +20,6 @@ namespace rei::render
     protected:
         std::vector<Vertex> _vertices {};
         std::vector<u32> _indices {};
-        std::vector<Face> _faces {};
 
         u32 _lastVertexIdx = 0;
     };

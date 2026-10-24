@@ -25,6 +25,6 @@ namespace rei::physics
         if (!IsAvailable()) return false;
 
         const auto& meshes = _model->GetMeshes();
-        return std::ranges::any_of(meshes, [&](const render::Mesh& m) { return m.BVHRoot.IsRayIntersecting(ray, model, out_intersectionPoint); });
+        return std::ranges::any_of(meshes, [&](const render::Mesh& m) { return m.BVHRoot.IsRayIntersecting(m, ray, model, out_intersectionPoint); });
     }
 }

@@ -92,7 +92,7 @@ void main(){result=texture(image,uv);}
         render::Mesh Mesh;
         explicit Triangle(const f32 z = 0) : Mesh("triangle", {
             {{-1, -1, z}, {}, {0, 0}}, {{3, -1, z}, {}, {2, 0}}, {{-1, 3, z}, {}, {0, 2}}
-        }, {0, 1, 2}, {}) { Mesh.PostLoad(); }
+        }, {0, 1, 2}) { Mesh.PostLoad(); }
         ~Triangle() { Mesh.Dispose(); }
     };
 
@@ -419,7 +419,7 @@ TEST_CASE("GL15 empty mesh draws no pixel and disposes allocated buffers", "[nat
         render::FrameBuffer target(32, 32);
         Program program;
         glUseProgram(program.Id);
-        render::Mesh mesh("empty", {}, {}, {});
+        render::Mesh mesh("empty", {}, {});
         mesh.PostLoad();
         ClearTarget(0, 0, 1);
         mesh.Render();

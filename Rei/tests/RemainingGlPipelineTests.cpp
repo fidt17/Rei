@@ -71,7 +71,7 @@ TEST_CASE("GL33 imported PNG reaches actual image shader with source orientation
         render::Mesh mesh("imported texture quad", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         mesh.PostLoad();
         render::FrameBuffer target(32, 32);
         target.EnableBuffer(32, 32);
@@ -171,7 +171,7 @@ TEST_CASE("sRGB imported and legacy color textures decode while explicit data st
         render::Mesh quad("sampler oracle", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         quad.PostLoad();
         const std::vector<u8> pixels(16, 128);
         for (const auto space : {render::TextureColorSpace::Srgb, render::TextureColorSpace::Linear})
@@ -218,7 +218,7 @@ TEST_CASE("sRGB roundtrip keeps unlit gray but half illumination encodes to 92",
         render::Mesh quad("lit sampler oracle", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         quad.PostLoad();
         material->Use();
         shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
@@ -261,7 +261,7 @@ TEST_CASE("sRGB blending mixes light linearly and leaves alpha arithmetic unchan
         render::Mesh quad("blend oracle", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         quad.PostLoad();
         material->Use();
         shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));

@@ -24,6 +24,7 @@ public class ProjectBuildStateService : IProjectBuildStateService
         public string Status { get; set; } = BuildStateStatus.READY;
         public BuildConfigurationEnum Configuration { get; set; }
         public string EngineVersion { get; set; } = "";
+        public string AssetBuildKey { get; set; } = "";
         public string ClientDllPath { get; set; } = "";
         public List<TrackedFileState> SourceFiles { get; set; } = new();
         public List<TrackedFileState> AssetFiles { get; set; } = new();
@@ -161,6 +162,9 @@ public class ProjectBuildStateService : IProjectBuildStateService
 
     private async Task<string?> GetAssetsRebuildReason(BuildExecutionContext buildContext, ProjectBuildState state)
     {
+        if (!string.Equals(state.AssetBuildKey, AssetBuildCacheKey.Create(_engineSettingsProvider.GetEngineVersion()), StringComparison.Ordinal))
+            return "Asset builder version changed.";
+
         foreach (var outputFile in GetAssetOutputFiles(buildContext))
         {
             if (!File.Exists(outputFile)) return $"Asset output is missing: {outputFile}";
@@ -244,10 +248,13 @@ public class ProjectBuildStateService : IProjectBuildStateService
         if (buildAssets)
         {
             state.AssetFiles = await GetTrackedAssetFiles();
+            state.AssetBuildKey = AssetBuildCacheKey.Create(_engineSettingsProvider.GetEngineVersion());
         }
         else
         {
-            state.AssetFiles = TryLoadStateSync(GetStateFilePath(buildContext, configuration))?.AssetFiles ?? new List<TrackedFileState>();
+            var existingState = TryLoadStateSync(GetStateFilePath(buildContext, configuration));
+            state.AssetFiles = existingState?.AssetFiles ?? new List<TrackedFileState>();
+            state.AssetBuildKey = existingState?.AssetBuildKey ?? "";
         }
 
         SaveState(GetStateFilePath(buildContext, configuration), state);

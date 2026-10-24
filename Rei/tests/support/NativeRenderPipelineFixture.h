@@ -81,7 +81,7 @@ namespace rei::tests
             {{-2, -2, z}, {0, 0, -1}, {0, 0}}, {{2, -2, z}, {0, 0, -1}, {1, 0}},
             {{2, 2, z}, {0, 0, -1}, {1, 1}}, {{-2, 2, z}, {0, 0, -1}, {0, 1}}
         };
-        auto model = GetAssetManager().CreateAsset<render::Model>("pipeline quad", render::Mesh("quad", vertices, {0, 1, 2, 0, 2, 3}, {}));
+        auto model = GetAssetManager().CreateAsset<render::Model>("pipeline quad", render::Mesh("quad", vertices, {0, 1, 2, 0, 2, 3}));
         auto material = GetAssetManager().CreateAsset<render::Material>(GetAssetManager().GetById<render::Shader>(REI_SHADER_COLOR_ASSET_ID));
         material->SetColor("_Color", color);
         material->SetDepth(true);

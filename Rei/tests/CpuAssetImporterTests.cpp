@@ -186,8 +186,8 @@ TEST_CASE("IMP-01 OBJ importer packages generated normals flipped UV and CPU BVH
         REQUIRE(model.GetMeshes().size() == 1);
         const auto& mesh = model.GetMeshes()[0];
         REQUIRE(mesh.Vertices.size() == 3);
-        REQUIRE(mesh.Faces.size() == 1);
-        REQUIRE(mesh.Faces[0].Vertices.size() == 3);
+        REQUIRE((mesh.Indices.size() / 3) == 1);
+        REQUIRE(mesh.GetFace(0).Vertices.size() == 3);
         CHECK(mesh.Indices == std::vector<u32>{0, 1, 2});
         for (const auto& vertex : mesh.Vertices) CheckVector(Vector3(vertex.Normal), {0, 0, 1});
         CHECK(mesh.Vertices[0].TexCoords.x == Catch::Approx(0));
@@ -195,7 +195,7 @@ TEST_CASE("IMP-01 OBJ importer packages generated normals flipped UV and CPU BVH
         CHECK(mesh.Vertices[2].TexCoords.y == Catch::Approx(0));
         CHECK(mesh.VAO == 0);
         Vector3 point;
-        REQUIRE(mesh.BVHRoot.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
         CheckVector(point, {0.5f, 0.5f, 5});
     });
 }
@@ -209,16 +209,15 @@ TEST_CASE("IMP-01 OBJ quad triangulates and absent UV defaults to zero", "[nativ
         render::Model model(reader);
         REQUIRE(model.GetMeshes().size() == 1);
         const auto& mesh = model.GetMeshes()[0];
-        REQUIRE(mesh.Faces.size() == 2);
+        REQUIRE((mesh.Indices.size() / 3) == 2);
         REQUIRE(mesh.Indices.size() == 6);
-        for (const auto& face : mesh.Faces) REQUIRE(face.Vertices.size() == 3);
         for (const auto& vertex : mesh.Vertices)
         {
             CHECK(vertex.TexCoords.x == 0);
             CHECK(vertex.TexCoords.y == 0);
         }
         Vector3 point;
-        REQUIRE(mesh.BVHRoot.IsRayIntersecting(Ray({1, 1, 0}, {0, 0, 1}), glm::mat4(1), point));
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({1, 1, 0}, {0, 0, 1}), glm::mat4(1), point));
         CheckVector(point, {1, 1, 5});
     });
 }
@@ -438,19 +437,19 @@ TEST_CASE("IMP-01 FBX importer preserves triangle coordinates normals UV and pac
         render::Model model(reader);
         REQUIRE(model.GetMeshes().size() == 1);
         const auto& mesh = model.GetMeshes()[0];
-        REQUIRE(mesh.Faces.size() == 1);
-        REQUIRE(mesh.Faces[0].Vertices.size() == 3);
+        REQUIRE((mesh.Indices.size() / 3) == 1);
+        REQUIRE(mesh.GetFace(0).Vertices.size() == 3);
         const std::array<Vector3, 3> expected = {{{0, 0, 5}, {2, 0, 5}, {0, 2, 5}}};
-        const auto matches = MatchTrianglePoints(mesh.Faces[0], expected);
+        const auto matches = MatchTrianglePoints(mesh.GetFace(0), expected);
         for (size_t index = 0; index < 3; ++index)
         {
-            const auto& vertex = mesh.Faces[0].Vertices[index];
+            const auto& vertex = mesh.Vertices[mesh.Indices[index]];
             CheckVector(Vector3(vertex.Normal), {0, 0, 1});
             CHECK(vertex.TexCoords.x == Catch::Approx(expected[matches[index]].x * 0.5f).margin(1e-4f));
             CHECK(vertex.TexCoords.y == Catch::Approx(1.0f - expected[matches[index]].y * 0.5f).margin(1e-4f));
         }
         Vector3 hit;
-        REQUIRE(mesh.BVHRoot.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), hit));
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), hit));
         CheckVector(hit, {0.5f, 0.5f, 5});
         CHECK(reader.GetPosition() == static_cast<i64>(std::filesystem::file_size(target)));
     });
@@ -471,12 +470,12 @@ TEST_CASE("IMP-01 FBX node transforms reach packed geometry and collision surfac
         render::Model model(reader);
         REQUIRE(model.GetMeshes().size() == 1);
         const auto& mesh = model.GetMeshes()[0];
-        REQUIRE(mesh.Faces.size() == 1);
-        REQUIRE(mesh.Faces[0].Vertices.size() == 3);
+        REQUIRE((mesh.Indices.size() / 3) == 1);
+        REQUIRE(mesh.GetFace(0).Vertices.size() == 3);
         const std::array<Vector3, 3> expected = {{{10, -2, 8}, {14, -2, 8}, {10, 4, 8}}};
-        static_cast<void>(MatchTrianglePoints(mesh.Faces[0], expected));
+        static_cast<void>(MatchTrianglePoints(mesh.GetFace(0), expected));
         Vector3 hit;
-        REQUIRE(mesh.BVHRoot.IsRayIntersecting(Ray({11, -1, 0}, {0, 0, 1}), glm::mat4(1), hit));
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({11, -1, 0}, {0, 0, 1}), glm::mat4(1), hit));
         CheckVector(hit, {11, -1, 8});
     });
 }

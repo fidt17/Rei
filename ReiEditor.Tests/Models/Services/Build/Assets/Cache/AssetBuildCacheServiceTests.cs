@@ -64,6 +64,7 @@ public sealed class AssetBuildCacheServiceTests
     [Theory]
     [InlineData("not-json")]
     [InlineData("null")]
+    [InlineData("{\"CacheKey\":\"engine-new|1\",\"Entries\":{\"old-model\":{}}}")]
     [InlineData("{\"CacheKey\":\"old|1\",\"Entries\":{}}")]
     public async Task TestLoadOrCreateManifestRecoversInvalidOrVersionChangedState(string json)
     {

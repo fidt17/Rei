@@ -139,7 +139,7 @@ TEST_CASE("SPOT_GL01 shader renders angular falloff hard edge range and additive
         render::Mesh quad("spot oracle", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         quad.PostLoad();
         const auto pixel = [&](const f32 cosine, const f32 inner, const f32 outer, const f32 range = 1000, const i32 points = 0)
         {

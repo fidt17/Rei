@@ -146,6 +146,7 @@ public class AssetBuildCachePipeline : IAssetBuildCachePipeline
     {
         Directory.CreateDirectory(Path.GetDirectoryName(cacheFilePath)!);
 
+        File.Delete(cacheFilePath);
         engineApi.BuildAsset(assetPath, cacheFilePath, 0);
 
         var fileInfo = new FileInfo(cacheFilePath);

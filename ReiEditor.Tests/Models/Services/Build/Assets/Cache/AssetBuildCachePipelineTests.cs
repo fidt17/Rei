@@ -48,7 +48,11 @@ public sealed class AssetBuildCachePipelineTests
             if (ExceptionToThrow != null) throw ExceptionToThrow;
             if (SkipOutput) return 0;
             var bytes = Outputs[assetPath];
-            File.WriteAllBytes(destinationFile, bytes);
+            using (var stream = new FileStream(destinationFile, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                stream.Position = offset;
+                stream.Write(bytes);
+            }
             AfterBuild?.Invoke(assetPath);
             return bytes.Length;
         }
@@ -332,6 +336,37 @@ public sealed class AssetBuildCachePipelineTests
         Assert.Equal((0, 1), (forced.Report.CacheHits, forced.Report.CacheMisses));
         Assert.Equal((0, 1), (changed.Report.CacheHits, changed.Report.CacheMisses));
         Assert.Equal(3, engine.Calls.Count);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RebuiltSmallerModelDoesNotRetainPreviousCacheTail(bool forceRebuild)
+    {
+        using var directory = new TemporaryDirectory();
+        var model = await CreateAsset(directory, "model", "model.obj", new byte[] { 1 });
+        var material = await CreateAsset(directory, "material", "material.mat", new byte[] { 2 });
+        var engine = new TestEngineApi();
+        engine.Outputs[model.FullPath] = new byte[] { 10, 11, 12, 13 };
+        engine.Outputs[material.FullPath] = new byte[] { 20, 21 };
+        var cache = directory.GetPath("cache");
+        var packed = directory.GetPath("assets.bin");
+        var pipeline = CreatePipeline("engine-1");
+        pipeline.BuildAssets(engine, new[] { model, material }, cache, packed);
+        engine.Outputs[model.FullPath] = new byte[] { 30 };
+        if (!forceRebuild) pipeline = CreatePipeline("engine-2");
+
+        var result = pipeline.BuildAssets(engine, new[] { model, material }, cache, packed, forceRebuild);
+
+        Assert.Equal(new byte[] { 30, 20, 21 }, await File.ReadAllBytesAsync(packed));
+        Assert.Equal(new long[] { 0, 1 }, result.Map.Assets.Select(asset => asset.Offset));
+        Assert.Equal(3, result.Report.TotalBytes);
+        Assert.Equal(1, Assert.Single(result.Report.BuiltAssets, asset => asset.AssetId == "model").SizeBytes);
+        var cached = Assert.Single(Directory.GetFiles(cache, "model_*.cache"));
+        Assert.Equal(new byte[] { 30 }, await File.ReadAllBytesAsync(cached));
+        var reused = pipeline.BuildAssets(engine, new[] { model, material }, cache, packed);
+        Assert.Equal(2, reused.Report.CacheHits);
+        Assert.Equal(new byte[] { 30, 20, 21 }, await File.ReadAllBytesAsync(packed));
     }
 
     /// <summary>Empty input writes manifest and produces empty map and zeroed report.</summary>

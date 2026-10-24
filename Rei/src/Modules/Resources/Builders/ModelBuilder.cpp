@@ -6,24 +6,12 @@
 
 namespace
 {
-    void WriteFaces(const std::vector<rei::render::Face>& faces, rei::resources::BinaryWriter& writer)
-    {
-        writer.WriteI32(static_cast<i32>(faces.size()));
-        for (const auto& face : faces)
-        {
-            writer.WriteI32(static_cast<i32>(face.Vertices.size()));
-            for (const auto& vertex : face.Vertices)
-            {
-                writer.Write(vertex);
-            }
-        }
-    }
-
     void WriteBVHNode(const rei::render::MeshBVHNode& node, rei::resources::BinaryWriter& writer)
     {
         writer.Write(node.Min);
         writer.Write(node.Max);
-        WriteFaces(node.Faces, writer);
+        writer.WriteI32(static_cast<i32>(node.Triangles.size()));
+        for (const auto triangle : node.Triangles) writer.WriteU32(triangle);
 
         const bool hasLeft = node.Left != nullptr;
         writer.WriteU8(hasLeft ? 1 : 0);
@@ -45,7 +33,6 @@ rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
 {
     std::vector<rei::render::Vertex> vertices;
     std::vector<u32> indices;
-    std::vector<rei::render::Face> faces;
 
     // process vertices
     for (u32 i = 0; i < mesh->mNumVertices; i++)
@@ -71,16 +58,14 @@ rei::render::Mesh ModelBuilder::ProcessMesh(const aiMesh* mesh) const
     {
         const aiFace ai_face = mesh->mFaces[i];
         REI_THROW_IF(ai_face.mNumIndices != 3, "Imported mesh face must contain 3 vertices")
-        auto& face = faces.emplace_back();
         for (u32 j = 0; j < ai_face.mNumIndices; j++)
         {
             auto idx = ai_face.mIndices[j];
             indices.push_back(idx);
-            face.Vertices[j] = vertices[idx];
         }
     }
 
-    return rei::render::Mesh("NaN", vertices, indices, faces);
+    return rei::render::Mesh("NaN", vertices, indices);
 }
 
 void ModelBuilder::ProcessNode(const aiNode* node, const aiScene* scene, std::vector<rei::render::Mesh>& meshes) const
@@ -129,10 +114,7 @@ void ModelBuilder::BuildModelAsset(const std::filesystem::path& assetPath, rei::
             writer.Write(index);
         }
 
-        // faces
-        WriteFaces(mesh.Faces, writer);
-
-        mesh.BVHRoot.BuildBVH(mesh.BVHRoot, mesh.Faces);
+        mesh.BVHRoot.BuildBVH(mesh);
         WriteBVHNode(mesh.BVHRoot, writer);
     }
 }

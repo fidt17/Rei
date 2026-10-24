@@ -11,7 +11,6 @@ namespace rei::render
         std::string Name;
         std::vector<Vertex> Vertices;
         std::vector<u32> Indices;
-        std::vector<Face> Faces;
 
         u32 VAO, VBO, EBO;
 
@@ -19,7 +18,9 @@ namespace rei::render
 
         REI_API Mesh() = default;
         Mesh(resources::BinaryReader& reader);
-        Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<u32>& indices, const std::vector<Face>& faces);
+        Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<u32>& indices);
+
+        Face GetFace(u32 triangle) const;
 
         REI_API void PostLoad();
         REI_API void Dispose() const;
@@ -30,6 +31,7 @@ namespace rei::render
         bool _didSetupBvh = false;
         bool _didSetupOpenGlObjects = false;
 
+        void ValidateGeometry() const;
         void SetupOpenGlObjects();
         void SetupBVH();
     };

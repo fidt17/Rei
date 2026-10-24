@@ -517,7 +517,7 @@ TEST_CASE("RENDER17 point light pixels attenuate smoothly and retain material al
         render::Mesh quad("point light attenuation oracle", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         quad.PostLoad();
         const auto pixel = [&](const f32 distance, const f32 range)
         {
@@ -573,7 +573,7 @@ TEST_CASE("RENDER18 light source material stays visible without scene illuminati
         render::Mesh quad("light source material oracle", {
             {{-1, -1, 0}, {0, 0, 1}, {0, 0}}, {{1, -1, 0}, {0, 0, 1}, {1, 0}},
             {{1, 1, 0}, {0, 0, 1}, {1, 1}}, {{-1, 1, 0}, {0, 0, 1}, {0, 1}}
-        }, {0, 1, 2, 0, 2, 3}, {});
+        }, {0, 1, 2, 0, 2, 3});
         quad.PostLoad();
         material->Use();
         shader->SetViewMatrices(glm::mat4(1), glm::mat4(1), glm::mat4(1));
@@ -987,8 +987,8 @@ TEST_CASE("BOUNDS02 cached model bounds include vertices across every mesh witho
     {
         NativeRenderFixture fixture;
         std::vector<render::Mesh> meshes;
-        meshes.emplace_back("left", std::vector<render::Vertex>{{{-8, -1, 0}, {}, {}}, {{-4, 1, 0}, {}, {}}}, std::vector<u32>{}, std::vector<render::Face>{});
-        meshes.emplace_back("right", std::vector<render::Vertex>{{{4, -2, 1}, {}, {}}, {{9, 2, 1}, {}, {}}}, std::vector<u32>{}, std::vector<render::Face>{});
+        meshes.emplace_back("left", std::vector<render::Vertex>{{{-8, -1, 0}, {}, {}}, {{-4, 1, 0}, {}, {}}}, std::vector<u32>{});
+        meshes.emplace_back("right", std::vector<render::Vertex>{{{4, -2, 1}, {}, {}}, {{9, 2, 1}, {}, {}}}, std::vector<u32>{});
         render::Model model("multi mesh", meshes);
         REQUIRE(model.GetBounds().IsValid());
         REQUIRE(model.GetBounds().Min == glm::vec3(-8, -2, 0));

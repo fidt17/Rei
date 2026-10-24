@@ -13,6 +13,7 @@ namespace rei::render
         _name = reader.GetStr();
 
         const i32 meshCount = reader.GetI32();
+        REI_THROW_IF(meshCount < 0, "Negative packed model mesh count")
 
         for (i32 i = 0; i < meshCount; i++)
         {

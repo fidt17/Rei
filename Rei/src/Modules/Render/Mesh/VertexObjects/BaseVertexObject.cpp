@@ -6,16 +6,11 @@ void rei::render::BaseVertexObject::AddFace(const u32 a, const u32 b, const u32 
     _indices.push_back(a);
     _indices.push_back(b);
     _indices.push_back(c);
-    
-    Face f;
-    f.Vertices = {_vertices[a], _vertices[b], _vertices[c]};
-    
-    _faces.push_back(f);    
 }
 
 rei::render::Mesh rei::render::BaseVertexObject::GenerateMesh() const
 {
-    return Mesh(GetMeshName(), _vertices, _indices, _faces);
+    return Mesh(GetMeshName(), _vertices, _indices);
 }
 
 u32 rei::render::BaseVertexObject::AddVertex(math::Vector3 v)

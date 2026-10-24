@@ -1,6 +1,7 @@
 #pragma once
 #include "NativeTestSupport.h"
 #include "Common/Math/math.h"
+#include "Modules/Render/Mesh/Mesh.h"
 #include "glm/gtc/quaternion.hpp"
 #include <cmath>
 
@@ -32,4 +33,20 @@ namespace rei::tests
         face.Vertices = {render::Vertex{glm::vec3(origin)}, render::Vertex{glm::vec3(origin + math::Vector3(2, 0, 0))}, render::Vertex{glm::vec3(origin + math::Vector3(0, 2, 0))}};
         return face;
     }
+
+    inline render::Mesh MeshFromFaces(const std::vector<render::Face>& faces)
+    {
+        std::vector<render::Vertex> vertices;
+        std::vector<u32> indices;
+        for (const auto& face : faces)
+        {
+            for (const auto& vertex : face.Vertices)
+            {
+                indices.push_back(static_cast<u32>(vertices.size()));
+                vertices.push_back(vertex);
+            }
+        }
+        return render::Mesh("test", vertices, indices);
+    }
+
 }

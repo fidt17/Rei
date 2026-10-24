@@ -7,45 +7,38 @@
 
 namespace
 {
-    void ReadFaceVertices(std::vector<rei::render::Face>& faces, rei::resources::BinaryReader& reader)
+    u64 ReadBVHNode(rei::resources::BinaryReader& reader, rei::render::MeshBVHNode& node, std::vector<u8>& seen, const i32 depth = 0)
     {
-        for (auto& face : faces)
-        {
-            const i32 verticesCount = reader.GetI32();
-            REI_THROW_IF(verticesCount != static_cast<i32>(face.Vertices.size()), "Packed mesh face must contain 3 vertices")
-            face.Vertices = reader.GetByType<decltype(face.Vertices)>();
-        }
-    }
-
-    void ReadBVHNode(rei::resources::BinaryReader& reader, rei::render::MeshBVHNode& node)
-    {
+        REI_THROW_IF(depth > rei::render::MeshBVHNode::MAX_DEPTH, "Packed mesh BVH exceeds maximum depth")
         node.Min = reader.GetByType<rei::math::Vector3>();
         node.Max = reader.GetByType<rei::math::Vector3>();
-
-        node.Faces = std::vector<rei::render::Face>(reader.GetI32());
-        ReadFaceVertices(node.Faces, reader);
-
-        const bool hasLeft = reader.GetU8() != 0;
-        if (hasLeft)
+        for (i32 axis = 0; axis < 3; ++axis)
         {
-            node.Left = std::make_shared<rei::render::MeshBVHNode>();
-            ReadBVHNode(reader, *node.Left);
+            REI_THROW_IF(!std::isfinite(node.Min[axis]) || !std::isfinite(node.Max[axis]) || node.Min[axis] > node.Max[axis], "Invalid packed mesh BVH bounds")
         }
-        else
+        node.Triangles = reader.GetVector<u32>();
+        const auto count = node.Triangles.size();
+        const auto* triangles = node.Triangles.data();
+        auto* visited = seen.data();
+        const auto triangleCount = seen.size();
+        for (size_t i = 0; i < count; ++i)
         {
-            node.Left = nullptr;
+            const auto triangle = triangles[i];
+            REI_THROW_IF(triangle >= triangleCount, "Packed mesh BVH triangle index out of range")
+            REI_THROW_IF(visited[triangle] != 0, "Duplicate packed mesh BVH triangle")
+            visited[triangle] = 1;
         }
-
-        const bool hasRight = reader.GetU8() != 0;
-        if (hasRight)
+        u64 covered = count;
+        for (auto* child : {&node.Left, &node.Right})
         {
-            node.Right = std::make_shared<rei::render::MeshBVHNode>();
-            ReadBVHNode(reader, *node.Right);
+            const auto present = reader.GetU8();
+            REI_THROW_IF(present > 1, "Invalid packed mesh BVH child flag")
+            if (present == 0) continue;
+            REI_THROW_IF(!node.Triangles.empty(), "Packed mesh BVH branch contains triangles")
+            *child = std::make_shared<rei::render::MeshBVHNode>();
+            covered += ReadBVHNode(reader, **child, seen, depth + 1);
         }
-        else
-        {
-            node.Right = nullptr;
-        }
+        return covered;
     }
 }
 
@@ -60,27 +53,40 @@ rei::render::Mesh::Mesh(resources::BinaryReader& reader)
     Indices = reader.GetVector<u32>();
     const auto buffersMs = timer.ElapsedMs();
 
-    Faces = std::vector<Face>(reader.GetI32());
-    ReadFaceVertices(Faces, reader);
-    const auto facesMs = timer.ElapsedMs();
-    ReadBVHNode(reader, BVHRoot);
+    ValidateGeometry();
+    std::vector<u8> seen(Indices.size() / 3);
+    REI_THROW_IF(ReadBVHNode(reader, BVHRoot, seen) != seen.size(), "Packed mesh BVH omits triangles")
     _didSetupBvh = true;
     const auto totalMs = timer.ElapsedMs();
     if (rei::profiling::IsLoadTimingEnabled()) rei::profiling::WriteLoadTiming(nlohmann::json({
         {"stage", "mesh.read"}, {"name", Name}, {"bytes", reader.GetPosition() - start},
-        {"vertices", Vertices.size()}, {"triangles", Indices.size() / 3}, {"faces", Faces.size()},
-        {"buffersMs", buffersMs}, {"facesMs", facesMs - buffersMs}, {"bvhMs", totalMs - facesMs}, {"totalMs", totalMs}
+        {"vertices", Vertices.size()}, {"triangles", Indices.size() / 3},
+        {"buffersMs", buffersMs}, {"bvhMs", totalMs - buffersMs}, {"totalMs", totalMs}
     }).dump());
 }
 
-rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<u32>& indices, const std::vector<Face>& faces)
-    :
-    Name(std::move(name)),
-    VAO(0), VBO(0), EBO(0)
+rei::render::Mesh::Mesh(std::string name, const std::vector<Vertex>& vertices, const std::vector<u32>& indices)
+    : Name(std::move(name)), Vertices(vertices), Indices(indices), VAO(0), VBO(0), EBO(0)
 {
-    Vertices = vertices;
-    Indices = indices;
-    Faces = faces;
+    ValidateGeometry();
+}
+
+void rei::render::Mesh::ValidateGeometry() const
+{
+    REI_THROW_IF(Indices.size() % 3 != 0, "Mesh index count must be a multiple of 3")
+    const auto* indices = Indices.data();
+    const auto count = Indices.size();
+    const auto vertexCount = Vertices.size();
+    for (size_t i = 0; i < count; ++i)
+    {
+        REI_THROW_IF(indices[i] >= vertexCount, "Mesh vertex index out of range")
+    }
+}
+
+rei::render::Face rei::render::Mesh::GetFace(const u32 triangle) const
+{
+    const auto offset = static_cast<size_t>(triangle) * 3;
+    return {{Vertices.at(Indices.at(offset)), Vertices.at(Indices.at(offset + 1)), Vertices.at(Indices.at(offset + 2))}};
 }
 
 void rei::render::Mesh::SetupOpenGlObjects()
@@ -126,7 +132,7 @@ void rei::render::Mesh::SetupBVH()
 {
     if (_didSetupBvh) return;
     
-    BVHRoot.BuildBVH(BVHRoot, Faces);
+    BVHRoot.BuildBVH(*this);
     _didSetupBvh = true;
 }
 

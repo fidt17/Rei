@@ -31,22 +31,13 @@ namespace
         AppendFloat(bytes, vertex.TexCoords.y);
     }
 
-    void AppendFaces(std::vector<u8>& bytes, const std::vector<Face>& faces)
-    {
-        AppendInteger(bytes, faces.size(), 4);
-        for (const auto& face : faces)
-        {
-            AppendInteger(bytes, face.Vertices.size(), 4);
-            for (const auto& vertex : face.Vertices) AppendVertex(bytes, vertex);
-        }
-    }
-
-    std::vector<u8> NodeBytes(const Vector3& min, const Vector3& max, const std::vector<Face>& faces, const std::vector<u8>& left = {}, const std::vector<u8>& right = {})
+    std::vector<u8> NodeBytes(const Vector3& min, const Vector3& max, const std::vector<u32>& triangles, const std::vector<u8>& left = {}, const std::vector<u8>& right = {})
     {
         std::vector<u8> bytes;
         AppendVector(bytes, min);
         AppendVector(bytes, max);
-        AppendFaces(bytes, faces);
+        AppendInteger(bytes, triangles.size(), 4);
+        for (const auto triangle : triangles) AppendInteger(bytes, triangle, 4);
         bytes.push_back(left.empty() ? 0 : 1);
         bytes.insert(bytes.end(), left.begin(), left.end());
         bytes.push_back(right.empty() ? 0 : 1);
@@ -54,9 +45,9 @@ namespace
         return bytes;
     }
 
-    std::vector<u8> LeafBytes(const Vector3& origin)
+    std::vector<u8> LeafBytes(const Vector3& origin, const u32 triangle = 0)
     {
-        return NodeBytes(origin - Vector3(0, 0, 0.001f), origin + Vector3(2, 2, 0.001f), {Triangle(origin)});
+        return NodeBytes(origin - Vector3(0, 0, 0.001f), origin + Vector3(2, 2, 0.001f), {triangle});
     }
 
     std::vector<u8> MeshBytes(const std::string& name, const std::vector<Face>& faces, const std::vector<u8>& bvh)
@@ -71,7 +62,6 @@ namespace
         }
         AppendInteger(bytes, faces.size() * 3, 4);
         for (u32 index = 0; index < faces.size() * 3; ++index) AppendInteger(bytes, index, 4);
-        AppendFaces(bytes, faces);
         bytes.insert(bytes.end(), bvh.begin(), bvh.end());
         return bytes;
     }
@@ -87,7 +77,7 @@ namespace
 
     std::vector<u8> SplitMeshBytes()
     {
-        const auto root = NodeBytes({0, 0, 4.999f}, {5, 2, 10.001f}, {}, LeafBytes({0, 0, 5}), LeafBytes({3, 0, 10}));
+        const auto root = NodeBytes({0, 0, 4.999f}, {5, 2, 10.001f}, {}, LeafBytes({0, 0, 5}), LeafBytes({3, 0, 10}, 1));
         return MeshBytes("split", {Triangle({0, 0, 5}), Triangle({3, 0, 10})}, root);
     }
 
@@ -151,18 +141,19 @@ TEST_CASE("PHY-03 Packed triangles preserve vertex attributes and following stre
             face.Vertices[i].Normal = {static_cast<f32>(i), -1, 0.5f};
             face.Vertices[i].TexCoords = {static_cast<f32>(i) / 2, -0.25f};
         }
-        auto bytes = MeshBytes("attributes", {face}, NodeBytes({0, 0, 4}, {2, 2, 6}, {face}));
+        auto bytes = MeshBytes("attributes", {face}, NodeBytes({0, 0, 4}, {2, 2, 6}, {0}));
         constexpr u32 SENTINEL = 0x78563412;
         AppendInteger(bytes, SENTINEL, 4);
         resources::BinaryReader reader(files.Write("attributes.bin", bytes).string());
         Mesh mesh(reader);
         REQUIRE(reader.GetPosition() == static_cast<i64>(bytes.size() - 4));
         REQUIRE(reader.GetU32() == SENTINEL);
-        REQUIRE(mesh.Faces.size() == 1);
-        REQUIRE(mesh.BVHRoot.Faces.size() == 1);
+        REQUIRE(mesh.Indices.size() == 3);
+        REQUIRE(mesh.BVHRoot.Triangles == std::vector<u32>{0});
+        const auto indexedFace = mesh.GetFace(mesh.BVHRoot.Triangles[0]);
         for (u32 i = 0; i < face.Vertices.size(); ++i)
         {
-            for (const auto* actual : {&mesh.Vertices[i], &mesh.Faces[0].Vertices[i], &mesh.BVHRoot.Faces[0].Vertices[i]})
+            for (const auto* actual : std::array<const Vertex*, 2>{&mesh.Vertices[i], &indexedFace.Vertices[i]})
             {
                 CheckVector(Vector3(actual->Position), Vector3(face.Vertices[i].Position));
                 CheckVector(Vector3(actual->Normal), Vector3(face.Vertices[i].Normal));
@@ -173,33 +164,34 @@ TEST_CASE("PHY-03 Packed triangles preserve vertex attributes and following stre
     });
 }
 
-TEST_CASE("PHY-03 Nontriangle vertex counts reject before reading mesh or BVH payload", "[native][physics][bvh][binary][isolated]")
+TEST_CASE("PHY-03 Invalid packed vertex and triangle indices reject explicitly", "[native][physics][bvh][binary][isolated]")
 {
     Isolated([]
     {
         TemporaryDirectory files;
-        for (const bool inBvh : {false, true})
+        for (const auto& triangles : std::vector<std::vector<u32>>{{1}, {0, 0}, {}})
         {
-            for (const i32 count : {-1, 0, 1, 2, 4, 2147483647})
-            {
-                CAPTURE(inBvh, count);
-                std::vector<u8> bytes;
-                AppendString(bytes, "invalid-face");
-                AppendInteger(bytes, 0, 4); // Vertices.
-                AppendInteger(bytes, 0, 4); // Indices.
-                if (inBvh)
-                {
-                    AppendInteger(bytes, 0, 4); // No mesh faces.
-                    AppendVector(bytes, {});
-                    AppendVector(bytes, {1, 1, 1});
-                }
-                AppendInteger(bytes, 1, 4); // One face, in mesh or BVH.
-                AppendInteger(bytes, count, 4);
-                resources::BinaryReader reader(files.Write("invalid-face.bin", bytes).string());
-                CHECK_THROWS_WITH(Mesh(reader), Catch::Matchers::ContainsSubstring("Packed mesh face must contain 3 vertices"));
-                reader.Close();
-            }
+            const auto bytes = MeshBytes("bad-bvh", {Triangle()}, NodeBytes({0, 0, 4}, {2, 2, 6}, triangles));
+            resources::BinaryReader reader(files.Write("bad-bvh.bin", bytes).string());
+            CHECK_THROWS(Mesh(reader));
         }
+        for (const auto& indices : std::vector<std::vector<u32>>{{0}, {0, 1}, {0, 1, 3}, {0, 1, 0xffffffff}})
+        {
+            std::vector<u8> bytes;
+            AppendString(bytes, "bad-indices");
+            AppendInteger(bytes, 3, 4);
+            for (const auto& vertex : Triangle().Vertices) AppendVertex(bytes, vertex);
+            AppendInteger(bytes, indices.size(), 4);
+            for (const auto index : indices) AppendInteger(bytes, index, 4);
+            resources::BinaryReader reader(files.Write("bad-indices.bin", bytes).string());
+            CHECK_THROWS(Mesh(reader));
+            CHECK_THROWS(Mesh("invalid", std::vector<Vertex>(3), indices));
+        }
+        std::vector<u8> invalidModel;
+        AppendString(invalidModel, "negative-mesh-count");
+        AppendInteger(invalidModel, 0xffffffff, 4);
+        resources::BinaryReader reader(files.Write("invalid-model.bin", invalidModel).string());
+        CHECK_THROWS_WITH(Model(reader), Catch::Matchers::ContainsSubstring("Negative packed model mesh count"));
     });
 }
 
@@ -215,23 +207,22 @@ TEST_CASE("PHY-03 Serialized split BVH preserves faces children and analytic hit
         REQUIRE(mesh.Name == "split");
         REQUIRE(mesh.Vertices.size() == 6);
         CHECK(mesh.Indices == std::vector<u32>{0, 1, 2, 3, 4, 5});
-        REQUIRE(mesh.Faces.size() == 2);
-        REQUIRE(mesh.BVHRoot.Faces.empty());
+        REQUIRE(mesh.BVHRoot.Triangles.empty());
         REQUIRE(mesh.BVHRoot.Left != nullptr);
         REQUIRE(mesh.BVHRoot.Right != nullptr);
-        REQUIRE(mesh.BVHRoot.Left->Faces.size() == 1);
-        REQUIRE(mesh.BVHRoot.Right->Faces.size() == 1);
-        CheckVector(Vector3(mesh.BVHRoot.Right->Faces[0].Vertices[0].Position), {3, 0, 10});
+        REQUIRE(mesh.BVHRoot.Left->Triangles.size() == 1);
+        REQUIRE(mesh.BVHRoot.Right->Triangles.size() == 1);
+        CheckVector(Vector3(mesh.GetFace(mesh.BVHRoot.Right->Triangles[0]).Vertices[0].Position), {3, 0, 10});
         CHECK(mesh.VAO == 0);
         CHECK(mesh.VBO == 0);
         CHECK(mesh.EBO == 0);
         Vector3 point;
-        REQUIRE(mesh.BVHRoot.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
         CheckVector(point, {0.5f, 0.5f, 5});
-        REQUIRE(mesh.BVHRoot.IsRayIntersecting(Ray({3.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
+        REQUIRE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({3.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
         CheckVector(point, {3.5f, 0.5f, 10});
         point = {91, 92, 93};
-        CHECK_FALSE(mesh.BVHRoot.IsRayIntersecting(Ray({2.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
+        CHECK_FALSE(mesh.BVHRoot.IsRayIntersecting(mesh, Ray({2.5f, 0.5f, 0}, {0, 0, 1}), glm::mat4(1), point));
         CheckVector(point, {91, 92, 93});
     });
 }
@@ -328,11 +319,11 @@ TEST_CASE("PHY-03 One analytic triangle survives runtime serialized packed and r
         {
             return FaceRayIntersection(triangle, ray, matrix, point);
         });
-        Mesh runtime("analytic", std::vector<Vertex>(triangle.Vertices.begin(), triangle.Vertices.end()), {0, 1, 2}, faces);
-        runtime.BVHRoot.BuildBVH(runtime.BVHRoot, faces);
+        Mesh runtime("analytic", std::vector<Vertex>(triangle.Vertices.begin(), triangle.Vertices.end()), {0, 1, 2});
+        runtime.BVHRoot.BuildBVH(runtime);
         CheckAnalyticTriangleAtStage("runtime BVH", [&](const Ray& ray, const glm::mat4& matrix, Vector3& point)
         {
-            return runtime.BVHRoot.IsRayIntersecting(ray, matrix, point);
+            return runtime.BVHRoot.IsRayIntersecting(runtime, ray, matrix, point);
         });
         const auto meshBytes = MeshBytes("analytic", faces, LeafBytes({0, 0, 5}));
         resources::BinaryReader meshReader(files.Write("analytic-mesh.bin", meshBytes).string());
@@ -340,7 +331,7 @@ TEST_CASE("PHY-03 One analytic triangle survives runtime serialized packed and r
         REQUIRE(meshReader.GetPosition() == static_cast<i64>(meshBytes.size()));
         CheckAnalyticTriangleAtStage("serialized BVH", [&](const Ray& ray, const glm::mat4& matrix, Vector3& point)
         {
-            return serialized.BVHRoot.IsRayIntersecting(ray, matrix, point);
+            return serialized.BVHRoot.IsRayIntersecting(serialized, ray, matrix, point);
         });
         const auto modelBytes = ModelBytes({meshBytes});
         WriteAssetPack(files, {{"analytic-packed", "analytic", modelBytes}});
@@ -380,24 +371,92 @@ TEST_CASE("PHY-03 One analytic triangle survives runtime serialized packed and r
     });
 }
 
+TEST_CASE("PHY-03 Shared reordered vertices survive packed BVH and mesh ownership changes", "[native][physics][bvh][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        const std::vector<Vertex> vertices{{{0, 0, 5}}, {{2, 0, 5}}, {{0, 2, 5}}, {{2, 2, 5}}};
+        const std::vector<u32> indices{2, 0, 1, 2, 1, 3};
+        Mesh runtime("shared", vertices, indices);
+        runtime.BVHRoot.BuildBVH(runtime);
+        std::vector<u8> bytes;
+        AppendString(bytes, "shared");
+        AppendInteger(bytes, vertices.size(), 4);
+        for (const auto& vertex : vertices) AppendVertex(bytes, vertex);
+        AppendInteger(bytes, indices.size(), 4);
+        for (const auto index : indices) AppendInteger(bytes, index, 4);
+        const auto bvh = NodeBytes({0, 0, 4.999f}, {2, 2, 5.001f}, {1, 0});
+        bytes.insert(bytes.end(), bvh.begin(), bvh.end());
+        resources::BinaryReader reader(files.Write("shared.bin", bytes).string());
+        Mesh loaded(reader);
+        REQUIRE(loaded.Vertices.size() == 4);
+        REQUIRE(loaded.Indices == indices);
+        CHECK(loaded.BVHRoot.Triangles == std::vector<u32>{1, 0});
+        Mesh copied = loaded;
+        loaded = Mesh("released", {}, {});
+        Mesh moved = std::move(copied);
+        for (const auto* mesh : {&runtime, &moved})
+        {
+            for (const auto& origin : std::array<Vector3, 2>{{{0.25f, 0.25f, 0}, {1.75f, 1.75f, 0}}})
+            {
+                Vector3 point;
+                REQUIRE(mesh->BVHRoot.IsRayIntersecting(*mesh, Ray(origin, {0, 0, 1}), glm::mat4(1), point));
+                CheckVector(point, {origin.x, origin.y, 5});
+            }
+            Vector3 point(91, 92, 93);
+            CHECK_FALSE(mesh->BVHRoot.IsRayIntersecting(*mesh, Ray({3, 3, 0}, {0, 0, 1}), glm::mat4(1), point));
+            CheckVector(point, {91, 92, 93});
+        }
+    });
+}
+
+TEST_CASE("PHY-03 Packed BVH rejects invalid counts bounds child flags and excessive depth", "[native][physics][bvh][binary][isolated]")
+{
+    Isolated([]
+    {
+        TemporaryDirectory files;
+        auto nested = LeafBytes({0, 0, 5});
+        for (i32 depth = 0; depth <= MeshBVHNode::MAX_DEPTH; ++depth)
+            nested = NodeBytes({0, 0, 4}, {2, 2, 6}, {}, nested);
+        auto flag = LeafBytes({0, 0, 5});
+        flag[flag.size() - 2] = 2;
+        auto negative = LeafBytes({0, 0, 5});
+        for (u32 offset = 24; offset < 28; ++offset) negative[offset] = 0xff;
+        for (const auto& node : {nested, flag, negative, NodeBytes({2, 0, 4}, {0, 2, 6}, {0})})
+        {
+            const auto bytes = MeshBytes("invalid-node", {Triangle()}, node);
+            resources::BinaryReader reader(files.Write("invalid-node.bin", bytes).string());
+            CHECK_THROWS(Mesh(reader));
+        }
+        const auto emptyBytes = MeshBytes("empty", {}, NodeBytes({}, {}, {}));
+        resources::BinaryReader reader(files.Write("empty.bin", emptyBytes).string());
+        Mesh empty(reader);
+        Vector3 point(91, 92, 93);
+        CHECK_FALSE(empty.BVHRoot.IsRayIntersecting(empty, Ray({}, {0, 0, 1}), glm::mat4(1), point));
+        CheckVector(point, {91, 92, 93});
+    });
+}
+
 TEST_CASE("PHY-03 BVH local traversal preserves parallel edge hits and singular misses", "[native][physics][bvh][picking]")
 {
     MeshBVHNode root;
-    root.BuildBVH(root, {Triangle()});
+    const auto mesh = MeshFromFaces({Triangle()});
+    root.BuildBVH(mesh);
     for (const auto& origin : std::array<Vector3, 3>{{{0, 0.5f, 0}, {0.5f, 0, 0}, {1, 1, 0}}})
     {
         Vector3 point;
-        REQUIRE(root.IsRayIntersecting(Ray(origin, {0, 0, 1}), glm::mat4(1), point));
+        REQUIRE(root.IsRayIntersecting(mesh, Ray(origin, {0, 0, 1}), glm::mat4(1), point));
         CheckVector(point, {origin.x, origin.y, 5});
     }
     Vector3 point(91, 92, 93);
-    CHECK_FALSE(root.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::scale(glm::mat4(1), glm::vec3(1, 1, 0)), point));
+    CHECK_FALSE(root.IsRayIntersecting(mesh, Ray({0.5f, 0.5f, 0}, {0, 0, 1}), glm::scale(glm::mat4(1), glm::vec3(1, 1, 0)), point));
     CheckVector(point, {91, 92, 93});
-    CHECK_FALSE(root.IsRayIntersecting(Ray({0.5f, 0.5f, 0}, {}), glm::mat4(1), point));
+    CHECK_FALSE(root.IsRayIntersecting(mesh, Ray({0.5f, 0.5f, 0}, {}), glm::mat4(1), point));
     CheckVector(point, {91, 92, 93});
 
     auto shear = glm::mat4(1);
     shear[1][0] = 2; // x' = x + 2y.
-    REQUIRE(root.IsRayIntersecting(Ray({1.5f, 0.5f, 0}, {0, 0, 2}), shear, point));
+    REQUIRE(root.IsRayIntersecting(mesh, Ray({1.5f, 0.5f, 0}, {0, 0, 2}), shear, point));
     CheckVector(point, {1.5f, 0.5f, 5});
 }

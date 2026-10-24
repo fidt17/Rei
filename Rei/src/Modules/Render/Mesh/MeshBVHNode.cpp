@@ -1,72 +1,58 @@
 ﻿#include "pch.h"
 #include "MeshBVHNode.h"
+#include "Mesh.h"
 
-void rei::render::MeshBVHNode::BuildBVH(MeshBVHNode& node, const std::vector<Face>& faces, const i32 depth)
+void rei::render::MeshBVHNode::BuildBVH(const Mesh& mesh)
 {
-    constexpr i32 MAX_DEPTH = 5;
+    std::vector<u32> triangles(mesh.Indices.size() / 3);
+    for (u32 i = 0; i < triangles.size(); ++i) triangles[i] = i;
+    BuildBVH(mesh, triangles, 0);
+}
+
+void rei::render::MeshBVHNode::BuildBVH(const Mesh& mesh, const std::vector<u32>& triangles, const i32 depth)
+{
     constexpr i32 MIN_FACES = 16;
+    Triangles.clear();
+    Left.reset();
+    Right.reset();
+    Min = {};
+    Max = {};
+    if (triangles.empty()) return;
 
-    constexpr i32 X_AXIS = 1;
-    constexpr i32 Y_AXIS = 2;
-    constexpr i32 Z_AXIS = 3;
-
-    if (faces.empty()) return;
-
-    node.CalculateBoundingBox(faces);
-
-    if (faces.size() <= MIN_FACES || depth >= MAX_DEPTH)
+    CalculateBoundingBox(mesh, triangles);
+    if (triangles.size() <= MIN_FACES || depth >= MAX_DEPTH)
     {
-        node.Faces = faces;
+        Triangles = triangles;
         return;
     }
 
-    // Split along longest axis
-    const math::Vector3 extent = node.Max - node.Min;
-    i32 axis = X_AXIS;
-    if (extent.y > extent.x) axis = Y_AXIS;
-    if (extent.z > extent.x && extent.z > extent.y) axis = Z_AXIS;
-
-    f32 center = (node.Min.x + node.Max.x) * 0.5f;
-    if (axis == Y_AXIS) center = (node.Min.y + node.Max.y) * 0.5f;
-    if (axis == Z_AXIS) center = (node.Min.z + node.Max.z) * 0.5f;
-
-    std::vector<Face> leftFaces, rightFaces;
-
-    for (const auto& face : faces)
+    const math::Vector3 extent = Max - Min;
+    i32 axis = 0;
+    if (extent.y > extent.x) axis = 1;
+    if (extent.z > extent.x && extent.z > extent.y) axis = 2;
+    const f32 center = (Min[axis] + Max[axis]) * 0.5f;
+    std::vector<u32> leftTriangles, rightTriangles;
+    for (const auto triangle : triangles)
     {
-        f32 faceCenter = 0.0f;
-        for (const auto& vert : face.Vertices)
-        {
-            if (axis == X_AXIS) faceCenter += vert.Position.x;
-            else if (axis == Y_AXIS) faceCenter += vert.Position.y;
-            else faceCenter += vert.Position.z;
-        }
+        const auto face = mesh.GetFace(triangle);
+        f32 faceCenter = 0;
+        for (const auto& vertex : face.Vertices) faceCenter += vertex.Position[axis];
         faceCenter /= 3.0f;
-
-        if (faceCenter < center)
-        {
-            leftFaces.push_back(face);
-        }
-        else
-        {
-            rightFaces.push_back(face);
-        }
+        (faceCenter < center ? leftTriangles : rightTriangles).push_back(triangle);
     }
-
-    if (!leftFaces.empty())
+    if (!leftTriangles.empty())
     {
-        node.Left = std::make_shared<MeshBVHNode>();
-        BuildBVH(*node.Left, leftFaces, depth + 1);
+        Left = std::make_shared<MeshBVHNode>();
+        Left->BuildBVH(mesh, leftTriangles, depth + 1);
     }
-
-    if (!rightFaces.empty())
+    if (!rightTriangles.empty())
     {
-        node.Right = std::make_shared<MeshBVHNode>();
-        BuildBVH(*node.Right, rightFaces, depth + 1);
+        Right = std::make_shared<MeshBVHNode>();
+        Right->BuildBVH(mesh, rightTriangles, depth + 1);
     }
 }
 
-bool rei::render::MeshBVHNode::IsRayIntersecting(const math::Ray& ray, const glm::mat4& model, math::Vector3& out_intersectionPoint) const
+bool rei::render::MeshBVHNode::IsRayIntersecting(const Mesh& mesh, const math::Ray& ray, const glm::mat4& model, math::Vector3& out_intersectionPoint) const
 {
     const f32 determinant = glm::determinant(glm::mat3(model));
     if (!std::isfinite(determinant) || determinant == 0) return false;
@@ -77,33 +63,33 @@ bool rei::render::MeshBVHNode::IsRayIntersecting(const math::Ray& ray, const glm
         math::Vector3(glm::vec3(inverseModel * glm::vec4(glm::vec3(ray.Direction), 0))));
     // Keep direction length: the ray parameter and forward-distance tolerance stay unchanged.
     math::Vector3 localPoint;
-    if (!IsLocalRayIntersecting(localRay, determinant, localPoint)) return false;
+    if (!IsLocalRayIntersecting(mesh, localRay, determinant, localPoint)) return false;
     out_intersectionPoint = localPoint.Transform(model);
     return true;
 }
 
-bool rei::render::MeshBVHNode::IsLocalRayIntersecting(const math::Ray& ray, const f32 determinantScale, math::Vector3& out_intersectionPoint) const
+bool rei::render::MeshBVHNode::IsLocalRayIntersecting(const Mesh& mesh, const math::Ray& ray, const f32 determinantScale, math::Vector3& out_intersectionPoint) const
 {
     if (!math::AxisAlignedBoxRayIntersection(Min, Max, ray)) return false;
-    if (!Faces.empty())
+    if (!Triangles.empty())
     {
-        return std::ranges::any_of(Faces, [&](const auto& face)
+        return std::ranges::any_of(Triangles, [&](const u32 triangle)
         {
-            return math::FaceRayIntersection(face, ray, out_intersectionPoint, determinantScale);
+            return math::FaceRayIntersection(mesh.GetFace(triangle), ray, out_intersectionPoint, determinantScale);
         });
     }
-    return (Left && Left->IsLocalRayIntersecting(ray, determinantScale, out_intersectionPoint)) ||
-           (Right && Right->IsLocalRayIntersecting(ray, determinantScale, out_intersectionPoint));
+    return (Left && Left->IsLocalRayIntersecting(mesh, ray, determinantScale, out_intersectionPoint)) ||
+           (Right && Right->IsLocalRayIntersecting(mesh, ray, determinantScale, out_intersectionPoint));
 }
 
-void rei::render::MeshBVHNode::CalculateBoundingBox(const std::vector<Face>& faces)
+void rei::render::MeshBVHNode::CalculateBoundingBox(const Mesh& mesh, const std::vector<u32>& triangles)
 {
     Min = math::Vector3::Max();
     Max = math::Vector3::Min();
 
-    for (const auto& face : faces)
+    for (const auto triangle : triangles)
     {
-        for (const auto& vertex : face.Vertices)
+        for (const auto& vertex : mesh.GetFace(triangle).Vertices)
         {
             Min.x = std::min(Min.x, vertex.Position.x);
             Min.y = std::min(Min.y, vertex.Position.y);
