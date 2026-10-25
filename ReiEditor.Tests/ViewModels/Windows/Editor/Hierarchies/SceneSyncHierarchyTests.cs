@@ -116,7 +116,7 @@ public sealed class SceneSyncHierarchyTests
             {
                 CreatedDrawers++;
                 return new((GameEntity)args[0],
-                    new Factory<EntityInfoComponentDrawerViewModel>(values => new((GameEntity)values[0], management)),
+                    new Factory<EntityInfoComponentDrawerViewModel>(values => new((GameEntity)values[0], new Rename())),
                     new Factory<BehaviourComponentDrawerViewModel>(_ => throw new NotSupportedException()), new Registry(), management);
             }), null!, null!, null!, null!, null!, null!, null!, null!, new EntitySync());
         }
