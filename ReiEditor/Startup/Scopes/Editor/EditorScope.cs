@@ -8,6 +8,7 @@ using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.EditorApp.AssetCreation.Shader;
 using ReiEditor.Models.Services.Mcp.Editor;
+using ReiEditor.Models.Services.Commands;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
@@ -35,6 +36,7 @@ public class EditorScope : BaseLifetimeScope
 		
         b.RegisterSingleton<ResourceService>().As<IResourceService>();
         b.RegisterSingleton<EditorProceduresService>().As<IEditorProceduresService>();
+        b.RegisterSingleton<EditorCommandService>().As<IEditorCommandService>();
         b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
         b.RegisterSingleton<ProjectUpdateService>().As<IProjectUpdateService>();
         b.RegisterSingleton<EditorRefreshService>().As<IEditorRefreshService>();

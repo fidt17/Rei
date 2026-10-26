@@ -116,8 +116,8 @@ public sealed class SelectedEntityCommandTests
     public async Task TestEntityRenameCommandForwardsTarget()
     {
         var management = new TestEntityManagementService { OnRename = (_, _) => { } };
-        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
         var entity = new GameEntity(14, "Before");
+        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
 
         var result = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, "  After  "));
         Assert.Equal("Before", result.BeforeName);
@@ -136,9 +136,9 @@ public sealed class SelectedEntityCommandTests
     public async Task RenameResultCapturesActualNamesThroughCommonContract(string requestedName, string appliedName, bool changed)
     {
         var management = new TestEntityManagementService { OnRename = (target, _) => target.SetName(appliedName) };
-        IEditorCommand<EntityRenameCommandTarget, EntityRenameCommandResult> command =
-            new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
         var entity = new GameEntity(14, "Before");
+        IEditorCommand<EntityRenameCommandTarget, EntityRenameCommandResult> command =
+            new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
 
         var result = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, requestedName));
 
@@ -157,8 +157,8 @@ public sealed class SelectedEntityCommandTests
     {
         var expected = new InvalidOperationException("rename failed");
         var management = new TestEntityManagementService { OnRename = (_, _) => throw expected };
-        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
         var entity = new GameEntity(15, "Before");
+        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
 
         var actual = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             command.ExecuteAsync(new EntityRenameCommandTarget(entity, "After")));

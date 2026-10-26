@@ -1,4 +1,5 @@
 using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Entities;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Tests.Infrastructure.TestDoubles;
@@ -6,6 +7,14 @@ namespace ReiEditor.Tests.Infrastructure.TestDoubles;
 /// <summary>Supplies an observable current scene without loading assets or starting the editor.</summary>
 internal sealed class TestSceneManagementService : ISceneManagementService
 {
+    public TestSceneManagementService(params GameEntity[] entities)
+    {
+        if (entities.Length == 0) return;
+        var scene = new Scene("Test");
+        foreach (var entity in entities) scene.AddEntity(entity);
+        Scene.Value = scene;
+    }
+
     public Observable<Scene?> Scene { get; } = new(null);
     public ReiEditor.Utils.Common.IObservable<Scene?> CurrentScene => Scene;
     public Task InitializeAsync() => throw new NotSupportedException();

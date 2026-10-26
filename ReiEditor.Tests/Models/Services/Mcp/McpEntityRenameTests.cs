@@ -22,7 +22,7 @@ public sealed class McpEntityRenameTests
     {
         var scenes = CreateScene();
         var management = new TestEntityManagementService { OnRename = (target, value) => target.SetName(value) };
-        var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
+        var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes);
         using var session = Create(scenes, rename);
 
         var result = await session.RenameEntityAsync(1, name);
@@ -37,7 +37,7 @@ public sealed class McpEntityRenameTests
     {
         var scenes = CreateScene();
         var management = new TestEntityManagementService { OnRename = (_, _) => { } };
-        var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
+        var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes);
         using var session = Create(scenes, rename);
 
         var error = await Assert.ThrowsAsync<ReiMcpOperationException>(() => session.RenameEntityAsync(1, "After"));
