@@ -117,7 +117,7 @@ public sealed class SelectedEntityCommandTests
     {
         var management = new TestEntityManagementService { OnRename = (_, _) => { } };
         var entity = new GameEntity(14, "Before");
-        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
+        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity), new TestEngineRunner());
 
         var result = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, "  After  "));
         Assert.Equal("Before", result.BeforeName);
@@ -138,7 +138,7 @@ public sealed class SelectedEntityCommandTests
         var management = new TestEntityManagementService { OnRename = (target, _) => target.SetName(appliedName) };
         var entity = new GameEntity(14, "Before");
         IEditorCommand<EntityRenameCommandTarget, EntityRenameCommandResult> command =
-            new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
+            new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity), new TestEngineRunner());
 
         var result = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, requestedName));
 
@@ -158,7 +158,7 @@ public sealed class SelectedEntityCommandTests
         var expected = new InvalidOperationException("rename failed");
         var management = new TestEntityManagementService { OnRename = (_, _) => throw expected };
         var entity = new GameEntity(15, "Before");
-        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
+        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity), new TestEngineRunner());
 
         var actual = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             command.ExecuteAsync(new EntityRenameCommandTarget(entity, "After")));

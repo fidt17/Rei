@@ -41,6 +41,18 @@ Inputs are validated before mutation. Expected failures become MCP errors in `co
 
 Parameter names below match MCP input schema. `—` means no parameters. Results use structured JSON except `capture_frame`, which returns metadata and PNG content.
 
+### Editor commands
+
+| Tool | Parameters | Result / effect |
+| --- | --- | --- |
+| `rei_editor_get_command_state` | — | Read-only `isBusy`, `canUndo`, `canRedo` from the shared Editor command service. No native runtime inspection. |
+| `rei_editor_undo` | — | Undo one applicable recorded command; returns updated command state. No Save. |
+| `rei_editor_redo` | — | Redo one applicable recorded command; returns updated command state. No Save. |
+
+Rename from Hierarchy, Inspector and MCP uses the same `EditorCommandService`. Hierarchy confirms with Enter; Inspector's existing ReiTextBox commits on Enter/focus loss. Ctrl+Z / Ctrl+Y use the service outside text editing, including the native Editor viewport; focused text fields retain their own draft Undo. Only Rename currently creates history entries. Other mutations are not yet undoable.
+
+History is scoped to the open Editor project, not to a scene. Each entry decides its own eligibility; changing scenes does not discard unrelated history. Rename rejects Play/startup, replaced/missing entities and conflicting names. Closing the project or restarting Editor releases history. `command_in_progress`, `undo_unavailable`, `redo_unavailable`, `undo_failed`, `redo_failed`, `rename_failed` distinguish failures. Undo/Redo are not idempotent: each call traverses one entry. After an uncertain transport result, inspect Editor/native values before retrying. Save/persistence is separate from in-memory Undo/Redo.
+
 ### Scene
 
 | Tool | Parameters | Result / effect |

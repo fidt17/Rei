@@ -16,6 +16,7 @@ public sealed class EditorCommandServiceTests
         public Scene Scene { get; } = new("History");
         public GameEntity Entity { get; } = new(1, "Before");
         public TestSceneManagementService Scenes { get; } = new();
+        public TestEngineRunner Engine { get; } = new();
         public TestEntityManagementService Entities { get; } = new();
         public EntityRenameCommand Rename { get; }
         public EditorCommandService Commands { get; }
@@ -25,7 +26,7 @@ public sealed class EditorCommandServiceTests
             Scene.AddEntity(Entity);
             Scenes.Scene.Value = Scene;
             ApplyNames();
-            Rename = new(Entities, new TestLogger<EntityRenameCommand>(), Scenes);
+            Rename = new(Entities, new TestLogger<EntityRenameCommand>(), Scenes, Engine);
             Commands = new();
         }
 
@@ -387,6 +388,31 @@ public sealed class EditorCommandServiceTests
         await c.Commands.UndoAsync();
 
         c.Scenes.Scene.Value = c.Scene;
+        Assert.True(c.Commands.CanUndo);
+        await c.Commands.UndoAsync();
+        Assert.Equal("Before", c.Entity.Name);
+    }
+
+    [Theory]
+    [InlineData("play")]
+    [InlineData("starting")]
+    [InlineData("active_play")]
+    public async Task RenameOwnsPlayAndStartupRestrictions(string mode)
+    {
+        using var c = new Context();
+        await c.Execute("After");
+        c.Engine.PlaymodeActive.Value = mode == "play";
+        c.Engine.Starting.Value = mode == "starting";
+        c.Engine.Active.Value = mode == "active_play";
+        c.Engine.ActiveMode = ReiEditor.Models.Services.Engine.Playmode.EngineRunMode.PlayMode;
+        Assert.False(c.Commands.CanUndo);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Commands.UndoAsync());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Execute("Blocked"));
+        Assert.Equal("After", c.Entity.Name);
+        Assert.Single(c.Entities.RenameCalls);
+        c.Engine.PlaymodeActive.Value = false;
+        c.Engine.Starting.Value = false;
+        c.Engine.Active.Value = false;
         Assert.True(c.Commands.CanUndo);
         await c.Commands.UndoAsync();
         Assert.Equal("Before", c.Entity.Name);

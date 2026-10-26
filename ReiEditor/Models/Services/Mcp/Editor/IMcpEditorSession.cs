@@ -11,6 +11,9 @@ internal interface IMcpEditorSession
     ReiSelectionState GetSelectionState(string source);
     ReiSelectionState SetEntitySelection(System.Collections.Generic.IReadOnlyList<int> entityIds);
     ReiEditorState GetState();
+    ReiEditorCommandState GetCommandState();
+    Task<ReiEditorCommandState> UndoAsync();
+    Task<ReiEditorCommandState> RedoAsync();
     ReiEntityList ListEntities();
     ReiEntityDetails GetEntity(int entityId);
     ReiEntityParentResult SetEntityParent(int entityId, int parentId, int order);

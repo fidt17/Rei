@@ -8,7 +8,6 @@ using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.EditorApp.AssetCreation.Shader;
 using ReiEditor.Models.Services.Mcp.Editor;
-using ReiEditor.Models.Services.Commands;
 using ReiEditor.Models.ProjectManagement.Setup;
 using ReiEditor.Models.ProjectManagement.Update;
 using ReiEditor.Models.Resources.Client;
@@ -19,7 +18,6 @@ using ReiEditor.Startup.Scopes.Editor.Modules;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor;
 using ReiEditor.ViewModels.Windows.Editor.Project;
-using ReiEditor.ViewModels.Windows.Editor.Commands;
 using ReiEditor.ViewModels.Windows.Editor.Project.AssetCreation;
 
 namespace ReiEditor.Startup.Scopes.Editor;
@@ -36,7 +34,6 @@ public class EditorScope : BaseLifetimeScope
 		
         b.RegisterSingleton<ResourceService>().As<IResourceService>();
         b.RegisterSingleton<EditorProceduresService>().As<IEditorProceduresService>();
-        b.RegisterSingleton<EditorCommandService>().As<IEditorCommandService>();
         b.RegisterSingleton<ProjectSetupService>().As<IProjectSetupService>();
         b.RegisterSingleton<ProjectUpdateService>().As<IProjectUpdateService>();
         b.RegisterSingleton<EditorRefreshService>().As<IEditorRefreshService>();
@@ -47,16 +44,18 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterBuildCallback(scope => scope.Resolve<WindowActivatedAssetRefreshService>());
         b.RegisterSingleton<PlaymodeAssetDiskRestoreService>();
         b.RegisterBuildCallback(scope => scope.Resolve<PlaymodeAssetDiskRestoreService>());
+        b.RegisterSingleton<EditorCommandHotkeyService>();
+        b.RegisterBuildCallback(scope => scope.Resolve<EditorCommandHotkeyService>());
         b.RegisterSingleton<EditorTransformationHotkeyService>();
         b.RegisterBuildCallback(scope => scope.Resolve<EditorTransformationHotkeyService>());
 		
-        b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<SelectionService>().As<ISelectionService>();
 
         b.RegisterModule<AssetsModule>();
         b.RegisterModule<EngineModule>();
         b.RegisterModule<EditorConsoleModule>();
         b.RegisterModule<SceneModule>();
+        b.RegisterModule<EditorCommandsModule>();
         b.RegisterModule<MonitorModule>();
         b.RegisterModule<PlaymodeModule>();
         b.RegisterModule<SettingsModule>();

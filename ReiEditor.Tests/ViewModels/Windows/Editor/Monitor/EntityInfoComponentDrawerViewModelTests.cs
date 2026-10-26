@@ -44,7 +44,7 @@ public sealed class EntityInfoComponentDrawerViewModelTests
     {
         var entity = new GameEntity(17, "Before");
         var management = new TestEntityManagementService();
-        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
+        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity), new TestEngineRunner());
         using var drawer = new EntityInfoComponentDrawerViewModel(entity, command, new TestLogger<EntityInfoComponentDrawerViewModel>());
         Assert.Equal("Before", drawer.EntityName);
         Assert.Empty(management.RenameCalls);
@@ -65,7 +65,7 @@ public sealed class EntityInfoComponentDrawerViewModelTests
     {
         var entity = new GameEntity(17, "Before");
         var management = new TestEntityManagementService { OnRename = (target, _) => target.SetName(appliedName) };
-        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity));
+        var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity), new TestEngineRunner());
         using var drawer = new EntityInfoComponentDrawerViewModel(entity, command, new TestLogger<EntityInfoComponentDrawerViewModel>());
 
         drawer.EntityName = requestedName;

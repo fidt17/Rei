@@ -15,6 +15,8 @@ public sealed class ReiMcpHostIntegrationTests
         private static readonly DateTimeOffset NOW = new(2026, 7, 30, 12, 0, 0, TimeSpan.Zero);
         private static readonly byte[] PNG_DATA = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
+        public int UndoCalls { get; private set; }
+        public int RedoCalls { get; private set; }
         public int? RenamedEntityId { get; private set; }
         public string? RenamedEntityName { get; private set; }
         public ReiBuildOptions? BuildOptions { get; private set; }
@@ -56,6 +58,18 @@ public sealed class ReiMcpHostIntegrationTests
                 new ReiSceneInfo("scene-1", "Main", 1),
                 new ReiEngineInfo("running", "EditorMode"),
                 new ReiAutomationState(false, false, null)));
+        }
+
+        public Task<ReiEditorCommandState> GetCommandStateAsync(CancellationToken cancellationToken) => Task.FromResult(new ReiEditorCommandState(false, true, false));
+        public Task<ReiEditorCommandState> UndoAsync(CancellationToken cancellationToken)
+        {
+            UndoCalls++;
+            return Task.FromResult(new ReiEditorCommandState(false, false, true));
+        }
+        public Task<ReiEditorCommandState> RedoAsync(CancellationToken cancellationToken)
+        {
+            RedoCalls++;
+            return Task.FromResult(new ReiEditorCommandState(false, true, false));
         }
 
         public Task<ReiEntityList> ListEntitiesAsync(CancellationToken cancellationToken)
@@ -319,7 +333,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(29, tools.Count);
+        Assert.Equal(32, tools.Count);
         var opened = await client.CallToolAsync("rei_editor_open_scene", new Dictionary<string, object?> { ["scene"] = "Scenes/Other.scene" });
         Assert.False(opened.IsError ?? false);
         Assert.Equal("Scenes/Other.scene", gateway.OpenedScene);
@@ -350,6 +364,23 @@ public sealed class ReiMcpHostIntegrationTests
         var stateTool = Assert.Single(tools, x => x.Name == "rei_editor_get_state");
         Assert.True(stateTool.ProtocolTool.Annotations?.ReadOnlyHint);
         Assert.False(stateTool.ProtocolTool.Annotations?.OpenWorldHint);
+
+        var commandStateTool = Assert.Single(tools, x => x.Name == "rei_editor_get_command_state");
+        Assert.True(commandStateTool.ProtocolTool.Annotations?.ReadOnlyHint);
+        foreach (var name in new[] { "rei_editor_undo", "rei_editor_redo" })
+        {
+            var commandTool = Assert.Single(tools, x => x.Name == name);
+            Assert.False(commandTool.ProtocolTool.Annotations?.ReadOnlyHint);
+            Assert.False(commandTool.ProtocolTool.Annotations?.IdempotentHint);
+            Assert.False(commandTool.ProtocolTool.Annotations?.DestructiveHint);
+        }
+        var commandState = await client.CallToolAsync("rei_editor_get_command_state", cancellationToken: CancellationToken.None);
+        Assert.NotEqual(true, commandState.IsError);
+        Assert.Contains("\"canUndo\":true", GetText(commandState));
+        Assert.NotEqual(true, (await client.CallToolAsync("rei_editor_undo", cancellationToken: CancellationToken.None)).IsError);
+        Assert.NotEqual(true, (await client.CallToolAsync("rei_editor_redo", cancellationToken: CancellationToken.None)).IsError);
+        Assert.Equal(1, gateway.UndoCalls);
+        Assert.Equal(1, gateway.RedoCalls);
 
         var saveTool = Assert.Single(tools, x => x.Name == "rei_editor_save_project");
         Assert.False(saveTool.ProtocolTool.Annotations?.ReadOnlyHint);

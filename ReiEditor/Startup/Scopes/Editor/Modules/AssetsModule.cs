@@ -2,7 +2,6 @@ using Autofac;
 using ReiEditor.Models.EditorApp.AssetCreation.Behaviour;
 using ReiEditor.Models.EditorApp.AssetCreation.Material;
 using ReiEditor.Models.EditorApp.AssetCreation.Shader;
-using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Resources.EngineResources;
 using ReiEditor.Models.Services.Assets;
@@ -62,10 +61,6 @@ public class AssetsModule : Module
         b.RegisterSingleton<BehaviourComponentsService>().As<IBehaviourComponentsService>();
 
         b.RegisterSingleton<ProjectAssetFocusService>().As<IProjectAssetFocusService>();
-        b.RegisterSingleton<ProjectAssetDeleteCommand>().As<IProjectAssetDeleteCommand>();
-        b.RegisterSingleton<ProjectAssetDuplicateCommand>().As<IProjectAssetDuplicateCommand>();
-        b.RegisterSingleton<ProjectAssetMoveCommand>().As<IProjectAssetMoveCommand>();
-        b.RegisterSingleton<ProjectAssetRenameCommand>().As<IProjectAssetRenameCommand>();
         
         RegisterMigrations(b);
     }

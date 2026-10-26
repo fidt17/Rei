@@ -1,6 +1,7 @@
 using System;
 using ReiEditor.Models.EditorApp.Commands;
 using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Engine.Playmode;
 using EditorScene = ReiEditor.Models.Services.Scenes.Scene;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Logging.Loggers;
@@ -11,7 +12,7 @@ namespace ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<EntityRenameCommandTarget, EntityRenameCommandResult>
 {
     private sealed class RenameHistoryEntry(
-        IEntityRenameCommand command,
+        EntityRenameCommand command,
         ISceneManagementService scenes,
         EditorScene scene,
         GameEntity entity,
@@ -23,7 +24,7 @@ public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<
         private readonly string _afterName = result.AfterName;
 
         private bool CanRename(string expectedName) => ReferenceEquals(scene, scenes.CurrentScene.Value)
-            && ReferenceEquals(scene.GetById(entity.Id), entity) && entity.Name == expectedName;
+            && command.CanExecute(entity) && entity.Name == expectedName;
 
         public Task UndoAsync() => RenameAsync(_afterName, _beforeName);
         public Task RedoAsync() => RenameAsync(_beforeName, _afterName);
@@ -37,14 +38,16 @@ public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<
     }
 
     private readonly ISceneManagementService _scenes;
+    private readonly IEngineRunner _engine;
     private readonly IEntityManagementService _entityManagementService;
     private readonly ILogger<EntityRenameCommand> _logger;
 
-    public EntityRenameCommand(IEntityManagementService entityManagementService, ILogger<EntityRenameCommand> logger, ISceneManagementService scenes)
+    public EntityRenameCommand(IEntityManagementService entityManagementService, ILogger<EntityRenameCommand> logger, ISceneManagementService scenes, IEngineRunner engine)
     {
         _entityManagementService = entityManagementService;
         _logger = logger;
         _scenes = scenes;
+        _engine = engine;
     }
 
     public IEditorHistoryEntry? CreateHistoryEntry(EntityRenameCommandTarget target, EntityRenameCommandResult result)
@@ -56,10 +59,13 @@ public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<
         return new RenameHistoryEntry(this, _scenes, scene, target.Entity, result);
     }
 
+    private bool CanExecute(GameEntity entity) => !_engine.IsPlaymodeActive.Value && !_engine.IsEngineStarting.Value
+        && !(_engine.IsActive.Value && _engine.ActiveMode == EngineRunMode.PlayMode)
+        && ReferenceEquals(_scenes.CurrentScene.Value?.GetById(entity.Id), entity);
+
     public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target)
     {
-        if (!ReferenceEquals(_scenes.CurrentScene.Value?.GetById(target.Entity.Id), target.Entity))
-            throw new InvalidOperationException("The entity does not belong to the current scene.");
+        if (!CanExecute(target.Entity)) throw new InvalidOperationException("The entity cannot be renamed in the current Editor context.");
         _logger.Log($"Renaming entity {target.Entity.Id}:{target.Entity.Name} -> {target.Name}");
         var beforeName = target.Entity.Name;
         _entityManagementService.RenameEntity(target.Entity, target.Name);

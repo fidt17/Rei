@@ -41,6 +41,15 @@ internal sealed class McpEditorGateway : IReiEditorGateway
         }, cancellationToken);
     }
 
+    public Task<ReiEditorCommandState> GetCommandStateAsync(CancellationToken cancellationToken) =>
+        _dispatcher.InvokeAsync(() => GetRequiredSession().GetCommandState(), cancellationToken);
+
+    public Task<ReiEditorCommandState> UndoAsync(CancellationToken cancellationToken) =>
+        _dispatcher.InvokeTaskAsync(() => GetRequiredSession().UndoAsync(), cancellationToken);
+
+    public Task<ReiEditorCommandState> RedoAsync(CancellationToken cancellationToken) =>
+        _dispatcher.InvokeTaskAsync(() => GetRequiredSession().RedoAsync(), cancellationToken);
+
     public Task<ReiEntityList> ListEntitiesAsync(CancellationToken cancellationToken)
     {
         return _dispatcher.InvokeAsync(() => GetRequiredSession().ListEntities(), cancellationToken);
