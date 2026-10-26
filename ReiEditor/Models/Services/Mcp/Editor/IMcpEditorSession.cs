@@ -14,7 +14,7 @@ internal interface IMcpEditorSession
     ReiEntityList ListEntities();
     ReiEntityDetails GetEntity(int entityId);
     ReiEntityParentResult SetEntityParent(int entityId, int parentId, int order);
-    ReiEntityMutationResult RenameEntity(int entityId, string newName);
+    Task<ReiEntityMutationResult> RenameEntityAsync(int entityId, string newName);
     ReiBehaviourMutationResult AddBehaviour(int entityId, string behaviourName);
     ReiBehaviourPropertyMutationResult SetBehaviourProperty(int entityId, string behaviourName, string propertyName, object? value);
     Task<ReiMaterialPropertyMutationResult> SetMaterialPropertyAsync(string materialAssetId, string propertyName, object? value);

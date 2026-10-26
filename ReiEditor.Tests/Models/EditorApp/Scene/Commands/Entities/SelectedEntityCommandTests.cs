@@ -1,4 +1,5 @@
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
+using ReiEditor.Models.EditorApp.Commands;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 
@@ -112,32 +113,55 @@ public sealed class SelectedEntityCommandTests
     /// Entity rename command forwards entity and unmodified requested name to management service.
     /// </summary>
     [Fact]
-    public void TestEntityRenameCommandForwardsTarget()
+    public async Task TestEntityRenameCommandForwardsTarget()
     {
         var management = new TestEntityManagementService { OnRename = (_, _) => { } };
         var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
         var entity = new GameEntity(14, "Before");
 
-        command.Execute(new EntityRenameCommandTarget(entity, "  After  "));
+        var result = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, "  After  "));
+        Assert.Equal("Before", result.BeforeName);
+        Assert.Equal("Before", result.AfterName);
+        Assert.False(result.Changed);
 
         var call = Assert.Single(management.RenameCalls);
         Assert.Same(entity, call.Entity);
         Assert.Equal("  After  ", call.Name);
     }
 
+    [Theory]
+    [InlineData("After", "After", true)]
+    [InlineData("Before", "Before", false)]
+    [InlineData("", "Entity 14", true)]
+    public async Task RenameResultCapturesActualNamesThroughCommonContract(string requestedName, string appliedName, bool changed)
+    {
+        var management = new TestEntityManagementService { OnRename = (target, _) => target.SetName(appliedName) };
+        IEditorCommand<EntityRenameCommandTarget, EntityRenameCommandResult> command =
+            new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
+        var entity = new GameEntity(14, "Before");
+
+        var result = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, requestedName));
+
+        Assert.Equal("Before", result.BeforeName);
+        Assert.Equal(appliedName, result.AfterName);
+        Assert.Equal(changed, result.Changed);
+        entity.SetName("Later edit");
+        Assert.Equal(appliedName, result.AfterName);
+    }
+
     /// <summary>
     /// Entity rename command does not mask management service exceptions.
     /// </summary>
     [Fact]
-    public void TestEntityRenameCommandPropagatesDependencyException()
+    public async Task TestEntityRenameCommandPropagatesDependencyException()
     {
         var expected = new InvalidOperationException("rename failed");
         var management = new TestEntityManagementService { OnRename = (_, _) => throw expected };
         var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
         var entity = new GameEntity(15, "Before");
 
-        var actual = Assert.Throws<InvalidOperationException>(() =>
-            command.Execute(new EntityRenameCommandTarget(entity, "After")));
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            command.ExecuteAsync(new EntityRenameCommandTarget(entity, "After")));
 
         Assert.Same(expected, actual);
     }

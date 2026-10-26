@@ -17,7 +17,11 @@ public sealed class HierarchyNodeViewModelTests
     private sealed class TestEntityRenameCommand : IEntityRenameCommand
     {
         public List<EntityRenameCommandTarget> Targets { get; } = new();
-        public void Execute(EntityRenameCommandTarget target) => Targets.Add(target);
+        public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target)
+        {
+            Targets.Add(target);
+            return Task.FromResult(new EntityRenameCommandResult(target.Entity.Name, target.Entity.Name));
+        }
     }
 
     private sealed class TestSelectedEntityActionService : ISelectedEntityActionService

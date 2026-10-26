@@ -9,13 +9,43 @@ namespace ReiEditor.Tests.ViewModels.Windows.Editor.Monitor;
 [Trait("Area", "Monitor")]
 public sealed class EntityInfoComponentDrawerViewModelTests
 {
+    private sealed class Rename(Func<EntityRenameCommandTarget, Task<EntityRenameCommandResult>> execute) : IEntityRenameCommand
+    {
+        public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target) => execute(target);
+    }
+
+    [Fact]
+    public async Task FailedAsyncRenameIsLoggedAndRestoresModelName()
+    {
+        var entity = new GameEntity(17, "Before");
+        var completion = new TaskCompletionSource<EntityRenameCommandResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var command = new Rename(_ => completion.Task);
+        var logger = new TestLogger<EntityInfoComponentDrawerViewModel>();
+        using var drawer = new EntityInfoComponentDrawerViewModel(entity, command, logger);
+        var restored = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        drawer.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(drawer.EntityName) && drawer.EntityName == "Before") restored.TrySetResult();
+        };
+        drawer.EntityName = "Requested";
+        Assert.Equal("Requested", drawer.EntityName);
+        var error = new InvalidOperationException("rename failed");
+
+        completion.SetException(error);
+        await restored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("Before", drawer.EntityName);
+        Assert.Equal("Before", entity.Name);
+        Assert.Same(error, Assert.Single(logger.Entries).Exception);
+    }
+
     [Fact]
     public void InitializationAndModelUpdatesDoNotExecuteRename()
     {
         var entity = new GameEntity(17, "Before");
         var management = new TestEntityManagementService();
         var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
-        using var drawer = new EntityInfoComponentDrawerViewModel(entity, command);
+        using var drawer = new EntityInfoComponentDrawerViewModel(entity, command, new TestLogger<EntityInfoComponentDrawerViewModel>());
         Assert.Equal("Before", drawer.EntityName);
         Assert.Empty(management.RenameCalls);
         var notifications = new List<string?>();
@@ -36,7 +66,7 @@ public sealed class EntityInfoComponentDrawerViewModelTests
         var entity = new GameEntity(17, "Before");
         var management = new TestEntityManagementService { OnRename = (target, _) => target.SetName(appliedName) };
         var command = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>());
-        using var drawer = new EntityInfoComponentDrawerViewModel(entity, command);
+        using var drawer = new EntityInfoComponentDrawerViewModel(entity, command, new TestLogger<EntityInfoComponentDrawerViewModel>());
 
         drawer.EntityName = requestedName;
 

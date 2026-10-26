@@ -1,5 +1,6 @@
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Logging.Loggers;
+using System.Threading.Tasks;
 
 namespace ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 
@@ -14,9 +15,11 @@ public class EntityRenameCommand : IEntityRenameCommand
         _logger = logger;
     }
 
-    public void Execute(EntityRenameCommandTarget target)
+    public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target)
     {
         _logger.Log($"Renaming entity {target.Entity.Id}:{target.Entity.Name} -> {target.Name}");
+        var beforeName = target.Entity.Name;
         _entityManagementService.RenameEntity(target.Entity, target.Name);
+        return Task.FromResult(new EntityRenameCommandResult(beforeName, target.Entity.Name));
     }
 }

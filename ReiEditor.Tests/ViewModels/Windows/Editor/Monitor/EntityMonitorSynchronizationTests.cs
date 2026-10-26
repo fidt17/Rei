@@ -104,7 +104,7 @@ public sealed class EntityMonitorSynchronizationTests
     {
         var registry = new Registry();
         return new(entity,
-            new Factory<EntityInfoComponentDrawerViewModel>(args => new((GameEntity)args[0], null!)),
+            new Factory<EntityInfoComponentDrawerViewModel>(args => new((GameEntity)args[0], null!, null!)),
             new Factory<BehaviourComponentDrawerViewModel>(args => new((GameEntity)args[0], (BehaviourComponent)args[1], registry, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, new NoCustomProperties())),
             registry, null!);
     }

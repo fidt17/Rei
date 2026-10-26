@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
+using System.Threading.Tasks;
 using Avalonia.Input;
 using ReactiveUI;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
@@ -66,7 +67,7 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
         DeleteCommand = ReactiveCommand.Create(Delete);
 
         StartRenameCommand = new RelayCommand(StartRename);
-        ConfirmRenameCommand = ReactiveCommand.Create<string>(ConfirmRename);
+        ConfirmRenameCommand = ReactiveCommand.CreateFromTask<string>(ConfirmRename);
         ContextMenu.AddOption(new ContextMenuOption("New Entity", () => _createChildEntityRequestedAction?.Invoke(this)));
         ContextMenu.AddOption(new ContextMenuOption("Rename", () => StartRenameCommand.Execute(null)));
         ContextMenu.AddOption(new ContextMenuOption("Duplicate", () => DuplicateCommand.Execute(null)));
@@ -135,5 +136,5 @@ public class HierarchyNodeViewModel : BaseViewModel, IEntitySelectable
 
     private void HandleNameChangedEvent(GameEntity e, string name) => Name.Value = name;
     private void StartRename() => RenameValue.Value = Name.Value;
-    private void ConfirmRename(string name) => _entityRenameCommand.Execute(new EntityRenameCommandTarget(Node.Content, name));
+    private Task ConfirmRename(string name) => _entityRenameCommand.ExecuteAsync(new EntityRenameCommandTarget(Node.Content, name));
 }

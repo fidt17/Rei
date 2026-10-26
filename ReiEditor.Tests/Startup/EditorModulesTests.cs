@@ -239,7 +239,8 @@ public sealed class EditorModulesTests
         var entities = new TestEntityManagementService { OnRename = (target, name) => target.SetName(name) };
         var drawer = container.Resolve<EntityInfoComponentDrawerViewModel>(
             new TypedParameter(typeof(GameEntity), entity),
-            new TypedParameter(typeof(IEntityRenameCommand), new EntityRenameCommand(entities, new TestLogger<EntityRenameCommand>())));
+            new TypedParameter(typeof(IEntityRenameCommand), new EntityRenameCommand(entities, new TestLogger<EntityRenameCommand>())),
+            new TypedParameter(typeof(ILogger<EntityInfoComponentDrawerViewModel>), new TestLogger<EntityInfoComponentDrawerViewModel>()));
 
         drawer.EntityName = "During";
         Assert.Equal("During", entity.Name);

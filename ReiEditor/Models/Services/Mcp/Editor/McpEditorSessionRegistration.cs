@@ -171,7 +171,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         return new ReiEntityParentResult(true, entityId, parentId, order);
     }
 
-    public ReiEntityMutationResult RenameEntity(int entityId, string newName)
+    public async Task<ReiEntityMutationResult> RenameEntityAsync(int entityId, string newName)
     {
         if (string.IsNullOrWhiteSpace(newName))
         {
@@ -185,18 +185,14 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         }
 
         var entity = GetRequiredEntity(entityId);
-        if (string.Equals(entity.Name, newName, StringComparison.Ordinal))
-        {
-            return new ReiEntityMutationResult(false, CreateEntitySummary(entity, GetEntityDepth(entity)), "Entity already has requested name.");
-        }
-
-        _entityRenameCommand.Execute(new EntityRenameCommandTarget(entity, newName));
-        if (!string.Equals(entity.Name, newName, StringComparison.Ordinal))
+        var result = await _entityRenameCommand.ExecuteAsync(new EntityRenameCommandTarget(entity, newName));
+        if (!string.Equals(result.AfterName, newName, StringComparison.Ordinal))
         {
             throw new ReiMcpOperationException("rename_failed", $"Editor did not apply name {newName} to entity {entityId}.");
         }
 
-        return new ReiEntityMutationResult(true, CreateEntitySummary(entity, GetEntityDepth(entity)), "Entity renamed. Save project to persist change.");
+        return new ReiEntityMutationResult(result.Changed, CreateEntitySummary(entity, GetEntityDepth(entity)),
+            result.Changed ? "Entity renamed. Save project to persist change." : "Entity already has requested name.");
     }
 
     public ReiBehaviourMutationResult AddBehaviour(int entityId, string behaviourName)

@@ -56,7 +56,7 @@ internal sealed class McpEditorGateway : IReiEditorGateway
 
     public Task<ReiEntityMutationResult> RenameEntityAsync(int entityId, string newName, CancellationToken cancellationToken)
     {
-        return _dispatcher.InvokeAsync(() => GetRequiredSession().RenameEntity(entityId, newName), cancellationToken);
+        return _dispatcher.InvokeTaskAsync(() => GetRequiredSession().RenameEntityAsync(entityId, newName), cancellationToken);
     }
 
     public Task<ReiBehaviourMutationResult> AddBehaviourAsync(int entityId, string behaviourName, CancellationToken cancellationToken)

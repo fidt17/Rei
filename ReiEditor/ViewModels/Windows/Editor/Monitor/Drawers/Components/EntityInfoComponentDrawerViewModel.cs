@@ -1,6 +1,9 @@
 ﻿using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.ViewModels.Common;
+using ReiEditor.Models.Services.Logging.Loggers;
+using System;
+using System.Threading.Tasks;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 
@@ -18,7 +21,7 @@ public class EntityInfoComponentDrawerViewModel : BaseViewModel
         {
             if (SetField(ref _entityName, value))
             {
-                _entityRenameCommand.Execute(new EntityRenameCommandTarget(_entity, value));
+                _ = RenameAsync(value);
             }
         }
     }
@@ -27,15 +30,17 @@ public class EntityInfoComponentDrawerViewModel : BaseViewModel
 
     private readonly GameEntity _entity;
     private readonly IEntityRenameCommand _entityRenameCommand;
+    private readonly ILogger<EntityInfoComponentDrawerViewModel> _logger;
 
 #pragma warning disable CS8618
     public EntityInfoComponentDrawerViewModel() { }
 #pragma warning restore CS8618
 
-    public EntityInfoComponentDrawerViewModel(GameEntity e, IEntityRenameCommand entityRenameCommand)
+    public EntityInfoComponentDrawerViewModel(GameEntity e, IEntityRenameCommand entityRenameCommand, ILogger<EntityInfoComponentDrawerViewModel> logger)
     {
         _entity = e;
         _entityRenameCommand = entityRenameCommand;
+        _logger = logger;
 
         SceneId = e.Id.ToString();
         _entityName = e.Name;
@@ -48,6 +53,13 @@ public class EntityInfoComponentDrawerViewModel : BaseViewModel
         base.Dispose();
         
         _entity.NameChangedEvent -= HandleEntityNameChangedEvent;
+    }
+
+    private async Task RenameAsync(string name)
+    {
+        try { await _entityRenameCommand.ExecuteAsync(new EntityRenameCommandTarget(_entity, name)); }
+        catch (Exception error) { _logger.LogException(error); }
+        finally { SetField(ref _entityName, _entity.Name, nameof(EntityName)); }
     }
 
     private void HandleEntityNameChangedEvent(GameEntity e, string name)
