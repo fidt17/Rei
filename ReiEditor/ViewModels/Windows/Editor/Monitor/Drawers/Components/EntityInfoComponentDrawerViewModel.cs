@@ -1,5 +1,9 @@
 ﻿using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.ViewModels.Common;
+using ReiEditor.Models.Services.Logging.Loggers;
+using System;
+using System.Threading.Tasks;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 
@@ -17,7 +21,7 @@ public class EntityInfoComponentDrawerViewModel : BaseViewModel
         {
             if (SetField(ref _entityName, value))
             {
-                _entityManagementService.RenameEntity(_entity, value);
+                _ = RenameAsync(value);
             }
         }
     }
@@ -25,19 +29,21 @@ public class EntityInfoComponentDrawerViewModel : BaseViewModel
     #endregion
 
     private readonly GameEntity _entity;
-    private readonly IEntityManagementService _entityManagementService;
+    private readonly IEntityRenameCommand _entityRenameCommand;
+    private readonly ILogger<EntityInfoComponentDrawerViewModel> _logger;
 
 #pragma warning disable CS8618
     public EntityInfoComponentDrawerViewModel() { }
 #pragma warning restore CS8618
 
-    public EntityInfoComponentDrawerViewModel(GameEntity e, IEntityManagementService entityManagementService)
+    public EntityInfoComponentDrawerViewModel(GameEntity e, IEntityRenameCommand entityRenameCommand, ILogger<EntityInfoComponentDrawerViewModel> logger)
     {
         _entity = e;
-        _entityManagementService = entityManagementService;
+        _entityRenameCommand = entityRenameCommand;
+        _logger = logger;
 
         SceneId = e.Id.ToString();
-        EntityName = e.Name;
+        _entityName = e.Name;
         
         _entity.NameChangedEvent += HandleEntityNameChangedEvent;
     }
@@ -49,8 +55,15 @@ public class EntityInfoComponentDrawerViewModel : BaseViewModel
         _entity.NameChangedEvent -= HandleEntityNameChangedEvent;
     }
 
+    private async Task RenameAsync(string name)
+    {
+        try { await _entityRenameCommand.ExecuteAsync(new EntityRenameCommandTarget(_entity, name)); }
+        catch (Exception error) { _logger.LogException(error); }
+        finally { SetField(ref _entityName, _entity.Name, nameof(EntityName)); }
+    }
+
     private void HandleEntityNameChangedEvent(GameEntity e, string name)
     {
-        EntityName = name;
+        SetField(ref _entityName, name, nameof(EntityName));
     }
 }

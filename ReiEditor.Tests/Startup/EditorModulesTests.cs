@@ -3,6 +3,7 @@ using Autofac;
 using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.EditorApp.MainWindow;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.EditorApp.ViewportGrid;
 using ReiEditor.Models.ProjectManagement;
@@ -238,7 +239,8 @@ public sealed class EditorModulesTests
         var entities = new TestEntityManagementService { OnRename = (target, name) => target.SetName(name) };
         var drawer = container.Resolve<EntityInfoComponentDrawerViewModel>(
             new TypedParameter(typeof(GameEntity), entity),
-            new TypedParameter(typeof(IEntityManagementService), entities));
+            new TypedParameter(typeof(IEntityRenameCommand), new EntityRenameCommand(entities, new TestLogger<EntityRenameCommand>(), new TestSceneManagementService(entity), new TestEngineRunner())),
+            new TypedParameter(typeof(ILogger<EntityInfoComponentDrawerViewModel>), new TestLogger<EntityInfoComponentDrawerViewModel>()));
 
         drawer.EntityName = "During";
         Assert.Equal("During", entity.Name);

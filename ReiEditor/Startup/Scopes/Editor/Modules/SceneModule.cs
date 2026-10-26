@@ -1,12 +1,10 @@
 ﻿using Autofac;
-using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.RectTransform;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Scenes.Templates;
 using ReiEditor.Utils.Extensions;
-using ReiEditor.ViewModels.Windows.Editor.Commands.Entities;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 
 namespace ReiEditor.Startup.Scopes.Editor.Modules;
@@ -34,12 +32,6 @@ public class SceneModule : Module
         b.RegisterSingleton<EngineSelectionSyncService>().As<IEngineSelectionSyncService>();
         b.RegisterSingleton<SceneSyncService>().As<ISceneSyncService>().AutoActivate();
         b.RegisterSingleton<EntitySyncService>().As<IEntitySyncService>();
-        b.RegisterType<EntityRenameCommand>().As<IEntityRenameCommand>();
-        b.RegisterType<SelectedEntityDeleteCommand>().As<ISelectedEntityDeleteCommand>();
-        b.RegisterType<SelectedEntityDuplicateCommand>().As<ISelectedEntityDuplicateCommand>();
-        b.RegisterType<SelectedEntityRenameCommand>().As<ISelectedEntityRenameCommand>();
-
-        b.RegisterType<CreateSceneEntityCommand>();
 
         b.RegisterType<DefaultSceneTemplate>();
 		

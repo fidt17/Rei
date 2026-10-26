@@ -12,6 +12,18 @@ public sealed class ReiEditorMcpTools
 {
     private readonly IReiEditorGateway _gateway;
 
+    [McpServerTool(Name = "rei_editor_get_command_state", Title = "Read Editor command state", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Reads isBusy, canUndo and canRedo from the shared Editor command service. Read-only; does not save, load or inspect native runtime values.")]
+    public Task<ReiEditorCommandState> GetCommandState(CancellationToken cancellationToken) => Execute(() => _gateway.GetCommandStateAsync(cancellationToken));
+
+    [McpServerTool(Name = "rei_editor_undo", Title = "Undo Editor command", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Undoes one applicable recorded Editor command through the same service as Ctrl+Z. Currently Rename is recorded. Returns updated command state; unavailable/busy/failed operations return errors. Does not save. Repeating the call undoes another entry; do not blindly retry after an uncertain transport result.")]
+    public Task<ReiEditorCommandState> Undo(CancellationToken cancellationToken) => Execute(() => _gateway.UndoAsync(cancellationToken));
+
+    [McpServerTool(Name = "rei_editor_redo", Title = "Redo Editor command", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Reapplies one applicable recorded Editor command through the same service as Ctrl+Y. Returns updated command state. Does not save; repeating the call replays another entry.")]
+    public Task<ReiEditorCommandState> Redo(CancellationToken cancellationToken) => Execute(() => _gateway.RedoAsync(cancellationToken));
+
     public ReiEditorMcpTools(IReiEditorGateway gateway)
     {
         _gateway = gateway;

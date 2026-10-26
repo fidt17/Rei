@@ -18,7 +18,7 @@ public sealed class HierarchyCollectionAndFocusTests
 {
     private sealed class TestEntityRenameCommand : IEntityRenameCommand
     {
-        public void Execute(EntityRenameCommandTarget target) { }
+        public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target) => Task.FromResult(new EntityRenameCommandResult(target.Entity.Name, target.Entity.Name));
     }
 
     private sealed class TestSelectedEntityActionService : ISelectedEntityActionService

@@ -7,6 +7,9 @@ public interface IReiEditorGateway
     Task<ReiSelectionState> GetSelectionStateAsync(string source, CancellationToken cancellationToken);
     Task<ReiSelectionState> SetEntitySelectionAsync(IReadOnlyList<int> entityIds, CancellationToken cancellationToken);
     Task<ReiEditorState> GetStateAsync(CancellationToken cancellationToken);
+    Task<ReiEditorCommandState> GetCommandStateAsync(CancellationToken cancellationToken);
+    Task<ReiEditorCommandState> UndoAsync(CancellationToken cancellationToken);
+    Task<ReiEditorCommandState> RedoAsync(CancellationToken cancellationToken);
     Task<ReiEntityList> ListEntitiesAsync(CancellationToken cancellationToken);
     Task<ReiEntityDetails> GetEntityAsync(int entityId, CancellationToken cancellationToken);
     Task<ReiEntityParentResult> SetEntityParentAsync(int entityId, int parentId, int order, CancellationToken cancellationToken);

@@ -22,6 +22,7 @@ using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Commands;
 using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.Render;
@@ -40,6 +41,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly ISceneManagementService _sceneManagementService;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IEntityRenameCommand _entityRenameCommand;
+    private readonly IEditorCommandService _commands;
     private readonly IMcpEditorAutomationService _automationService;
     private readonly IDisposable _sessionLease;
     private readonly IEntityManagementService _entityManagementService;
@@ -81,12 +83,14 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IAssetRuntimeInspectionService runtimeInspection,
         IEngineProfilingService profiling,
         IMcpEntitySelectionService entitySelection,
-        IEditorThreadDispatcher dispatcher)
+        IEditorThreadDispatcher dispatcher,
+        IEditorCommandService commands)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
         _behaviourRegistry = behaviourRegistry;
         _entityRenameCommand = entityRenameCommand;
+        _commands = commands;
         _entityManagementService = entityManagementService;
         _behaviourComponentsService = behaviourComponentsService;
         _serializedPropertiesService = serializedPropertiesService;
@@ -116,6 +120,27 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     public void Dispose()
     {
         _sessionLease.Dispose();
+    }
+
+    public ReiEditorCommandState GetCommandState() => new(_commands.IsBusy, _commands.CanUndo, _commands.CanRedo);
+    public Task<ReiEditorCommandState> UndoAsync() => TraverseAsync(undo: true);
+    public Task<ReiEditorCommandState> RedoAsync() => TraverseAsync(undo: false);
+
+    private async Task<ReiEditorCommandState> TraverseAsync(bool undo)
+    {
+        if (_commands.IsBusy) throw new ReiMcpOperationException("command_in_progress", "An Editor command is already running.");
+        if (!(undo ? _commands.CanUndo : _commands.CanRedo))
+            throw new ReiMcpOperationException(undo ? "undo_unavailable" : "redo_unavailable", "No applicable command is available.");
+        try
+        {
+            if (undo) await _commands.UndoAsync();
+            else await _commands.RedoAsync();
+        }
+        catch (InvalidOperationException error)
+        {
+            throw new ReiMcpOperationException(undo ? "undo_failed" : "redo_failed", error.Message);
+        }
+        return GetCommandState();
     }
 
     public ReiEditorState GetState()
@@ -171,7 +196,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         return new ReiEntityParentResult(true, entityId, parentId, order);
     }
 
-    public ReiEntityMutationResult RenameEntity(int entityId, string newName)
+    public async Task<ReiEntityMutationResult> RenameEntityAsync(int entityId, string newName)
     {
         if (string.IsNullOrWhiteSpace(newName))
         {
@@ -185,18 +210,17 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         }
 
         var entity = GetRequiredEntity(entityId);
-        if (string.Equals(entity.Name, newName, StringComparison.Ordinal))
-        {
-            return new ReiEntityMutationResult(false, CreateEntitySummary(entity, GetEntityDepth(entity)), "Entity already has requested name.");
-        }
-
-        _entityRenameCommand.Execute(new EntityRenameCommandTarget(entity, newName));
-        if (!string.Equals(entity.Name, newName, StringComparison.Ordinal))
+        if (_commands.IsBusy) throw new ReiMcpOperationException("command_in_progress", "An Editor command is already running.");
+        EntityRenameCommandResult result;
+        try { result = await _entityRenameCommand.ExecuteAsync(new EntityRenameCommandTarget(entity, newName)); }
+        catch (InvalidOperationException error) { throw new ReiMcpOperationException("rename_failed", error.Message); }
+        if (!string.Equals(result.AfterName, newName, StringComparison.Ordinal))
         {
             throw new ReiMcpOperationException("rename_failed", $"Editor did not apply name {newName} to entity {entityId}.");
         }
 
-        return new ReiEntityMutationResult(true, CreateEntitySummary(entity, GetEntityDepth(entity)), "Entity renamed. Save project to persist change.");
+        return new ReiEntityMutationResult(result.Changed, CreateEntitySummary(entity, GetEntityDepth(entity)),
+            result.Changed ? "Entity renamed. Save project to persist change." : "Entity already has requested name.");
     }
 
     public ReiBehaviourMutationResult AddBehaviour(int entityId, string behaviourName)

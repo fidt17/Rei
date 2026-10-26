@@ -18,7 +18,6 @@ using ReiEditor.Startup.Scopes.Editor.Modules;
 using ReiEditor.Utils.Extensions;
 using ReiEditor.ViewModels.Windows.Editor;
 using ReiEditor.ViewModels.Windows.Editor.Project;
-using ReiEditor.ViewModels.Windows.Editor.Commands;
 using ReiEditor.ViewModels.Windows.Editor.Project.AssetCreation;
 
 namespace ReiEditor.Startup.Scopes.Editor;
@@ -45,16 +44,18 @@ public class EditorScope : BaseLifetimeScope
         b.RegisterBuildCallback(scope => scope.Resolve<WindowActivatedAssetRefreshService>());
         b.RegisterSingleton<PlaymodeAssetDiskRestoreService>();
         b.RegisterBuildCallback(scope => scope.Resolve<PlaymodeAssetDiskRestoreService>());
+        b.RegisterSingleton<EditorCommandHotkeyService>();
+        b.RegisterBuildCallback(scope => scope.Resolve<EditorCommandHotkeyService>());
         b.RegisterSingleton<EditorTransformationHotkeyService>();
         b.RegisterBuildCallback(scope => scope.Resolve<EditorTransformationHotkeyService>());
 		
-        b.RegisterType<SaveProjectCommand>();
         b.RegisterSingleton<SelectionService>().As<ISelectionService>();
 
         b.RegisterModule<AssetsModule>();
         b.RegisterModule<EngineModule>();
         b.RegisterModule<EditorConsoleModule>();
         b.RegisterModule<SceneModule>();
+        b.RegisterModule<EditorCommandsModule>();
         b.RegisterModule<MonitorModule>();
         b.RegisterModule<PlaymodeModule>();
         b.RegisterModule<SettingsModule>();

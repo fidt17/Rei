@@ -53,7 +53,7 @@ public sealed class SceneSyncHierarchyTests
 
     private sealed class Rename : IEntityRenameCommand
     {
-        public void Execute(EntityRenameCommandTarget target) { }
+        public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target) => Task.FromResult(new EntityRenameCommandResult(target.Entity.Name, target.Entity.Name));
     }
 
     private sealed class Actions : ISelectedEntityActionService
@@ -116,7 +116,7 @@ public sealed class SceneSyncHierarchyTests
             {
                 CreatedDrawers++;
                 return new((GameEntity)args[0],
-                    new Factory<EntityInfoComponentDrawerViewModel>(values => new((GameEntity)values[0], management)),
+                    new Factory<EntityInfoComponentDrawerViewModel>(values => new((GameEntity)values[0], new Rename(), new TestLogger<EntityInfoComponentDrawerViewModel>())),
                     new Factory<BehaviourComponentDrawerViewModel>(_ => throw new NotSupportedException()), new Registry(), management);
             }), null!, null!, null!, null!, null!, null!, null!, null!, new EntitySync());
         }
