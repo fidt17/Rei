@@ -10,6 +10,7 @@ public interface IEditorCommandService
     bool CanRedo { get; }
 
     Task<TResult> ExecuteAsync<TArgs, TResult>(IEditorCommand<TArgs, TResult> command, TArgs args);
+    void RecordApplied(IEditorHistoryEntry entry);
     Task UndoAsync();
     Task RedoAsync();
 }

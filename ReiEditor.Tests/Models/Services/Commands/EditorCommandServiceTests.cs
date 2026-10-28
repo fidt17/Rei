@@ -119,6 +119,7 @@ public sealed class EditorCommandServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => c.Execute("Concurrent"));
         await Assert.ThrowsAsync<InvalidOperationException>(() => c.Commands.UndoAsync());
         await Assert.ThrowsAsync<InvalidOperationException>(() => c.Commands.RedoAsync());
+        Assert.Throws<InvalidOperationException>(() => c.Commands.RecordApplied(entry!));
         ready.SetResult();
         await operation;
 
@@ -307,6 +308,9 @@ public sealed class EditorCommandServiceTests
     {
         using var c = new Context();
         var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var value = new ValueCommand();
+        var before = await value.ExecuteAsync(42);
+        var entry = value.CreateHistoryEntry(42, before)!;
         var command = new DeferredRename(c.Rename, ready.Task);
         var pending = c.Commands.ExecuteAsync(command, new EntityRenameCommandTarget(c.Entity, "Late"));
         Assert.True(c.Commands.IsBusy);
@@ -314,6 +318,7 @@ public sealed class EditorCommandServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => c.Execute("Concurrent"));
         await Assert.ThrowsAsync<InvalidOperationException>(() => c.Commands.UndoAsync());
         await Assert.ThrowsAsync<InvalidOperationException>(() => c.Commands.RedoAsync());
+        Assert.Throws<InvalidOperationException>(() => c.Commands.RecordApplied(entry));
         c.Scenes.Scene.Value = new Scene("Other");
         c.Scenes.Scene.Value = c.Scene;
         ready.SetResult();
@@ -324,6 +329,8 @@ public sealed class EditorCommandServiceTests
         Assert.Single(c.Entities.RenameCalls);
         await c.Commands.UndoAsync();
         Assert.Equal("Before", c.Entity.Name);
+        Assert.Equal(42, value.Value);
+        Assert.False(c.Commands.CanUndo);
     }
 
     [Fact]
@@ -422,12 +429,100 @@ public sealed class EditorCommandServiceTests
     public async Task DisposedServiceRejectsFurtherOperations()
     {
         using var c = new Context();
-        await c.Execute("After");
+        var result = await c.Execute("After");
+        var entry = c.Rename.CreateHistoryEntry(new(c.Entity, "After"), result)!;
         c.Commands.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => c.Commands.RecordApplied(entry));
         Assert.False(c.Commands.CanUndo);
         await Assert.ThrowsAsync<ObjectDisposedException>(() => c.Execute("Unapplied"));
         await Assert.ThrowsAsync<ObjectDisposedException>(() => c.Commands.UndoAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => c.Commands.RedoAsync());
+        Assert.Equal("After", c.Entity.Name);
+    }
+
+    [Fact]
+    public async Task AlreadyAppliedEntryAndRenameTraverseOneHistoryWithoutRepeatingExecution()
+    {
+        using var c = new Context();
+        var value = new ValueCommand();
+        await c.Execute("First");
+        var before = await value.ExecuteAsync(42); // Applied outside the command service.
+        c.Commands.RecordApplied(value.CreateHistoryEntry(42, before)!);
+        Assert.Equal(42, value.Value);
+        await c.Execute("Last");
+
+        await c.Commands.UndoAsync();
+        Assert.Equal("First", c.Entity.Name);
+        Assert.Equal(42, value.Value);
+        await c.Commands.UndoAsync();
+        Assert.Equal("First", c.Entity.Name);
+        Assert.Equal(0, value.Value);
+        await c.Commands.UndoAsync();
+        Assert.Equal("Before", c.Entity.Name);
+        Assert.False(c.Commands.CanUndo);
+
+        await c.Commands.RedoAsync();
+        Assert.Equal("First", c.Entity.Name);
+        Assert.Equal(0, value.Value);
+        await c.Commands.RedoAsync();
+        Assert.Equal("First", c.Entity.Name);
+        Assert.Equal(42, value.Value);
+        await c.Commands.RedoAsync();
+        Assert.Equal("Last", c.Entity.Name);
+        Assert.False(c.Commands.CanRedo);
+        Assert.False(c.Commands.IsBusy);
+    }
+
+    [Fact]
+    public async Task RecordAppliedClearsRenameRedoAndKeepsEarlierHistory()
+    {
+        using var c = new Context();
+        await c.Execute("First");
+        await c.Execute("Discarded");
+        await c.Commands.UndoAsync();
+        Assert.True(c.Commands.CanRedo);
+        var value = new ValueCommand();
+        var before = await value.ExecuteAsync(7);
+        c.Commands.RecordApplied(value.CreateHistoryEntry(7, before)!);
+        Assert.False(c.Commands.CanRedo);
+        await c.Commands.RedoAsync();
+        Assert.Equal("First", c.Entity.Name);
+        Assert.Equal(7, value.Value);
+        await c.Commands.UndoAsync();
+        Assert.Equal(0, value.Value);
+        await c.Commands.UndoAsync();
+        Assert.Equal("Before", c.Entity.Name);
+        Assert.False(c.Commands.CanUndo);
+    }
+
+    [Fact]
+    public async Task NewRenameClearsRedoOfAnAlreadyAppliedEntry()
+    {
+        using var c = new Context();
+        var value = new ValueCommand();
+        var before = await value.ExecuteAsync(7);
+        c.Commands.RecordApplied(value.CreateHistoryEntry(7, before)!);
+        await c.Commands.UndoAsync();
+        Assert.True(c.Commands.CanRedo);
+        await c.Execute("Branch");
+        Assert.False(c.Commands.CanRedo);
+        await c.Commands.RedoAsync();
+        Assert.Equal(0, value.Value);
+        await c.Commands.UndoAsync();
+        Assert.Equal("Before", c.Entity.Name);
+        Assert.False(c.Commands.CanUndo);
+    }
+
+    [Fact]
+    public async Task NullEntryDoesNotChangeHistory()
+    {
+        using var c = new Context();
+        await c.Execute("After");
+        await c.Commands.UndoAsync();
+        Assert.Throws<ArgumentNullException>(() => c.Commands.RecordApplied(null!));
+        Assert.False(c.Commands.CanUndo);
+        Assert.True(c.Commands.CanRedo);
+        await c.Commands.RedoAsync();
         Assert.Equal("After", c.Entity.Name);
     }
 }
