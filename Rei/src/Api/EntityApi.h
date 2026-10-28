@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <string>
+#include <unordered_set>
 
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Components/EntityInfo.h"
@@ -175,6 +176,83 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
         {
             rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityOrderAction>(std::move(changes)));
         }
+    });
+}
+
+REI_EXTERN_API inline void ReorderEntities(const i32* entityIds, const i32 count, const i32 insertionIndex, const i32 recordHierarchyChange)
+{
+    if (entityIds == nullptr || count <= 0) return;
+    std::vector<i32> ids(entityIds, entityIds + count);
+    rei::GetEngine().ExecuteOnMainThread([ids = std::move(ids), insertionIndex, recordHierarchyChange]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        std::vector<rei::ecs::Entity> entities;
+        for (const auto id : ids)
+        {
+            const auto entity = rei::GetEntityManager().GetBySceneId(id);
+            if (IS_DEAD(entity) || !HAS(entity, rei::Transform)) return;
+            entities.push_back(entity);
+        }
+        std::vector<rei::editor::EntityOrderAction::Change> changes;
+        if (recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode())
+        {
+            for (const auto sibling : rei::transform_utility::CollectSiblings(GET(entities.front(), rei::Transform).GetParent()))
+            {
+                rei::ecs::ComponentRef<rei::Transform> target(_ecs, sibling);
+                changes.push_back({target, target.Get().GetChildOrder(), 0});
+            }
+        }
+        if (!rei::transform_utility::ReorderSiblings(entities, insertionIndex)) return;
+        for (auto& change : changes) change.After = change.Target.Get().GetChildOrder();
+        std::erase_if(changes, [](const auto& change) { return change.Before == change.After; });
+        if (!changes.empty()) rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityOrderAction>(std::move(changes)));
+    });
+}
+
+REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 count, const i32 parentSceneEntityId, const i32 insertionIndex, const i32 recordHierarchyChange)
+{
+    if (entityIds == nullptr || count <= 0) return;
+    std::vector<i32> ids(entityIds, entityIds + count);
+    rei::GetEngine().ExecuteOnMainThread([ids = std::move(ids), parentSceneEntityId, insertionIndex, recordHierarchyChange]
+    {
+        ECS_WORLD(rei::GetInternalWorld());
+        const auto parent = parentSceneEntityId == 0 ? rei::ecs::NULL_ENTITY : rei::GetEntityManager().GetBySceneId(parentSceneEntityId);
+        if (parentSceneEntityId != 0 && (IS_DEAD(parent) || !HAS(parent, rei::Transform))) return;
+        std::vector<rei::ecs::Entity> entities;
+        for (const auto id : ids)
+        {
+            const auto entity = rei::GetEntityManager().GetBySceneId(id);
+            if (IS_DEAD(entity) || !HAS(entity, rei::Transform)) return;
+            entities.push_back(entity);
+        }
+        const bool record = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode();
+        std::vector<rei::editor::EntityReparentAction::Change> changes;
+        std::vector<rei::editor::EntityOrderAction::Change> orders;
+        if (record)
+        {
+            for (const auto entity : entities)
+            {
+                rei::ecs::ComponentRef<rei::Transform> target(_ecs, entity);
+                const rei::editor::EntityReparentAction::State before(target.Get());
+                changes.push_back({target, before, before});
+            }
+            std::unordered_set<rei::ecs::Entity> parents{parent};
+            for (const auto entity : entities) parents.insert(GET(entity, rei::Transform).GetParent());
+            for (const auto affectedParent : parents)
+            {
+                for (const auto sibling : rei::transform_utility::CollectSiblings(affectedParent))
+                {
+                    rei::ecs::ComponentRef<rei::Transform> target(_ecs, sibling);
+                    orders.push_back({target, target.Get().GetChildOrder(), 0});
+                }
+            }
+        }
+        if (!rei::transform_utility::ReparentEntities(entities, parent, insertionIndex)) return;
+        if (!record) return;
+        for (auto& change : changes) change.After = rei::editor::EntityReparentAction::State(change.Target.Get());
+        for (auto& order : orders) order.After = order.Target.Get().GetChildOrder();
+        std::erase_if(orders, [](const auto& order) { return order.Before == order.After; });
+        rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityReparentAction>(std::move(changes), std::move(orders)));
     });
 }
 

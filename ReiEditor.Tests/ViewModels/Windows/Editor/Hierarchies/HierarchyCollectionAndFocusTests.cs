@@ -258,19 +258,133 @@ public sealed class HierarchyCollectionAndFocusTests
     [InlineData(false, false, true)]
     [InlineData(false, true, false)]
     [InlineData(true, false, true)]
-    public void DragRecordsOnlySingleEntity(bool changeParent, bool multiple, bool expectedRecord)
+    public void DragUsesOneBatchForSiblingGroupsAndRecordsSingleMoves(bool changeParent, bool multiple, bool expectedRecord)
     {
         var hierarchy = TestCreateHierarchy(out var first, out _, out var second);
-        var management = new TestEntityManagementService { OnSetParent = (_, _, _) => { } };
+        var management = new TestEntityManagementService { OnSetParent = (_, _, _) => { }, OnReorderEntities = (_, _) => { } };
         using var fixture = new HierarchyDragFixture(hierarchy, management);
 
         fixture.ViewModel.MoveEntities(multiple ? [1, 3] : [1], changeParent ? second.Content.Id : null, 2);
 
-        Assert.Equal(multiple ? 2 : 1, management.ParentCalls.Count);
+        if (multiple)
+        {
+            var batch = Assert.Single(management.ReorderCalls);
+            Assert.Equal(new[] { 1, 3 }, batch.Entities.Select(entity => entity.Id));
+            Assert.Equal(2, batch.Index);
+            Assert.Empty(management.ParentCalls);
+            return;
+        }
+        Assert.Single(management.ParentCalls);
+        Assert.Empty(management.ReorderCalls);
         Assert.All(management.RecordHierarchyChangeCalls, record => Assert.Equal(expectedRecord, record));
         Assert.Same(first.Content, management.ParentCalls[0].Entity);
         Assert.Equal(changeParent ? second.Content : null, management.ParentCalls[0].Parent);
         Assert.Equal(changeParent ? 2 : 1, management.ParentCalls[0].Order);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GroupDragUsesOriginalInsertionIndexAndSiblingOrder(bool nested)
+    {
+        var hierarchy = new Hierarchy<GameEntity>("Scene");
+        var parent = nested ? new HierarchyNode<GameEntity>(new(10, "Parent"), null) : null;
+        if (parent != null) hierarchy.AddNode(parent, true);
+        for (var id = 1; id <= 5; id++)
+        {
+            var node = new HierarchyNode<GameEntity>(new(id, $"Entity {id}"), parent);
+            parent?.PushChild(node);
+            hierarchy.AddNode(node, parent == null);
+        }
+        var management = new TestEntityManagementService { OnReorderEntities = (_, _) => { } };
+        using var fixture = new HierarchyDragFixture(hierarchy, management);
+
+        fixture.ViewModel.MoveEntities([4, 2], parent?.Content.Id, 3);
+
+        var call = Assert.Single(management.ReorderCalls);
+        Assert.Equal(new[] { 2, 4 }, call.Entities.Select(entity => entity.Id));
+        Assert.Equal(3, call.Index);
+        Assert.Empty(management.ParentCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GroupParentChangeSendsOneBatchInSiblingOrder(bool toRoot)
+    {
+        var hierarchy = new Hierarchy<GameEntity>("Scene");
+        var source = new HierarchyNode<GameEntity>(new(10, "Source"), null);
+        var destination = new HierarchyNode<GameEntity>(new(20, "Destination"), null);
+        hierarchy.AddNode(source, true);
+        hierarchy.AddNode(destination, true);
+        foreach (var id in new[] { 1, 2, 3 })
+        {
+            var node = new HierarchyNode<GameEntity>(new(id, $"Entity {id}"), source);
+            source.PushChild(node);
+            hierarchy.AddNode(node, false);
+        }
+        var management = new TestEntityManagementService { OnReparentEntities = (_, _, _) => { } };
+        using var fixture = new HierarchyDragFixture(hierarchy, management);
+
+        fixture.ViewModel.MoveEntities([3, 1], toRoot ? null : 20, 1);
+
+        var batch = Assert.Single(management.ReparentCalls);
+        Assert.Equal(new[] { 1, 3 }, batch.Entities.Select(entity => entity.Id));
+        Assert.Equal(toRoot ? null : destination.Content, batch.Parent);
+        Assert.Equal(1, batch.Index);
+        Assert.Empty(management.ParentCalls);
+        Assert.Empty(management.ReorderCalls);
+    }
+
+    [Fact]
+    public void GroupFromDifferentParentsSendsOneRecordedBatch()
+    {
+        var hierarchy = TestCreateHierarchy(out _, out _, out _);
+        var management = new TestEntityManagementService { OnReparentEntities = (_, _, _) => { } };
+        using var fixture = new HierarchyDragFixture(hierarchy, management);
+
+        fixture.ViewModel.MoveEntities([3, 2], null, 0);
+
+        var batch = Assert.Single(management.ReparentCalls);
+        Assert.Equal(new[] { 2, 3 }, batch.Entities.Select(entity => entity.Id));
+        Assert.Null(batch.Parent);
+        Assert.Equal(0, batch.Index);
+        Assert.Empty(management.ParentCalls);
+        Assert.Empty(management.ReorderCalls);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void MixedGroupUsesTreeOrderAndExcludesSelectedDescendants(bool reverseRoots, bool includeAncestor)
+    {
+        var hierarchy = new Hierarchy<GameEntity>("Scene");
+        var first = new HierarchyNode<GameEntity>(new(10, "First"), null);
+        var second = new HierarchyNode<GameEntity>(new(20, "Second"), null);
+        var destination = new HierarchyNode<GameEntity>(new(30, "Destination"), null);
+        foreach (var root in new[] { first, second, destination }) hierarchy.AddNode(root, true);
+        foreach (var id in new[] { 11, 12, 21 })
+        {
+            var parent = id < 20 ? first : second;
+            var child = new HierarchyNode<GameEntity>(new(id, $"Child {id}"), parent);
+            parent.PushChild(child);
+            hierarchy.AddNode(child, false);
+        }
+        var management = new TestEntityManagementService { OnReparentEntities = (_, _, _) => { } };
+        using var fixture = new HierarchyDragFixture(hierarchy, management);
+        if (reverseRoots) hierarchy.MoveNode(second, null, 0);
+
+        fixture.ViewModel.MoveEntities(includeAncestor ? [21, 12, 10] : [21, 12], 30, 1);
+
+        var batch = Assert.Single(management.ReparentCalls);
+        var firstId = includeAncestor ? 10 : 12;
+        Assert.Equal(reverseRoots ? new[] { 21, firstId } : new[] { firstId, 21 }, batch.Entities.Select(entity => entity.Id));
+        Assert.Same(destination.Content, batch.Parent);
+        Assert.Equal(1, batch.Index);
+        Assert.Empty(management.ParentCalls);
+        Assert.Empty(management.ReorderCalls);
     }
 
     private static Hierarchy<GameEntity> TestCreateHierarchy(

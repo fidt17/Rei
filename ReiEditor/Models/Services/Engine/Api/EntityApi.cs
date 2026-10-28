@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Utils.Common;
@@ -115,6 +118,22 @@ public class EntityApi : IEntityApi
         {
             // ignore
         }
+    }
+
+    private delegate void ReorderEntitiesDelegate([In] int[] entityIds, int count, int insertionIndex, int recordHierarchyChange);
+    public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false)
+    {
+        if (!_engineApi.IsEngineRunning || entityIds.Count == 0) return;
+        var ids = entityIds.ToArray();
+        _engineApi.Invoke(typeof(ReorderEntitiesDelegate), "ReorderEntities", ids, ids.Length, insertionIndex, recordHierarchyChange ? 1 : 0);
+    }
+
+    private delegate void ReparentEntitiesDelegate([In] int[] entityIds, int count, int parentEntityId, int insertionIndex, int recordHierarchyChange);
+    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false)
+    {
+        if (!_engineApi.IsEngineRunning || entityIds.Count == 0) return;
+        var ids = entityIds.ToArray();
+        _engineApi.Invoke(typeof(ReparentEntitiesDelegate), "ReparentEntities", ids, ids.Length, parentEntityId, insertionIndex, recordHierarchyChange ? 1 : 0);
     }
 
     private delegate void SetEntityDataDelegate(string json);

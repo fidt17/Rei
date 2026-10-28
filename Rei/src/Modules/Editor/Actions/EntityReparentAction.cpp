@@ -10,7 +10,12 @@ namespace rei::editor
     }
 
     EntityReparentAction::EntityReparentAction(ecs::ComponentRef<Transform> target, State before, State after, std::vector<EntityOrderAction::Change> orders) :
-        _target(target), _before(before), _after(after), _orders(std::move(orders))
+        EntityReparentAction(std::vector<Change>{{target, before, after}}, std::move(orders))
+    {
+    }
+
+    EntityReparentAction::EntityReparentAction(std::vector<Change> changes, std::vector<EntityOrderAction::Change> orders) :
+        _changes(std::move(changes)), _orders(std::move(orders))
     {
     }
 
@@ -19,20 +24,28 @@ namespace rei::editor
 
     bool EntityReparentAction::Apply(const bool undo)
     {
-        if (_target.IsNull()) return false;
-        const auto& state = undo ? _before : _after;
+        if (_changes.empty()) return false;
         ECS_WORLD(GetInternalWorld())
-        if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return false;
+        for (const auto& change : _changes)
+        {
+            if (change.Target.IsNull()) return false;
+            const auto& state = undo ? change.Before : change.After;
+            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return false;
+        }
         for (const auto& change : _orders)
         {
             if (change.Target.IsNull()) return false;
         }
 
-        auto& transform = _target.Get();
-        transform.SetParent(state.Parent);
-        transform.GetLocalPosition() = state.Position;
-        transform.GetLocalScale() = state.Scale;
-        transform.SetRotation(state.Rotation);
+        for (const auto& change : _changes)
+        {
+            const auto& state = undo ? change.Before : change.After;
+            auto& transform = change.Target.Get();
+            transform.SetParent(state.Parent);
+            transform.GetLocalPosition() = state.Position;
+            transform.GetLocalScale() = state.Scale;
+            transform.SetRotation(state.Rotation);
+        }
         for (const auto& change : _orders)
         {
             change.Target.Get().SetChildOrder(undo ? change.Before : change.After);

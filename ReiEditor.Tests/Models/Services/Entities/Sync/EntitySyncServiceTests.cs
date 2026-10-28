@@ -39,6 +39,8 @@ public sealed class EntitySyncServiceTests
             return State;
         }
 
+        public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => SetDataCalls++;
         public GetSceneEntitiesResponse? GetSceneEntities() => throw new NotSupportedException();
         public InstantiateEntityResponse? CreateNewEntity(string name) => throw new NotSupportedException();

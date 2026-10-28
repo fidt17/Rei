@@ -54,6 +54,8 @@ public sealed class BehaviourSyncServiceTests
         public SetEntityDataRequest? Request { get; private set; }
         public bool ThrowOnSetData { get; init; }
 
+        public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request)
         {
             if (ThrowOnSetData) throw new InvalidOperationException("write failed");

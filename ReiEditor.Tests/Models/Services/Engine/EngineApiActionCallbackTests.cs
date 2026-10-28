@@ -292,7 +292,19 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyHierarchyDragAsync(bool nested)
+    [NativeCallbackFact]
+    public Task GroupedHierarchyDragRecordsOneEntryAndPreservesSiblingOrder()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var nested in new[] { false, true })
+                foreach (var disjoint in new[] { false, true }) await VerifyHierarchyDragAsync(nested, grouped: true, disjoint: disjoint);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyHierarchyDragAsync(bool nested, bool grouped = false, bool disjoint = false)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
@@ -316,7 +328,10 @@ public sealed class EngineApiActionCallbackTests
             var hierarchy = new Hierarchy<GameEntity>("Test");
             var parent = nested ? new HierarchyNode<GameEntity>(new(parentId, "Parent"), null) : null;
             if (parent != null) hierarchy.AddNode(parent, true);
-            for (var i = 0; i < 3; i++)
+            var count = grouped ? 5 : 3;
+            var initial = Enumerable.Range(0, count).ToArray();
+            int[] expected = grouped ? disjoint ? [0, 3, 1, 4, 2] : [0, 3, 4, 1, 2] : [2, 0, 1];
+            for (var i = 0; i < count; i++)
             {
                 var id = entityApi.CreateNewEntity($"Sibling {i}")!.EntityId!.Value;
                 entityApi.SetEntityParent(id, parentId, i);
@@ -335,25 +350,37 @@ public sealed class EngineApiActionCallbackTests
                 new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entityApi.GetEntityData(entity.Id)!) },
                 new RectTransformLayoutService(registry, scenes, null!));
             using var drag = new HierarchyDragFixture(hierarchy, management);
-            CheckOrders([0, 1, 2]);
+            CheckOrders(initial);
             Assert.Empty(received);
 
-            drag.ViewModel.MoveEntities([editors[0].Entity.Id], nested ? parentId : null, 3);
-            CheckOrders([2, 0, 1]);
+            int[] selection = grouped ? disjoint ? [editors[3].Entity.Id, editors[1].Entity.Id] : [editors[2].Entity.Id, editors[1].Entity.Id] : [editors[0].Entity.Id];
+            drag.ViewModel.MoveEntities(selection, nested ? parentId : null, count);
+            CheckOrders(expected);
             Dispatcher.UIThread.RunJobs();
             Assert.Single(received);
             await commands.UndoAsync();
-            CheckOrders([0, 1, 2]);
+            CheckOrders(initial);
             Assert.False(commands.CanUndo);
             Assert.True(commands.CanRedo);
             // Dropping in the same slot must preserve Redo and produce no callback.
-            drag.ViewModel.MoveEntities([editors[0].Entity.Id], nested ? parentId : null, 1);
-            CheckOrders([0, 1, 2]);
+            int[] noOp = grouped ? [editors[1].Entity.Id, editors[2].Entity.Id] : [editors[0].Entity.Id];
+            drag.ViewModel.MoveEntities(noOp, nested ? parentId : null, grouped ? 3 : 1);
+            CheckOrders(initial);
             Dispatcher.UIThread.RunJobs();
             Assert.Single(received);
             Assert.True(commands.CanRedo);
             await commands.RedoAsync();
-            CheckOrders([2, 0, 1]);
+            CheckOrders(expected);
+
+            if (grouped)
+            {
+                entityApi.ReorderEntities([editors[0].Entity.Id, int.MaxValue], 0, recordHierarchyChange: true);
+                entityApi.ReorderEntities([editors[0].Entity.Id, editors[0].Entity.Id], 0, recordHierarchyChange: true);
+                if (nested) entityApi.ReorderEntities([editors[0].Entity.Id, parentId], 0, recordHierarchyChange: true);
+                CheckOrders(expected);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Single(received);
+            }
 
             api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", 0, 1);
             Dispatcher.UIThread.RunJobs();
@@ -364,12 +391,12 @@ public sealed class EngineApiActionCallbackTests
             Assert.Equal("Sibling 0", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
             await commands.UndoAsync();
             CheckMove(1);
-            CheckOrders([2, 0, 1]);
+            CheckOrders(expected);
             await commands.UndoAsync();
-            CheckOrders([0, 1, 2]);
+            CheckOrders(initial);
             Assert.False(commands.CanUndo);
             await commands.RedoAsync();
-            CheckOrders([2, 0, 1]);
+            CheckOrders(expected);
             await commands.RedoAsync();
             CheckMove(4);
             await commands.RedoAsync();
@@ -391,6 +418,12 @@ public sealed class EngineApiActionCallbackTests
                     Assert.Equal(parentId, Convert.ToInt32(transform["_parent"]));
                     editors[i].Apply(state);
                     Assert.Equal(expected[i], Convert.ToInt32(editors[i].Transform.GetProperty("_order").Value));
+                    foreach (var name in new[] { "_position", "_scale", "_rotation" })
+                    {
+                        var vector = JObject.FromObject(transform[name]);
+                        foreach (var axis in new[] { "x", "y", "z" })
+                            Assert.InRange(MathF.Abs(vector[axis]!.Value<float>() - (name == "_scale" ? 1f : 0f)), 0f, 0.0001f);
+                    }
                     Assert.Empty(editors[i].Logger.Entries);
                 }
             }
@@ -422,7 +455,31 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyHierarchyReparentAsync(int mode)
+    [NativeCallbackFact]
+    public Task GroupParentChangesRecordOneEntryAndPreserveWorldTransforms()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var mode = 0; mode < 3; mode++)
+                foreach (var disjoint in new[] { false, true }) await VerifyHierarchyReparentAsync(mode, grouped: true, disjoint: disjoint);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task MixedParentDragUsesHierarchyOrderAndOneHistoryEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var mode = 0; mode < 4; mode++)
+                foreach (var disjoint in new[] { false, true }) await VerifyHierarchyReparentAsync(mode, grouped: true, disjoint: disjoint, mixedParents: true);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyHierarchyReparentAsync(int mode, bool grouped = false, bool disjoint = false, bool mixedParents = false)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
@@ -446,14 +503,19 @@ public sealed class EngineApiActionCallbackTests
             api.MarkEngineStarted();
             foreach (var name in new[] { "Parent A", "Parent B", "Target", "Source 1", "Source 2", "Destination 1", "Destination 2" })
                 editors.Add(new(entityApi, entityApi.CreateNewEntity(name)!.EntityId!.Value));
+            if (mixedParents && mode != 3) editors.Add(new(entityApi, entityApi.CreateNewEntity("Parent C")!.EntityId!.Value));
             var target = editors[2];
+            var second = editors[disjoint ? 4 : 3];
+            int[] movedIds = grouped ? [target.Entity.Id, second.Entity.Id] : [target.Entity.Id];
             var oldParent = mode == 2 ? 0 : editors[0].Entity.Id;
-            var newParent = mode == 1 ? 0 : editors[1].Entity.Id;
+            var newParent = mode == 1 ? 0 : mixedParents && mode != 3 ? editors[7].Entity.Id : editors[1].Entity.Id;
             SetTransform(editors[0].Entity.Id, 10, 2, 30);
             SetTransform(editors[1].Entity.Id, -5, 3, -45);
             SetTransform(target.Entity.Id, 1, 1.5f, 15);
+            if (grouped) SetTransform(second.Entity.Id, 7, 0.8f, -20);
             for (var i = 2; i < 7; i++)
                 entityApi.SetEntityParent(editors[i].Entity.Id, i < 5 ? oldParent : newParent, i < 5 ? i - 2 : i - 5);
+            if (mixedParents) entityApi.SetEntityParent(second.Entity.Id, editors[1].Entity.Id, 0);
             var scenes = new TestSceneManagementService(editors.Select(e => e.Entity).ToArray());
             var scene = scenes.Scene.Value!;
             scene.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
@@ -470,10 +532,26 @@ public sealed class EngineApiActionCallbackTests
             var world = ReadWorld();
             Assert.Empty(received);
 
-            drag.ViewModel.MoveEntities([target.Entity.Id], newParent == 0 ? null : newParent, 1);
+            if (grouped)
+            {
+                entityApi.ReparentEntities([target.Entity.Id, int.MaxValue], newParent, 1, recordHierarchyChange: true);
+                entityApi.ReparentEntities(movedIds, target.Entity.Id, 1, recordHierarchyChange: true);
+                entityApi.ReparentEntities([target.Entity.Id, target.Entity.Id], newParent, 1, recordHierarchyChange: true);
+                CheckState(before, await ReadStateAsync());
+                Assert.Empty(received);
+            }
+            drag.ViewModel.MoveEntities(movedIds.Reverse().ToArray(), newParent == 0 ? null : newParent, 1);
             var after = await ReadStateAsync();
             Assert.Equal(newParent, after[target.Entity.Id]["_parent"]!.Value<int>());
-            Assert.Equal(1, after[target.Entity.Id]["_order"]!.Value<int>());
+            var expectedIndex = 1 - movedIds.Count(id => before[id]["_parent"]!.Value<int>() == newParent && before[id]["_order"]!.Value<int>() < 1);
+            Assert.Equal(expectedIndex, after[target.Entity.Id]["_order"]!.Value<int>());
+            if (grouped)
+            {
+                Assert.Equal(newParent, after[second.Entity.Id]["_parent"]!.Value<int>());
+                Assert.Equal(expectedIndex + 1, after[second.Entity.Id]["_order"]!.Value<int>());
+                if (mixedParents && mode == 3)
+                    foreach (var name in new[] { "_position", "_scale", "_rotation" }) Assert.True(JToken.DeepEquals(before[second.Entity.Id][name], after[second.Entity.Id][name]));
+            }
             CheckWorld(world);
             Assert.Single(received);
 
@@ -497,7 +575,8 @@ public sealed class EngineApiActionCallbackTests
             Assert.False(commands.CanUndo);
             Assert.True(commands.CanRedo);
             var originalIndex = scene.Hierarchy.GetNodeOrder(scene.Hierarchy.GetNode(target.Entity)!);
-            drag.ViewModel.MoveEntities([target.Entity.Id], oldParent == 0 ? null : oldParent, originalIndex + 1);
+            int[] noOp = grouped && !mixedParents ? [target.Entity.Id, editors[3].Entity.Id] : [target.Entity.Id];
+            drag.ViewModel.MoveEntities(noOp, oldParent == 0 ? null : oldParent, originalIndex + (grouped && !mixedParents ? 2 : 1));
             CheckState(before, await ReadStateAsync());
             Assert.True(commands.CanRedo);
             Assert.Equal(2, received.Count);
@@ -513,9 +592,10 @@ public sealed class EngineApiActionCallbackTests
 
             // RectTransform parent changes remain outside history.
             api.Invoke(typeof(EntityIdDelegate), "NativeProjectAddRectTransform", target.Entity.Id);
-            drag.ViewModel.MoveEntities([target.Entity.Id], oldParent == 0 ? null : oldParent, 0);
+            drag.ViewModel.MoveEntities(movedIds, oldParent == 0 ? null : oldParent, 0);
             var rectState = await ReadStateAsync();
-            Assert.Equal(oldParent, rectState[target.Entity.Id]["_parent"]!.Value<int>());
+            Assert.Equal(grouped ? newParent : oldParent, rectState[target.Entity.Id]["_parent"]!.Value<int>());
+            if (grouped) CheckState(moved, rectState);
             Assert.Equal(2, received.Count);
             Assert.Empty(historyLogger.Entries);
             Assert.Empty(managementLogger.Entries);
@@ -559,19 +639,27 @@ public sealed class EngineApiActionCallbackTests
                 return states;
             }
 
-            float[] ReadWorld()
+            Dictionary<int, float[]> ReadWorld()
             {
-                var values = new float[10];
-                api.Invoke(typeof(ReadEntityWorldTransformDelegate), "NativeProjectReadEntityWorldTransform", target.Entity.Id, (object)values);
-                return values;
+                var result = new Dictionary<int, float[]>();
+                foreach (var id in movedIds)
+                {
+                    var values = new float[10];
+                    api.Invoke(typeof(ReadEntityWorldTransformDelegate), "NativeProjectReadEntityWorldTransform", id, (object)values);
+                    result.Add(id, values);
+                }
+                return result;
             }
 
-            void CheckWorld(float[] expected)
+            void CheckWorld(Dictionary<int, float[]> expected)
             {
                 var actual = ReadWorld();
-                for (var i = 0; i < 6; i++) Assert.InRange(MathF.Abs(expected[i] - actual[i]), 0f, 0.0001f);
-                var dot = Enumerable.Range(6, 4).Sum(i => expected[i] * actual[i]);
-                Assert.InRange(MathF.Abs(MathF.Abs(dot) - 1), 0f, 0.0001f);
+                foreach (var (id, values) in expected)
+                {
+                    for (var i = 0; i < 6; i++) Assert.InRange(MathF.Abs(values[i] - actual[id][i]), 0f, 0.0001f);
+                    var dot = Enumerable.Range(6, 4).Sum(i => values[i] * actual[id][i]);
+                    Assert.InRange(MathF.Abs(MathF.Abs(dot) - 1), 0f, 0.0001f);
+                }
             }
         }
         finally

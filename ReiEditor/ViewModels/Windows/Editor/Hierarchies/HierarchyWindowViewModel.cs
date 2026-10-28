@@ -181,22 +181,18 @@ public class HierarchyWindowViewModel : BaseViewModel
 
         if (draggedNodes.Any(node => !CanMoveNode(node.Node, targetParentNode))) return;
 
-        var targetParentEntity = targetParentNode?.Content;
-        var targetIndex = Math.Max(0, insertionIndex);
-
-        foreach (var node in draggedNodes)
+        if (draggedNodes.Count > 1)
         {
-            var currentParent = node.Node.Parent;
-            var currentIndex = hierarchy.GetNodeOrder(node.Node);
-            if (currentParent == targetParentNode && currentIndex < targetIndex)
-            {
-                targetIndex -= 1;
-            }
-
-            _entityManagementService.SetParent(node.Node.Content, targetParentEntity, targetIndex,
-                recordHierarchyChange: draggedNodes.Count == 1);
-            targetIndex += 1;
+            var entities = draggedNodes.Select(node => node.Node.Content).ToArray();
+            if (draggedNodes.All(node => node.Node.Parent == targetParentNode)) _entityManagementService.ReorderEntities(entities, insertionIndex);
+            else _entityManagementService.ReparentEntities(entities, targetParentNode?.Content, insertionIndex);
+            return;
         }
+
+        var node = draggedNodes[0];
+        var targetIndex = Math.Max(0, insertionIndex);
+        if (node.Node.Parent == targetParentNode && hierarchy.GetNodeOrder(node.Node) < targetIndex) targetIndex--;
+        _entityManagementService.SetParent(node.Node.Content, targetParentNode?.Content, targetIndex, recordHierarchyChange: true);
     }
 
     public void MoveEntitiesToNode(IReadOnlyList<int> draggedEntityIds, int targetParentEntityId)
@@ -208,26 +204,20 @@ public class HierarchyWindowViewModel : BaseViewModel
         MoveEntities(draggedEntityIds, targetParentEntityId, insertionIndex);
     }
 
-    private IReadOnlyList<HierarchyNodeViewModel> GetVisibleNodes()
-    {
-        var visibleNodes = new List<HierarchyNodeViewModel>();
-        foreach (var node in Nodes.ToArray())
-        {
-            AppendVisibleNode(node, visibleNodes);
-        }
+    private IReadOnlyList<HierarchyNodeViewModel> GetVisibleNodes() => GetNodesInHierarchyOrder(visibleOnly: true);
 
-        return visibleNodes;
+    private IReadOnlyList<HierarchyNodeViewModel> GetNodesInHierarchyOrder(bool visibleOnly)
+    {
+        var nodes = new List<HierarchyNodeViewModel>();
+        foreach (var node in Nodes.ToArray()) AppendNodes(node, nodes, visibleOnly);
+        return nodes;
     }
 
-    private static void AppendVisibleNode(HierarchyNodeViewModel node, ICollection<HierarchyNodeViewModel> visibleNodes)
+    private static void AppendNodes(HierarchyNodeViewModel node, ICollection<HierarchyNodeViewModel> nodes, bool visibleOnly)
     {
-        visibleNodes.Add(node);
-        if (!node.Expanded.Value) return;
-
-        foreach (var childNode in node.ChildNodes.ToArray())
-        {
-            AppendVisibleNode(childNode, visibleNodes);
-        }
+        nodes.Add(node);
+        if (visibleOnly && !node.Expanded.Value) return;
+        foreach (var child in node.ChildNodes.ToArray()) AppendNodes(child, nodes, visibleOnly);
     }
 
     private List<HierarchyNodeViewModel> ResolveDraggedNodes(IReadOnlyList<int> draggedEntityIds)
@@ -236,12 +226,8 @@ public class HierarchyWindowViewModel : BaseViewModel
         if (hierarchy == null) return new List<HierarchyNodeViewModel>();
 
         var draggedSet = draggedEntityIds.ToHashSet();
-        var draggedNodes = draggedSet
-            .Select(id => _nodeCollectionController.FindByEntityId(id))
-            .Where(node => node != null)
-            .Cast<HierarchyNodeViewModel>()
-            .Where(node => !HasDraggedAncestor(node.Node, draggedSet))
-            .OrderBy(node => hierarchy.GetNodeOrder(node.Node))
+        var draggedNodes = GetNodesInHierarchyOrder(visibleOnly: false)
+            .Where(node => draggedSet.Contains(node.Node.Content.Id) && !HasDraggedAncestor(node.Node, draggedSet))
             .ToList();
 
         return draggedNodes;
