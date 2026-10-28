@@ -28,7 +28,7 @@ public sealed class RectTransformPropertyViewModelTests
         public InstantiateEntityResponse? CreateNewEntity(string name) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId) => throw new NotSupportedException();
         public void Rename(int sceneEntityId, string newName) => throw new NotSupportedException();
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order) => throw new NotSupportedException();
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordOrderChange = false) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => Requests.Add(request);
         public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request) => throw new NotSupportedException();
         public void AddBehaviour(int sceneEntityId, int behaviourId) => throw new NotSupportedException();

@@ -102,14 +102,14 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order);
-    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order)
+    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order, int recordOrderChange);
+    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordOrderChange = false)
     {
         if (!_engineApi.IsEngineRunning) return;
 
         try
         {
-            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order);
+            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order, recordOrderChange ? 1 : 0);
         }
         catch (Exception)
         {

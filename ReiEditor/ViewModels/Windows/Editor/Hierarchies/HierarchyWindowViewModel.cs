@@ -193,7 +193,8 @@ public class HierarchyWindowViewModel : BaseViewModel
                 targetIndex -= 1;
             }
 
-            _entityManagementService.SetParent(node.Node.Content, targetParentEntity, targetIndex);
+            _entityManagementService.SetParent(node.Node.Content, targetParentEntity, targetIndex,
+                recordOrderChange: draggedNodes.Count == 1 && currentParent == targetParentNode);
             targetIndex += 1;
         }
     }

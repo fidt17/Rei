@@ -8,6 +8,8 @@
 #include "Modules/Editor/Actions/EntityMoveAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
+#include "Modules/Editor/Actions/EntityOrderAction.h"
+#include "Common/Transform/TransformHierarchyUtility.h"
 #include "rei_behaviours/ui/RectTransform.h"
 #include "rei_behaviours/transformation/Transform.h"
 
@@ -120,7 +122,7 @@ REI_EXTERN_API inline void RenameEntity(const i32 sceneEntityId, const char* new
     task->WaitForCompletion();
 }
 
-REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 parentSceneEntityId, const i32 order)
+REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 parentSceneEntityId, const i32 order, const i32 recordOrderChange)
 {
     rei::GetEngine().ExecuteOnMainThread([=]
     {
@@ -135,7 +137,20 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
 
         if (!HAS(e, rei::Transform)) return;
 
-        GET(e, rei::Transform).SetParent(parent, order);
+        auto& transform = GET(e, rei::Transform);
+        std::vector<rei::editor::EntityOrderAction::Change> changes;
+        if (recordOrderChange != 0 && rei::GetEngine().IsEditorMode() && transform.GetParent() == parent)
+        {
+            for (const auto sibling : rei::transform_utility::CollectSiblings(parent))
+            {
+                rei::ecs::ComponentRef<rei::Transform> target(rei::GetInternalWorld()->GetRegistry(), sibling);
+                changes.push_back({target, target.Get().GetChildOrder(), 0});
+            }
+        }
+        transform.SetParent(parent, order);
+        for (auto& change : changes) change.After = change.Target.Get().GetChildOrder();
+        std::erase_if(changes, [](const auto& change) { return change.Before == change.After; });
+        if (!changes.empty()) rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityOrderAction>(std::move(changes)));
     });
 }
 

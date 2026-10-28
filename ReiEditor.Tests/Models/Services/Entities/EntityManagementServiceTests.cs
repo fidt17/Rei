@@ -121,7 +121,7 @@ public sealed class EntityManagementServiceTests
         public void DeleteBehaviour(int sceneEntityId, int behaviourId) => DeletedBehaviours.Add((sceneEntityId, behaviourId));
         public void DestroyEntity(int sceneEntityId) => DestroyedIds.Add(sceneEntityId);
         public GetSceneEntitiesResponse? GetSceneEntities() => throw new InvalidOperationException("polling is forbidden in immediate-response test");
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order) => throw new NotSupportedException();
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordOrderChange = false) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => throw new NotSupportedException();
         public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request) => throw new NotSupportedException();
         public void SelectEntity(int sceneEntityId, bool resetCurrentSelection = true) => throw new NotSupportedException();

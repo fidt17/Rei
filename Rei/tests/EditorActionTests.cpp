@@ -5,6 +5,8 @@
 #include "Modules/Editor/Actions/EntityMoveAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
+#include "Modules/Editor/Actions/EntityOrderAction.h"
+#include "Common/Transform/TransformHierarchyUtility.h"
 #include "support/InputTestFixture.h"
 #include "Modules/Editor/TransformationControls/Systems/Drag/ResetTransformationControlsDragSystem.h"
 #include "Modules/Editor/TransformationControls/Systems/Drag/TransformationControlDragUtilities.h"
@@ -465,4 +467,68 @@ TEST_CASE("Editor action store cannot replay an empty transform action", "[nativ
     CHECK_FALSE(scale.Redo());
     CHECK_FALSE(rotate.Undo());
     CHECK_FALSE(rotate.Redo());
+}
+
+TEST_CASE("Editor action store restores sibling orders after moving first and last entities", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        for (const bool nested : {false, true})
+        {
+            const auto parent = nested ? fixture.Entity(10) : ecs::NULL_ENTITY;
+            std::vector<ecs::ComponentRef<Transform>> siblings;
+            for (i32 i = 0; i < 3; i++)
+            {
+                siblings.emplace_back(fixture.Registry, fixture.Entity(i + 1));
+                siblings.back().Get().SetParent(parent);
+                siblings.back().Get().SetChildOrder(i);
+            }
+            for (const i32 destination : {2, 0})
+            {
+                std::vector<EntityOrderAction::Change> changes;
+                for (const auto& target : siblings) changes.push_back({target, target.Get().GetChildOrder(), 0});
+                siblings[0].Get().SetParent(parent, destination);
+                for (auto& change : changes) change.After = change.Target.Get().GetChildOrder();
+                const std::vector<i32> expected = destination == 2 ? std::vector<i32>{2, 0, 1} : std::vector<i32>{0, 1, 2};
+                for (i32 i = 0; i < 3; i++) CHECK(siblings[i].Get().GetChildOrder() == expected[i]);
+                EditorActionStore actions;
+                i32 records = 0;
+                actions.ActionRecorded.append([&](u64) { records++; });
+                const auto id = actions.RecordApplied(std::make_unique<EntityOrderAction>(changes));
+                REQUIRE(actions.Undo(id));
+                for (const auto& change : changes) CHECK(change.Target.Get().GetChildOrder() == change.Before);
+                REQUIRE(actions.Redo(id));
+                for (const auto& change : changes)
+                {
+                    CHECK(change.Target.Get().GetChildOrder() == change.After);
+                    CHECK(change.Target.Get().GetParent() == parent);
+                }
+                CHECK(records == 1);
+            }
+            siblings[0].Get().SetParent(parent, 100);
+            CHECK(siblings[0].Get().GetChildOrder() == 2);
+            siblings[0].Get().SetParent(parent, -100);
+            CHECK(siblings[0].Get().GetChildOrder() == 0);
+            // Separate parent groups for the next iteration.
+            for (const auto& target : siblings) fixture.Registry->DestroyEntity(target.Get().GetEntity());
+            fixture.World->RefreshAll();
+        }
+    });
+}
+
+TEST_CASE("Editor action store rejects missing order targets without partially applying", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        ecs::ComponentRef<Transform> target(fixture.Registry, fixture.Entity());
+        target.Get().SetChildOrder(2);
+        EntityOrderAction action({{target, 0, 2}, {{}, 1, 0}});
+        CHECK_FALSE(action.Undo());
+        CHECK(target.Get().GetChildOrder() == 2);
+        CHECK_FALSE(action.Redo());
+        CHECK(target.Get().GetChildOrder() == 2);
+        CHECK_FALSE(EntityOrderAction({}).Undo());
+    });
 }

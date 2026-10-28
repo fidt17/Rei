@@ -1,3 +1,6 @@
+using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Hierarchies;
+using ReiEditor.Models.Services.RectTransform;
 using Avalonia;
 using Avalonia.Data;
 using Newtonsoft.Json.Linq;
@@ -263,6 +266,141 @@ public sealed class EngineApiActionCallbackTests
         }
         finally
         {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+    }
+
+    [NativeCallbackFact]
+    public Task HierarchyDragSharesHistoryWithTransformAndRename()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var nested in new[] { false, true }) await VerifyHierarchyDragAsync(nested);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyHierarchyDragAsync(bool nested)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entityApi = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        var editors = new List<InspectorTransformFixture>();
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var parentId = nested ? entityApi.CreateNewEntity("Parent")!.EntityId!.Value : 0;
+            var hierarchy = new Hierarchy<GameEntity>("Test");
+            var parent = nested ? new HierarchyNode<GameEntity>(new(parentId, "Parent"), null) : null;
+            if (parent != null) hierarchy.AddNode(parent, true);
+            for (var i = 0; i < 3; i++)
+            {
+                var id = entityApi.CreateNewEntity($"Sibling {i}")!.EntityId!.Value;
+                entityApi.SetEntityParent(id, parentId, i);
+                var editor = new InspectorTransformFixture(entityApi, id);
+                editors.Add(editor);
+                editor.Apply(entityApi.GetEntityData(id)!);
+                var node = new HierarchyNode<GameEntity>(editor.Entity, parent);
+                parent?.PushChild(node);
+                hierarchy.AddNode(node, parent == null);
+            }
+            var scenes = new TestSceneManagementService(editors.Select(e => e.Entity).ToArray());
+            var runner = editors[0].Runner;
+            var registry = new TestBehaviourRegistry();
+            var managementLogger = new TestLogger<EntityManagementService>();
+            var management = new EntityManagementService(managementLogger, scenes, null!, entityApi, registry, runner,
+                new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entityApi.GetEntityData(entity.Id)!) },
+                new RectTransformLayoutService(registry, scenes, null!));
+            using var drag = new HierarchyDragFixture(hierarchy, management);
+            CheckOrders([0, 1, 2]);
+            Assert.Empty(received);
+
+            drag.ViewModel.MoveEntities([editors[0].Entity.Id], nested ? parentId : null, 3);
+            CheckOrders([2, 0, 1]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            await commands.UndoAsync();
+            CheckOrders([0, 1, 2]);
+            Assert.False(commands.CanUndo);
+            Assert.True(commands.CanRedo);
+            // Dropping in the same slot must preserve Redo and produce no callback.
+            drag.ViewModel.MoveEntities([editors[0].Entity.Id], nested ? parentId : null, 1);
+            CheckOrders([0, 1, 2]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            Assert.True(commands.CanRedo);
+            await commands.RedoAsync();
+            CheckOrders([2, 0, 1]);
+
+            api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", 0, 1);
+            Dispatcher.UIThread.RunJobs();
+            var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes, runner);
+            await commands.ExecuteAsync((IEntityRenameCommand)rename, new(editors[0].Entity, "Renamed"));
+            Assert.Equal("Renamed", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
+            await commands.UndoAsync();
+            Assert.Equal("Sibling 0", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
+            await commands.UndoAsync();
+            CheckMove(1);
+            CheckOrders([2, 0, 1]);
+            await commands.UndoAsync();
+            CheckOrders([0, 1, 2]);
+            Assert.False(commands.CanUndo);
+            await commands.RedoAsync();
+            CheckOrders([2, 0, 1]);
+            await commands.RedoAsync();
+            CheckMove(4);
+            await commands.RedoAsync();
+            Assert.Equal("Renamed", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(commands.CanRedo);
+            Assert.Equal(2, received.Count);
+
+            // Even an explicit flag cannot record a parent change.
+            entityApi.SetEntityParent(editors[0].Entity.Id, nested ? 0 : editors[1].Entity.Id, 0, recordOrderChange: true);
+            Assert.NotNull(entityApi.GetEntityData(editors[0].Entity.Id));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(2, received.Count);
+            Assert.Empty(logger.Entries);
+            Assert.Empty(managementLogger.Entries);
+
+            void CheckOrders(int[] expected)
+            {
+                for (var i = 0; i < editors.Count; i++)
+                {
+                    var state = entityApi.GetEntityData(editors[i].Entity.Id)!;
+                    var transform = state.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Transform");
+                    Assert.Equal(expected[i], Convert.ToInt32(transform["_order"]));
+                    Assert.Equal(parentId, Convert.ToInt32(transform["_parent"]));
+                    editors[i].Apply(state);
+                    Assert.Equal(expected[i], Convert.ToInt32(editors[i].Transform.GetProperty("_order").Value));
+                    Assert.Empty(editors[i].Logger.Entries);
+                }
+            }
+
+            void CheckMove(float x)
+            {
+                var values = new float[10];
+                api.Invoke(typeof(ReadTransformDelegate), "NativeProjectReadActionTransform", 0, (object)values);
+                Assert.Equal(new[] { x, x + 1, x + 2 }, values.Take(3));
+            }
+        }
+        finally
+        {
+            foreach (var editor in editors) editor.Dispose();
             api.MarkEngineStopped();
             api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
             GC.KeepAlive(createEngine);

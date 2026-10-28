@@ -24,6 +24,7 @@ public sealed class EntityManagementAdvancedTests
         public Func<GetSceneEntitiesResponse?>? OnGetSceneEntities { get; set; }
         public Func<int, GetEntityDataResponse?>? OnGetEntityData { get; set; }
         public Action<int, int, int>? OnSetParent { get; set; }
+        public List<bool> RecordOrderChangeCalls { get; } = new();
         public Action<SetEntityDataRequest>? OnSetData { get; set; }
         public List<InstantiateEntityRequest> InstantiateRequests { get; } = new();
         public List<int> StateRequests { get; } = new();
@@ -51,9 +52,10 @@ public sealed class EntityManagementAdvancedTests
             return (OnInstantiate ?? throw UnexpectedCall())(request);
         }
 
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order)
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordOrderChange = false)
         {
             Calls.Add("set-parent");
+            RecordOrderChangeCalls.Add(recordOrderChange);
             (OnSetParent ?? throw UnexpectedCall())(sceneEntityId, parentSceneEntityId, order);
         }
 
@@ -530,18 +532,35 @@ public sealed class EntityManagementAdvancedTests
         Assert.Equal(y, vector["y"]);
     }
 
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    public void SetParentRecordsOrderOnlyWhenRequestedInEditorMode(bool requested, bool editorActive, bool expected)
+    {
+        var api = new TestEntityApi { OnSetParent = (_, _, _) => { } };
+        var rect = new TestRectTransformLayoutService();
+        var service = CreateService(new Scene("Scene"), true, api, rect: rect, editorActive: editorActive);
+
+        service.SetParent(new GameEntity(1, "Entity"), null, 2, recordOrderChange: requested);
+
+        Assert.Equal(new[] { expected }, api.RecordOrderChangeCalls);
+    }
+
     private static EntityManagementService CreateService(
         Scene? scene,
         bool active,
         TestEntityApi api,
         TestEntitySyncService? sync = null,
         TestRectTransformLayoutService? rect = null,
-        TestLogger<EntityManagementService>? logger = null)
+        TestLogger<EntityManagementService>? logger = null,
+        bool editorActive = false)
     {
         var sceneManagement = new TestSceneManagementService();
         sceneManagement.Scene.Value = scene;
         var engine = new TestEngineRunner();
         engine.Active.Value = active;
+        engine.EditorActive.Value = editorActive;
 
         return new EntityManagementService(
             logger ?? new TestLogger<EntityManagementService>(),

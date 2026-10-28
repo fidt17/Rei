@@ -166,27 +166,22 @@ namespace rei::transform_utility
         const auto worldRotation = transform.GetWorldRotation();
         const auto worldScale = transform.GetWorldScale();
 
-        NormalizeSiblingOrders(oldParent, entity);
-        if (oldParent != parent)
-        {
-            NormalizeSiblingOrders(parent, entity);
-        }
-
-        const i32 oldOrder = transform.GetChildOrder();
-        i32 newOrder = std::max(0, order);
-
-        if (oldParent == parent && oldOrder == newOrder)
-        {
-            return;
-        }
-
         if (oldParent == parent)
         {
-            ShiftSiblingOrdersWithinParent(oldParent, entity, oldOrder, newOrder);
+            NormalizeSiblingOrders(parent);
+            const i32 oldOrder = transform.GetChildOrder();
+            const i32 newOrder = std::clamp(order, 0, GetMaxOrderForParent(parent));
+            if (oldOrder == newOrder) return;
 
+            ShiftSiblingOrdersWithinParent(parent, entity, oldOrder, newOrder);
             transform.SetChildOrder(newOrder);
             return;
         }
+
+        NormalizeSiblingOrders(oldParent, entity);
+        NormalizeSiblingOrders(parent, entity);
+        const i32 oldOrder = transform.GetChildOrder();
+        i32 newOrder = std::max(0, order);
 
         DecrementOrdersAfter(oldParent, entity, oldOrder);
         const i32 maxOrder = GetMaxOrderForParent(parent, entity);

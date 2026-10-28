@@ -3,6 +3,7 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
+using ReiEditor.Tests.Infrastructure.Fixtures;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies;
 using ReiEditor.ViewModels.Windows.Editor.Hierarchies.Services;
@@ -251,6 +252,25 @@ public sealed class HierarchyCollectionAndFocusTests
         Assert.Same(replacement, controller.ActiveHierarchy);
         controller.Dispose();
         controller.Dispose();
+    }
+
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    public void DragRecordsOnlySingleEntityWithinSameParent(bool changeParent, bool multiple, bool expectedRecord)
+    {
+        var hierarchy = TestCreateHierarchy(out var first, out _, out var second);
+        var management = new TestEntityManagementService { OnSetParent = (_, _, _) => { } };
+        using var fixture = new HierarchyDragFixture(hierarchy, management);
+
+        fixture.ViewModel.MoveEntities(multiple ? [1, 3] : [1], changeParent ? second.Content.Id : null, 2);
+
+        Assert.Equal(multiple ? 2 : 1, management.ParentCalls.Count);
+        Assert.All(management.RecordOrderChangeCalls, record => Assert.Equal(expectedRecord, record));
+        Assert.Same(first.Content, management.ParentCalls[0].Entity);
+        Assert.Equal(changeParent ? second.Content : null, management.ParentCalls[0].Parent);
+        Assert.Equal(changeParent ? 2 : 1, management.ParentCalls[0].Order);
     }
 
     private static Hierarchy<GameEntity> TestCreateHierarchy(
