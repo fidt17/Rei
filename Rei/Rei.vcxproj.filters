@@ -3,6 +3,8 @@
   <ItemGroup>
     <ClCompile Include="src\Modules\Editor\Actions\EditorActionStore.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityMoveAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntityScaleAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntityRotateAction.cpp" />
     <ClCompile Include="tests\EditorActionTests.cpp" />
     <ClCompile Include="tests\SpotLightTests.cpp" />
     <ClCompile Include="resources\rei_behaviours\render\light\SpotLight.cpp" />
@@ -110,6 +112,8 @@
     <ClInclude Include="src\Modules\Editor\Actions\IEditorAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EditorActionStore.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityMoveAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntityScaleAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntityRotateAction.h" />
     <ClInclude Include="src\Modules\Render\Lighting\LightGizmoGeometry.h" />
     <ClInclude Include="src\Modules\Render\Lighting\LightUtility.h" />
     <ClInclude Include="resources\rei_behaviours\render\light\SpotLight.h" />

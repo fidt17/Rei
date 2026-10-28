@@ -3,6 +3,9 @@
 #include "support/NativeEngineFixture.h"
 #include "NativeProjectJournal.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
+#include "Modules/Editor/Actions/EntityScaleAction.h"
+#include "Modules/Editor/Actions/EntityRotateAction.h"
+#include "glm/gtc/quaternion.hpp"
 #include <mutex>
 #include <chrono>
 #include <thread>
@@ -24,10 +27,8 @@ namespace
     JournalSink ConfiguredSink;
     i32 FailureMode = 0;
     std::weak_ptr<rei::ecs::World> ProjectWorld;
-    std::unique_ptr<rei::tests::TemporaryDirectory> ActionResources;
-    std::string ActionResourcesPath;
     std::unique_ptr<rei::tests::NativeEngineFixture> ActionEngine;
-    rei::ecs::ComponentRef<rei::Transform> ActionTarget;
+    std::vector<rei::ecs::ComponentRef<rei::Transform>> ActionTargets;
 
     struct NativeWorkerException final : std::runtime_error
     {
@@ -181,21 +182,6 @@ REI_EXTERN_API i32 NativeProjectLoadSaved()
     return result;
 }
 
-// Reuse the native engine fixture's owned resource pack for managed ABI tests.
-REI_EXTERN_API const char* NativeProjectPrepareActionResources()
-{
-    ActionResources = std::make_unique<rei::tests::TemporaryDirectory>();
-    rei::tests::PrepareEngineResources(*ActionResources);
-    ActionResourcesPath = ActionResources->File("").string();
-    return ActionResourcesPath.c_str();
-}
-
-REI_EXTERN_API void NativeProjectReleaseActionResources()
-{
-    ActionResources.reset();
-    ActionResourcesPath.clear();
-}
-
 REI_EXTERN_API void NativeProjectEmitActionRecorded(const u64 id)
 {
     rei::GetEditorEventsRelay().EditorActionRecordedEvent(id);
@@ -214,31 +200,72 @@ REI_EXTERN_API void NativeProjectStartActionEngine(void* (*createEngine)(const c
 
 REI_EXTERN_API void NativeProjectStopActionEngine()
 {
-    ActionTarget = {};
+    ActionTargets.clear();
     ActionEngine.reset();
 }
 
-REI_EXTERN_API u64 NativeProjectRecordMove()
+REI_EXTERN_API u64 NativeProjectRecordTransformAction(const i32 mode, const i32 targetCount)
 {
     u64 id = 0;
     ActionEngine->OnEngineThread([&]
     {
-        const auto entity = rei::GetEntityManager().CreateNewEntity("Action replay probe");
-        ActionTarget = {rei::GetInternalWorld()->GetRegistry(), entity};
-        ActionTarget.Get().GetLocalPosition() = {4, 5, 6};
-        id = rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(
-            ActionTarget, rei::math::Vector3(1, 2, 3), rei::math::Vector3(4, 5, 6)));
+        ActionTargets.clear();
+        std::vector<rei::editor::EntityMoveAction::Change> moves;
+        std::vector<rei::editor::EntityScaleAction::Change> scales;
+        std::vector<rei::editor::EntityRotateAction::Change> rotations;
+        for (i32 index = 0; index < targetCount; ++index)
+        {
+            const auto entity = rei::GetEntityManager().CreateNewEntity("Action replay probe");
+            ActionTargets.emplace_back(rei::GetInternalWorld()->GetRegistry(), entity);
+            const auto& target = ActionTargets.back();
+            auto& transform = target.Get();
+            const f32 offset = static_cast<f32>(index);
+            transform.GetLocalPosition() = {1 + offset, 2 + offset, 3 + offset};
+            transform.GetLocalScale() = {1 + offset, 1 + offset, 1 + offset};
+            if (mode == 0)
+            {
+                const auto before = transform.GetLocalPosition();
+                transform.GetLocalPosition() += rei::math::Vector3(3, 3, 3);
+                moves.push_back({target, before, transform.GetLocalPosition()});
+            }
+            else if (mode == 1)
+            {
+                const auto before = transform.GetLocalScale();
+                transform.GetLocalScale() += rei::math::Vector3(1, 2, 3);
+                scales.push_back({target, before, transform.GetLocalScale()});
+            }
+            else if (mode == 2)
+            {
+                const auto before = transform.GetLocalRotation();
+                transform.SetRotation(glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 0, 1)));
+                rotations.push_back({target, before, transform.GetLocalRotation()});
+            }
+        }
+        auto& actions = rei::GetEngine().GetEditorActions();
+        if (mode == 0) id = actions.RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(std::move(moves)));
+        else if (mode == 1) id = actions.RecordApplied(std::make_unique<rei::editor::EntityScaleAction>(std::move(scales)));
+        else if (mode == 2) id = actions.RecordApplied(std::make_unique<rei::editor::EntityRotateAction>(std::move(rotations)));
     });
     return id;
 }
 
-REI_EXTERN_API void NativeProjectReadActionPosition(f32* position)
+REI_EXTERN_API void NativeProjectReadActionTransform(const i32 index, f32* values)
 {
-    ActionEngine->OnEngineThread([position]
+    ActionEngine->OnEngineThread([index, values]
     {
-        const auto value = ActionTarget.Get().GetLocalPosition();
-        position[0] = value.x;
-        position[1] = value.y;
-        position[2] = value.z;
+        const auto& transform = ActionTargets.at(index).Get();
+        const auto position = transform.GetLocalPosition();
+        const auto scale = transform.GetLocalScale();
+        const auto rotation = transform.GetLocalRotation();
+        values[0] = position.x;
+        values[1] = position.y;
+        values[2] = position.z;
+        values[3] = scale.x;
+        values[4] = scale.y;
+        values[5] = scale.z;
+        values[6] = rotation.x;
+        values[7] = rotation.y;
+        values[8] = rotation.z;
+        values[9] = rotation.w;
     });
 }

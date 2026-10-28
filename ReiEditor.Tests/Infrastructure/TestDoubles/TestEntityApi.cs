@@ -10,6 +10,7 @@ public sealed class TestEntityApi : IEntityApi
     public IReadOnlyList<IReadOnlyList<int>> Selections => _selections;
     public Func<GetSceneEntitiesResponse?>? OnGetSceneEntities { get; set; }
     public Func<int, GetEntityDataResponse?>? OnGetEntityData { get; set; }
+    public Action<SetEntityDataRequest>? OnSetData { get; set; }
 
     public void SetEntitySelection(SetEntitySelectionRequest request) => _selections.Add(request.EntityIds.ToArray());
 
@@ -19,7 +20,7 @@ public sealed class TestEntityApi : IEntityApi
     public void DestroyEntity(int sceneEntityId) => throw UnexpectedCall();
     public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();
     public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order) => throw UnexpectedCall();
-    public void SetData(SetEntityDataRequest request) => throw UnexpectedCall();
+    public void SetData(SetEntityDataRequest request) => (OnSetData ?? throw UnexpectedCall())(request);
     public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request) => throw UnexpectedCall();
     public void AddBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();
     public void DeleteBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();

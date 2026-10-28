@@ -83,6 +83,13 @@ public sealed class VectorPropertyViewModelTests
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(90f, Convert.ToSingle(children["x"].Value));
             Assert.Equal("90", fields[0].TextInternal);
+            if (dimensions == 3)
+            {
+                fields[0].TextInternal = "invalid number";
+                fields[0].LoseFocus();
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(90f, Convert.ToSingle(children["x"].Value));
+            }
             vm.Dispose();
             children["x"].Value = 99f;
             Dispatcher.UIThread.RunJobs();

@@ -35,6 +35,7 @@
                         Foreground="{StaticResource Gray_4}"
                         Text="X" />
                     <textBoxes:ReiTextBox
+                        IsFloat="True"
                         VerticalAlignment="Center"
                         MaxWidth="64"
                         Text="{Binding X, Mode=TwoWay}" />
@@ -48,6 +49,7 @@
                         Foreground="{StaticResource Gray_4}"
                         Text="Y" />
                     <textBoxes:ReiTextBox
+                        IsFloat="True"
                         VerticalAlignment="Center"
                         MaxWidth="64"
                         Text="{Binding Y, Mode=TwoWay}" />
@@ -61,6 +63,7 @@
                         Foreground="{StaticResource Gray_4}"
                         Text="Z" />
                     <textBoxes:ReiTextBox
+                        IsFloat="True"
                         VerticalAlignment="Center"
                         MaxWidth="64"
                         Text="{Binding Z, Mode=TwoWay}" />

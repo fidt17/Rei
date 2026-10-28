@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -20,6 +21,13 @@ public partial class ReiTextBox : UserControl
     {
         get => GetValue(TextProperty);
         set => SetValue(TextProperty, value);
+    }
+
+    public static readonly StyledProperty<bool> IsFloatProperty = AvaloniaProperty.Register<ReiTextBox, bool>(nameof(IsFloat));
+    public bool IsFloat
+    {
+        get => GetValue(IsFloatProperty);
+        set => SetValue(IsFloatProperty, value);
     }
 
     public ReiTextBox()
@@ -50,7 +58,16 @@ public partial class ReiTextBox : UserControl
     {
         var oldValue = GetValue(TextProperty);
         var targetValue = GetValue(TextInternalProperty);
-        SetValue(TextProperty, GetValue(TextInternalProperty));
+        if (IsFloat)
+        {
+            if (!float.TryParse(targetValue, NumberStyles.Float, CultureInfo.CurrentCulture, out var value) || !float.IsFinite(value))
+            {
+                SetValue(TextInternalProperty, oldValue);
+                return;
+            }
+            targetValue = value.ToString(CultureInfo.CurrentCulture);
+        }
+        SetValue(TextProperty, targetValue);
         var actualValue = GetValue(TextProperty);
 
         if (targetValue != actualValue)
