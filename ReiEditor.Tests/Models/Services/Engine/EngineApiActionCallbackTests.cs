@@ -1,3 +1,4 @@
+using ReiEditor.Models.Services.Commands;
 using System.Runtime.InteropServices;
 using ReiEditor.Models.Services.Build.Assets;
 using ReiEditor.Models.Services.Engine.Api;
@@ -12,6 +13,12 @@ namespace ReiEditor.Tests.Models.Services.Engine;
 [Trait("Area", "EngineActionCallbacks")]
 public sealed class EngineApiActionCallbackTests
 {
+    // The isolated session owns the DLL until this test finishes all calls.
+    private sealed class NativeAccess(IEngineApi api) : IEngineNativeAccess
+    {
+        public bool TryInvoke(Action<IEngineApi> action) { action(api); return true; }
+    }
+
     private sealed class NativeCallbackFactAttribute : FactAttribute
     {
         public NativeCallbackFactAttribute()
@@ -35,7 +42,7 @@ public sealed class EngineApiActionCallbackTests
     private delegate int ReplayActionDelegate(ulong id);
 
     [NativeCallbackFact]
-    public void NativeApiReplaysMoveByIdWithoutRecordingAgain()
+    public async Task NativeApiReplaysMoveByIdWithoutRecordingAgain()
     {
         Assert.True(Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD") == "1",
             "Run Area=EngineActionCallbacks in a dedicated testhost with REI_NATIVE_TEST_CHILD=1; the native fixture changes process globals.");
@@ -55,9 +62,10 @@ public sealed class EngineApiActionCallbackTests
             Assert.NotEqual(0UL, id);
             Assert.Equal(new[] { id }, received);
             AssertPosition(4, 5, 6);
-            Assert.True(api.UndoEditorAction(id));
+            var entry = new NativeEditorHistoryEntry(id, new NativeAccess(api));
+            await entry.UndoAsync();
             AssertPosition(1, 2, 3);
-            Assert.True(api.RedoEditorAction(id));
+            await entry.RedoAsync();
             AssertPosition(4, 5, 6);
             foreach (var missing in new[] { 0UL, ulong.MaxValue })
             {
