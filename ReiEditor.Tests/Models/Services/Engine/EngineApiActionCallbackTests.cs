@@ -35,9 +35,9 @@ public sealed class EngineApiActionCallbackTests
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void StartActionEngineDelegate(IntPtr createEngine);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate ulong RecordTransformActionDelegate(int mode);
+    private delegate ulong RecordTransformActionDelegate(int mode, int targetCount);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void ReadTransformDelegate([Out] float[] values);
+    private delegate void ReadTransformDelegate(int index, [Out] float[] values);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int ReplayActionDelegate(ulong id);
 
@@ -47,12 +47,15 @@ public sealed class EngineApiActionCallbackTests
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
         {
-            foreach (var mode in new[] { 0, 1, 2 }) await VerifyNativeCallbackHistoryAsync(mode);
+            foreach (var mode in new[] { 0, 1, 2 })
+            {
+                foreach (var count in new[] { 1, 3 }) await VerifyNativeCallbackHistoryAsync(mode, count);
+            }
             return true;
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyNativeCallbackHistoryAsync(int mode)
+    private static async Task VerifyNativeCallbackHistoryAsync(int mode, int targetCount)
     {
         Assert.True(Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD") == "1",
             "Run Area=EngineActionCallbacks in a dedicated testhost with REI_NATIVE_TEST_CHILD=1; the native fixture changes process globals.");
@@ -71,24 +74,19 @@ public sealed class EngineApiActionCallbackTests
         {
             api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
             api.MarkEngineStarted();
-            var id = api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", mode);
+            var id = api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", mode, targetCount);
             Assert.NotEqual(0UL, id);
             Assert.Equal(new[] { id }, received);
-            float[] before = [1, 2, 3, 1, 1, 1, 0, 0, 0, 1];
-            var after = (float[])before.Clone();
-            if (mode == 0) { after[0] = 4; after[1] = 5; after[2] = 6; }
-            else if (mode == 1) { after[3] = 2; after[4] = 3; after[5] = 4; }
-            else { after[8] = MathF.Sqrt(0.5f); after[9] = MathF.Sqrt(0.5f); }
-            AssertTransform(after);
+            AssertTransforms(applied: true);
             Dispatcher.UIThread.RunJobs();
             Assert.True(commands.CanUndo);
             await commands.UndoAsync();
-            AssertTransform(before);
+            AssertTransforms(applied: false);
             Dispatcher.UIThread.RunJobs();
             Assert.False(commands.CanUndo);
             Assert.True(commands.CanRedo);
             await commands.RedoAsync();
-            AssertTransform(after);
+            AssertTransforms(applied: true);
             Dispatcher.UIThread.RunJobs();
             Assert.False(commands.CanRedo);
             foreach (var missing in new[] { 0UL, ulong.MaxValue })
@@ -96,7 +94,7 @@ public sealed class EngineApiActionCallbackTests
                 Assert.False(api.UndoEditorAction(missing));
                 Assert.False(api.RedoEditorAction(missing));
             }
-            AssertTransform(after);
+            AssertTransforms(applied: true);
             Assert.Equal(new[] { id }, received);
             Assert.Empty(logger.Entries);
         }
@@ -109,12 +107,22 @@ public sealed class EngineApiActionCallbackTests
         Assert.False(api.UndoEditorAction(1));
         Assert.False(api.RedoEditorAction(1));
 
-        void AssertTransform(float[] expected)
+        void AssertTransforms(bool applied)
         {
-            var values = new float[10];
-            api.Invoke(typeof(ReadTransformDelegate), "NativeProjectReadActionTransform", (object)values);
-            for (var i = 0; i < values.Length; i++)
-                Assert.True(MathF.Abs(expected[i] - values[i]) < 0.00001f, $"Mode {mode}, component {i}: expected {expected[i]}, actual {values[i]}.");
+            for (var index = 0; index < targetCount; index++)
+            {
+                float[] expected = [1 + index, 2 + index, 3 + index, 1 + index, 1 + index, 1 + index, 0, 0, 0, 1];
+                if (applied)
+                {
+                    if (mode == 0) { expected[0] += 3; expected[1] += 3; expected[2] += 3; }
+                    else if (mode == 1) { expected[3] += 1; expected[4] += 2; expected[5] += 3; }
+                    else { expected[8] = MathF.Sqrt(0.5f); expected[9] = MathF.Sqrt(0.5f); }
+                }
+                var values = new float[10];
+                api.Invoke(typeof(ReadTransformDelegate), "NativeProjectReadActionTransform", index, (object)values);
+                for (var i = 0; i < values.Length; i++)
+                    Assert.True(MathF.Abs(expected[i] - values[i]) < 0.00001f, $"Mode {mode}, target {index}, component {i}: expected {expected[i]}, actual {values[i]}.");
+            }
         }
     }
 

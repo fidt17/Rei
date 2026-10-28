@@ -1,20 +1,32 @@
 #include "pch.h"
 #include "EntityRotateAction.h"
+#include <utility>
 
 namespace rei::editor
 {
     EntityRotateAction::EntityRotateAction(ecs::ComponentRef<Transform> transform, glm::quat before, glm::quat after) :
-        _transform(transform), _before(before), _after(after)
+        EntityRotateAction(std::vector<Change>{{transform, before, after}})
     {
     }
 
-    bool EntityRotateAction::Undo() { return Apply(_before); }
-    bool EntityRotateAction::Redo() { return Apply(_after); }
-
-    bool EntityRotateAction::Apply(const glm::quat& rotation)
+    EntityRotateAction::EntityRotateAction(std::vector<Change> changes) : _changes(std::move(changes))
     {
-        if (_transform.IsNull()) return false;
-        _transform.Get().SetRotation(rotation);
+    }
+
+    bool EntityRotateAction::Undo() { return Apply(true); }
+    bool EntityRotateAction::Redo() { return Apply(false); }
+
+    bool EntityRotateAction::Apply(const bool undo)
+    {
+        if (_changes.empty()) return false;
+        for (const auto& change : _changes)
+        {
+            if (change.Target.IsNull()) return false;
+        }
+        for (const auto& change : _changes)
+        {
+            change.Target.Get().SetRotation(undo ? change.Before : change.After);
+        }
         return true;
     }
 }

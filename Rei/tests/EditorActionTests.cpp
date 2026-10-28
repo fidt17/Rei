@@ -16,6 +16,29 @@ using namespace rei::tests;
 
 namespace
 {
+    TransformationControlTargetState ReadState(const Transform& transform)
+    {
+        TransformationControlTargetState state;
+        state.LocalPosition = transform.GetLocalPosition();
+        state.LocalScale = transform.GetLocalScale();
+        state.LocalRotation = transform.GetLocalRotation();
+        return state;
+    }
+
+    void CheckState(const Transform& transform, const TransformationControlTargetState& state)
+    {
+        CheckVector(transform.GetLocalPosition(), state.LocalPosition);
+        CheckVector(transform.GetLocalScale(), state.LocalScale);
+        CheckRotation(transform.GetLocalRotation(), state.LocalRotation);
+    }
+
+    void ChangeValue(Transform& transform, const TransformationMode mode, const math::Vector3& value)
+    {
+        if (mode == Movement) transform.GetLocalPosition() = value;
+        else if (mode == Scale) transform.GetLocalScale() = value;
+        else transform.SetRotation(value);
+    }
+
     struct TransformDragFixture
     {
         BehaviourFixture Native;
@@ -231,16 +254,11 @@ TEST_CASE("Editor action store skips unchanged and unsupported gizmo drags", "[n
 {
     Isolated([]
     {
-        for (const std::string reason : {"unchanged", "returned", "scale", "rotation", "rect", "multiple", "inactive"})
+        for (const std::string reason : {"unchanged", "returned", "scale", "rotation", "rect", "inactive"})
         {
             CAPTURE(reason);
             TransformDragFixture fixture;
             fixture.Begin();
-            if (reason == "multiple")
-            {
-                fixture.Control().TargetEntities.push_back(fixture.Native.Entity(2));
-                transformation_control_drag::CaptureDragStartTargetStates(fixture.Native.World, fixture.Control());
-            }
             if (reason != "unchanged") fixture.TargetTransform().GetLocalPosition() = {4, 5, 6};
             if (reason == "returned") fixture.TargetTransform().GetLocalPosition() = {1, 2, 3};
             if (reason == "scale") fixture.Control().Mode = Scale;
@@ -300,18 +318,13 @@ TEST_CASE("Editor action store skips empty and unsupported Scale and Rotation dr
     {
         for (const auto mode : {Scale, Rotation})
         {
-            for (const std::string reason : {"unchanged", "returned", "rect", "multiple", "inactive", "equivalent_rotation"})
+            for (const std::string reason : {"unchanged", "returned", "rect", "inactive", "equivalent_rotation"})
             {
                 if (mode == Scale && reason == "equivalent_rotation") continue;
                 CAPTURE(mode, reason);
                 TransformDragFixture fixture;
                 fixture.Begin(mode);
                 const auto before = fixture.Control().DragStartTargetStates.front();
-                if (reason == "multiple")
-                {
-                    fixture.Control().TargetEntities.push_back(fixture.Native.Entity(2));
-                    transformation_control_drag::CaptureDragStartTargetStates(fixture.Native.World, fixture.Control());
-                }
                 if (reason != "unchanged")
                 {
                     if (mode == Scale) fixture.TargetTransform().GetLocalScale() = {2, 3, 4};
@@ -336,4 +349,120 @@ TEST_CASE("Editor action store skips empty and unsupported Scale and Rotation dr
             }
         }
     });
+}
+
+TEST_CASE("Editor action store records one gizmo action for all changed entities", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (const auto mode : {Movement, Scale, Rotation})
+        {
+            CAPTURE(mode);
+            TransformDragFixture fixture;
+            const auto child = fixture.Native.Entity(2);
+            const auto unchanged = fixture.Native.Entity(3);
+            fixture.Native.Registry->Get<Transform>(child).SetParent(fixture.Target);
+            fixture.Native.Registry->Get<Transform>(child).GetLocalPosition() = {10, 11, 12};
+            fixture.Control().TargetEntities = {fixture.Target, child, unchanged};
+            fixture.Begin(mode);
+            const auto beforeFirst = ReadState(fixture.TargetTransform());
+            const auto beforeChild = ReadState(fixture.Native.Registry->Get<Transform>(child));
+            const auto beforeChildWorldPosition = fixture.Native.Registry->Get<Transform>(child).GetWorldPosition();
+            ChangeValue(fixture.TargetTransform(), mode, {4, 5, 6});
+            ChangeValue(fixture.Native.Registry->Get<Transform>(child), mode, {7, 8, 9});
+            const auto afterFirst = ReadState(fixture.TargetTransform());
+            const auto afterChild = ReadState(fixture.Native.Registry->Get<Transform>(child));
+            const auto afterChildWorldPosition = fixture.Native.Registry->Get<Transform>(child).GetWorldPosition();
+            fixture.Finish.OnUpdate();
+            REQUIRE(fixture.Recorded.empty());
+            fixture.Release();
+            REQUIRE(fixture.Recorded.size() == 1);
+            fixture.Finish.OnUpdate();
+            REQUIRE(fixture.Recorded.size() == 1);
+            const auto id = fixture.Recorded.front();
+
+            // An unchanged selection member must not be captured by this action.
+            ChangeValue(fixture.Native.Registry->Get<Transform>(unchanged), mode, {20, 30, 40});
+            const auto external = ReadState(fixture.Native.Registry->Get<Transform>(unchanged));
+            REQUIRE(fixture.Actions->Undo(id));
+            CheckState(fixture.TargetTransform(), beforeFirst);
+            CheckState(fixture.Native.Registry->Get<Transform>(child), beforeChild);
+            CheckVector(fixture.Native.Registry->Get<Transform>(child).GetWorldPosition(), beforeChildWorldPosition);
+            CheckState(fixture.Native.Registry->Get<Transform>(unchanged), external);
+            REQUIRE(fixture.Actions->Redo(id));
+            CheckState(fixture.TargetTransform(), afterFirst);
+            CheckState(fixture.Native.Registry->Get<Transform>(child), afterChild);
+            CheckVector(fixture.Native.Registry->Get<Transform>(child).GetWorldPosition(), afterChildWorldPosition);
+            CheckState(fixture.Native.Registry->Get<Transform>(unchanged), external);
+            CHECK(fixture.Recorded.size() == 1);
+        }
+    });
+}
+
+TEST_CASE("Editor action store rejects invalid group replay before changing any target", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (const auto mode : {Movement, Scale, Rotation})
+        {
+            for (const bool undo : {true, false})
+            {
+                CAPTURE(mode, undo);
+                TransformDragFixture fixture;
+                const auto second = fixture.Native.Entity(2);
+                fixture.Control().TargetEntities.push_back(second);
+                fixture.Begin(mode);
+                ChangeValue(fixture.TargetTransform(), mode, {4, 5, 6});
+                ChangeValue(fixture.Native.Registry->Get<Transform>(second), mode, {7, 8, 9});
+                fixture.Release();
+                REQUIRE(fixture.Recorded.size() == 1);
+                const auto id = fixture.Recorded.front();
+                if (!undo) REQUIRE(fixture.Actions->Undo(id));
+                const auto firstBeforeReplay = ReadState(fixture.TargetTransform());
+                fixture.Native.Registry->Del<Transform>(second);
+                const bool applied = undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id);
+                CHECK_FALSE(applied);
+                CheckState(fixture.TargetTransform(), firstBeforeReplay);
+                CHECK(fixture.Recorded.size() == 1);
+            }
+        }
+    });
+}
+
+TEST_CASE("Editor action store skips unchanged and unsupported groups", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (const auto mode : {Movement, Scale, Rotation})
+        {
+            for (const bool rect : {false, true})
+            {
+                CAPTURE(mode, rect);
+                TransformDragFixture fixture;
+                const auto second = fixture.Native.Entity(2);
+                fixture.Control().TargetEntities.push_back(second);
+                fixture.Begin(mode);
+                if (rect)
+                {
+                    fixture.Native.Registry->Get<ui::RectTransform>(second);
+                    ChangeValue(fixture.TargetTransform(), mode, {4, 5, 6});
+                }
+                fixture.Release();
+                CHECK(fixture.Recorded.empty());
+            }
+        }
+    });
+}
+
+TEST_CASE("Editor action store cannot replay an empty transform action", "[native][editor-actions]")
+{
+    EntityMoveAction move(std::vector<EntityMoveAction::Change>{});
+    EntityScaleAction scale(std::vector<EntityScaleAction::Change>{});
+    EntityRotateAction rotate(std::vector<EntityRotateAction::Change>{});
+    CHECK_FALSE(move.Undo());
+    CHECK_FALSE(move.Redo());
+    CHECK_FALSE(scale.Undo());
+    CHECK_FALSE(scale.Redo());
+    CHECK_FALSE(rotate.Undo());
+    CHECK_FALSE(rotate.Redo());
 }

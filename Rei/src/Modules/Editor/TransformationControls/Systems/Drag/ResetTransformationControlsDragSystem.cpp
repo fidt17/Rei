@@ -30,10 +30,11 @@ namespace rei::editor
 
     void ResetTransformationControlsDragSystem::RecordTransformChange(const TransformationControl& control) const
     {
-        if (control.DragStartTargetStates.size() != 1) return;
-        const auto& start = control.DragStartTargetStates.front();
-        if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform) || HAS(start.Entity, ui::RectTransform)) return;
-        const ecs::ComponentRef<Transform> transform(_ecs, start.Entity);
+        if (control.DragStartTargetStates.empty()) return;
+        for (const auto& start : control.DragStartTargetStates)
+        {
+            if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform) || HAS(start.Entity, ui::RectTransform)) return;
+        }
 
         switch (control.Mode)
         {
@@ -42,30 +43,48 @@ namespace rei::editor
             const bool dragging = control.RightMovementArrow.DragActive || control.UpMovementArrow.DragActive || control.ForwardMovementArrow.DragActive
                 || control.RightUpMovementPlane.DragActive || control.RightForwardMovementPlane.DragActive || control.UpForwardMovementPlane.DragActive;
             if (!dragging) return;
-            const auto before = start.LocalPosition;
-            const auto after = transform.Get().GetLocalPosition();
-            if (glm::vec3(before) == glm::vec3(after)) return;
-            _actions->RecordApplied(std::make_unique<EntityMoveAction>(transform, before, after));
+            std::vector<EntityMoveAction::Change> changes;
+            for (const auto& start : control.DragStartTargetStates)
+            {
+                const ecs::ComponentRef<Transform> transform(_ecs, start.Entity);
+                const auto before = start.LocalPosition;
+                const auto after = transform.Get().GetLocalPosition();
+                if (glm::vec3(before) == glm::vec3(after)) continue;
+                changes.push_back({transform, before, after});
+            }
+            if (!changes.empty()) _actions->RecordApplied(std::make_unique<EntityMoveAction>(std::move(changes)));
             return;
         }
         case Scale:
         {
             const bool dragging = control.RightScaleArrow.DragActive || control.UpScaleArrow.DragActive || control.ForwardScaleArrow.DragActive || control.RootScale.DragActive;
             if (!dragging) return;
-            const auto before = start.LocalScale;
-            const auto after = transform.Get().GetLocalScale();
-            if (glm::vec3(before) == glm::vec3(after)) return;
-            _actions->RecordApplied(std::make_unique<EntityScaleAction>(transform, before, after));
+            std::vector<EntityScaleAction::Change> changes;
+            for (const auto& start : control.DragStartTargetStates)
+            {
+                const ecs::ComponentRef<Transform> transform(_ecs, start.Entity);
+                const auto before = start.LocalScale;
+                const auto after = transform.Get().GetLocalScale();
+                if (glm::vec3(before) == glm::vec3(after)) continue;
+                changes.push_back({transform, before, after});
+            }
+            if (!changes.empty()) _actions->RecordApplied(std::make_unique<EntityScaleAction>(std::move(changes)));
             return;
         }
         case Rotation:
         {
             const bool dragging = control.RightRotationRing.DragActive || control.UpRotationRing.DragActive || control.ForwardRotationRing.DragActive;
             if (!dragging) return;
-            const auto before = start.LocalRotation;
-            const auto after = transform.Get().GetLocalRotation();
-            if (before == after || before == -after) return;
-            _actions->RecordApplied(std::make_unique<EntityRotateAction>(transform, before, after));
+            std::vector<EntityRotateAction::Change> changes;
+            for (const auto& start : control.DragStartTargetStates)
+            {
+                const ecs::ComponentRef<Transform> transform(_ecs, start.Entity);
+                const auto before = start.LocalRotation;
+                const auto after = transform.Get().GetLocalRotation();
+                if (before == after || before == -after) continue;
+                changes.push_back({transform, before, after});
+            }
+            if (!changes.empty()) _actions->RecordApplied(std::make_unique<EntityRotateAction>(std::move(changes)));
             return;
         }
         }

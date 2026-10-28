@@ -30,7 +30,7 @@ namespace
     std::unique_ptr<rei::tests::TemporaryDirectory> ActionResources;
     std::string ActionResourcesPath;
     std::unique_ptr<rei::tests::NativeEngineFixture> ActionEngine;
-    rei::ecs::ComponentRef<rei::Transform> ActionTarget;
+    std::vector<rei::ecs::ComponentRef<rei::Transform>> ActionTargets;
 
     struct NativeWorkerException final : std::runtime_error
     {
@@ -217,48 +217,60 @@ REI_EXTERN_API void NativeProjectStartActionEngine(void* (*createEngine)(const c
 
 REI_EXTERN_API void NativeProjectStopActionEngine()
 {
-    ActionTarget = {};
+    ActionTargets.clear();
     ActionEngine.reset();
 }
 
-REI_EXTERN_API u64 NativeProjectRecordTransformAction(const i32 mode)
+REI_EXTERN_API u64 NativeProjectRecordTransformAction(const i32 mode, const i32 targetCount)
 {
     u64 id = 0;
     ActionEngine->OnEngineThread([&]
     {
-        const auto entity = rei::GetEntityManager().CreateNewEntity("Action replay probe");
-        ActionTarget = {rei::GetInternalWorld()->GetRegistry(), entity};
-        auto& transform = ActionTarget.Get();
-        transform.GetLocalPosition() = {1, 2, 3};
-        std::unique_ptr<rei::editor::IEditorAction> action;
-        if (mode == 0)
+        ActionTargets.clear();
+        std::vector<rei::editor::EntityMoveAction::Change> moves;
+        std::vector<rei::editor::EntityScaleAction::Change> scales;
+        std::vector<rei::editor::EntityRotateAction::Change> rotations;
+        for (i32 index = 0; index < targetCount; ++index)
         {
-            const auto before = transform.GetLocalPosition();
-            transform.GetLocalPosition() = {4, 5, 6};
-            action = std::make_unique<rei::editor::EntityMoveAction>(ActionTarget, before, transform.GetLocalPosition());
+            const auto entity = rei::GetEntityManager().CreateNewEntity("Action replay probe");
+            ActionTargets.emplace_back(rei::GetInternalWorld()->GetRegistry(), entity);
+            const auto& target = ActionTargets.back();
+            auto& transform = target.Get();
+            const f32 offset = static_cast<f32>(index);
+            transform.GetLocalPosition() = {1 + offset, 2 + offset, 3 + offset};
+            transform.GetLocalScale() = {1 + offset, 1 + offset, 1 + offset};
+            if (mode == 0)
+            {
+                const auto before = transform.GetLocalPosition();
+                transform.GetLocalPosition() += rei::math::Vector3(3, 3, 3);
+                moves.push_back({target, before, transform.GetLocalPosition()});
+            }
+            else if (mode == 1)
+            {
+                const auto before = transform.GetLocalScale();
+                transform.GetLocalScale() += rei::math::Vector3(1, 2, 3);
+                scales.push_back({target, before, transform.GetLocalScale()});
+            }
+            else if (mode == 2)
+            {
+                const auto before = transform.GetLocalRotation();
+                transform.SetRotation(glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 0, 1)));
+                rotations.push_back({target, before, transform.GetLocalRotation()});
+            }
         }
-        else if (mode == 1)
-        {
-            const auto before = transform.GetLocalScale();
-            transform.GetLocalScale() = {2, 3, 4};
-            action = std::make_unique<rei::editor::EntityScaleAction>(ActionTarget, before, transform.GetLocalScale());
-        }
-        else if (mode == 2)
-        {
-            const auto before = transform.GetLocalRotation();
-            transform.SetRotation(glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 0, 1)));
-            action = std::make_unique<rei::editor::EntityRotateAction>(ActionTarget, before, transform.GetLocalRotation());
-        }
-        id = rei::GetEngine().GetEditorActions().RecordApplied(std::move(action));
+        auto& actions = rei::GetEngine().GetEditorActions();
+        if (mode == 0) id = actions.RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(std::move(moves)));
+        else if (mode == 1) id = actions.RecordApplied(std::make_unique<rei::editor::EntityScaleAction>(std::move(scales)));
+        else if (mode == 2) id = actions.RecordApplied(std::make_unique<rei::editor::EntityRotateAction>(std::move(rotations)));
     });
     return id;
 }
 
-REI_EXTERN_API void NativeProjectReadActionTransform(f32* values)
+REI_EXTERN_API void NativeProjectReadActionTransform(const i32 index, f32* values)
 {
-    ActionEngine->OnEngineThread([values]
+    ActionEngine->OnEngineThread([index, values]
     {
-        const auto& transform = ActionTarget.Get();
+        const auto& transform = ActionTargets.at(index).Get();
         const auto position = transform.GetLocalPosition();
         const auto scale = transform.GetLocalScale();
         const auto rotation = transform.GetLocalRotation();
