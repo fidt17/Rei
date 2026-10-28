@@ -1,3 +1,11 @@
+using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Meta;
+using ReiEditor.Models.Services.Entities.Sync;
+using ReiEditor.Models.Services.Engine.SceneSync;
+using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Hierarchies;
+using ReiEditor.Models.Services.RectTransform;
 using Avalonia;
 using Avalonia.Data;
 using Newtonsoft.Json.Linq;
@@ -47,6 +55,10 @@ public sealed class EngineApiActionCallbackTests
     private delegate void ReadTransformDelegate(int index, [Out] float[] values);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int ReplayActionDelegate(ulong id);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void ReadEntityWorldTransformDelegate(int sceneId, [Out] float[] values);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void EntityIdDelegate(int sceneId);
 
     [NativeCallbackFact]
     public Task NativeCallbacksRecordTransformActionsInCommonHistoryAndReplayWithoutRecordingAgain()
@@ -266,6 +278,423 @@ public sealed class EngineApiActionCallbackTests
             api.MarkEngineStopped();
             api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
             GC.KeepAlive(createEngine);
+        }
+    }
+
+    [NativeCallbackFact]
+    public Task HierarchyDragSharesHistoryWithTransformAndRename()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var nested in new[] { false, true }) await VerifyHierarchyDragAsync(nested);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task GroupedHierarchyDragRecordsOneEntryAndPreservesSiblingOrder()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var nested in new[] { false, true })
+                foreach (var disjoint in new[] { false, true }) await VerifyHierarchyDragAsync(nested, grouped: true, disjoint: disjoint);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyHierarchyDragAsync(bool nested, bool grouped = false, bool disjoint = false)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entityApi = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        var editors = new List<InspectorTransformFixture>();
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var parentId = nested ? entityApi.CreateNewEntity("Parent")!.EntityId!.Value : 0;
+            var hierarchy = new Hierarchy<GameEntity>("Test");
+            var parent = nested ? new HierarchyNode<GameEntity>(new(parentId, "Parent"), null) : null;
+            if (parent != null) hierarchy.AddNode(parent, true);
+            var count = grouped ? 5 : 3;
+            var initial = Enumerable.Range(0, count).ToArray();
+            int[] expected = grouped ? disjoint ? [0, 3, 1, 4, 2] : [0, 3, 4, 1, 2] : [2, 0, 1];
+            for (var i = 0; i < count; i++)
+            {
+                var id = entityApi.CreateNewEntity($"Sibling {i}")!.EntityId!.Value;
+                entityApi.SetEntityParent(id, parentId, i);
+                var editor = new InspectorTransformFixture(entityApi, id);
+                editors.Add(editor);
+                editor.Apply(entityApi.GetEntityData(id)!);
+                var node = new HierarchyNode<GameEntity>(editor.Entity, parent);
+                parent?.PushChild(node);
+                hierarchy.AddNode(node, parent == null);
+            }
+            var scenes = new TestSceneManagementService(editors.Select(e => e.Entity).ToArray());
+            var runner = editors[0].Runner;
+            var registry = new TestBehaviourRegistry();
+            var managementLogger = new TestLogger<EntityManagementService>();
+            var management = new EntityManagementService(managementLogger, scenes, null!, entityApi, registry, runner,
+                new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entityApi.GetEntityData(entity.Id)!) },
+                new RectTransformLayoutService(registry, scenes, null!));
+            using var drag = new HierarchyDragFixture(hierarchy, management);
+            CheckOrders(initial);
+            Assert.Empty(received);
+
+            int[] selection = grouped ? disjoint ? [editors[3].Entity.Id, editors[1].Entity.Id] : [editors[2].Entity.Id, editors[1].Entity.Id] : [editors[0].Entity.Id];
+            drag.ViewModel.MoveEntities(selection, nested ? parentId : null, count);
+            CheckOrders(expected);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            await commands.UndoAsync();
+            CheckOrders(initial);
+            Assert.False(commands.CanUndo);
+            Assert.True(commands.CanRedo);
+            // Dropping in the same slot must preserve Redo and produce no callback.
+            int[] noOp = grouped ? [editors[1].Entity.Id, editors[2].Entity.Id] : [editors[0].Entity.Id];
+            drag.ViewModel.MoveEntities(noOp, nested ? parentId : null, grouped ? 3 : 1);
+            CheckOrders(initial);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            Assert.True(commands.CanRedo);
+            await commands.RedoAsync();
+            CheckOrders(expected);
+
+            if (grouped)
+            {
+                entityApi.ReorderEntities([editors[0].Entity.Id, int.MaxValue], 0, recordHierarchyChange: true);
+                entityApi.ReorderEntities([editors[0].Entity.Id, editors[0].Entity.Id], 0, recordHierarchyChange: true);
+                if (nested) entityApi.ReorderEntities([editors[0].Entity.Id, parentId], 0, recordHierarchyChange: true);
+                CheckOrders(expected);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Single(received);
+            }
+
+            api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", 0, 1);
+            Dispatcher.UIThread.RunJobs();
+            var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes, runner);
+            await commands.ExecuteAsync((IEntityRenameCommand)rename, new(editors[0].Entity, "Renamed"));
+            Assert.Equal("Renamed", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
+            await commands.UndoAsync();
+            Assert.Equal("Sibling 0", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
+            await commands.UndoAsync();
+            CheckMove(1);
+            CheckOrders(expected);
+            await commands.UndoAsync();
+            CheckOrders(initial);
+            Assert.False(commands.CanUndo);
+            await commands.RedoAsync();
+            CheckOrders(expected);
+            await commands.RedoAsync();
+            CheckMove(4);
+            await commands.RedoAsync();
+            Assert.Equal("Renamed", entityApi.GetEntityData(editors[0].Entity.Id)!.Name);
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(commands.CanRedo);
+            Assert.Equal(2, received.Count);
+
+            Assert.Empty(logger.Entries);
+            Assert.Empty(managementLogger.Entries);
+
+            void CheckOrders(int[] expected)
+            {
+                for (var i = 0; i < editors.Count; i++)
+                {
+                    var state = entityApi.GetEntityData(editors[i].Entity.Id)!;
+                    var transform = state.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Transform");
+                    Assert.Equal(expected[i], Convert.ToInt32(transform["_order"]));
+                    Assert.Equal(parentId, Convert.ToInt32(transform["_parent"]));
+                    editors[i].Apply(state);
+                    Assert.Equal(expected[i], Convert.ToInt32(editors[i].Transform.GetProperty("_order").Value));
+                    foreach (var name in new[] { "_position", "_scale", "_rotation" })
+                    {
+                        var vector = JObject.FromObject(transform[name]);
+                        foreach (var axis in new[] { "x", "y", "z" })
+                            Assert.InRange(MathF.Abs(vector[axis]!.Value<float>() - (name == "_scale" ? 1f : 0f)), 0f, 0.0001f);
+                    }
+                    Assert.Empty(editors[i].Logger.Entries);
+                }
+            }
+
+            void CheckMove(float x)
+            {
+                var values = new float[10];
+                api.Invoke(typeof(ReadTransformDelegate), "NativeProjectReadActionTransform", 0, (object)values);
+                Assert.Equal(new[] { x, x + 1, x + 2 }, values.Take(3));
+            }
+        }
+        finally
+        {
+            foreach (var editor in editors) editor.Dispose();
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+    }
+
+    [NativeCallbackFact]
+    public Task HierarchyReparentPreservesTransformsAndSharesHistoryWithInspectorAndRename()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var mode = 0; mode < 3; mode++) await VerifyHierarchyReparentAsync(mode);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task GroupParentChangesRecordOneEntryAndPreserveWorldTransforms()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var mode = 0; mode < 3; mode++)
+                foreach (var disjoint in new[] { false, true }) await VerifyHierarchyReparentAsync(mode, grouped: true, disjoint: disjoint);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task MixedParentDragUsesHierarchyOrderAndOneHistoryEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var mode = 0; mode < 4; mode++)
+                foreach (var disjoint in new[] { false, true }) await VerifyHierarchyReparentAsync(mode, grouped: true, disjoint: disjoint, mixedParents: true);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyHierarchyReparentAsync(int mode, bool grouped = false, bool disjoint = false, bool mixedParents = false)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entityApi = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var historyLogger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, historyLogger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        var editors = new List<InspectorTransformFixture>();
+        var sourceLogger = new TestLogger<EngineSceneSyncEventSource>();
+        var source = new EngineSceneSyncEventSource(api, sourceLogger);
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            foreach (var name in new[] { "Parent A", "Parent B", "Target", "Source 1", "Source 2", "Destination 1", "Destination 2" })
+                editors.Add(new(entityApi, entityApi.CreateNewEntity(name)!.EntityId!.Value));
+            if (mixedParents && mode != 3) editors.Add(new(entityApi, entityApi.CreateNewEntity("Parent C")!.EntityId!.Value));
+            var target = editors[2];
+            var second = editors[disjoint ? 4 : 3];
+            int[] movedIds = grouped ? [target.Entity.Id, second.Entity.Id] : [target.Entity.Id];
+            var oldParent = mode == 2 ? 0 : editors[0].Entity.Id;
+            var newParent = mode == 1 ? 0 : mixedParents && mode != 3 ? editors[7].Entity.Id : editors[1].Entity.Id;
+            SetTransform(editors[0].Entity.Id, 10, 2, 30);
+            SetTransform(editors[1].Entity.Id, -5, 3, -45);
+            SetTransform(target.Entity.Id, 1, 1.5f, 15);
+            if (grouped) SetTransform(second.Entity.Id, 7, 0.8f, -20);
+            for (var i = 2; i < 7; i++)
+                entityApi.SetEntityParent(editors[i].Entity.Id, i < 5 ? oldParent : newParent, i < 5 ? i - 2 : i - 5);
+            if (mixedParents) entityApi.SetEntityParent(second.Entity.Id, editors[1].Entity.Id, 0);
+            var scenes = new TestSceneManagementService(editors.Select(e => e.Entity).ToArray());
+            var scene = scenes.Scene.Value!;
+            scene.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
+            var registry = new TestBehaviourRegistry();
+            var managementLogger = new TestLogger<EntityManagementService>();
+            var entitySync = new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entityApi.GetEntityData(entity.Id)!) };
+            var management = new EntityManagementService(managementLogger, scenes, null!, entityApi, registry, target.Runner, entitySync,
+                new RectTransformLayoutService(registry, scenes, null!));
+            var syncLogger = new TestLogger<SceneSyncService>();
+            using var sync = new SceneSyncService(source, scenes, new EngineSelectionSyncService(new SelectionService(new TestEntityApi())), syncLogger, entitySync);
+            using var drag = new HierarchyDragFixture(scene.Hierarchy, management);
+            source.Connect();
+            var before = await ReadStateAsync();
+            var world = ReadWorld();
+            Assert.Empty(received);
+
+            if (grouped)
+            {
+                entityApi.ReparentEntities([target.Entity.Id, int.MaxValue], newParent, 1, recordHierarchyChange: true);
+                entityApi.ReparentEntities(movedIds, target.Entity.Id, 1, recordHierarchyChange: true);
+                entityApi.ReparentEntities([target.Entity.Id, target.Entity.Id], newParent, 1, recordHierarchyChange: true);
+                CheckState(before, await ReadStateAsync());
+                Assert.Empty(received);
+            }
+            drag.ViewModel.MoveEntities(movedIds.Reverse().ToArray(), newParent == 0 ? null : newParent, 1);
+            var after = await ReadStateAsync();
+            Assert.Equal(newParent, after[target.Entity.Id]["_parent"]!.Value<int>());
+            var expectedIndex = 1 - movedIds.Count(id => before[id]["_parent"]!.Value<int>() == newParent && before[id]["_order"]!.Value<int>() < 1);
+            Assert.Equal(expectedIndex, after[target.Entity.Id]["_order"]!.Value<int>());
+            if (grouped)
+            {
+                Assert.Equal(newParent, after[second.Entity.Id]["_parent"]!.Value<int>());
+                Assert.Equal(expectedIndex + 1, after[second.Entity.Id]["_order"]!.Value<int>());
+                if (mixedParents && mode == 3)
+                    foreach (var name in new[] { "_position", "_scale", "_rotation" }) Assert.True(JToken.DeepEquals(before[second.Entity.Id][name], after[second.Entity.Id][name]));
+            }
+            CheckWorld(world);
+            Assert.Single(received);
+
+            using var vm = new Vector3PropertyViewModel(target.Transform.GetProperty("_position"));
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var binding = input.Bind(ReiTextBox.TextProperty, new Binding("X") { Mode = BindingMode.TwoWay });
+            input.TextInternal = (vm.X + 5).ToString(System.Globalization.CultureInfo.CurrentCulture);
+            input.LoseFocus();
+            var moved = await ReadStateAsync();
+            Assert.Equal(2, received.Count);
+            var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes, target.Runner);
+            await commands.ExecuteAsync((IEntityRenameCommand)rename, new(target.Entity, "Renamed"));
+            Assert.Equal("Renamed", entityApi.GetEntityData(target.Entity.Id)!.Name);
+            await commands.UndoAsync();
+            Assert.Equal("Target", entityApi.GetEntityData(target.Entity.Id)!.Name);
+            await commands.UndoAsync();
+            CheckState(after, await ReadStateAsync());
+            await commands.UndoAsync();
+            CheckState(before, await ReadStateAsync());
+            CheckWorld(world);
+            Assert.False(commands.CanUndo);
+            Assert.True(commands.CanRedo);
+            var originalIndex = scene.Hierarchy.GetNodeOrder(scene.Hierarchy.GetNode(target.Entity)!);
+            int[] noOp = grouped && !mixedParents ? [target.Entity.Id, editors[3].Entity.Id] : [target.Entity.Id];
+            drag.ViewModel.MoveEntities(noOp, oldParent == 0 ? null : oldParent, originalIndex + (grouped && !mixedParents ? 2 : 1));
+            CheckState(before, await ReadStateAsync());
+            Assert.True(commands.CanRedo);
+            Assert.Equal(2, received.Count);
+            await commands.RedoAsync();
+            CheckState(after, await ReadStateAsync());
+            CheckWorld(world);
+            await commands.RedoAsync();
+            CheckState(moved, await ReadStateAsync());
+            await commands.RedoAsync();
+            Assert.Equal("Renamed", entityApi.GetEntityData(target.Entity.Id)!.Name);
+            Assert.False(commands.CanRedo);
+            Assert.Equal(2, received.Count);
+
+            // RectTransform parent changes remain outside history.
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectAddRectTransform", target.Entity.Id);
+            drag.ViewModel.MoveEntities(movedIds, oldParent == 0 ? null : oldParent, 0);
+            var rectState = await ReadStateAsync();
+            Assert.Equal(grouped ? newParent : oldParent, rectState[target.Entity.Id]["_parent"]!.Value<int>());
+            if (grouped) CheckState(moved, rectState);
+            Assert.Equal(2, received.Count);
+            Assert.Empty(historyLogger.Entries);
+            Assert.Empty(managementLogger.Entries);
+            Assert.Empty(sourceLogger.Entries);
+            Assert.Empty(syncLogger.Entries);
+
+            async Task<Dictionary<int, JObject>> ReadStateAsync()
+            {
+                var states = new Dictionary<int, JObject>();
+                foreach (var editor in editors)
+                {
+                    var state = entityApi.GetEntityData(editor.Entity.Id)!;
+                    states.Add(editor.Entity.Id, JObject.FromObject(state.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Transform")));
+                    editor.Apply(state);
+                }
+                source.RequestSnapshot();
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < deadline)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    if (editors.All(e => e.Entity.Transform.Parent == states[e.Entity.Id]["_parent"]!.Value<int>() &&
+                        e.Entity.Transform.Order == states[e.Entity.Id]["_order"]!.Value<int>())) break;
+                    await Task.Delay(10);
+                }
+                foreach (var editor in editors)
+                {
+                    var state = states[editor.Entity.Id];
+                    Assert.Equal(state["_parent"]!.Value<int>(), editor.Entity.Transform.Parent);
+                    Assert.Equal(state["_order"]!.Value<int>(), editor.Entity.Transform.Order);
+                    var node = scene.Hierarchy.GetNode(editor.Entity)!;
+                    Assert.Equal(editor.Entity.Transform.Parent, node.Parent?.Content.Id ?? 0);
+                    Assert.Equal(editor.Entity.Transform.Order, scene.Hierarchy.GetNodeOrder(node));
+                    foreach (var name in new[] { "_position", "_scale", "_rotation" })
+                    {
+                        var values = (Dictionary<string, SerializedProperty>)editor.Transform.GetProperty(name).Value!;
+                        foreach (var axis in new[] { "x", "y", "z" })
+                            Assert.InRange(MathF.Abs(state[name]![axis]!.Value<float>() - Convert.ToSingle(values[axis].Value)), 0f, 0.0001f);
+                    }
+                    Assert.Empty(editor.Logger.Entries);
+                }
+                return states;
+            }
+
+            Dictionary<int, float[]> ReadWorld()
+            {
+                var result = new Dictionary<int, float[]>();
+                foreach (var id in movedIds)
+                {
+                    var values = new float[10];
+                    api.Invoke(typeof(ReadEntityWorldTransformDelegate), "NativeProjectReadEntityWorldTransform", id, (object)values);
+                    result.Add(id, values);
+                }
+                return result;
+            }
+
+            void CheckWorld(Dictionary<int, float[]> expected)
+            {
+                var actual = ReadWorld();
+                foreach (var (id, values) in expected)
+                {
+                    for (var i = 0; i < 6; i++) Assert.InRange(MathF.Abs(values[i] - actual[id][i]), 0f, 0.0001f);
+                    var dot = Enumerable.Range(6, 4).Sum(i => values[i] * actual[id][i]);
+                    Assert.InRange(MathF.Abs(MathF.Abs(dot) - 1), 0f, 0.0001f);
+                }
+            }
+        }
+        finally
+        {
+            foreach (var editor in editors) editor.Dispose();
+            source.Disconnect();
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+
+        void SetTransform(int id, float position, float scale, float rotation)
+        {
+            var editor = editors.Single(e => e.Entity.Id == id);
+            var state = entityApi.GetEntityData(id)!;
+            var transform = state.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Transform");
+            transform["_position"] = JObject.FromObject(new { x = position, y = 2f, z = 3f });
+            transform["_scale"] = JObject.FromObject(new { x = scale, y = scale, z = scale });
+            transform["_rotation"] = JObject.FromObject(new { x = 0f, y = 0f, z = rotation });
+            editor.Apply(state);
+            var values = new Dictionary<string, object?> { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = InspectorTransformFixture.TRANSFORM_ID };
+            foreach (var name in new[] { "_position", "_scale", "_rotation" })
+                values[name] = SerializedPropertyJsonConverter.SerializeRuntimeProperty(editor.Transform.GetProperty(name));
+            entityApi.SetData(new SetEntityDataRequest { SceneId = id, Behaviours = [values] });
+        }
+
+        static void CheckState(Dictionary<int, JObject> expected, Dictionary<int, JObject> actual)
+        {
+            foreach (var (id, state) in expected)
+            {
+                foreach (var name in new[] { "_parent", "_order" }) Assert.Equal(state[name]!.Value<int>(), actual[id][name]!.Value<int>());
+                foreach (var name in new[] { "_position", "_scale", "_rotation" })
+                    foreach (var axis in new[] { "x", "y", "z" })
+                        Assert.InRange(MathF.Abs(state[name]![axis]!.Value<float>() - actual[id][name]![axis]!.Value<float>()), 0f, 0.0001f);
+            }
         }
     }
 

@@ -130,7 +130,7 @@ public class EntityManagementService : IEntityManagementService
         }
     }
 
-    public void SetParent(GameEntity e, GameEntity? parent, int idx)
+    public void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false)
     {
         if (e == parent) return;
         
@@ -139,11 +139,47 @@ public class EntityManagementService : IEntityManagementService
         try
         {
             var shouldPreserveRectTransform = _rectTransformLayoutService.TryPreserveRectForParent(e, parent, out var preservedLayout);
-            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx);
+            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordHierarchyChange && _engineRunner.IsEditorActive.Value);
             if (shouldPreserveRectTransform && _rectTransformLayoutService.TryGetRectTransform(e, out var rectTransform))
             {
                 ApplyRectTransformLayout(e, rectTransform, preservedLayout);
             }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+        }
+    }
+
+    public void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex)
+    {
+        if (!_engineRunner.IsActive.Value || entities.Count == 0) return;
+        try
+        {
+            _entityApi.ReorderEntities(entities.Select(entity => entity.Id).ToArray(), insertionIndex, _engineRunner.IsEditorActive.Value);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+        }
+    }
+
+    public void ReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex)
+    {
+        if (!_engineRunner.IsActive.Value || entities.Count == 0) return;
+        try
+        {
+            if (entities.Any(entity => _rectTransformLayoutService.TryGetRectTransform(entity, out _)))
+            {
+                var index = Math.Max(0, insertionIndex);
+                foreach (var entity in entities)
+                {
+                    if (entity.Transform.Parent == (parent?.Id ?? 0) && entity.Transform.Order < index) index--;
+                    SetParent(entity, parent, index++);
+                }
+                return;
+            }
+            _entityApi.ReparentEntities(entities.Select(entity => entity.Id).ToArray(), parent?.Id ?? 0, insertionIndex, _engineRunner.IsEditorActive.Value);
         }
         catch (Exception exception)
         {

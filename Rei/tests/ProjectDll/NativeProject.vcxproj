@@ -21,6 +21,7 @@
     </PropertyGroup>
     <ItemDefinitionGroup>
         <ClCompile>
+            <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
             <LanguageStandard>stdcpp20</LanguageStandard><ConformanceMode>true</ConformanceMode><ExceptionHandling>Sync</ExceptionHandling>
             <PrecompiledHeader>NotUsing</PrecompiledHeader><RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
             <PreprocessorDefinitions>DEBUG;NOMINMAX;NATIVE_PROJECT_VERSION=$(NativeProjectVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>

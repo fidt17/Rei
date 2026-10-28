@@ -13,7 +13,9 @@ public interface IEntityApi
     void DestroyEntity(int sceneEntityId);
     
     void Rename(int sceneEntityId, string newName);
-    void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order);
+    void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false);
+    void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false);
+    void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false);
     void SetData(SetEntityDataRequest request);
     InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request);
 

@@ -39,12 +39,14 @@ public sealed class EntitySyncServiceTests
             return State;
         }
 
+        public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => SetDataCalls++;
         public GetSceneEntitiesResponse? GetSceneEntities() => throw new NotSupportedException();
         public InstantiateEntityResponse? CreateNewEntity(string name) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId) => throw new NotSupportedException();
         public void Rename(int sceneEntityId, string newName) => throw new NotSupportedException();
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order) => throw new NotSupportedException();
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request) => throw new NotSupportedException();
         public void AddBehaviour(int sceneEntityId, int behaviourId) => throw new NotSupportedException();
         public void DeleteBehaviour(int sceneEntityId, int behaviourId) => throw new NotSupportedException();

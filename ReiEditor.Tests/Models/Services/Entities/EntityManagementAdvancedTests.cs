@@ -24,6 +24,9 @@ public sealed class EntityManagementAdvancedTests
         public Func<GetSceneEntitiesResponse?>? OnGetSceneEntities { get; set; }
         public Func<int, GetEntityDataResponse?>? OnGetEntityData { get; set; }
         public Action<int, int, int>? OnSetParent { get; set; }
+        public List<bool> RecordHierarchyChangeCalls { get; } = new();
+        public Action<IReadOnlyList<int>, int, bool>? OnReorderEntities { get; set; }
+        public Action<IReadOnlyList<int>, int, int, bool>? OnReparentEntities { get; set; }
         public Action<SetEntityDataRequest>? OnSetData { get; set; }
         public List<InstantiateEntityRequest> InstantiateRequests { get; } = new();
         public List<int> StateRequests { get; } = new();
@@ -51,12 +54,23 @@ public sealed class EntityManagementAdvancedTests
             return (OnInstantiate ?? throw UnexpectedCall())(request);
         }
 
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order)
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false)
         {
             Calls.Add("set-parent");
+            RecordHierarchyChangeCalls.Add(recordHierarchyChange);
             (OnSetParent ?? throw UnexpectedCall())(sceneEntityId, parentSceneEntityId, order);
         }
 
+        public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false)
+        {
+            Calls.Add("reorder");
+            (OnReorderEntities ?? throw UnexpectedCall())(entityIds, insertionIndex, recordHierarchyChange);
+        }
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false)
+        {
+            Calls.Add("reparent");
+            (OnReparentEntities ?? throw UnexpectedCall())(entityIds, parentEntityId, insertionIndex, recordHierarchyChange);
+        }
         public void SetData(SetEntityDataRequest request)
         {
             Calls.Add("set-data");
@@ -530,18 +544,118 @@ public sealed class EntityManagementAdvancedTests
         Assert.Equal(y, vector["y"]);
     }
 
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    public void SetParentRecordsHistoryOnlyWhenRequestedInEditorMode(bool requested, bool editorActive, bool expected)
+    {
+        var api = new TestEntityApi { OnSetParent = (_, _, _) => { } };
+        var rect = new TestRectTransformLayoutService();
+        var service = CreateService(new Scene("Scene"), true, api, rect: rect, editorActive: editorActive);
+
+        service.SetParent(new GameEntity(1, "Entity"), null, 2, recordHierarchyChange: requested);
+
+        Assert.Equal(new[] { expected }, api.RecordHierarchyChangeCalls);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    public void ReorderSendsOneBatchAndRecordsOnlyInEditorMode(bool active, bool editorActive)
+    {
+        var requests = new List<(int[] Ids, int Index, bool Record)>();
+        var api = new TestEntityApi { OnReorderEntities = (ids, index, record) => requests.Add((ids.ToArray(), index, record)) };
+        var rect = new TestRectTransformLayoutService();
+        var service = CreateService(new Scene("Scene"), active, api, rect: rect, editorActive: editorActive);
+
+        service.ReorderEntities([new GameEntity(1, "First"), new GameEntity(3, "Third")], 4);
+
+        Assert.Empty(rect.Calls);
+        if (!active)
+        {
+            Assert.Empty(requests);
+            return;
+        }
+        var request = Assert.Single(requests);
+        Assert.Equal(new[] { 1, 3 }, request.Ids);
+        Assert.Equal(4, request.Index);
+        Assert.Equal(editorActive, request.Record);
+    }
+
+    [Theory]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, false, false)]
+    [InlineData(true, true, true)]
+    public void ReparentSendsOneBatchOnlyForSupportedActiveEntities(bool active, bool editorActive, bool rectTransform)
+    {
+        var batches = new List<(int[] Ids, int Parent, int Index, bool Record)>();
+        var singles = new List<(int Id, int Parent, int Index)>();
+        var api = new TestEntityApi
+        {
+            OnReparentEntities = (ids, parent, index, record) => batches.Add((ids.ToArray(), parent, index, record)),
+            OnSetParent = (id, parent, index) => singles.Add((id, parent, index))
+        };
+        var rect = new TestRectTransformLayoutService { HasRectTransform = rectTransform };
+        var service = CreateService(new Scene("Scene"), active, api, rect: rect, editorActive: editorActive);
+
+        service.ReparentEntities([new(1, "First"), new(3, "Third")], new(10, "Parent"), 2);
+
+        if (!active)
+        {
+            Assert.Empty(batches);
+            Assert.Empty(singles);
+            return;
+        }
+        if (rectTransform)
+        {
+            Assert.Empty(batches);
+            Assert.Equal(new[] { (1, 10, 2), (3, 10, 3) }, singles);
+            Assert.All(api.RecordHierarchyChangeCalls, record => Assert.False(record));
+            return;
+        }
+        var batch = Assert.Single(batches);
+        Assert.Equal(new[] { 1, 3 }, batch.Ids);
+        Assert.Equal(10, batch.Parent);
+        Assert.Equal(2, batch.Index);
+        Assert.Equal(editorActive, batch.Record);
+        Assert.Empty(singles);
+    }
+
+    [Fact]
+    public void RectFallbackKeepsRemovalOffsetForEntityAlreadyAtDestination()
+    {
+        var calls = new List<(int Id, int Parent, int Index)>();
+        var api = new TestEntityApi { OnSetParent = (id, parent, index) => calls.Add((id, parent, index)) };
+        var rect = new TestRectTransformLayoutService { HasRectTransform = true };
+        var service = CreateService(new Scene("Scene"), true, api, rect: rect, editorActive: true);
+        var first = new GameEntity(1, "First");
+        first.Transform.SetParent(10);
+        var second = new GameEntity(3, "Second");
+        second.Transform.SetOrder(1);
+
+        service.ReparentEntities([first, second], null, 2);
+
+        Assert.Equal(new[] { (1, 0, 2), (3, 0, 2) }, calls);
+        Assert.All(api.RecordHierarchyChangeCalls, record => Assert.False(record));
+    }
+
     private static EntityManagementService CreateService(
         Scene? scene,
         bool active,
         TestEntityApi api,
         TestEntitySyncService? sync = null,
         TestRectTransformLayoutService? rect = null,
-        TestLogger<EntityManagementService>? logger = null)
+        TestLogger<EntityManagementService>? logger = null,
+        bool editorActive = false)
     {
         var sceneManagement = new TestSceneManagementService();
         sceneManagement.Scene.Value = scene;
         var engine = new TestEngineRunner();
         engine.Active.Value = active;
+        engine.EditorActive.Value = editorActive;
 
         return new EntityManagementService(
             logger ?? new TestLogger<EntityManagementService>(),

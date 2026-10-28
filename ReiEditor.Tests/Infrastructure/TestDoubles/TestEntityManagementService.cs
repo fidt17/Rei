@@ -8,7 +8,12 @@ internal sealed class TestEntityManagementService : IEntityManagementService
     public List<(string Name, GameEntity? Parent)> CreateCalls { get; } = new();
     public List<(GameEntity Entity, int BehaviourId)> AddBehaviourCalls { get; } = new();
     public List<(GameEntity Entity, GameEntity? Parent, int Order)> ParentCalls { get; } = new();
+    public List<bool> RecordHierarchyChangeCalls { get; } = new();
     public Action<GameEntity, GameEntity?, int>? OnSetParent { get; set; }
+    public List<(IReadOnlyList<GameEntity> Entities, int Index)> ReorderCalls { get; } = new();
+    public Action<IReadOnlyList<GameEntity>, int>? OnReorderEntities { get; set; }
+    public List<(IReadOnlyList<GameEntity> Entities, GameEntity? Parent, int Index)> ReparentCalls { get; } = new();
+    public Action<IReadOnlyList<GameEntity>, GameEntity?, int>? OnReparentEntities { get; set; }
     public List<GameEntity> DestroyCalls { get; } = new();
     public List<(GameEntity Entity, string Name)> RenameCalls { get; } = new();
     public List<(GameEntity Entity, string? Name, bool IncludeChildren)> InstantiateCalls { get; } = new();
@@ -48,9 +53,20 @@ internal sealed class TestEntityManagementService : IEntityManagementService
         return (OnInstantiate ?? throw new NotSupportedException())(sourceEntity, requestedName, includeChildren);
     }
 
-    public void SetParent(GameEntity e, GameEntity? parent, int idx)
+    public void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex)
+    {
+        ReorderCalls.Add((entities.ToArray(), insertionIndex));
+        (OnReorderEntities ?? throw new NotSupportedException())(entities, insertionIndex);
+    }
+    public void ReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex)
+    {
+        ReparentCalls.Add((entities.ToArray(), parent, insertionIndex));
+        (OnReparentEntities ?? throw new NotSupportedException())(entities, parent, insertionIndex);
+    }
+    public void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false)
     {
         ParentCalls.Add((e, parent, idx));
+        RecordHierarchyChangeCalls.Add(recordHierarchyChange);
         (OnSetParent ?? throw new NotSupportedException())(e, parent, idx);
     }
     public void DeleteBehaviour(GameEntity e, int behaviourId) => throw new NotSupportedException();

@@ -62,7 +62,9 @@ public sealed class BehaviourComponentDrawerViewModelTests
         public List<(GameEntity Entity, int Id)> Deleted { get; } = [];
         public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null) => throw new NotSupportedException();
         public void RenameEntity(GameEntity e, string name) => throw new NotSupportedException();
-        public void SetParent(GameEntity e, GameEntity? parent, int idx) => throw new NotSupportedException();
+        public void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex) => throw new NotSupportedException();
+        public void ReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex) => throw new NotSupportedException();
+        public void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void AddBehaviour(GameEntity e, int behaviourId) => throw new NotSupportedException();
         public void DeleteBehaviour(GameEntity e, int behaviourId) => Deleted.Add((e, behaviourId));
         public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true) => throw new NotSupportedException();
