@@ -7,7 +7,7 @@ public interface IEntityManagementService
     Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null);
 
     void RenameEntity(GameEntity e, string name);
-    void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordOrderChange = false);
+    void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false);
     
     void AddBehaviour(GameEntity e, int behaviourId);
     void DeleteBehaviour(GameEntity e, int behaviourId);

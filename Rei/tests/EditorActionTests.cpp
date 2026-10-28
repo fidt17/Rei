@@ -6,6 +6,7 @@
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
+#include "Modules/Editor/Actions/EntityReparentAction.h"
 #include "Common/Transform/TransformHierarchyUtility.h"
 #include "support/InputTestFixture.h"
 #include "Modules/Editor/TransformationControls/Systems/Drag/ResetTransformationControlsDragSystem.h"
@@ -530,5 +531,119 @@ TEST_CASE("Editor action store rejects missing order targets without partially a
         CHECK_FALSE(action.Redo());
         CHECK(target.Get().GetChildOrder() == 2);
         CHECK_FALSE(EntityOrderAction({}).Undo());
+    });
+}
+
+TEST_CASE("Editor action store restores reparented entity and both sibling groups", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (i32 mode = 0; mode < 3; mode++)
+        {
+            BehaviourFixture fixture;
+            const auto firstParent = fixture.Entity(10);
+            const auto secondParent = fixture.Entity(11);
+            auto& first = fixture.Registry->Get<Transform>(firstParent);
+            first.GetLocalPosition() = {10, 20, 30};
+            first.GetLocalScale() = {2, 2, 2};
+            first.SetRotation(math::Vector3(10, 20, 30));
+            auto& second = fixture.Registry->Get<Transform>(secondParent);
+            second.GetLocalPosition() = {-5, 7, 3};
+            second.GetLocalScale() = {3, 3, 3};
+            second.SetRotation(math::Vector3(30, 0, 45));
+            const auto oldParent = mode == 2 ? ecs::NULL_ENTITY : firstParent;
+            const auto newParent = mode == 1 ? ecs::NULL_ENTITY : secondParent;
+            ecs::ComponentRef<Transform> target(fixture.Registry, fixture.Entity(1));
+            target.Get().SetParent(oldParent);
+            target.Get().GetLocalPosition() = {1, 2, 3};
+            target.Get().GetLocalScale() = {1, 2, 3};
+            target.Get().SetRotation(math::Vector3(15, 25, 35));
+            for (i32 i = 0; i < 4; i++)
+            {
+                auto& sibling = fixture.Registry->Get<Transform>(fixture.Entity(i + 2));
+                sibling.SetParent(i < 2 ? oldParent : newParent);
+                sibling.SetChildOrder(i < 2 ? i + 1 : i - 2);
+            }
+            transform_utility::NormalizeSiblingOrders(oldParent);
+            transform_utility::NormalizeSiblingOrders(newParent);
+            const EntityReparentAction::State before(target.Get());
+            const auto beforeOrder = target.Get().GetChildOrder();
+            const auto worldPosition = target.Get().GetWorldPosition();
+            const auto worldScale = target.Get().GetWorldScale();
+            const auto worldRotation = target.Get().GetWorldRotation();
+            auto siblings = transform_utility::CollectSiblings(oldParent);
+            const auto destination = transform_utility::CollectSiblings(newParent);
+            siblings.insert(siblings.end(), destination.begin(), destination.end());
+            std::vector<EntityOrderAction::Change> orders;
+            for (const auto entity : siblings)
+            {
+                ecs::ComponentRef<Transform> sibling(fixture.Registry, entity);
+                orders.push_back({sibling, sibling.Get().GetChildOrder(), 0});
+            }
+
+            target.Get().SetParent(newParent, 1);
+            CHECK(target.Get().GetParent() == newParent);
+            CHECK(target.Get().GetChildOrder() == 1);
+            CheckVector(target.Get().GetWorldPosition(), worldPosition);
+            CheckVector(target.Get().GetWorldScale(), worldScale);
+            CheckRotation(target.Get().GetWorldRotation(), worldRotation);
+            const EntityReparentAction::State after(target.Get());
+            for (auto& change : orders) change.After = change.Target.Get().GetChildOrder();
+            for (const auto parent : {oldParent, newParent})
+            {
+                std::vector<i32> actual;
+                for (const auto sibling : transform_utility::CollectSiblings(parent)) actual.push_back(fixture.Registry->Get<Transform>(sibling).GetChildOrder());
+                std::ranges::sort(actual);
+                for (i32 i = 0; i < actual.size(); i++) CHECK(actual[i] == i);
+            }
+            EditorActionStore actions;
+            i32 records = 0;
+            actions.ActionRecorded.append([&](u64) { records++; });
+            const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(target, before, after, orders));
+            REQUIRE(actions.Undo(id));
+            CHECK(target.Get().GetParent() == oldParent);
+            CHECK(target.Get().GetChildOrder() == beforeOrder);
+            CheckVector(target.Get().GetLocalPosition(), before.Position);
+            CheckVector(target.Get().GetLocalScale(), before.Scale);
+            CheckRotation(target.Get().GetLocalRotation(), before.Rotation);
+            CheckVector(target.Get().GetWorldPosition(), worldPosition);
+            for (const auto& change : orders) CHECK(change.Target.Get().GetChildOrder() == change.Before);
+            REQUIRE(actions.Redo(id));
+            CHECK(target.Get().GetParent() == newParent);
+            CheckVector(target.Get().GetLocalPosition(), after.Position);
+            CheckVector(target.Get().GetLocalScale(), after.Scale);
+            CheckRotation(target.Get().GetLocalRotation(), after.Rotation);
+            CheckVector(target.Get().GetWorldPosition(), worldPosition);
+            for (const auto& change : orders) CHECK(change.Target.Get().GetChildOrder() == change.After);
+            CHECK(records == 1);
+        }
+    });
+}
+
+TEST_CASE("Editor action store rejects missing reparent targets before making changes", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto parent = fixture.Entity(1);
+        ecs::ComponentRef<Transform> target(fixture.Registry, fixture.Entity(2));
+        target.Get().SetParent(parent);
+        const EntityReparentAction::State before(target.Get());
+        target.Get().SetParent(ecs::NULL_ENTITY);
+        target.Get().GetLocalPosition() = {7, 8, 9};
+        const EntityReparentAction::State after(target.Get());
+        EntityReparentAction missingSibling(target, before, after, {{{}, 0, 1}});
+        CHECK_FALSE(missingSibling.Undo());
+        CHECK(target.Get().GetParent() == ecs::NULL_ENTITY);
+        CheckVector(target.Get().GetLocalPosition(), after.Position);
+        EntityReparentAction missingParent(target, before, after, {});
+        fixture.Registry->DestroyEntity(parent);
+        fixture.World->Refresh();
+        CHECK_FALSE(missingParent.Undo());
+        CHECK(target.Get().GetParent() == ecs::NULL_ENTITY);
+        CheckVector(target.Get().GetLocalPosition(), after.Position);
+        EntityReparentAction missingTarget({}, before, after, {});
+        CHECK_FALSE(missingTarget.Undo());
+        CHECK_FALSE(missingTarget.Redo());
     });
 }

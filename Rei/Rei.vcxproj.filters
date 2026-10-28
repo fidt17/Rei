@@ -5,6 +5,7 @@
     <ClCompile Include="src\Modules\Editor\Actions\EntityMoveAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityScaleAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityOrderAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntityReparentAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityRotateAction.cpp" />
     <ClCompile Include="tests\EditorActionTests.cpp" />
     <ClCompile Include="tests\SpotLightTests.cpp" />
@@ -115,6 +116,7 @@
     <ClInclude Include="src\Modules\Editor\Actions\EntityMoveAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityScaleAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityOrderAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntityReparentAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityRotateAction.h" />
     <ClInclude Include="src\Modules\Render\Lighting\LightGizmoGeometry.h" />
     <ClInclude Include="src\Modules\Render\Lighting\LightUtility.h" />

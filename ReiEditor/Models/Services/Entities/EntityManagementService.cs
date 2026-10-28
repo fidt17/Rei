@@ -130,7 +130,7 @@ public class EntityManagementService : IEntityManagementService
         }
     }
 
-    public void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordOrderChange = false)
+    public void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false)
     {
         if (e == parent) return;
         
@@ -139,7 +139,7 @@ public class EntityManagementService : IEntityManagementService
         try
         {
             var shouldPreserveRectTransform = _rectTransformLayoutService.TryPreserveRectForParent(e, parent, out var preservedLayout);
-            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordOrderChange && _engineRunner.IsEditorActive.Value);
+            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordHierarchyChange && _engineRunner.IsEditorActive.Value);
             if (shouldPreserveRectTransform && _rectTransformLayoutService.TryGetRectTransform(e, out var rectTransform))
             {
                 ApplyRectTransformLayout(e, rectTransform, preservedLayout);

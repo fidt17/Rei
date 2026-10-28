@@ -24,7 +24,7 @@ public sealed class EntityManagementAdvancedTests
         public Func<GetSceneEntitiesResponse?>? OnGetSceneEntities { get; set; }
         public Func<int, GetEntityDataResponse?>? OnGetEntityData { get; set; }
         public Action<int, int, int>? OnSetParent { get; set; }
-        public List<bool> RecordOrderChangeCalls { get; } = new();
+        public List<bool> RecordHierarchyChangeCalls { get; } = new();
         public Action<SetEntityDataRequest>? OnSetData { get; set; }
         public List<InstantiateEntityRequest> InstantiateRequests { get; } = new();
         public List<int> StateRequests { get; } = new();
@@ -52,10 +52,10 @@ public sealed class EntityManagementAdvancedTests
             return (OnInstantiate ?? throw UnexpectedCall())(request);
         }
 
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordOrderChange = false)
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false)
         {
             Calls.Add("set-parent");
-            RecordOrderChangeCalls.Add(recordOrderChange);
+            RecordHierarchyChangeCalls.Add(recordHierarchyChange);
             (OnSetParent ?? throw UnexpectedCall())(sceneEntityId, parentSceneEntityId, order);
         }
 
@@ -536,15 +536,15 @@ public sealed class EntityManagementAdvancedTests
     [InlineData(true, true, true)]
     [InlineData(true, false, false)]
     [InlineData(false, true, false)]
-    public void SetParentRecordsOrderOnlyWhenRequestedInEditorMode(bool requested, bool editorActive, bool expected)
+    public void SetParentRecordsHistoryOnlyWhenRequestedInEditorMode(bool requested, bool editorActive, bool expected)
     {
         var api = new TestEntityApi { OnSetParent = (_, _, _) => { } };
         var rect = new TestRectTransformLayoutService();
         var service = CreateService(new Scene("Scene"), true, api, rect: rect, editorActive: editorActive);
 
-        service.SetParent(new GameEntity(1, "Entity"), null, 2, recordOrderChange: requested);
+        service.SetParent(new GameEntity(1, "Entity"), null, 2, recordHierarchyChange: requested);
 
-        Assert.Equal(new[] { expected }, api.RecordOrderChangeCalls);
+        Assert.Equal(new[] { expected }, api.RecordHierarchyChangeCalls);
     }
 
     private static EntityManagementService CreateService(

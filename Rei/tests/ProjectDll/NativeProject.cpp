@@ -269,3 +269,34 @@ REI_EXTERN_API void NativeProjectReadActionTransform(const i32 index, f32* value
         values[9] = rotation.w;
     });
 }
+
+REI_EXTERN_API void NativeProjectReadEntityWorldTransform(const i32 sceneId, f32* values)
+{
+    ActionEngine->OnEngineThread([sceneId, values]
+    {
+        const auto entity = rei::GetEntityManager().GetBySceneId(sceneId);
+        const auto& transform = rei::GetInternalWorld()->GetRegistry()->Get<rei::Transform>(entity);
+        const auto position = transform.GetWorldPosition();
+        const auto scale = transform.GetWorldScale();
+        const auto rotation = transform.GetWorldRotation();
+        values[0] = position.x;
+        values[1] = position.y;
+        values[2] = position.z;
+        values[3] = scale.x;
+        values[4] = scale.y;
+        values[5] = scale.z;
+        values[6] = rotation.x;
+        values[7] = rotation.y;
+        values[8] = rotation.z;
+        values[9] = rotation.w;
+    });
+}
+
+REI_EXTERN_API void NativeProjectAddRectTransform(const i32 sceneId)
+{
+    ActionEngine->OnEngineThread([sceneId]
+    {
+        const auto entity = rei::GetEntityManager().GetBySceneId(sceneId);
+        rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::RectTransform>(entity);
+    });
+}

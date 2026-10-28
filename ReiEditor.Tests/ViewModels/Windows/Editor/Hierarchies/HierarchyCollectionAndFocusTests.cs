@@ -257,8 +257,8 @@ public sealed class HierarchyCollectionAndFocusTests
     [Theory]
     [InlineData(false, false, true)]
     [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    public void DragRecordsOnlySingleEntityWithinSameParent(bool changeParent, bool multiple, bool expectedRecord)
+    [InlineData(true, false, true)]
+    public void DragRecordsOnlySingleEntity(bool changeParent, bool multiple, bool expectedRecord)
     {
         var hierarchy = TestCreateHierarchy(out var first, out _, out var second);
         var management = new TestEntityManagementService { OnSetParent = (_, _, _) => { } };
@@ -267,7 +267,7 @@ public sealed class HierarchyCollectionAndFocusTests
         fixture.ViewModel.MoveEntities(multiple ? [1, 3] : [1], changeParent ? second.Content.Id : null, 2);
 
         Assert.Equal(multiple ? 2 : 1, management.ParentCalls.Count);
-        Assert.All(management.RecordOrderChangeCalls, record => Assert.Equal(expectedRecord, record));
+        Assert.All(management.RecordHierarchyChangeCalls, record => Assert.Equal(expectedRecord, record));
         Assert.Same(first.Content, management.ParentCalls[0].Entity);
         Assert.Equal(changeParent ? second.Content : null, management.ParentCalls[0].Parent);
         Assert.Equal(changeParent ? 2 : 1, management.ParentCalls[0].Order);

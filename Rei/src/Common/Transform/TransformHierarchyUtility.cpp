@@ -178,7 +178,7 @@ namespace rei::transform_utility
             return;
         }
 
-        NormalizeSiblingOrders(oldParent, entity);
+        NormalizeSiblingOrders(oldParent);
         NormalizeSiblingOrders(parent, entity);
         const i32 oldOrder = transform.GetChildOrder();
         i32 newOrder = std::max(0, order);
