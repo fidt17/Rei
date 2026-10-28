@@ -78,6 +78,7 @@ namespace rei::internal::engine
         {
             _world->AddSystem<editor::PointerEntitySelectionSystem>();
 
+            _editorActions->ActionRecorded.append([](const u64 id) { GetEditorEventsRelay().EditorActionRecordedEvent(id); });
             _world->AddModule(editor::TransformationControlsModule(_editorActions));
         }
 

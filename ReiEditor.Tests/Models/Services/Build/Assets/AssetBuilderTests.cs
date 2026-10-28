@@ -30,6 +30,7 @@ public sealed class AssetBuilderTests
     private sealed class TestEngineApi : IEngineApi
     {
         public event Action<int>? SceneLoadProgressChanged { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
+        public event Action<ulong>? ActionRecorded { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
         public Dictionary<string, byte[]> Outputs { get; } = new(StringComparer.Ordinal);
         public List<string> BuiltPaths { get; } = new();
         public Exception? ExceptionToThrow { get; set; }

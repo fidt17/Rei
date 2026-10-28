@@ -23,7 +23,7 @@
         <ClCompile>
             <LanguageStandard>stdcpp20</LanguageStandard><ConformanceMode>true</ConformanceMode><ExceptionHandling>Sync</ExceptionHandling>
             <PrecompiledHeader>NotUsing</PrecompiledHeader><RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-            <PreprocessorDefinitions>DEBUG;NATIVE_PROJECT_VERSION=$(NativeProjectVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+            <PreprocessorDefinitions>DEBUG;NOMINMAX;NATIVE_PROJECT_VERSION=$(NativeProjectVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>
             <ForcedIncludeFiles>pch.h;Rei.h</ForcedIncludeFiles>
             <AdditionalIncludeDirectories>$(ReiRoot)Rei\src;$(ReiRoot)Rei\external;$(ReiRoot)Rei\resources;$(ReiRoot)Rei\tests;$(ReiRoot)Rei\external\imgui;$(ReiRoot)bin\int\x64Tests\Rei\native-tests</AdditionalIncludeDirectories>
         </ClCompile>

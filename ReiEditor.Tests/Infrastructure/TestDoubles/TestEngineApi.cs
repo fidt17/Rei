@@ -10,6 +10,7 @@ namespace ReiEditor.Tests.Infrastructure.TestDoubles;
 internal abstract class TestEngineApi : IEngineApi
 {
     public event Action<int>? SceneLoadProgressChanged;
+    public event Action<ulong>? ActionRecorded { add { } remove { } }
     public void EmitSceneLoadProgress(int percent) => SceneLoadProgressChanged?.Invoke(percent);
     public virtual bool IsEngineRunning => throw new NotSupportedException();
     public virtual IntPtr CreateEngine(string resourcesDir, EngineRunMode mode) => throw new NotSupportedException();

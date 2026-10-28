@@ -83,6 +83,13 @@ REI_EXTERN_API inline i32 LoadEditorScene(const char* requestJson)
     return result.get();
 }
 
+typedef void (*EditorActionRecordedCallbackDelegate)(u64 actionId);
+REI_EXTERN_API inline void AddEditorActionRecordedCallback(const EditorActionRecordedCallbackDelegate callback)
+{
+    if (callback == nullptr) return;
+    rei::GetEditorEventsRelay().EditorActionRecordedEvent.append([callback](const u64 id) { callback(id); });
+}
+
 typedef void (*EditorInputCallbackDelegate)(const rei::api::EditorInputEvent& inputEvent);
 REI_EXTERN_API inline void AddEditorInputCallback(const EditorInputCallbackDelegate callback)
 {

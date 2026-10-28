@@ -17,6 +17,7 @@ public interface IEngineApi
     delegate void FrameCaptureCallbackDelegate(IntPtr pixels, int width, int height);
 	
     event Action<int>? SceneLoadProgressChanged;
+    event Action<ulong>? ActionRecorded;
 
     bool IsEngineRunning { get; }
     bool HasExport(string name) => false;
