@@ -201,9 +201,14 @@ REI_EXTERN_API void NativeProjectEmitActionRecorded(const u64 id)
     rei::GetEditorEventsRelay().EditorActionRecordedEvent(id);
 }
 
-REI_EXTERN_API void NativeProjectStartActionEngine()
+REI_EXTERN_API void NativeProjectStartActionEngine(void* (*createEngine)(const char*))
 {
     ActionEngine = std::make_unique<rei::tests::NativeEngineFixture>(rei::internal::engine::EditorMode, "action-replay", nullptr, true);
+    ActionEngine->EngineFactory = [createEngine]
+    {
+        const auto resources = ActionEngine->Resources.Files.File("").string();
+        return std::unique_ptr<rei::internal::engine::Engine>(static_cast<rei::internal::engine::Engine*>(createEngine(resources.c_str())));
+    };
     ActionEngine->Start();
 }
 

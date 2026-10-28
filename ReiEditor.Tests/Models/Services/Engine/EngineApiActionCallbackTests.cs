@@ -1,3 +1,5 @@
+using Avalonia.Headless;
+using Avalonia.Threading;
 using ReiEditor.Models.Services.Commands;
 using System.Runtime.InteropServices;
 using ReiEditor.Models.Services.Build.Assets;
@@ -13,12 +15,6 @@ namespace ReiEditor.Tests.Models.Services.Engine;
 [Trait("Area", "EngineActionCallbacks")]
 public sealed class EngineApiActionCallbackTests
 {
-    // The isolated session owns the DLL until this test finishes all calls.
-    private sealed class NativeAccess(IEngineApi api) : IEngineNativeAccess
-    {
-        public bool TryInvoke(Action<IEngineApi> action) { action(api); return true; }
-    }
-
     private sealed class NativeCallbackFactAttribute : FactAttribute
     {
         public NativeCallbackFactAttribute()
@@ -35,6 +31,10 @@ public sealed class EngineApiActionCallbackTests
     private delegate void EmitActionDelegate(ulong id);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate IntPtr CreateActionEngineDelegate(IntPtr resources);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void StartActionEngineDelegate(IntPtr createEngine);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate ulong RecordMoveDelegate();
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void ReadPositionDelegate([Out] float[] position);
@@ -42,7 +42,13 @@ public sealed class EngineApiActionCallbackTests
     private delegate int ReplayActionDelegate(ulong id);
 
     [NativeCallbackFact]
-    public async Task NativeApiReplaysMoveByIdWithoutRecordingAgain()
+    public Task NativeCallbackRecordsMoveInCommonHistoryAndReplaysWithoutRecordingAgain()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () => { await VerifyNativeCallbackHistoryAsync(); return true; }, CancellationToken.None);
+    }
+
+    private static async Task VerifyNativeCallbackHistoryAsync()
     {
         Assert.True(Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD") == "1",
             "Run Area=EngineActionCallbacks in a dedicated testhost with REI_NATIVE_TEST_CHILD=1; the native fixture changes process globals.");
@@ -51,22 +57,31 @@ public sealed class EngineApiActionCallbackTests
         var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
         using var session = factory.CreateIsolatedSession(path!);
         var api = session.EngineApi;
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
         var received = new List<ulong>();
-        EmitActionDelegate callback = received.Add;
+        api.ActionRecorded += received.Add;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
         try
         {
-            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStartActionEngine");
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
             api.MarkEngineStarted();
-            api.Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddEditorActionRecordedCallback", Marshal.GetFunctionPointerForDelegate(callback));
             var id = api.Invoke<ulong>(typeof(RecordMoveDelegate), "NativeProjectRecordMove");
             Assert.NotEqual(0UL, id);
             Assert.Equal(new[] { id }, received);
             AssertPosition(4, 5, 6);
-            var entry = new NativeEditorHistoryEntry(id, new NativeAccess(api));
-            await entry.UndoAsync();
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(commands.CanUndo);
+            await commands.UndoAsync();
             AssertPosition(1, 2, 3);
-            await entry.RedoAsync();
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(commands.CanUndo);
+            Assert.True(commands.CanRedo);
+            await commands.RedoAsync();
             AssertPosition(4, 5, 6);
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(commands.CanRedo);
             foreach (var missing in new[] { 0UL, ulong.MaxValue })
             {
                 Assert.False(api.UndoEditorAction(missing));
@@ -74,12 +89,13 @@ public sealed class EngineApiActionCallbackTests
             }
             AssertPosition(4, 5, 6);
             Assert.Equal(new[] { id }, received);
+            Assert.Empty(logger.Entries);
         }
         finally
         {
             api.MarkEngineStopped();
             api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
-            GC.KeepAlive(callback);
+            GC.KeepAlive(createEngine);
         }
         Assert.False(api.UndoEditorAction(1));
         Assert.False(api.RedoEditorAction(1));

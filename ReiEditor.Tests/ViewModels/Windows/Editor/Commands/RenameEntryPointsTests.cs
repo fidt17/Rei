@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Commands;
+using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -44,6 +45,9 @@ public sealed class RenameEntryPointsTests
         builder.RegisterInstance(scenes).As<ISceneManagementService>();
         builder.RegisterInstance(new TestEngineRunner()).As<IEngineRunner>();
         builder.RegisterGeneric(typeof(TestLogger<>)).As(typeof(ILogger<>));
+        var api = new EngineApi(new TestLogger<EngineApi>());
+        builder.RegisterInstance(api).As<IEngineApi>();
+        builder.RegisterInstance(new TestEngineNativeAccess(api)).As<IEngineNativeAccess>();
         using var container = builder.Build();
         var rename = container.Resolve<IEntityRenameCommand>();
         var commands = container.Resolve<IEditorCommandService>();

@@ -13,6 +13,7 @@ public sealed class EditorCommandsModule : Module
     protected override void Load(ContainerBuilder builder)
     {
         builder.RegisterSingleton<EditorCommandService>().As<IEditorCommandService>();
+        builder.RegisterSingleton<NativeEditorHistoryRecorder>().AsSelf().AutoActivate();
         builder.RegisterType<EntityRenameCommand>().As<IEntityRenameCommand>();
         builder.RegisterDecorator<EntityRenameCommandDecorator, IEntityRenameCommand>();
         builder.RegisterType<SelectedEntityDeleteCommand>().As<ISelectedEntityDeleteCommand>();
