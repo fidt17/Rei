@@ -9,7 +9,7 @@ namespace rei::ecs
     class Filter : public std::enable_shared_from_this<Filter>
     {
     public:
-        const std::vector<Entity>& Entities() const;
+        REI_API const std::vector<Entity>& Entities() const;
         void OnEntityChange(Entity e, const BitMask& entityMask, bool isAlive = true);
 
         void ResizeMask(u64 size);

@@ -34,6 +34,8 @@ public interface IEngineApi
     void SetSceneSyncCallback(SceneSyncCallbackDelegate? callback);
     void RequestSceneSync();
     bool LoadEditorScene(string requestJson);
+    bool UndoEditorAction(ulong actionId);
+    bool RedoEditorAction(ulong actionId);
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 

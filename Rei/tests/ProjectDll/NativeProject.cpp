@@ -2,6 +2,7 @@
 #include "support/BehaviourTestProbes.h"
 #include "support/NativeEngineFixture.h"
 #include "NativeProjectJournal.h"
+#include "Modules/Editor/Actions/EntityMoveAction.h"
 #include <mutex>
 #include <chrono>
 #include <thread>
@@ -25,6 +26,8 @@ namespace
     std::weak_ptr<rei::ecs::World> ProjectWorld;
     std::unique_ptr<rei::tests::TemporaryDirectory> ActionResources;
     std::string ActionResourcesPath;
+    std::unique_ptr<rei::tests::NativeEngineFixture> ActionEngine;
+    rei::ecs::ComponentRef<rei::Transform> ActionTarget;
 
     struct NativeWorkerException final : std::runtime_error
     {
@@ -196,4 +199,41 @@ REI_EXTERN_API void NativeProjectReleaseActionResources()
 REI_EXTERN_API void NativeProjectEmitActionRecorded(const u64 id)
 {
     rei::GetEditorEventsRelay().EditorActionRecordedEvent(id);
+}
+
+REI_EXTERN_API void NativeProjectStartActionEngine()
+{
+    ActionEngine = std::make_unique<rei::tests::NativeEngineFixture>(rei::internal::engine::EditorMode, "action-replay", nullptr, true);
+    ActionEngine->Start();
+}
+
+REI_EXTERN_API void NativeProjectStopActionEngine()
+{
+    ActionTarget = {};
+    ActionEngine.reset();
+}
+
+REI_EXTERN_API u64 NativeProjectRecordMove()
+{
+    u64 id = 0;
+    ActionEngine->OnEngineThread([&]
+    {
+        const auto entity = rei::GetEntityManager().CreateNewEntity("Action replay probe");
+        ActionTarget = {rei::GetInternalWorld()->GetRegistry(), entity};
+        ActionTarget.Get().GetLocalPosition() = {4, 5, 6};
+        id = rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(
+            ActionTarget, rei::math::Vector3(1, 2, 3), rei::math::Vector3(4, 5, 6)));
+    });
+    return id;
+}
+
+REI_EXTERN_API void NativeProjectReadActionPosition(f32* position)
+{
+    ActionEngine->OnEngineThread([position]
+    {
+        const auto value = ActionTarget.Get().GetLocalPosition();
+        position[0] = value.x;
+        position[1] = value.y;
+        position[2] = value.z;
+    });
 }

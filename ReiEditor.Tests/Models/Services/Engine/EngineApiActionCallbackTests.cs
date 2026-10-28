@@ -27,6 +27,63 @@ public sealed class EngineApiActionCallbackTests
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void EmitActionDelegate(ulong id);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate ulong RecordMoveDelegate();
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void ReadPositionDelegate([Out] float[] position);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ReplayActionDelegate(ulong id);
+
+    [NativeCallbackFact]
+    public void NativeApiReplaysMoveByIdWithoutRecordingAgain()
+    {
+        Assert.True(Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD") == "1",
+            "Run Area=EngineActionCallbacks in a dedicated testhost with REI_NATIVE_TEST_CHILD=1; the native fixture changes process globals.");
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build Rei/tests/ProjectDll/NativeProject.vcxproj and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var received = new List<ulong>();
+        EmitActionDelegate callback = received.Add;
+        try
+        {
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStartActionEngine");
+            api.MarkEngineStarted();
+            api.Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddEditorActionRecordedCallback", Marshal.GetFunctionPointerForDelegate(callback));
+            var id = api.Invoke<ulong>(typeof(RecordMoveDelegate), "NativeProjectRecordMove");
+            Assert.NotEqual(0UL, id);
+            Assert.Equal(new[] { id }, received);
+            AssertPosition(4, 5, 6);
+            Assert.True(api.UndoEditorAction(id));
+            AssertPosition(1, 2, 3);
+            Assert.True(api.RedoEditorAction(id));
+            AssertPosition(4, 5, 6);
+            foreach (var missing in new[] { 0UL, ulong.MaxValue })
+            {
+                Assert.False(api.UndoEditorAction(missing));
+                Assert.False(api.RedoEditorAction(missing));
+            }
+            AssertPosition(4, 5, 6);
+            Assert.Equal(new[] { id }, received);
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(callback);
+        }
+        Assert.False(api.UndoEditorAction(1));
+        Assert.False(api.RedoEditorAction(1));
+
+        void AssertPosition(float x, float y, float z)
+        {
+            var position = new float[3];
+            api.Invoke(typeof(ReadPositionDelegate), "NativeProjectReadActionPosition", (object)position);
+            Assert.Equal(new[] { x, y, z }, position);
+        }
+    }
+
     [NativeCallbackFact]
     public void NativeProjectCallbackPreservesUInt64SurvivesGcAndReconnectsWithoutDuplicates()
     {
@@ -51,6 +108,8 @@ public sealed class EngineApiActionCallbackTests
                 var engine = api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
                 try
                 {
+                    Assert.Equal(0, api.Invoke<int>(typeof(ReplayActionDelegate), "UndoEditorAction", 1UL));
+                    Assert.Equal(0, api.Invoke<int>(typeof(ReplayActionDelegate), "RedoEditorAction", 1UL));
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
                     GC.Collect();

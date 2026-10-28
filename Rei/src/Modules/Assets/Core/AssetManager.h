@@ -26,7 +26,7 @@ namespace rei::assets
     {
     public:
 
-        explicit AssetManager();
+        REI_API explicit AssetManager();
         REI_API ~AssetManager();
 
         template <typename T>

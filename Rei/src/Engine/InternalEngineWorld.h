@@ -13,6 +13,7 @@ namespace rei::internal::engine
         void Run() const;
 
         std::shared_ptr<ecs::World> GetWorld();
+        editor::EditorActionStore& GetEditorActions() const { return *_editorActions; }
 
     private:
         std::shared_ptr<ecs::World> _world = std::make_shared<ecs::World>();

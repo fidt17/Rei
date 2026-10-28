@@ -12,9 +12,9 @@ namespace rei::editor
         REI_EVENT(u64) ActionRecorded;
 
         // Stores an already applied edit. Zero means no action was supplied.
-        u64 RecordApplied(std::unique_ptr<IEditorAction> action);
-        bool Undo(u64 actionId);
-        bool Redo(u64 actionId);
+        REI_API u64 RecordApplied(std::unique_ptr<IEditorAction> action);
+        REI_API bool Undo(u64 actionId);
+        REI_API bool Redo(u64 actionId);
 
     private:
         u64 _nextId = 1;

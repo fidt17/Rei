@@ -178,7 +178,7 @@ namespace rei
     class EntityManager
     {
     public:
-        explicit EntityManager(const std::shared_ptr<ecs::World>& world);
+        REI_API explicit EntityManager(const std::shared_ptr<ecs::World>& world);
 
         REI_API ecs::Entity GetBySceneId(i32 id) const;
 

@@ -115,6 +115,11 @@ public class EngineApi : IEngineApi
     private delegate int LoadEditorSceneDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string requestJson);
     public bool LoadEditorScene(string requestJson) => IsEngineRunning && Invoke<int>(typeof(LoadEditorSceneDelegate), "LoadEditorScene", requestJson) == 1;
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ReplayEditorActionDelegate(ulong actionId);
+    public bool UndoEditorAction(ulong actionId) => IsEngineRunning && Invoke<int>(typeof(ReplayEditorActionDelegate), "UndoEditorAction", actionId) == 1;
+    public bool RedoEditorAction(ulong actionId) => IsEngineRunning && Invoke<int>(typeof(ReplayEditorActionDelegate), "RedoEditorAction", actionId) == 1;
+
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 

@@ -9,9 +9,9 @@ namespace rei::editor
     class EntityMoveAction : public IEditorAction
     {
     public:
-        EntityMoveAction(ecs::ComponentRef<Transform> transform, math::Vector3 before, math::Vector3 after);
-        bool Undo() override;
-        bool Redo() override;
+        REI_API EntityMoveAction(ecs::ComponentRef<Transform> transform, math::Vector3 before, math::Vector3 after);
+        REI_API bool Undo() override;
+        REI_API bool Redo() override;
 
     private:
         ecs::ComponentRef<Transform> _transform;

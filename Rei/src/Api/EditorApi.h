@@ -83,6 +83,37 @@ REI_EXTERN_API inline i32 LoadEditorScene(const char* requestJson)
     return result.get();
 }
 
+namespace rei::api
+{
+    // Called from outside the engine thread, like LoadEditorScene.
+    inline i32 ReplayEditorAction(const u64 actionId, const bool undo)
+    {
+        auto& engine = GetEngine();
+        if (!engine.IsRunning() || !engine.IsEditorMode()) return 0;
+        auto completion = std::make_shared<std::promise<i32>>();
+        auto result = completion->get_future();
+        engine.ExecuteOnMainThread([actionId, undo, completion]
+        {
+            i32 applied = 0;
+            try
+            {
+                auto& actions = GetEngine().GetEditorActions();
+                applied = (undo ? actions.Undo(actionId) : actions.Redo(actionId)) ? 1 : 0;
+            }
+            catch (...) { LOG_ERROR("Failed to replay Editor action {}", actionId) }
+            completion->set_value(applied);
+        });
+        while (result.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
+        {
+            if (!engine.IsRunning()) return 0;
+        }
+        return result.get();
+    }
+}
+
+REI_EXTERN_API inline i32 UndoEditorAction(const u64 actionId) { return rei::api::ReplayEditorAction(actionId, true); }
+REI_EXTERN_API inline i32 RedoEditorAction(const u64 actionId) { return rei::api::ReplayEditorAction(actionId, false); }
+
 typedef void (*EditorActionRecordedCallbackDelegate)(u64 actionId);
 REI_EXTERN_API inline void AddEditorActionRecordedCallback(const EditorActionRecordedCallbackDelegate callback)
 {

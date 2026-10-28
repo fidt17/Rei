@@ -41,6 +41,7 @@ namespace rei::internal::engine
         REI_API bool IsRunning() const;
 
         REI_API i32 GetExitCode() const;
+        REI_API editor::EditorActionStore& GetEditorActions() const;
 
         REI_API std::shared_ptr<window::Window> CreateMainWindow(const WindowCreationSettings& settings);
         REI_API std::shared_ptr<Task> ExecuteOnMainThread(std::function<void()>) const;
