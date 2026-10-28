@@ -428,3 +428,61 @@ TEST_CASE("Failed system registration unwinds caller scope", "[ecs]")
     const auto entity = world.GetRegistry()->NewEntity();
     REQUIRE(world.GetRegistry()->IsAlive(entity));
 }
+
+namespace
+{
+    struct ConfiguredTestModule : IEcsModule
+    {
+        std::shared_ptr<i32> Counter;
+        i32 Step;
+        i32 AddCalls = 0;
+
+        ConfiguredTestModule(std::shared_ptr<i32> counter, const i32 step) : Counter(counter), Step(step) {}
+
+        void AddSystems(std::shared_ptr<World> world) override
+        {
+            ++AddCalls;
+            world->AddSystem([counter = Counter, step = Step] { *counter += step; });
+        }
+    };
+
+    struct DefaultTestModule : IEcsModule
+    {
+        void AddSystems(std::shared_ptr<World> world) override
+        {
+            world->AddSystem([registry = world->GetRegistry()]
+            {
+                const auto entity = registry->NewEntity();
+                registry->Get<C1>(entity).Value = 42;
+            });
+        }
+    };
+}
+
+TEST_CASE("ECS AddModule accepts configured instances and preserves default construction", "[native][ecs][modules]")
+{
+    auto first = std::make_shared<World>();
+    auto second = std::make_shared<World>();
+    auto counter = std::make_shared<i32>(0);
+    first->AddModule(ConfiguredTestModule(counter, 7));
+    second->Run();
+    CHECK(*counter == 0);
+    first->Run();
+    CHECK(*counter == 7);
+
+    ConfiguredTestModule module(counter, 3);
+    second->AddModule(module);
+    CHECK(module.AddCalls == 1); // AddSystems ran on the supplied instance, without copying it.
+    second->Run();
+    CHECK(*counter == 10);
+    first->Run();
+    CHECK(*counter == 17);
+
+    auto defaults = std::make_shared<World>();
+    defaults->AddModule<DefaultTestModule>();
+    CHECK(defaults->GetRegistry()->GetAllEntities().empty());
+    defaults->Run();
+    const auto entities = defaults->GetRegistry()->GetAllEntities();
+    REQUIRE(entities.size() == 1);
+    CHECK(defaults->GetRegistry()->Get<C1>(entities.front()).Value == 42);
+}

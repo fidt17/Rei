@@ -644,6 +644,9 @@
     <ClInclude Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.h" />
     <ClInclude Include="src\Modules\Components\ActiveTag.h" />
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\IEditorAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EditorActionStore.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntityMoveAction.h" />
     <ClInclude Include="src\Modules\Editor\EditorPointerInteractionState.h" />
     <ClInclude Include="src\Modules\Editor\Components\EditorSelectionCollider.h" />
     <ClInclude Include="src\Modules\Editor\RendererSelectionColliderUtility.h" />
@@ -847,6 +850,8 @@
     <ClCompile Include="src\Modules\Behaviour\Behaviour.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\StartBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EditorActionStore.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntityMoveAction.cpp" />
     <ClCompile Include="src\Modules\Editor\EditorPointerInteractionState.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.cpp" />
@@ -1028,6 +1033,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\LoggingBoundaryTests.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="tests\EditorActionTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)'!='Tests'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="tests\EditorPickingTests.cpp">

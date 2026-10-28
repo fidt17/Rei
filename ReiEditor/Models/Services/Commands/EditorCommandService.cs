@@ -27,15 +27,22 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
             {
                 if (_disposed) return result;
                 var entry = (command as IUndoableEditorCommand<TArgs, TResult>)?.CreateHistoryEntry(args, result);
-                if (entry != null)
-                {
-                    _undo.Push(entry);
-                    _redo.Clear();
-                }
+                if (entry != null) AddHistoryEntry(entry);
             }
             return result;
         }
         finally { EndOperation(); }
+    }
+
+    public void RecordApplied(IEditorHistoryEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_isBusy) throw new InvalidOperationException("An Editor command operation is already running.");
+            AddHistoryEntry(entry);
+        }
     }
 
     public Task UndoAsync() => TraverseAsync(_undo, _redo, undo: true);
@@ -69,6 +76,12 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
             }
         }
         finally { EndOperation(); }
+    }
+
+    private void AddHistoryEntry(IEditorHistoryEntry entry)
+    {
+        _undo.Push(entry);
+        _redo.Clear();
     }
 
     private void BeginOperation()

@@ -78,6 +78,7 @@ namespace rei::tests
         BehaviourFixture Resources;
         std::shared_ptr<EngineProbeApp> App = std::make_shared<EngineProbeApp>();
         std::unique_ptr<internal::engine::Engine> Engine;
+        std::function<std::unique_ptr<internal::engine::Engine>()> EngineFactory;
         std::function<void()> BeforeStartAction;
         std::string LastSceneId;
 
@@ -101,7 +102,7 @@ namespace rei::tests
             {
                 try
                 {
-                    auto engine = std::make_unique<internal::engine::Engine>(App, _mode, _isEditor);
+                    auto engine = EngineFactory ? EngineFactory() : std::make_unique<internal::engine::Engine>(App, _mode, _isEditor);
                     {
                         std::scoped_lock lock(_mutex);
                         Engine = std::move(engine);

@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "support/BehaviourTestProbes.h"
+#include "support/NativeEngineFixture.h"
 #include "NativeProjectJournal.h"
+#include "Modules/Editor/Actions/EntityMoveAction.h"
 #include <mutex>
 #include <chrono>
 #include <thread>
@@ -22,6 +24,10 @@ namespace
     JournalSink ConfiguredSink;
     i32 FailureMode = 0;
     std::weak_ptr<rei::ecs::World> ProjectWorld;
+    std::unique_ptr<rei::tests::TemporaryDirectory> ActionResources;
+    std::string ActionResourcesPath;
+    std::unique_ptr<rei::tests::NativeEngineFixture> ActionEngine;
+    rei::ecs::ComponentRef<rei::Transform> ActionTarget;
 
     struct NativeWorkerException final : std::runtime_error
     {
@@ -173,4 +179,66 @@ REI_EXTERN_API i32 NativeProjectLoadSaved()
         if (asset.IsLoaded()) result = asset.Get()->Number;
     })->WaitForCompletion();
     return result;
+}
+
+// Reuse the native engine fixture's owned resource pack for managed ABI tests.
+REI_EXTERN_API const char* NativeProjectPrepareActionResources()
+{
+    ActionResources = std::make_unique<rei::tests::TemporaryDirectory>();
+    rei::tests::PrepareEngineResources(*ActionResources);
+    ActionResourcesPath = ActionResources->File("").string();
+    return ActionResourcesPath.c_str();
+}
+
+REI_EXTERN_API void NativeProjectReleaseActionResources()
+{
+    ActionResources.reset();
+    ActionResourcesPath.clear();
+}
+
+REI_EXTERN_API void NativeProjectEmitActionRecorded(const u64 id)
+{
+    rei::GetEditorEventsRelay().EditorActionRecordedEvent(id);
+}
+
+REI_EXTERN_API void NativeProjectStartActionEngine(void* (*createEngine)(const char*))
+{
+    ActionEngine = std::make_unique<rei::tests::NativeEngineFixture>(rei::internal::engine::EditorMode, "action-replay", nullptr, true);
+    ActionEngine->EngineFactory = [createEngine]
+    {
+        const auto resources = ActionEngine->Resources.Files.File("").string();
+        return std::unique_ptr<rei::internal::engine::Engine>(static_cast<rei::internal::engine::Engine*>(createEngine(resources.c_str())));
+    };
+    ActionEngine->Start();
+}
+
+REI_EXTERN_API void NativeProjectStopActionEngine()
+{
+    ActionTarget = {};
+    ActionEngine.reset();
+}
+
+REI_EXTERN_API u64 NativeProjectRecordMove()
+{
+    u64 id = 0;
+    ActionEngine->OnEngineThread([&]
+    {
+        const auto entity = rei::GetEntityManager().CreateNewEntity("Action replay probe");
+        ActionTarget = {rei::GetInternalWorld()->GetRegistry(), entity};
+        ActionTarget.Get().GetLocalPosition() = {4, 5, 6};
+        id = rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(
+            ActionTarget, rei::math::Vector3(1, 2, 3), rei::math::Vector3(4, 5, 6)));
+    });
+    return id;
+}
+
+REI_EXTERN_API void NativeProjectReadActionPosition(f32* position)
+{
+    ActionEngine->OnEngineThread([position]
+    {
+        const auto value = ActionTarget.Get().GetLocalPosition();
+        position[0] = value.x;
+        position[1] = value.y;
+        position[2] = value.z;
+    });
 }

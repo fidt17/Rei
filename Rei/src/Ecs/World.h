@@ -31,7 +31,12 @@ namespace rei::ecs
         template<typename T>
         REI_API void AddModule()
         {
-            T module = T();
+            AddModule(T());
+        }
+
+        template<typename T>
+        REI_API void AddModule(T&& module)
+        {
             module.AddSystems(shared_from_this());
         }
 

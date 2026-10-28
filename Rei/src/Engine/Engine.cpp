@@ -199,6 +199,11 @@ namespace rei::internal::engine
         return _exitCode;
     }
 
+    editor::EditorActionStore& Engine::GetEditorActions() const
+    {
+        return _internalWorld->GetEditorActions();
+    }
+
     bool Engine::RequestFrameCapture(const render::FrameCaptureCallback& callback) const
     {
         return _mainRenderer->RequestFrameCapture(callback);

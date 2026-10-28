@@ -30,6 +30,7 @@ public sealed class AssetBuilderTests
     private sealed class TestEngineApi : IEngineApi
     {
         public event Action<int>? SceneLoadProgressChanged { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
+        public event Action<ulong>? ActionRecorded { add => throw new NotSupportedException(); remove => throw new NotSupportedException(); }
         public Dictionary<string, byte[]> Outputs { get; } = new(StringComparer.Ordinal);
         public List<string> BuiltPaths { get; } = new();
         public Exception? ExceptionToThrow { get; set; }
@@ -57,6 +58,8 @@ public sealed class AssetBuilderTests
         public void SetSceneSyncCallback(IEngineApi.SceneSyncCallbackDelegate? callback) => throw new NotSupportedException();
         public void RequestSceneSync() => throw new NotSupportedException();
         public bool LoadEditorScene(string requestJson) => throw new NotSupportedException();
+        public bool UndoEditorAction(ulong actionId) => throw new NotSupportedException();
+        public bool RedoEditorAction(ulong actionId) => throw new NotSupportedException();
         public Task<IntPtr> CreateEngineWindow() => throw new NotSupportedException();
         public IntPtr GetWindowHandle(IntPtr windowPtr) => throw new NotSupportedException();
         public void ResizeWindow(IntPtr windowPtr, int width, int height) => throw new NotSupportedException();

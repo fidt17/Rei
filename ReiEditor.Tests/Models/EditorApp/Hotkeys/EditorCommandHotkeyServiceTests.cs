@@ -50,6 +50,7 @@ public sealed class EditorCommandHotkeyServiceTests
         public int RedoCalls { get; private set; }
         public Task UndoResult { get; set; } = Task.CompletedTask;
         public Task<TResult> ExecuteAsync<TArgs, TResult>(IEditorCommand<TArgs, TResult> command, TArgs args) => throw new NotSupportedException();
+        public void RecordApplied(IEditorHistoryEntry entry) => throw new NotSupportedException();
         public Task UndoAsync() { UndoCalls++; return UndoResult; }
         public Task RedoAsync() { RedoCalls++; return Task.CompletedTask; }
     }

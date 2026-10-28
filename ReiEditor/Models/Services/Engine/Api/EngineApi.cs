@@ -13,11 +13,16 @@ namespace ReiEditor.Models.Services.Engine.Api;
 public class EngineApi : IEngineApi
 {
     private delegate IntPtr ActionDelegate();
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void ActionRecordedCallbackDelegate(ulong actionId);
     
     public event Action<int>? SceneLoadProgressChanged;
+    // Raised on the native engine thread, like the native callback itself.
+    public event Action<ulong>? ActionRecorded;
     public bool IsEngineRunning { get; private set; }
 
     private readonly IEngineApi.IntCallbackDelegate _sceneLoadProgressCallback;
+    private readonly ActionRecordedCallbackDelegate _actionRecordedCallback;
     
     private IntPtr? _dllPtr;
 
@@ -30,6 +35,11 @@ public class EngineApi : IEngineApi
         _sceneLoadProgressCallback = percent =>
         {
             try { SceneLoadProgressChanged?.Invoke(percent); }
+            catch (Exception error) { _logger.LogException(error); }
+        };
+        _actionRecordedCallback = id =>
+        {
+            try { ActionRecorded?.Invoke(id); }
             catch (Exception error) { _logger.LogException(error); }
         };
         _logInvokingMethods = false;
@@ -49,6 +59,7 @@ public class EngineApi : IEngineApi
         var ptr = Invoke<IntPtr>(typeof(CreateEngineDelegate), "CreateEngine", resourcesDir, mode);
         if (ptr == IntPtr.Zero) throw new Exception("Could not create engine");
         Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddSceneLoadProgressCallback", Marshal.GetFunctionPointerForDelegate(_sceneLoadProgressCallback));
+        Invoke(typeof(IEngineApi.FunctionPointerDelegate), "AddEditorActionRecordedCallback", Marshal.GetFunctionPointerForDelegate(_actionRecordedCallback));
         
         return ptr;
     }
@@ -103,6 +114,11 @@ public class EngineApi : IEngineApi
 
     private delegate int LoadEditorSceneDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string requestJson);
     public bool LoadEditorScene(string requestJson) => IsEngineRunning && Invoke<int>(typeof(LoadEditorSceneDelegate), "LoadEditorScene", requestJson) == 1;
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ReplayEditorActionDelegate(ulong actionId);
+    public bool UndoEditorAction(ulong actionId) => IsEngineRunning && Invoke<int>(typeof(ReplayEditorActionDelegate), "UndoEditorAction", actionId) == 1;
+    public bool RedoEditorAction(ulong actionId) => IsEngineRunning && Invoke<int>(typeof(ReplayEditorActionDelegate), "RedoEditorAction", actionId) == 1;
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);

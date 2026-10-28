@@ -284,8 +284,10 @@ TEST_CASE("Editor picking real engine gizmo captured drag changes target without
         ecs::Entity target = ecs::NULL_ENTITY;
         auto query = std::make_shared<CountingPointerCollider>();
         i32 arrowX = 0;
+        std::vector<u64> recordedActions;
         engine.OnEngineThread([&]
         {
+            GetEditorEventsRelay().EditorActionRecordedEvent.append([&](const u64 id) { recordedActions.push_back(id); });
             CreateCamera();
             target = CreatePickableMesh();
             auto registry = GetInternalWorld()->GetRegistry();
@@ -327,6 +329,7 @@ TEST_CASE("Editor picking real engine gizmo captured drag changes target without
         engine.OnEngineThread([&]
         {
             const auto position = GetInternalWorld()->GetRegistry()->Get<Transform>(target).GetWorldPosition();
+            CHECK(recordedActions.empty());
             CHECK(position.x > 0.01f);
             CHECK(position.y == Catch::Approx(0).margin(0.001f));
             CHECK(position.z == Catch::Approx(5).margin(0.001f));
@@ -337,6 +340,8 @@ TEST_CASE("Editor picking real engine gizmo captured drag changes target without
         {
             auto registry = GetInternalWorld()->GetRegistry();
             const auto entity = GetInternalWorld()->GetFiltersRegistry()->Get<editor::TransformationControl>()->First();
+            REQUIRE(recordedActions.size() == 1);
+            CHECK(recordedActions.front() == 1);
             CHECK_FALSE(registry->Get<editor::TransformationControl>(entity).RightMovementArrow.DragActive);
             CHECK(registry->Has<editor::SelectedTag>(target));
             CHECK(query->Calls == 0);

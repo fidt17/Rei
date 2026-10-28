@@ -19,7 +19,7 @@ namespace rei::editor
         world->AddSystem<CreateTransformationControlsSystem>();
         world->AddSystem<UpdateTransformationControlsTargetsSystem>();
         world->AddSystem<TransformationControlActivationSystem>();
-        world->AddSystem<ResetTransformationControlsDragSystem>();
+        world->AddSystem<ResetTransformationControlsDragSystem>(_actions);
         world->AddSystem<HandleTransformationControlsMovementDragSystem>();
         world->AddSystem<HandleTransformationControlsScaleDragSystem>();
         world->AddSystem<HandleTransformationControlsRotationDragSystem>();
