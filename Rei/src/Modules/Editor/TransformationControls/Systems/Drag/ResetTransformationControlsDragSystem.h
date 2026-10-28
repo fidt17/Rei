@@ -17,7 +17,7 @@ namespace rei::editor
         std::shared_ptr<ecs::Filter> _controlFilter;
         std::shared_ptr<EditorActionStore> _actions;
 
-        void RecordMove(const TransformationControl& control) const;
+        void RecordTransformChange(const TransformationControl& control) const;
         void ResetDragState(TransformationControl& control) const;
     };
 }

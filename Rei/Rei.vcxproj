@@ -647,6 +647,8 @@
     <ClInclude Include="src\Modules\Editor\Actions\IEditorAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EditorActionStore.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityMoveAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntityScaleAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntityRotateAction.h" />
     <ClInclude Include="src\Modules\Editor\EditorPointerInteractionState.h" />
     <ClInclude Include="src\Modules\Editor\Components\EditorSelectionCollider.h" />
     <ClInclude Include="src\Modules\Editor\RendererSelectionColliderUtility.h" />
@@ -852,6 +854,8 @@
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EditorActionStore.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityMoveAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntityScaleAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntityRotateAction.cpp" />
     <ClCompile Include="src\Modules\Editor\EditorPointerInteractionState.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\FlyCameraSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\PointerEntitySelectionSystem.cpp" />
