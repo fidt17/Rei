@@ -4,17 +4,20 @@
 
 namespace rei::editor
 {
+    class EditorActionStore;
+
     class ResetTransformationControlsDragSystem : public ecs::System
     {
     public:
-        explicit ResetTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld);
+        ResetTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld, const std::shared_ptr<EditorActionStore>& actions);
 
         void OnUpdate() override;
 
     private:
-        void ResetDragState(TransformationControl& control) const;
-
-    private:
         std::shared_ptr<ecs::Filter> _controlFilter;
+        std::shared_ptr<EditorActionStore> _actions;
+
+        void RecordMove(const TransformationControl& control) const;
+        void ResetDragState(TransformationControl& control) const;
     };
 }

@@ -2,6 +2,7 @@
 #include "Common/Tasks/TaskExecutor.h"
 #include "Modules/Render/Renderer.h"
 #include "Startup/App.h"
+#include "Modules/Editor/Actions/EditorActionStore.h"
 
 namespace rei::internal::engine
 {
@@ -15,5 +16,6 @@ namespace rei::internal::engine
 
     private:
         std::shared_ptr<ecs::World> _world = std::make_shared<ecs::World>();
+        std::shared_ptr<editor::EditorActionStore> _editorActions = std::make_shared<editor::EditorActionStore>();
     };
 }

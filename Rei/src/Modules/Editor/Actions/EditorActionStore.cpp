@@ -9,6 +9,7 @@ namespace rei::editor
         if (!action) return 0;
         const auto id = _nextId++;
         _actions.emplace(id, std::move(action));
+        ActionRecorded(id);
         return id;
     }
 

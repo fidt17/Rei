@@ -2,10 +2,14 @@
 #include "ResetTransformationControlsDragSystem.h"
 
 #include "Modules/Input/Input.h"
+#include "Modules/Editor/Actions/EditorActionStore.h"
+#include "Modules/Editor/Actions/EntityMoveAction.h"
+#include "rei_behaviours/ui/RectTransform.h"
 
 namespace rei::editor
 {
-    ResetTransformationControlsDragSystem::ResetTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld) : System(ecsWorld)
+    ResetTransformationControlsDragSystem::ResetTransformationControlsDragSystem(const std::shared_ptr<ecs::World>& ecsWorld, const std::shared_ptr<EditorActionStore>& actions) :
+        System(ecsWorld), _actions(actions)
     {
         _controlFilter = FILTER(TransformationControl);
     }
@@ -17,7 +21,25 @@ namespace rei::editor
         const auto controlEntity = _controlFilter->First();
         if (IS_DEAD(controlEntity)) return;
 
-        ResetDragState(GET(controlEntity, TransformationControl));
+        auto& control = GET(controlEntity, TransformationControl);
+        RecordMove(control);
+        ResetDragState(control);
+    }
+
+    void ResetTransformationControlsDragSystem::RecordMove(const TransformationControl& control) const
+    {
+        if (control.Mode != Movement || control.DragStartTargetStates.size() != 1) return;
+        const bool dragging = control.RightMovementArrow.DragActive || control.UpMovementArrow.DragActive || control.ForwardMovementArrow.DragActive
+            || control.RightUpMovementPlane.DragActive || control.RightForwardMovementPlane.DragActive || control.UpForwardMovementPlane.DragActive;
+        if (!dragging) return;
+
+        const auto& start = control.DragStartTargetStates.front();
+        if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform) || HAS(start.Entity, ui::RectTransform)) return;
+        const ecs::ComponentRef<Transform> transform(_ecs, start.Entity);
+        const auto before = start.LocalPosition;
+        const auto after = transform.Get().GetLocalPosition();
+        if (before.x == after.x && before.y == after.y && before.z == after.z) return;
+        _actions->RecordApplied(std::make_unique<EntityMoveAction>(transform, before, after));
     }
 
     void ResetTransformationControlsDragSystem::ResetDragState(TransformationControl& control) const

@@ -9,6 +9,8 @@ namespace rei::editor
     class EditorActionStore
     {
     public:
+        REI_EVENT(u64) ActionRecorded;
+
         // Stores an already applied edit. Zero means no action was supplied.
         u64 RecordApplied(std::unique_ptr<IEditorAction> action);
         bool Undo(u64 actionId);

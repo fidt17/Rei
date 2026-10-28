@@ -78,7 +78,7 @@ namespace rei::internal::engine
         {
             _world->AddSystem<editor::PointerEntitySelectionSystem>();
 
-            _world->AddModule<editor::TransformationControlsModule>();
+            _world->AddModule(editor::TransformationControlsModule(_editorActions));
         }
 
         _world->AddSystem([updateStopwatch, updateScope]
