@@ -14,7 +14,7 @@ using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Vector
 
 namespace ReiEditor.Tests.Infrastructure.Fixtures;
 
-internal sealed class InspectorPositionFixture : IDisposable
+internal sealed class InspectorTransformFixture : IDisposable
 {
     private sealed class Registry(BehaviourAssetInfo transform) : IBehaviourRegistry
     {
@@ -39,12 +39,12 @@ internal sealed class InspectorPositionFixture : IDisposable
     public TestLogger<EntitySyncService> Logger { get; } = new();
     private readonly EntitySyncService _sync;
 
-    public InspectorPositionFixture(IEntityApi api, int entityId = 20)
+    public InspectorTransformFixture(IEntityApi api, int entityId = 20)
     {
         Runner.Active.Value = true;
         Runner.EditorActive.Value = true;
         Runner.ActiveMode = EngineRunMode.EditorMode;
-        Entity = new GameEntity(entityId, "Position");
+        Entity = new GameEntity(entityId, "Transform");
         var vectorData = Data(SerializedTypeEnum.Custom, "Vector3");
         var transformInfo = new BehaviourAssetInfo("rei", "Transform", TRANSFORM_ID, new ObjectFile<string>("", ""), new()
         {

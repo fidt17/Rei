@@ -6,6 +6,8 @@
 #include "Modules/Editor/EntitySelectionUtility.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
+#include "Modules/Editor/Actions/EntityScaleAction.h"
+#include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "rei_behaviours/ui/RectTransform.h"
 #include "rei_behaviours/transformation/Transform.h"
 
@@ -179,16 +181,25 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
         for (auto b : data.at("Behaviours"))
         {
             const i32 behaviourId = b.at("REI_BEHAVIOUR_ID");
-            const bool recordPosition = data.value("RecordPositionChange", false) && rei::GetEngine().IsEditorMode()
+            const bool recordTransform = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::Transform) && !HAS(e, rei::ui::RectTransform)
-                && behaviourId == GET(e, rei::Transform).GetBehaviourId() && b.contains("_position");
-            const auto before = recordPosition ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
+                && behaviourId == GET(e, rei::Transform).GetBehaviourId();
+            const auto beforePosition = recordTransform ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
+            const auto beforeScale = recordTransform ? GET(e, rei::Transform).GetLocalScale() : rei::math::Vector3{};
+            const auto beforeRotation = recordTransform ? GET(e, rei::Transform).GetLocalRotation() : glm::quat(1, 0, 0, 0);
             rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
-            if (!recordPosition) continue;
-            const auto after = GET(e, rei::Transform).GetLocalPosition();
-            if (glm::vec3(before) == glm::vec3(after)) continue;
-            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(
-                rei::ecs::ComponentRef<rei::Transform>(_ecs, e), before, after));
+            if (!recordTransform) continue;
+            const rei::ecs::ComponentRef<rei::Transform> transform(_ecs, e);
+            const auto afterPosition = transform.Get().GetLocalPosition();
+            const auto afterScale = transform.Get().GetLocalScale();
+            const auto afterRotation = transform.Get().GetLocalRotation();
+            auto& actions = rei::GetEngine().GetEditorActions();
+            if (b.contains("_position") && glm::vec3(beforePosition) != glm::vec3(afterPosition))
+                actions.RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(transform, beforePosition, afterPosition));
+            if (b.contains("_scale") && glm::vec3(beforeScale) != glm::vec3(afterScale))
+                actions.RecordApplied(std::make_unique<rei::editor::EntityScaleAction>(transform, beforeScale, afterScale));
+            if (b.contains("_rotation") && beforeRotation != afterRotation && beforeRotation != -afterRotation)
+                actions.RecordApplied(std::make_unique<rei::editor::EntityRotateAction>(transform, beforeRotation, afterRotation));
         }
     });
 }
