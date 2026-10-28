@@ -51,6 +51,7 @@ public class BehaviourSyncService
             request.Behaviours.Add(behaviourData);
 
             var propertyToSync = GetPropertyRootForSync(args.Property);
+            request.RecordPositionChange = propertyToSync.Name == EngineBehavioursConstants.TRANSFORM_POSITION && _engineRunner.IsEditorActive.Value;
             behaviourData.Add(propertyToSync.Name, SerializedPropertyJsonConverter.SerializeRuntimeProperty(propertyToSync));
 
             if (request.Behaviours.Count == 0) return;

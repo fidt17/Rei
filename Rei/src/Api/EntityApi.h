@@ -5,6 +5,8 @@
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/Editor/EntitySelectionUtility.h"
 #include "Modules/EntityManagement/EntityManager.h"
+#include "Modules/Editor/Actions/EntityMoveAction.h"
+#include "rei_behaviours/ui/RectTransform.h"
 #include "rei_behaviours/transformation/Transform.h"
 
 REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer, const i32 bufferSize)
@@ -177,7 +179,16 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
         for (auto b : data.at("Behaviours"))
         {
             const i32 behaviourId = b.at("REI_BEHAVIOUR_ID");
+            const bool recordPosition = data.value("RecordPositionChange", false) && rei::GetEngine().IsEditorMode()
+                && HAS(e, rei::Transform) && !HAS(e, rei::ui::RectTransform)
+                && behaviourId == GET(e, rei::Transform).GetBehaviourId() && b.contains("_position");
+            const auto before = recordPosition ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
             rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
+            if (!recordPosition) continue;
+            const auto after = GET(e, rei::Transform).GetLocalPosition();
+            if (glm::vec3(before) == glm::vec3(after)) continue;
+            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityMoveAction>(
+                rei::ecs::ComponentRef<rei::Transform>(_ecs, e), before, after));
         }
     });
 }

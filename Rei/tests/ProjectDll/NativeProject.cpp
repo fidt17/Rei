@@ -27,8 +27,6 @@ namespace
     JournalSink ConfiguredSink;
     i32 FailureMode = 0;
     std::weak_ptr<rei::ecs::World> ProjectWorld;
-    std::unique_ptr<rei::tests::TemporaryDirectory> ActionResources;
-    std::string ActionResourcesPath;
     std::unique_ptr<rei::tests::NativeEngineFixture> ActionEngine;
     std::vector<rei::ecs::ComponentRef<rei::Transform>> ActionTargets;
 
@@ -182,21 +180,6 @@ REI_EXTERN_API i32 NativeProjectLoadSaved()
         if (asset.IsLoaded()) result = asset.Get()->Number;
     })->WaitForCompletion();
     return result;
-}
-
-// Reuse the native engine fixture's owned resource pack for managed ABI tests.
-REI_EXTERN_API const char* NativeProjectPrepareActionResources()
-{
-    ActionResources = std::make_unique<rei::tests::TemporaryDirectory>();
-    rei::tests::PrepareEngineResources(*ActionResources);
-    ActionResourcesPath = ActionResources->File("").string();
-    return ActionResourcesPath.c_str();
-}
-
-REI_EXTERN_API void NativeProjectReleaseActionResources()
-{
-    ActionResources.reset();
-    ActionResourcesPath.clear();
 }
 
 REI_EXTERN_API void NativeProjectEmitActionRecorded(const u64 id)
