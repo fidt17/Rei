@@ -1,21 +1,34 @@
 #include "pch.h"
 #include "RectTransformResizeAction.h"
+#include <utility>
 
 namespace rei::editor
 {
     RectTransformResizeAction::RectTransformResizeAction(ecs::ComponentRef<ui::RectTransform> target, State before, State after) :
-        _target(target), _before(before), _after(after)
+        RectTransformResizeAction(std::vector<Change>{{target, before, after}})
     {
     }
 
-    bool RectTransformResizeAction::Undo() { return Apply(_before); }
-    bool RectTransformResizeAction::Redo() { return Apply(_after); }
-
-    bool RectTransformResizeAction::Apply(const State& state)
+    RectTransformResizeAction::RectTransformResizeAction(std::vector<Change> changes) : _changes(std::move(changes))
     {
-        if (_target.IsNull()) return false;
-        _target.Get().GetAnchoredPosition() = state.AnchoredPosition;
-        _target.Get().GetSizeDelta() = state.SizeDelta;
+    }
+
+    bool RectTransformResizeAction::Undo() { return Apply(true); }
+    bool RectTransformResizeAction::Redo() { return Apply(false); }
+
+    bool RectTransformResizeAction::Apply(const bool undo)
+    {
+        if (_changes.empty()) return false;
+        for (const auto& change : _changes)
+        {
+            if (change.Target.IsNull()) return false;
+        }
+        for (const auto& change : _changes)
+        {
+            const auto& state = undo ? change.Before : change.After;
+            change.Target.Get().GetAnchoredPosition() = state.AnchoredPosition;
+            change.Target.Get().GetSizeDelta() = state.SizeDelta;
+        }
         return true;
     }
 }

@@ -737,6 +737,17 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
+    [NativeCallbackFact]
+    public Task RectTransformPointerGroupResizesShareOneHistoryEntryForEveryEdgeAndCorner()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var index = 0; index < 8; index++) await VerifyRectPointerDragAsync(3, index, targetCount: 3);
+            return true;
+        }, CancellationToken.None);
+    }
+
     private static async Task VerifyRectPointerDragAsync(int kind, int? resizeHandle = null, int targetCount = 1)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));

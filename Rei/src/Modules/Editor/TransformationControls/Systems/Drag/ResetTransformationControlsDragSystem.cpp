@@ -110,13 +110,16 @@ namespace rei::editor
             || control.BottomLeftRectHandle.DragActive || control.BottomRectHandle.DragActive || control.BottomRightRectHandle.DragActive);
         if (resize)
         {
-            if (control.DragStartTargetStates.size() != 1) return;
-            const auto& start = control.DragStartTargetStates.front();
-            const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
-            const RectTransformResizeAction::State before{start.AnchoredPosition, start.SizeDelta};
-            const RectTransformResizeAction::State after{target.Get().GetAnchoredPosition(), target.Get().GetSizeDelta()};
-            if (glm::vec2(before.AnchoredPosition) == glm::vec2(after.AnchoredPosition) && glm::vec2(before.SizeDelta) == glm::vec2(after.SizeDelta)) return;
-            _actions->RecordApplied(std::make_unique<RectTransformResizeAction>(target, before, after));
+            std::vector<RectTransformResizeAction::Change> changes;
+            for (const auto& start : control.DragStartTargetStates)
+            {
+                const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
+                const RectTransformResizeAction::State before{start.AnchoredPosition, start.SizeDelta};
+                const RectTransformResizeAction::State after{target.Get().GetAnchoredPosition(), target.Get().GetSizeDelta()};
+                if (glm::vec2(before.AnchoredPosition) == glm::vec2(after.AnchoredPosition) && glm::vec2(before.SizeDelta) == glm::vec2(after.SizeDelta)) continue;
+                changes.push_back({target, before, after});
+            }
+            if (!changes.empty()) _actions->RecordApplied(std::make_unique<RectTransformResizeAction>(std::move(changes)));
             return;
         }
 
