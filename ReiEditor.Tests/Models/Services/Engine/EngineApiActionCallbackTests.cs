@@ -846,6 +846,161 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
+    public Task InspectorRectSizeConfirmationsShareHistoryWithHandlesAndPosition()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            await VerifyInspectorRectSizeAsync(true);
+            await VerifyInspectorRectSizeAsync(false);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyInspectorRectSizeAsync(bool horizontal)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var ids = new int[1];
+            api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, 1, ids);
+            using var inspector = new InspectorTransformFixture(entities, ids[0]);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            var component = inspector.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
+            var registry = new TestBehaviourRegistry();
+            registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            var layout = new RectTransformLayoutService(registry, new TestSceneManagementService(inspector.Entity), null!);
+            using var vm = new RectTransformPropertyViewModel(inspector.Entity, component, inspector.Runner, entities, layout);
+            var baseline = new float[20];
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, baseline);
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var sizeBinding = input.Bind(ReiTextBox.TextProperty, new Binding(horizontal ? nameof(vm.HorizontalSecondaryValue) : nameof(vm.VerticalSecondaryValue)) { Mode = BindingMode.TwoWay });
+            var positionInput = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var positionBinding = positionInput.Bind(ReiTextBox.TextProperty, new Binding(horizontal ? nameof(vm.HorizontalPrimaryValue) : nameof(vm.VerticalPrimaryValue)) { Mode = BindingMode.TwoWay });
+            Dispatcher.UIThread.RunJobs();
+            input.TextInternal = "2";
+            input.TextInternal = "255";
+            Check(20, 30, 200, 160);
+            Assert.Empty(received);
+            input.LoseFocus();
+            var width = horizontal ? 255f : 200f;
+            var height = horizontal ? 160f : 255f;
+            Check(20, 30, width, height);
+            Assert.Single(received);
+            positionInput.TextInternal = "11";
+            positionInput.LoseFocus();
+            var x = horizontal ? 11f : 20f;
+            var y = horizontal ? 30f : 11f;
+            Check(x, y, width, height);
+            Assert.Equal(2, received.Count);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectResize", 2);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+            Check(x + 12, y + 8, width + 24, height + 16);
+            Assert.Equal(2, received.Count);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            Check(x + 12, y + 8, width + 24, height + 16);
+            Assert.Equal(3, received.Count);
+            await commands.UndoAsync();
+            Check(x, y, width, height);
+            await commands.UndoAsync();
+            Check(20, 30, width, height);
+            await commands.UndoAsync();
+            Check(20, 30, 200, 160);
+            Assert.False(commands.CanUndo);
+            foreach (var text in new[] { horizontal ? "200" : "160", "invalid", "NaN" })
+            {
+                input.TextInternal = text;
+                input.LoseFocus();
+                Check(20, 30, 200, 160);
+                Assert.Equal(3, received.Count);
+                Assert.True(commands.CanRedo);
+            }
+            await commands.RedoAsync();
+            Check(20, 30, width, height);
+            await commands.RedoAsync();
+            Check(x, y, width, height);
+            await commands.RedoAsync();
+            Check(x + 12, y + 8, width + 24, height + 16);
+            Assert.False(commands.CanRedo);
+            Assert.Equal(3, received.Count);
+            await commands.UndoAsync();
+            Check(x, y, width, height);
+            input.TextInternal = "75";
+            input.LoseFocus();
+            Check(x, y, horizontal ? 75 : width, horizontal ? height : 75);
+            Assert.Equal(4, received.Count);
+            Assert.False(commands.CanRedo);
+            await commands.UndoAsync();
+            Check(x, y, width, height);
+            await commands.RedoAsync();
+            Check(x, y, horizontal ? 75 : width, horizontal ? height : 75);
+            Assert.Equal(4, received.Count);
+            // Native rejects history for full-layout and stretch-size requests even if a caller flags them.
+            var excluded = new SetEntityDataRequest
+            {
+                SceneId = ids[0], RecordTransformChange = true,
+                Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = component.Id,
+                    ["_anchorMax"] = layout.SerializeVector2(new(1, 0.5f)),
+                    ["_sizeDelta"] = layout.SerializeVector2(new(88, 99)) }]
+            };
+            entities.SetData(excluded);
+            var unsupported = new float[20];
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+            Assert.Equal(88f, unsupported[2]);
+            Assert.Equal(99f, unsupported[3]);
+            excluded.Behaviours[0].Remove("_anchorMax");
+            excluded.Behaviours[0]["_sizeDelta"] = layout.SerializeVector2(new(90, 100));
+            entities.SetData(excluded);
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+            Assert.Equal(90f, unsupported[2]);
+            Assert.Equal(100f, unsupported[3]);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(vm.IsStretchX);
+            Assert.Equal(4, received.Count);
+            Assert.Empty(logger.Entries);
+            Assert.Empty(inspector.Logger.Entries);
+
+            void Check(float expectedX, float expectedY, float expectedWidth, float expectedHeight)
+            {
+                var native = new float[20];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, native);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                var runtime = new[] { native[0], native[1], native[2], native[3] };
+                var editor = new[] { vm.HorizontalPrimaryValue, vm.VerticalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalSecondaryValue };
+                var expected = new[] { expectedX, expectedY, expectedWidth, expectedHeight };
+                for (var i = 0; i < expected.Length; i++)
+                {
+                    Assert.InRange(MathF.Abs(runtime[i] - expected[i]), 0f, 0.0001f);
+                    Assert.InRange(MathF.Abs(editor[i] - expected[i]), 0f, 0.0001f);
+                }
+                for (var i = 4; i < native.Length; i++) Assert.InRange(MathF.Abs(native[i] - baseline[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+    }
+
+    [NativeCallbackFact]
     public Task RectTransformPointerMovesShareHistoryWithoutChangingOtherFields()
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);

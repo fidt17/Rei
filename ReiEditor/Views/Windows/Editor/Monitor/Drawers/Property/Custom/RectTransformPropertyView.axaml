@@ -92,6 +92,7 @@
                             Grid.Column="3"
                             VerticalAlignment="Center"
                             MaxWidth="64"
+                            IsFloat="True"
                             Text="{Binding HorizontalSecondaryValue, Mode=TwoWay}" />
                     </Grid>
 
@@ -121,6 +122,7 @@
                             Grid.Column="3"
                             VerticalAlignment="Center"
                             MaxWidth="64"
+                            IsFloat="True"
                             Text="{Binding VerticalSecondaryValue, Mode=TwoWay}" />
                     </Grid>
 

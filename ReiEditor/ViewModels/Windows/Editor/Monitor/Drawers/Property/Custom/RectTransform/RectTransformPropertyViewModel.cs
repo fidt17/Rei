@@ -381,14 +381,14 @@ public class RectTransformPropertyViewModel : BaseViewModel
     private void SetAnchoredPosition(float x, float y)
     {
         _anchoredPosition.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded(positionOnly: true);
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION);
         RefreshAll();
     }
 
     private void SetSizeDelta(float x, float y)
     {
         _sizeDelta.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
     }
 
@@ -400,26 +400,28 @@ public class RectTransformPropertyViewModel : BaseViewModel
         RefreshAll();
     }
 
-    private void PushRectTransformToRuntimeIfNeeded(bool positionOnly = false)
+    private void PushRectTransformToRuntimeIfNeeded(string? propertyName = null)
     {
         if (_entity == null || _component == null || _engineRunner?.IsActive.Value != true || _entityApi == null || _rectTransformLayoutService == null) return;
 
         var data = new Dictionary<string, object?>
         {
-            [SetEntityDataRequest.REI_BEHAVIOUR_ID] = _component.Id,
-            [EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY))
+            [SetEntityDataRequest.REI_BEHAVIOUR_ID] = _component.Id
         };
-        if (!positionOnly)
+        if (propertyName == null || propertyName == EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION)
+            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY));
+        if (propertyName == null || propertyName == EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA)
+            data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
+        if (propertyName == null)
         {
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
             data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
-            data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
         }
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
-            RecordTransformChange = positionOnly && _engineRunner.IsEditorActive.Value && !IsStretchX && !IsStretchY,
+            RecordTransformChange = propertyName != null && _engineRunner.IsEditorActive.Value && !IsStretchX && !IsStretchY,
             Behaviours = new List<Dictionary<string, object?>> { data }
         });
     }

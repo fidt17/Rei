@@ -8,6 +8,7 @@
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
 #include "Modules/Editor/Actions/RectTransformMoveAction.h"
+#include "Modules/Editor/Actions/RectTransformResizeAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
@@ -302,21 +303,28 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
             const bool recordTransform = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::Transform) && !HAS(e, rei::ui::RectTransform)
                 && behaviourId == GET(e, rei::Transform).GetBehaviourId();
-            const bool recordRectMove = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
+            const bool recordRect = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::ui::RectTransform) && behaviourId == GET(e, rei::ui::RectTransform).GetBehaviourId()
-                && b.size() == 2 && b.contains("_anchoredPosition")
+                && b.size() == 2 && (b.contains("_anchoredPosition") || b.contains("_sizeDelta"))
                 && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax());
-            const auto beforeRectPosition = recordRectMove ? GET(e, rei::ui::RectTransform).GetAnchoredPosition() : rei::math::Vector2{};
+            const auto beforeRectPosition = recordRect ? GET(e, rei::ui::RectTransform).GetAnchoredPosition() : rei::math::Vector2{};
+            const auto beforeRectSize = recordRect ? GET(e, rei::ui::RectTransform).GetSizeDelta() : rei::math::Vector2{};
             const auto beforePosition = recordTransform ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
             const auto beforeScale = recordTransform ? GET(e, rei::Transform).GetLocalScale() : rei::math::Vector3{};
             const auto beforeRotation = recordTransform ? GET(e, rei::Transform).GetLocalRotation() : glm::quat(1, 0, 0, 0);
             rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
-            if (recordRectMove)
+            if (recordRect)
             {
                 const rei::ecs::ComponentRef<rei::ui::RectTransform> target(_ecs, e);
                 const auto after = target.Get().GetAnchoredPosition();
-                if (glm::vec2(beforeRectPosition) != glm::vec2(after))
+                if (b.contains("_anchoredPosition") && glm::vec2(beforeRectPosition) != glm::vec2(after))
                     rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformMoveAction>(target, beforeRectPosition, after));
+                if (b.contains("_sizeDelta") && glm::vec2(beforeRectSize) != glm::vec2(target.Get().GetSizeDelta()))
+                {
+                    const rei::editor::RectTransformResizeAction::State before{beforeRectPosition, beforeRectSize};
+                    const rei::editor::RectTransformResizeAction::State resized{after, target.Get().GetSizeDelta()};
+                    rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformResizeAction>(target, before, resized));
+                }
             }
             if (!recordTransform) continue;
             const rei::ecs::ComponentRef<rei::Transform> transform(_ecs, e);
