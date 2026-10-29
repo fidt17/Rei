@@ -1,20 +1,32 @@
 #include "pch.h"
 #include "RectTransformMoveAction.h"
+#include <utility>
 
 namespace rei::editor
 {
     RectTransformMoveAction::RectTransformMoveAction(ecs::ComponentRef<ui::RectTransform> target, math::Vector2 before, math::Vector2 after) :
-        _target(target), _before(before), _after(after)
+        RectTransformMoveAction(std::vector<Change>{{target, before, after}})
     {
     }
 
-    bool RectTransformMoveAction::Undo() { return Apply(_before); }
-    bool RectTransformMoveAction::Redo() { return Apply(_after); }
-
-    bool RectTransformMoveAction::Apply(const math::Vector2& position)
+    RectTransformMoveAction::RectTransformMoveAction(std::vector<Change> changes) : _changes(std::move(changes))
     {
-        if (_target.IsNull()) return false;
-        _target.Get().GetAnchoredPosition() = position;
+    }
+
+    bool RectTransformMoveAction::Undo() { return Apply(true); }
+    bool RectTransformMoveAction::Redo() { return Apply(false); }
+
+    bool RectTransformMoveAction::Apply(const bool undo)
+    {
+        if (_changes.empty()) return false;
+        for (const auto& change : _changes)
+        {
+            if (change.Target.IsNull()) return false;
+        }
+        for (const auto& change : _changes)
+        {
+            change.Target.Get().GetAnchoredPosition() = undo ? change.Before : change.After;
+        }
         return true;
     }
 }

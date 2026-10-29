@@ -38,7 +38,7 @@ namespace rei::editor
             if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform)) return;
             if (HAS(start.Entity, ui::RectTransform))
             {
-                if (control.TargetEntities.size() == 1 && control.DragStartTargetStates.size() == 1) RecordRectTransformChange(control, start);
+                RecordRectTransformChange(control);
                 return;
             }
         }
@@ -97,13 +97,21 @@ namespace rei::editor
         }
     }
 
-    void ResetTransformationControlsDragSystem::RecordRectTransformChange(const TransformationControl& control, const TransformationControlTargetState& start) const
+    void ResetTransformationControlsDragSystem::RecordRectTransformChange(const TransformationControl& control) const
     {
+        if (control.DragStartTargetStates.size() != control.TargetEntities.size()) return;
+        for (const auto& start : control.DragStartTargetStates)
+        {
+            if (IS_DEAD(start.Entity) || !HAS(start.Entity, ui::RectTransform)) return;
+        }
+
         const bool resize = control.Mode == RectTransform && (control.TopLeftRectHandle.DragActive || control.TopRectHandle.DragActive
             || control.TopRightRectHandle.DragActive || control.LeftRectHandle.DragActive || control.RightRectHandle.DragActive
             || control.BottomLeftRectHandle.DragActive || control.BottomRectHandle.DragActive || control.BottomRightRectHandle.DragActive);
         if (resize)
         {
+            if (control.DragStartTargetStates.size() != 1) return;
+            const auto& start = control.DragStartTargetStates.front();
             const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
             const RectTransformResizeAction::State before{start.AnchoredPosition, start.SizeDelta};
             const RectTransformResizeAction::State after{target.Get().GetAnchoredPosition(), target.Get().GetSizeDelta()};
@@ -116,11 +124,16 @@ namespace rei::editor
         const bool body = control.Mode == RectTransform && control.RectTransformBodyDragActive;
         if (!movement && !body) return;
 
-        const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
-        const auto after = target.Get().GetAnchoredPosition();
-        if (glm::vec2(start.AnchoredPosition) == glm::vec2(after)) return;
-        if (glm::vec2(start.SizeDelta) != glm::vec2(target.Get().GetSizeDelta())) return;
-        _actions->RecordApplied(std::make_unique<RectTransformMoveAction>(target, start.AnchoredPosition, after));
+        std::vector<RectTransformMoveAction::Change> changes;
+        for (const auto& start : control.DragStartTargetStates)
+        {
+            const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
+            if (glm::vec2(start.SizeDelta) != glm::vec2(target.Get().GetSizeDelta())) return;
+            const auto after = target.Get().GetAnchoredPosition();
+            if (glm::vec2(start.AnchoredPosition) == glm::vec2(after)) continue;
+            changes.push_back({target, start.AnchoredPosition, after});
+        }
+        if (!changes.empty()) _actions->RecordApplied(std::make_unique<RectTransformMoveAction>(std::move(changes)));
     }
 
     void ResetTransformationControlsDragSystem::ResetDragState(TransformationControl& control) const

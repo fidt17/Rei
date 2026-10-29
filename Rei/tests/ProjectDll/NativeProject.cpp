@@ -33,7 +33,7 @@ namespace
     std::weak_ptr<rei::ecs::World> ProjectWorld;
     std::unique_ptr<rei::tests::NativeEngineFixture> ActionEngine;
     std::vector<rei::ecs::ComponentRef<rei::Transform>> ActionTargets;
-    rei::ecs::Entity RectMoveTarget = rei::ecs::NULL_ENTITY;
+    std::vector<rei::ecs::Entity> RectMoveTargets;
     i32 RectPointerX = 0;
     i32 RectPointerY = 0;
     using CreateEngineCallback = void* (*)(const char*);
@@ -223,7 +223,7 @@ REI_EXTERN_API void NativeProjectStartRectMoveEngine(CreateEngineCallback create
 REI_EXTERN_API void NativeProjectStopActionEngine()
 {
     ActionTargets.clear();
-    RectMoveTarget = rei::ecs::NULL_ENTITY;
+    RectMoveTargets.clear();
     ActionEngine.reset();
 }
 
@@ -324,28 +324,31 @@ REI_EXTERN_API void NativeProjectAddRectTransform(const i32 sceneId)
     });
 }
 
-REI_EXTERN_API i32 NativeProjectPrepareRectMove(const i32 kind)
+REI_EXTERN_API void NativeProjectPrepareRectMove(const i32 kind, const i32 targetCount, i32* ids)
 {
-    i32 id = 0;
     ActionEngine->OnEngineThread([&]
     {
         rei::tests::CreateCamera();
         const auto canvas = rei::tests::CreateCanvas();
-        RectMoveTarget = rei::tests::CreateEntity("Rect move");
         auto registry = rei::GetInternalWorld()->GetRegistry();
-        registry->Get<rei::Transform>(RectMoveTarget).SetParent(canvas);
-        rei::GetEntityManager().AddBehaviour(RectMoveTarget, 7303, nlohmann::json(), false);
-        auto& rect = registry->Get<rei::ui::RectTransform>(RectMoveTarget);
-        rect.GetAnchoredPosition() = {20, 30};
-        rect.GetSizeDelta() = {200, 160};
-        registry->Get<rei::editor::SelectedTag>(RectMoveTarget);
+        RectMoveTargets.clear();
+        for (i32 i = 0; i < targetCount; i++)
+        {
+            const auto target = rei::tests::CreateEntity("Rect move");
+            RectMoveTargets.push_back(target);
+            registry->Get<rei::Transform>(target).SetParent(canvas);
+            rei::GetEntityManager().AddBehaviour(target, 7303, nlohmann::json(), false);
+            auto& rect = registry->Get<rei::ui::RectTransform>(target);
+            rect.GetAnchoredPosition() = {20.0f + static_cast<f32>(i) * 40.0f, 30.0f + static_cast<f32>(i) * 25.0f};
+            rect.GetSizeDelta() = {200, 160};
+            registry->Get<rei::editor::SelectedTag>(target);
+            ids[i] = registry->Get<EntityInfo>(target).Id;
+        }
         const auto entity = rei::GetInternalWorld()->GetFiltersRegistry()->Get<rei::editor::TransformationControl>()->First();
         registry->Get<rei::editor::TransformationControl>(entity).Mode = kind == 3 ? rei::editor::RectTransform : rei::editor::Movement;
-        id = registry->Get<EntityInfo>(RectMoveTarget).Id;
         rei::tests::Refresh();
     });
     ActionEngine->WaitForNextFrames(3);
-    return id;
 }
 
 REI_EXTERN_API void NativeProjectBeginRectMove(const i32 kind)
@@ -456,13 +459,13 @@ REI_EXTERN_API void NativeProjectEndRectMove()
     ActionEngine->QueueMouse(WM_LBUTTONUP, RectPointerX, RectPointerY);
 }
 
-REI_EXTERN_API void NativeProjectReadRectMove(f32* values)
+REI_EXTERN_API void NativeProjectReadRectMove(const i32 index, f32* values)
 {
-    ActionEngine->OnEngineThread([values]
+    ActionEngine->OnEngineThread([index, values]
     {
         auto registry = rei::GetInternalWorld()->GetRegistry();
-        const auto& rect = registry->Get<rei::ui::RectTransform>(RectMoveTarget);
-        const auto& transform = registry->Get<rei::Transform>(RectMoveTarget);
+        const auto& rect = registry->Get<rei::ui::RectTransform>(RectMoveTargets.at(index));
+        const auto& transform = registry->Get<rei::Transform>(RectMoveTargets.at(index));
         const auto position = transform.GetLocalPosition();
         const auto scale = transform.GetLocalScale();
         const auto rotation = transform.GetLocalRotation();

@@ -158,6 +158,19 @@ namespace
             return *handles[index];
         }
 
+        ecs::Entity AddRectTarget(const i32 id, const math::Vector2& position)
+        {
+            const auto entity = Native.Entity(id);
+            Native.Registry->Get<Transform>(entity).SetParent(CanvasEntity);
+            auto& rect = Native.Registry->Get<ui::RectTransform>(entity);
+            rect = ui::RectTransform(7303, entity);
+            rect.GetAnchoredPosition() = position;
+            rect.GetSizeDelta() = {100, 80};
+            Control().TargetEntities.push_back(entity);
+            Native.World->RefreshAll();
+            return entity;
+        }
+
         void PressResize(const i32 index)
         {
             Input.Cursor(Input.First, 330, 220);
@@ -1151,11 +1164,11 @@ TEST_CASE("Editor action store records one RectTransform move for arrows plane a
     });
 }
 
-TEST_CASE("Editor action store skips RectTransform move no-ops inactive and group drags", "[native][editor-actions][isolated]")
+TEST_CASE("Editor action store skips RectTransform move no-ops inactive and incomplete drags", "[native][editor-actions][isolated]")
 {
     Isolated([]
     {
-        for (const std::string reason : {"unchanged", "returned", "click", "scale", "rotation", "inactive", "group", "partial_group", "missing"})
+        for (const std::string reason : {"unchanged", "returned", "click", "scale", "rotation", "inactive", "partial_group", "missing"})
         {
             CAPTURE(reason);
             RectMoveFixture fixture;
@@ -1163,10 +1176,9 @@ TEST_CASE("Editor action store skips RectTransform move no-ops inactive and grou
             fixture.Control().Mode = body ? editor::RectTransform : editor::Movement;
             fixture.Control().RightMovementArrow.DragActive = !body;
             fixture.Control().RectTransformBodyDragPending = reason == "click";
-            if (reason == "group" || reason == "partial_group")
+            if (reason == "partial_group")
             {
-                const auto second = reason == "group" ? fixture.Native.Entity(2) : fixture.Native.Registry->NewEntity();
-                if (reason == "group") fixture.Native.Registry->Get<ui::RectTransform>(second);
+                const auto second = fixture.Native.Registry->NewEntity();
                 fixture.Control().TargetEntities.push_back(second);
             }
             transformation_control_drag::CaptureDragStartTargetStates(fixture.Native.World, fixture.Control());
@@ -1319,6 +1331,110 @@ TEST_CASE("Editor action store RectTransform resize records size-only and clampe
             REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(size));
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
+        }
+    });
+}
+
+TEST_CASE("Editor action store records one RectTransform group move for arrows plane and body", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (i32 kind = 0; kind < 4; kind++)
+        {
+            CAPTURE(kind);
+            RectMoveFixture fixture;
+            fixture.AddRectTarget(2, {40, 50});
+            fixture.AddRectTarget(3, {-30, 70});
+            const auto targets = fixture.Control().TargetEntities;
+            const math::Vector2 before[] = {{10, 20}, {40, 50}, {-30, 70}};
+            fixture.Press(kind);
+            fixture.Input.Cursor(fixture.Input.First, 354, 204);
+            fixture.Update(kind);
+            fixture.Finish.OnUpdate();
+            CHECK(fixture.Recorded.empty());
+            const math::Vector2 delta(kind == 1 ? 0.0f : 24.0f, kind == 0 ? 0.0f : 16.0f);
+            for (i32 i = 0; i < 3; i++)
+                CHECK(glm::vec2(fixture.Native.Registry->Get<ui::RectTransform>(targets[i]).GetAnchoredPosition()) == glm::vec2(before[i] + delta));
+            fixture.Release();
+            REQUIRE(fixture.Recorded.size() == 1);
+            fixture.Finish.OnUpdate();
+            CHECK(fixture.Recorded.size() == 1);
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            for (i32 i = 0; i < 3; i++)
+                CHECK(glm::vec2(fixture.Native.Registry->Get<ui::RectTransform>(targets[i]).GetAnchoredPosition()) == glm::vec2(before[i]));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            for (i32 i = 0; i < 3; i++)
+            {
+                auto& rect = fixture.Native.Registry->Get<ui::RectTransform>(targets[i]);
+                CHECK(glm::vec2(rect.GetAnchoredPosition()) == glm::vec2(before[i] + delta));
+                CHECK(glm::vec2(rect.GetSizeDelta()) == glm::vec2(i == 0 ? math::Vector2(200, 160) : math::Vector2(100, 80)));
+            }
+            CHECK(fixture.Recorded.size() == 1);
+        }
+    });
+}
+
+TEST_CASE("Editor action store RectTransform group move rejects missing targets before applying any value", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        RectMoveFixture fixture;
+        const auto second = fixture.AddRectTarget(2, {40, 50});
+        ecs::ComponentRef<ui::RectTransform> first(fixture.Native.Registry, fixture.Target);
+        ecs::ComponentRef<ui::RectTransform> other(fixture.Native.Registry, second);
+        RectTransformMoveAction action(std::vector<RectTransformMoveAction::Change>{{first, {10, 20}, {34, 36}}, {other, {40, 50}, {64, 66}}});
+        first.Get().GetAnchoredPosition() = {34, 36};
+        fixture.Native.Registry->Del<ui::RectTransform>(second);
+        CHECK_FALSE(action.Undo());
+        CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(34, 36));
+        first.Get().GetAnchoredPosition() = {10, 20};
+        CHECK_FALSE(action.Redo());
+        CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(10, 20));
+        RectTransformMoveAction empty(std::vector<RectTransformMoveAction::Change>{});
+        CHECK_FALSE(empty.Undo());
+        CHECK_FALSE(empty.Redo());
+    });
+}
+
+TEST_CASE("Editor action store RectTransform group move ignores unchanged targets and skips empty drags", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (const std::string reason : {"click", "returned", "unchanged_target", "mixed", "missing"})
+        {
+            CAPTURE(reason);
+            RectMoveFixture fixture;
+            const auto second = fixture.AddRectTarget(2, {40, 50});
+            fixture.Press(2);
+            if (reason != "click")
+            {
+                fixture.Input.Cursor(fixture.Input.First, 354, 204);
+                fixture.Update(2);
+            }
+            if (reason == "returned")
+            {
+                fixture.Input.Cursor(fixture.Input.First, 330, 220);
+                fixture.Update(2);
+            }
+            if (reason == "unchanged_target") fixture.Native.Registry->Get<ui::RectTransform>(second).GetAnchoredPosition() = {40, 50};
+            if (reason == "mixed") fixture.Native.Registry->Del<ui::RectTransform>(second);
+            if (reason == "missing")
+            {
+                fixture.Native.Registry->DestroyEntity(second);
+                fixture.Native.World->Refresh();
+            }
+            fixture.Release();
+            if (reason != "unchanged_target")
+            {
+                CHECK(fixture.Recorded.empty());
+                continue;
+            }
+            REQUIRE(fixture.Recorded.size() == 1);
+            fixture.Native.Registry->Del<ui::RectTransform>(second);
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(34, 36));
         }
     });
 }
