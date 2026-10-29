@@ -5,6 +5,7 @@
 #include "Modules/Editor/Actions/EditorActionStore.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
 #include "Modules/Editor/Actions/RectTransformMoveAction.h"
+#include "Modules/Editor/Actions/RectTransformResizeAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "rei_behaviours/ui/RectTransform.h"
@@ -37,7 +38,7 @@ namespace rei::editor
             if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform)) return;
             if (HAS(start.Entity, ui::RectTransform))
             {
-                if (control.TargetEntities.size() == 1 && control.DragStartTargetStates.size() == 1) RecordRectTransformMove(control, start);
+                if (control.TargetEntities.size() == 1 && control.DragStartTargetStates.size() == 1) RecordRectTransformChange(control, start);
                 return;
             }
         }
@@ -96,8 +97,21 @@ namespace rei::editor
         }
     }
 
-    void ResetTransformationControlsDragSystem::RecordRectTransformMove(const TransformationControl& control, const TransformationControlTargetState& start) const
+    void ResetTransformationControlsDragSystem::RecordRectTransformChange(const TransformationControl& control, const TransformationControlTargetState& start) const
     {
+        const bool resize = control.Mode == RectTransform && (control.TopLeftRectHandle.DragActive || control.TopRectHandle.DragActive
+            || control.TopRightRectHandle.DragActive || control.LeftRectHandle.DragActive || control.RightRectHandle.DragActive
+            || control.BottomLeftRectHandle.DragActive || control.BottomRectHandle.DragActive || control.BottomRightRectHandle.DragActive);
+        if (resize)
+        {
+            const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
+            const RectTransformResizeAction::State before{start.AnchoredPosition, start.SizeDelta};
+            const RectTransformResizeAction::State after{target.Get().GetAnchoredPosition(), target.Get().GetSizeDelta()};
+            if (glm::vec2(before.AnchoredPosition) == glm::vec2(after.AnchoredPosition) && glm::vec2(before.SizeDelta) == glm::vec2(after.SizeDelta)) return;
+            _actions->RecordApplied(std::make_unique<RectTransformResizeAction>(target, before, after));
+            return;
+        }
+
         const bool movement = control.Mode == Movement && (control.RightMovementArrow.DragActive || control.UpMovementArrow.DragActive || control.RightUpMovementPlane.DragActive);
         const bool body = control.Mode == RectTransform && control.RectTransformBodyDragActive;
         if (!movement && !body) return;

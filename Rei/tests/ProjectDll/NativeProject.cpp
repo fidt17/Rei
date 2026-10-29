@@ -407,6 +407,43 @@ REI_EXTERN_API void NativeProjectBeginRectMove(const i32 kind)
     });
 }
 
+namespace
+{
+    rei::editor::TransformationControlRectHandle& GetRectResizeHandle(rei::editor::TransformationControl& control, const i32 index)
+    {
+        if (index < 0 || index >= 8) throw std::out_of_range("RectTransform resize handle index");
+        rei::editor::TransformationControlRectHandle* handles[] = {&control.TopLeftRectHandle, &control.TopRectHandle, &control.TopRightRectHandle,
+            &control.LeftRectHandle, &control.RightRectHandle, &control.BottomLeftRectHandle, &control.BottomRectHandle, &control.BottomRightRectHandle};
+        return *handles[index];
+    }
+}
+
+REI_EXTERN_API void NativeProjectBeginRectResize(const i32 index)
+{
+    ActionEngine->WaitForNextFrames(2);
+    ActionEngine->OnEngineThread([index]
+    {
+        auto registry = rei::GetInternalWorld()->GetRegistry();
+        const auto entity = rei::GetInternalWorld()->GetFiltersRegistry()->Get<rei::editor::TransformationControl>()->First();
+        auto& control = registry->Get<rei::editor::TransformationControl>(entity);
+        const auto camera = rei::render::Camera::GetMainCamera();
+        if (camera.IsNull() || !control.HasRectTransformTargets) throw std::runtime_error("Rect resize fixture is not ready");
+        const auto& handle = GetRectResizeHandle(control, index);
+        const auto point = camera.Get().WorldToScreenPosition(registry->Get<rei::Transform>(handle.Entity).GetWorldPosition());
+        RectPointerX = static_cast<i32>(std::round(point.x));
+        RectPointerY = static_cast<i32>(std::round(point.y));
+    });
+    ActionEngine->QueueMouse(WM_MOUSEMOVE, RectPointerX, RectPointerY);
+    ActionEngine->QueueMouse(WM_LBUTTONDOWN, RectPointerX, RectPointerY);
+    ActionEngine->OnEngineThread([index]
+    {
+        auto registry = rei::GetInternalWorld()->GetRegistry();
+        const auto entity = rei::GetInternalWorld()->GetFiltersRegistry()->Get<rei::editor::TransformationControl>()->First();
+        if (!GetRectResizeHandle(registry->Get<rei::editor::TransformationControl>(entity), index).DragActive)
+            throw std::runtime_error("Pointer did not start the requested RectTransform resize");
+    });
+}
+
 REI_EXTERN_API void NativeProjectMoveRectPointer(const i32 dx, const i32 dy)
 {
     RectPointerX += dx;

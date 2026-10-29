@@ -710,12 +710,23 @@ public sealed class EngineApiActionCallbackTests
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
         {
-            for (var kind = 0; kind < 4; kind++) await VerifyRectMoveAsync(kind);
+            for (var kind = 0; kind < 4; kind++) await VerifyRectPointerDragAsync(kind);
             return true;
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyRectMoveAsync(int kind)
+    [NativeCallbackFact]
+    public Task RectTransformPointerResizesShareHistoryForEveryEdgeAndCorner()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var index = 0; index < 8; index++) await VerifyRectPointerDragAsync(3, index);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectPointerDragAsync(int kind, int? resizeHandle = null)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
@@ -736,30 +747,42 @@ public sealed class EngineApiActionCallbackTests
             api.MarkEngineStarted();
             var entityId = api.Invoke<int>(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", kind);
             var before = Read(20, 30);
-            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectMove", kind);
+            var beginDrag = resizeHandle.HasValue ? "NativeProjectBeginRectResize" : "NativeProjectBeginRectMove";
+            api.Invoke(typeof(EntityIdDelegate), beginDrag, resizeHandle ?? kind);
             api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", kind == 1 ? 0 : 24, kind == 0 ? 0 : -16);
             var x = kind == 1 ? 20f : 44f;
             var y = kind == 0 ? 30f : 46f;
-            Check(x, y);
+            var width = 200f;
+            var height = 160f;
+            if (resizeHandle is int index)
+            {
+                var directionX = new[] { -1, 0, 1, -1, 1, -1, 0, 1 }[index];
+                var directionY = new[] { 1, 1, 1, 0, 0, -1, -1, -1 }[index];
+                x = directionX == 0 ? 20f : 32f;
+                y = directionY == 0 ? 30f : 38f;
+                width += directionX * 24;
+                height += directionY * 16;
+            }
+            Check(x, y, width, height);
             Dispatcher.UIThread.RunJobs();
             Assert.Empty(received);
             Assert.False(commands.CanUndo);
             api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
-            Check(x, y);
+            Check(x, y, width, height);
             Dispatcher.UIThread.RunJobs();
             Assert.Single(received);
             await commands.UndoAsync();
             Check(20, 30);
             Assert.False(commands.CanUndo);
             Assert.True(commands.CanRedo);
-            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectMove", kind);
+            api.Invoke(typeof(EntityIdDelegate), beginDrag, resizeHandle ?? kind);
             api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
             Check(20, 30);
             Dispatcher.UIThread.RunJobs();
             Assert.Single(received);
             Assert.True(commands.CanRedo);
             await commands.RedoAsync();
-            Check(x, y);
+            Check(x, y, width, height);
 
             var entity = new GameEntity(entityId, "Rect move");
             var management = new TestEntityManagementService { OnRename = (target, name) => { entities.Rename(target.Id, name); target.SetName(name); } };
@@ -776,7 +799,7 @@ public sealed class EngineApiActionCallbackTests
             Check(20, 30);
             Assert.False(commands.CanUndo);
             await commands.RedoAsync();
-            Check(x, y);
+            Check(x, y, width, height);
             await commands.RedoAsync();
             Assert.Equal("Renamed", entities.GetEntityData(entityId)!.Name);
             Dispatcher.UIThread.RunJobs();
@@ -784,23 +807,27 @@ public sealed class EngineApiActionCallbackTests
             Assert.False(commands.CanRedo);
             Assert.Empty(logger.Entries);
 
-            float[] Read(float expectedX, float expectedY)
+            float[] Read(float expectedX, float expectedY, float expectedWidth = 200, float expectedHeight = 160)
             {
                 var values = new float[20];
                 api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", (object)values);
                 Assert.InRange(MathF.Abs(values[0] - expectedX), 0f, 0.0001f);
                 Assert.InRange(MathF.Abs(values[1] - expectedY), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(values[2] - expectedWidth), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(values[3] - expectedHeight), 0f, 0.0001f);
                 var state = entities.GetEntityData(entityId)!;
                 var rect = JObject.FromObject(state.Behaviours.Single(item => item["REI_TYPE"].ToString() == "RectTransform"));
                 Assert.InRange(MathF.Abs(rect["_anchoredPosition"]!["x"]!.Value<float>() - values[0]), 0f, 0.0001f);
                 Assert.InRange(MathF.Abs(rect["_anchoredPosition"]!["y"]!.Value<float>() - values[1]), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(rect["_sizeDelta"]!["x"]!.Value<float>() - values[2]), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(rect["_sizeDelta"]!["y"]!.Value<float>() - values[3]), 0f, 0.0001f);
                 return values;
             }
 
-            void Check(float expectedX, float expectedY)
+            void Check(float expectedX, float expectedY, float expectedWidth = 200, float expectedHeight = 160)
             {
-                var values = Read(expectedX, expectedY);
-                for (var i = 2; i < values.Length; i++) Assert.InRange(MathF.Abs(before[i] - values[i]), 0f, 0.0001f);
+                var values = Read(expectedX, expectedY, expectedWidth, expectedHeight);
+                for (var i = 4; i < values.Length; i++) Assert.InRange(MathF.Abs(before[i] - values[i]), 0f, 0.0001f);
             }
         }
         finally
