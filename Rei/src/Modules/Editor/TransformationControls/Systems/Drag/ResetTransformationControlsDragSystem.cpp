@@ -4,6 +4,7 @@
 #include "Modules/Input/Input.h"
 #include "Modules/Editor/Actions/EditorActionStore.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
+#include "Modules/Editor/Actions/RectTransformMoveAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "rei_behaviours/ui/RectTransform.h"
@@ -33,7 +34,12 @@ namespace rei::editor
         if (control.DragStartTargetStates.empty()) return;
         for (const auto& start : control.DragStartTargetStates)
         {
-            if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform) || HAS(start.Entity, ui::RectTransform)) return;
+            if (IS_DEAD(start.Entity) || !HAS(start.Entity, Transform)) return;
+            if (HAS(start.Entity, ui::RectTransform))
+            {
+                if (control.TargetEntities.size() == 1 && control.DragStartTargetStates.size() == 1) RecordRectTransformMove(control, start);
+                return;
+            }
         }
 
         switch (control.Mode)
@@ -88,6 +94,19 @@ namespace rei::editor
             return;
         }
         }
+    }
+
+    void ResetTransformationControlsDragSystem::RecordRectTransformMove(const TransformationControl& control, const TransformationControlTargetState& start) const
+    {
+        const bool movement = control.Mode == Movement && (control.RightMovementArrow.DragActive || control.UpMovementArrow.DragActive || control.RightUpMovementPlane.DragActive);
+        const bool body = control.Mode == RectTransform && control.RectTransformBodyDragActive;
+        if (!movement && !body) return;
+
+        const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
+        const auto after = target.Get().GetAnchoredPosition();
+        if (glm::vec2(start.AnchoredPosition) == glm::vec2(after)) return;
+        if (glm::vec2(start.SizeDelta) != glm::vec2(target.Get().GetSizeDelta())) return;
+        _actions->RecordApplied(std::make_unique<RectTransformMoveAction>(target, start.AnchoredPosition, after));
     }
 
     void ResetTransformationControlsDragSystem::ResetDragState(TransformationControl& control) const

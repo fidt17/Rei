@@ -3,6 +3,7 @@
 #include "support/GeometryTestSupport.h"
 #include "Modules/Editor/Actions/EditorActionStore.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
+#include "Modules/Editor/Actions/RectTransformMoveAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
@@ -12,6 +13,13 @@
 #include "Modules/Editor/TransformationControls/Systems/Drag/ResetTransformationControlsDragSystem.h"
 #include "Modules/Editor/TransformationControls/Systems/Drag/TransformationControlDragUtilities.h"
 #include "rei_behaviours/ui/RectTransform.h"
+#include "rei_behaviours/ui/Canvas.h"
+#include "rei_behaviours/render/camera/Camera.h"
+#include "Modules/Components/ActiveTag.h"
+#include "Modules/Physics/PointerCollisionListener.h"
+#include "Modules/Editor/EditorPointerInteractionState.h"
+#include "Modules/Editor/TransformationControls/Systems/Drag/HandleTransformationControlsMovementDragSystem.h"
+#include "Modules/Editor/TransformationControls/Systems/Drag/HandleTransformationControlsRectTransformDragSystem.h"
 
 using namespace rei;
 using namespace rei::editor;
@@ -91,6 +99,72 @@ namespace
         {
             Input.Mouse(Input.First, GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE, 0);
             Finish.OnUpdate();
+        }
+    };
+    struct RectMoveFixture : TransformDragFixture
+    {
+        ecs::Entity CanvasEntity = Native.Entity(10);
+        ecs::Entity CameraEntity = Native.Entity(11);
+        HandleTransformationControlsMovementDragSystem Movement{Native.World};
+        HandleTransformationControlsRectTransformDragSystem Body{Native.World};
+
+        RectMoveFixture()
+        {
+            EditorPointerInteractionState::Reset();
+            Native.Registry->Get<ui::Canvas>(CanvasEntity) = ui::Canvas(7302, CanvasEntity);
+            Native.Registry->Get<ui::Canvas>(CanvasEntity).REI_SET({{"_scaleMode", {{"Value", static_cast<i32>(ui::ConstantPixelSize)}}}});
+            Native.Registry->Get<ui::RectTransform>(CanvasEntity) = ui::RectTransform(7303, CanvasEntity);
+            Native.Registry->Get<render::Camera>(CameraEntity) = render::Camera(7301, CameraEntity);
+            Native.Registry->Get<render::Camera>(CameraEntity).SetOutputSize(640, 480);
+            Native.Registry->Get<ActiveTag>(CameraEntity);
+            Native.Registry->Get<ui::RectTransform>(Target) = ui::RectTransform(7303, Target);
+            Rect().GetAnchoredPosition() = {10, 20};
+            Rect().GetSizeDelta() = {200, 160};
+            TargetTransform().SetParent(CanvasEntity);
+            auto& control = Control();
+            control.RightMovementArrow.Entity = Part();
+            control.UpMovementArrow.Entity = Part();
+            control.RightUpMovementPlane.Entity = Part();
+            control.RightMovementArrow.Direction = {1, 0, 0};
+            control.UpMovementArrow.Direction = {0, 1, 0};
+            for (auto* handle : {&control.TopLeftRectHandle, &control.TopRectHandle, &control.TopRightRectHandle, &control.LeftRectHandle,
+                &control.RightRectHandle, &control.BottomLeftRectHandle, &control.BottomRectHandle, &control.BottomRightRectHandle}) handle->Entity = Part();
+            Native.World->RefreshAll();
+        }
+
+        ~RectMoveFixture()
+        {
+            EditorPointerInteractionState::Reset();
+            Native.Registry->Del<render::Camera>(CameraEntity);
+        }
+
+        ecs::Entity Part()
+        {
+            const auto entity = Native.Registry->NewEntity();
+            Native.Registry->Get<physics::PointerCollisionListener>(entity);
+            return entity;
+        }
+
+        ui::RectTransform& Rect() { return Native.Registry->Get<ui::RectTransform>(Target); }
+
+        void Press(const i32 kind)
+        {
+            Input.Cursor(Input.First, 330, 220);
+            auto& control = Control();
+            control.Mode = kind == 3 ? editor::RectTransform : editor::Movement;
+            if (kind < 3)
+            {
+                const auto part = kind == 0 ? control.RightMovementArrow.Entity : kind == 1 ? control.UpMovementArrow.Entity : control.RightUpMovementPlane.Entity;
+                Native.Registry->Get<physics::PointerCollisionListener>(part).IsInside = true;
+            }
+            Input.Mouse(Input.First, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, 0);
+            Update(kind);
+        }
+
+        void Update(const i32 kind)
+        {
+            if (kind == 3) Body.OnUpdate();
+            else Movement.OnUpdate();
         }
     };
 }
@@ -991,6 +1065,106 @@ TEST_CASE("Editor action store mixed parent move preserves input order and resto
             for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.After);
             CHECK_FALSE(transform_utility::ReparentEntities({first, second}, destination, 1));
             CHECK(records == 1);
+        }
+    });
+}
+
+TEST_CASE("Editor action store RectTransform move restores only anchored position", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        RectMoveFixture fixture;
+        ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
+        target.Get().GetAnchoredPosition() = {34, 36};
+        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformMoveAction>(target, math::Vector2(10, 20), math::Vector2(34, 36)));
+        target.Get().GetSizeDelta() = {250, 190};
+        const nlohmann::json vector = {{"Value", {{"x", {{"Value", 0.25f}}}, {"y", {{"Value", 0.75f}}}}}};
+        target.Get().REI_SET({{"_anchorMin", vector}, {"_anchorMax", vector}, {"_pivot", vector}});
+        fixture.TargetTransform().GetLocalScale() = {2, 3, 4};
+        fixture.TargetTransform().SetRotation(math::Vector3(10, 20, 30));
+        const auto transform = ReadState(fixture.TargetTransform());
+        for (const bool undo : {true, false})
+        {
+            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)));
+            CHECK(glm::vec2(target.Get().GetAnchoredPosition()) == glm::vec2(undo ? math::Vector2(10, 20) : math::Vector2(34, 36)));
+            CHECK(glm::vec2(target.Get().GetSizeDelta()) == glm::vec2(250, 190));
+            CHECK(glm::vec2(target.Get().GetAnchorMin()) == glm::vec2(0.25f, 0.75f));
+            CHECK(glm::vec2(target.Get().GetAnchorMax()) == glm::vec2(0.25f, 0.75f));
+            CHECK(glm::vec2(target.Get().GetPivot()) == glm::vec2(0.25f, 0.75f));
+            CheckState(fixture.TargetTransform(), transform);
+        }
+        CHECK(fixture.Recorded.size() == 1);
+        fixture.Native.Registry->Del<ui::RectTransform>(fixture.Target);
+        CHECK_FALSE(fixture.Actions->Undo(id));
+        CHECK_FALSE(fixture.Actions->Redo(id));
+    });
+}
+
+TEST_CASE("Editor action store records one RectTransform move for arrows plane and body on release", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (i32 kind = 0; kind < 4; kind++)
+        {
+            CAPTURE(kind);
+            RectMoveFixture fixture;
+            fixture.Press(kind);
+            fixture.Input.Cursor(fixture.Input.First, 354, 204);
+            fixture.Update(kind);
+            fixture.Finish.OnUpdate();
+            CHECK(fixture.Recorded.empty());
+            const auto after = fixture.Rect().GetAnchoredPosition();
+            CHECK(after.x == Catch::Approx(kind == 1 ? 10 : 34));
+            CHECK(after.y == Catch::Approx(kind == 0 ? 20 : 36));
+            fixture.Release();
+            REQUIRE(fixture.Recorded.size() == 1);
+            fixture.Finish.OnUpdate();
+            CHECK(fixture.Recorded.size() == 1);
+            CHECK(fixture.Control().DragStartTargetStates.empty());
+            CHECK_FALSE(fixture.Control().RectTransformBodyDragActive);
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(after));
+            CHECK(fixture.Recorded.size() == 1);
+        }
+    });
+}
+
+TEST_CASE("Editor action store skips RectTransform no-ops resize inactive and group drags", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        for (const std::string reason : {"unchanged", "returned", "click", "resize", "scale", "rotation", "inactive", "group", "partial_group", "missing"})
+        {
+            CAPTURE(reason);
+            RectMoveFixture fixture;
+            const bool body = reason == "click" || reason == "resize";
+            fixture.Control().Mode = body ? editor::RectTransform : editor::Movement;
+            fixture.Control().RightMovementArrow.DragActive = !body;
+            fixture.Control().RectTransformBodyDragPending = reason == "click";
+            fixture.Control().TopRectHandle.DragActive = reason == "resize";
+            if (reason == "group" || reason == "partial_group")
+            {
+                const auto second = reason == "group" ? fixture.Native.Entity(2) : fixture.Native.Registry->NewEntity();
+                if (reason == "group") fixture.Native.Registry->Get<ui::RectTransform>(second);
+                fixture.Control().TargetEntities.push_back(second);
+            }
+            transformation_control_drag::CaptureDragStartTargetStates(fixture.Native.World, fixture.Control());
+            if (reason != "unchanged" && reason != "click") fixture.Rect().GetAnchoredPosition() = {34, 36};
+            if (reason == "returned") fixture.Rect().GetAnchoredPosition() = {10, 20};
+            if (reason == "resize") fixture.Rect().GetSizeDelta() = {250, 190};
+            if (reason == "scale") fixture.Control().Mode = editor::Scale;
+            if (reason == "rotation") fixture.Control().Mode = editor::Rotation;
+            if (reason == "inactive") fixture.Control().RightMovementArrow.DragActive = false;
+            if (reason == "missing")
+            {
+                fixture.Native.Registry->DestroyEntity(fixture.Target);
+                fixture.Native.World->Refresh();
+            }
+            fixture.Release();
+            fixture.Finish.OnUpdate();
+            CHECK(fixture.Recorded.empty());
         }
     });
 }

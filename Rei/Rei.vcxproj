@@ -647,6 +647,7 @@
     <ClInclude Include="src\Modules\Editor\Actions\IEditorAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EditorActionStore.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityMoveAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\RectTransformMoveAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityScaleAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityOrderAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityReparentAction.h" />
@@ -856,6 +857,7 @@
     <ClCompile Include="src\Modules\Behaviour\Systems\UpdateBehavioursSystem.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EditorActionStore.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityMoveAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\RectTransformMoveAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityScaleAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityOrderAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityReparentAction.cpp" />

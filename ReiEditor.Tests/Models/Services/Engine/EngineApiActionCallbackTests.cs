@@ -59,6 +59,12 @@ public sealed class EngineApiActionCallbackTests
     private delegate void ReadEntityWorldTransformDelegate(int sceneId, [Out] float[] values);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void EntityIdDelegate(int sceneId);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int PrepareRectMoveDelegate(int kind);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void MoveRectPointerDelegate(int dx, int dy);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void ReadRectMoveDelegate([Out] float[] values);
 
     [NativeCallbackFact]
     public Task NativeCallbacksRecordTransformActionsInCommonHistoryAndReplayWithoutRecordingAgain()
@@ -695,6 +701,113 @@ public sealed class EngineApiActionCallbackTests
                     foreach (var axis in new[] { "x", "y", "z" })
                         Assert.InRange(MathF.Abs(state[name]![axis]!.Value<float>() - actual[id][name]![axis]!.Value<float>()), 0f, 0.0001f);
             }
+        }
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformPointerMovesShareHistoryWithoutChangingOtherFields()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var kind = 0; kind < 4; kind++) await VerifyRectMoveAsync(kind);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectMoveAsync(int kind)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var entityId = api.Invoke<int>(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", kind);
+            var before = Read(20, 30);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectMove", kind);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", kind == 1 ? 0 : 24, kind == 0 ? 0 : -16);
+            var x = kind == 1 ? 20f : 44f;
+            var y = kind == 0 ? 30f : 46f;
+            Check(x, y);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Empty(received);
+            Assert.False(commands.CanUndo);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            Check(x, y);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            await commands.UndoAsync();
+            Check(20, 30);
+            Assert.False(commands.CanUndo);
+            Assert.True(commands.CanRedo);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectMove", kind);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            Check(20, 30);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            Assert.True(commands.CanRedo);
+            await commands.RedoAsync();
+            Check(x, y);
+
+            var entity = new GameEntity(entityId, "Rect move");
+            var management = new TestEntityManagementService { OnRename = (target, name) => { entities.Rename(target.Id, name); target.SetName(name); } };
+            var scenes = new TestSceneManagementService(entity);
+            var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+            runner.Active.Value = true;
+            runner.EditorActive.Value = true;
+            var rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes, runner);
+            await commands.ExecuteAsync((IEntityRenameCommand)rename, new(entity, "Renamed"));
+            Assert.Equal("Renamed", entities.GetEntityData(entityId)!.Name);
+            await commands.UndoAsync();
+            Assert.Equal("Rect move", entities.GetEntityData(entityId)!.Name);
+            await commands.UndoAsync();
+            Check(20, 30);
+            Assert.False(commands.CanUndo);
+            await commands.RedoAsync();
+            Check(x, y);
+            await commands.RedoAsync();
+            Assert.Equal("Renamed", entities.GetEntityData(entityId)!.Name);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(received);
+            Assert.False(commands.CanRedo);
+            Assert.Empty(logger.Entries);
+
+            float[] Read(float expectedX, float expectedY)
+            {
+                var values = new float[20];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", (object)values);
+                Assert.InRange(MathF.Abs(values[0] - expectedX), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(values[1] - expectedY), 0f, 0.0001f);
+                var state = entities.GetEntityData(entityId)!;
+                var rect = JObject.FromObject(state.Behaviours.Single(item => item["REI_TYPE"].ToString() == "RectTransform"));
+                Assert.InRange(MathF.Abs(rect["_anchoredPosition"]!["x"]!.Value<float>() - values[0]), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(rect["_anchoredPosition"]!["y"]!.Value<float>() - values[1]), 0f, 0.0001f);
+                return values;
+            }
+
+            void Check(float expectedX, float expectedY)
+            {
+                var values = Read(expectedX, expectedY);
+                for (var i = 2; i < values.Length; i++) Assert.InRange(MathF.Abs(before[i] - values[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
         }
     }
 
