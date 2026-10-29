@@ -230,16 +230,15 @@ public sealed class RectTransformPropertyViewModelTests
     }
 
     [Fact]
-    public void AnchorsAndPivotEditsDoNotRecordRectangleHistory()
+    public void AnchorEditsDoNotRecordRectangleHistory()
     {
         var fixture = TestCreateFixture();
         using var vm = fixture.ViewModel;
         fixture.Runner.Active.Value = true;
         fixture.Runner.EditorActive.Value = true;
-        vm.PivotX = 0.25f;
         vm.AnchorMaxX = 1;
         vm.AnchorMaxY = 1;
-        Assert.Equal(3, fixture.Api.Requests.Count);
+        Assert.Equal(2, fixture.Api.Requests.Count);
         Assert.All(fixture.Api.Requests, request => Assert.False(request.RecordTransformChange));
         Assert.All(fixture.Api.Requests, request => Assert.Equal(6, Assert.Single(request.Behaviours).Count));
     }
@@ -310,6 +309,32 @@ public sealed class RectTransformPropertyViewModelTests
         Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, data.Keys);
         var after = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
         for (var i = 0; i < 4; i++) Assert.InRange(MathF.Abs(after[i] - (i == edge ? 25 : before[i])), 0f, 0.0001f);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void PivotWritesOnePreservedLayoutAndRecordsOnlyInEditor(bool horizontal, bool editor)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        var pivot = horizontal ? new RectTransformVector2(0.25f, 0.5f) : new RectTransformVector2(0.5f, 0.25f);
+        var position = horizontal ? new RectTransformVector2(-15, 20) : new RectTransformVector2(10, 7.5f);
+        fixture.Layout.PreservedPivot = new RectTransformLayoutData(new(0.5f, 0.5f), new(0.5f, 0.5f), pivot, position, new(100, 50));
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        if (horizontal) vm.PivotX = 0.25f;
+        else vm.PivotY = 0.25f;
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(editor, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(4, data.Count);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, pivot.X, pivot.Y);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, position.X, position.Y);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, 100, 50);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
     }
 
     private static TestFixture TestCreateFixture()

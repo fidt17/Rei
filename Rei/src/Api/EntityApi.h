@@ -9,6 +9,7 @@
 #include "Modules/Editor/Actions/EntityMoveAction.h"
 #include "Modules/Editor/Actions/RectTransformMoveAction.h"
 #include "Modules/Editor/Actions/RectTransformResizeAction.h"
+#include "Modules/Editor/Actions/RectTransformPivotAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
@@ -303,11 +304,13 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
             const bool recordTransform = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::Transform) && !HAS(e, rei::ui::RectTransform)
                 && behaviourId == GET(e, rei::Transform).GetBehaviourId();
+            const bool pivotEdit = b.size() == 4 && b.contains("_pivot") && b.contains("_anchoredPosition") && b.contains("_sizeDelta");
             const bool recordRect = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::ui::RectTransform) && behaviourId == GET(e, rei::ui::RectTransform).GetBehaviourId()
-                && ((b.size() == 3 && b.contains("_anchoredPosition") && b.contains("_sizeDelta"))
+                && (pivotEdit || (b.size() == 3 && b.contains("_anchoredPosition") && b.contains("_sizeDelta"))
                     || (b.size() == 2 && (b.contains("_anchoredPosition") || b.contains("_sizeDelta"))
                         && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax())));
+            const auto beforeRectPivot = recordRect ? GET(e, rei::ui::RectTransform).GetPivot() : rei::math::Vector2{};
             const auto beforeRectPosition = recordRect ? GET(e, rei::ui::RectTransform).GetAnchoredPosition() : rei::math::Vector2{};
             const auto beforeRectSize = recordRect ? GET(e, rei::ui::RectTransform).GetSizeDelta() : rei::math::Vector2{};
             const auto beforePosition = recordTransform ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
@@ -318,7 +321,14 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
             {
                 const rei::ecs::ComponentRef<rei::ui::RectTransform> target(_ecs, e);
                 const auto after = target.Get().GetAnchoredPosition();
-                if (b.contains("_sizeDelta"))
+                if (pivotEdit)
+                {
+                    const rei::editor::RectTransformPivotAction::State before{beforeRectPivot, beforeRectPosition, beforeRectSize};
+                    const rei::editor::RectTransformPivotAction::State changed{target.Get().GetPivot(), after, target.Get().GetSizeDelta()};
+                    if (glm::vec2(before.Pivot) != glm::vec2(changed.Pivot) || glm::vec2(before.AnchoredPosition) != glm::vec2(changed.AnchoredPosition) || glm::vec2(before.SizeDelta) != glm::vec2(changed.SizeDelta))
+                        rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformPivotAction>(target, before, changed));
+                }
+                else if (b.contains("_sizeDelta"))
                 {
                     const rei::editor::RectTransformResizeAction::State before{beforeRectPosition, beforeRectSize};
                     const rei::editor::RectTransformResizeAction::State resized{after, target.Get().GetSizeDelta()};

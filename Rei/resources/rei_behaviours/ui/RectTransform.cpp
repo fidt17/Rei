@@ -14,6 +14,8 @@ namespace rei::ui
         return _anchorMax;
     }
 
+    math::Vector2& RectTransform::GetPivot() { return _pivot; }
+
     const math::Vector2& RectTransform::GetPivot() const
     {
         return _pivot;

@@ -412,17 +412,18 @@ public class RectTransformPropertyViewModel : BaseViewModel
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY));
         if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA))
             data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT))
+            data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
         if (propertyNames.Length == 0)
         {
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
-            data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
         }
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
             RecordTransformChange = propertyNames.Length > 0 && _engineRunner.IsEditorActive.Value
-                && (propertyNames.Length == 2 || (!IsStretchX && !IsStretchY)),
+                && (propertyNames.Length >= 2 || (!IsStretchX && !IsStretchY)),
             Behaviours = new List<Dictionary<string, object?>> { data }
         });
     }
@@ -436,7 +437,9 @@ public class RectTransformPropertyViewModel : BaseViewModel
             _pivot.SetSilently(preservedLayout.Pivot.X, preservedLayout.Pivot.Y);
             _anchoredPosition.SetSilently(preservedLayout.AnchoredPosition.X, preservedLayout.AnchoredPosition.Y);
             _sizeDelta.SetSilently(preservedLayout.SizeDelta.X, preservedLayout.SizeDelta.Y);
-            PushRectTransformToRuntimeIfNeeded();
+            PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT,
+                EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION,
+                EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
             RefreshAll();
             return;
         }
