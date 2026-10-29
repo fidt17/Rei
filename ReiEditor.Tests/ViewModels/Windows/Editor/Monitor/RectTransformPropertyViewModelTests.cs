@@ -229,18 +229,39 @@ public sealed class RectTransformPropertyViewModelTests
         Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
     }
 
-    [Fact]
-    public void AnchorEditsDoNotRecordRectangleHistory()
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(3, true)]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    public void ManualAnchorsRecordOneLayoutWithoutRecalculatingPositionOrSize(int field, bool editor)
     {
         var fixture = TestCreateFixture();
         using var vm = fixture.ViewModel;
         fixture.Runner.Active.Value = true;
-        fixture.Runner.EditorActive.Value = true;
-        vm.AnchorMaxX = 1;
-        vm.AnchorMaxY = 1;
-        Assert.Equal(2, fixture.Api.Requests.Count);
-        Assert.All(fixture.Api.Requests, request => Assert.False(request.RecordTransformChange));
-        Assert.All(fixture.Api.Requests, request => Assert.Equal(6, Assert.Single(request.Behaviours).Count));
+        fixture.Runner.EditorActive.Value = editor;
+        var value = field < 2 ? 0.375f : 0.625f;
+        switch (field)
+        {
+            case 0: vm.AnchorMinX = value; break;
+            case 1: vm.AnchorMinY = value; break;
+            case 2: vm.AnchorMaxX = value; break;
+            case 3: vm.AnchorMaxY = value; break;
+        }
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(editor, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(5, data.Count);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, field == 0 ? value : 0.5f, field == 1 ? value : 0.5f);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, field == 2 ? value : 0.5f, field == 3 ? value : 0.5f);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, 10, 20);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, 100, 50);
+        Assert.Equal(0.5f, vm.PivotX);
+        Assert.Equal(0.5f, vm.PivotY);
     }
 
     [Theory]

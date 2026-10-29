@@ -1388,7 +1388,7 @@ public sealed class EngineApiActionCallbackTests
                 await commands.RedoAsync();
                 Check(initial, bounds, center);
                 Assert.Equal(4, received.Count);
-                // Manual anchor requests stay outside this history step, even if a caller flags them.
+                // Partial anchor requests without a complete rectangle snapshot remain unrecorded.
                 entities.SetData(new SetEntityDataRequest
                 {
                     SceneId = ids[0], RecordTransformChange = true,
@@ -1435,6 +1435,162 @@ public sealed class EngineApiActionCallbackTests
             }
             return true;
         }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task InspectorManualRectAnchorsShareHistoryWithPresetsAndHandles()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var field = 0; field < 4; field++) await VerifyInspectorManualRectAnchorAsync(field);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyInspectorManualRectAnchorAsync(int field)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var ids = new int[1];
+            api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, 1, ids);
+            using var inspector = new InspectorTransformFixture(entities, ids[0]);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            var component = inspector.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
+            var registry = new TestBehaviourRegistry();
+            registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            var parentId = Convert.ToInt32(inspector.Transform.GetProperty("_parent").Value);
+            Assert.NotEqual(0, parentId);
+            var parent = new GameEntity(parentId, "Canvas bounds");
+            parent.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
+                new(new(0.5f, 0.5f), new(0.5f, 0.5f), new(0.5f, 0.5f), new(0, 0), new(640, 480))));
+            var scenes = new TestSceneManagementService(parent, inspector.Entity);
+            Assert.True(scenes.Scene.Value!.MoveEntity(inspector.Entity, parent, 0));
+            var layout = new RectTransformLayoutService(registry, scenes, null!);
+            Assert.Equal(new RectTransformVector2(640, 480), layout.GetParentSize(inspector.Entity));
+            using var vm = new RectTransformPropertyViewModel(inspector.Entity, component, inspector.Runner, entities, layout);
+            var baseline = new float[20];
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, baseline);
+            var initial = new[] { 20f, 30f, 200f, 160f, 0.5f, 0.5f, 0.5f, 0.5f };
+            var initialBounds = new[] { 240f, 190f, 440f, 350f };
+            var manual = initial.ToArray();
+            manual[4 + field] = field < 2 ? 0.375f : 0.625f;
+            var manualBounds = new[] { new[] { 160f, 190f, 440f, 350f }, new[] { 240f, 130f, 440f, 350f },
+                new[] { 240f, 190f, 520f, 350f }, new[] { 240f, 190f, 440f, 410f } }[field];
+            var stretched = new[] { new[] { -20f, 30f, -360f, -320f, 0f, 0f, 1f, 1f }, new[] { 20f, 0f, -440f, -260f, 0f, 0f, 1f, 1f },
+                new[] { 60f, 30f, -360f, -320f, 0f, 0f, 1f, 1f }, new[] { 20f, 60f, -440f, -260f, 0f, 0f, 1f, 1f } }[field];
+            var names = new[] { nameof(vm.AnchorMinX), nameof(vm.AnchorMinY), nameof(vm.AnchorMaxX), nameof(vm.AnchorMaxY) };
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var binding = input.Bind(ReiTextBox.TextProperty, new Binding(names[field]) { Mode = BindingMode.TwoWay });
+            Dispatcher.UIThread.RunJobs();
+            input.TextInternal = "0";
+            input.TextInternal = manual[4 + field].ToString(System.Globalization.CultureInfo.CurrentCulture);
+            Check(initial, initialBounds);
+            Assert.Empty(received);
+            input.LoseFocus();
+            Check(manual, manualBounds);
+            Assert.Single(received);
+            Assert.Equal("Custom", vm.AnchorModeName);
+            var stretch = Assert.Single(vm.Presets, preset => preset.DisplayName == "Stretch Both");
+            stretch.ApplyCommand.Execute(null);
+            Check(stretched, manualBounds);
+            Assert.True(stretch.IsSelected);
+            Assert.Equal(2, received.Count);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectResize", 2);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+            var dragged = stretched.ToArray();
+            dragged[0] += 12; dragged[1] += 8; dragged[2] += 24; dragged[3] += 16;
+            var draggedBounds = new[] { manualBounds[0], manualBounds[1], manualBounds[2] + 24, manualBounds[3] + 16 };
+            Check(dragged, draggedBounds);
+            Assert.Equal(2, received.Count);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            Check(dragged, draggedBounds);
+            Assert.Equal(3, received.Count);
+            await commands.UndoAsync();
+            Check(stretched, manualBounds);
+            await commands.UndoAsync();
+            Check(manual, manualBounds);
+            await commands.UndoAsync();
+            Check(initial, initialBounds);
+            Assert.False(commands.CanUndo);
+            foreach (var text in new[] { 0.5f.ToString(System.Globalization.CultureInfo.CurrentCulture), "invalid", "NaN" })
+            {
+                input.TextInternal = text;
+                input.LoseFocus();
+                Check(initial, initialBounds);
+                Assert.Equal(3, received.Count);
+                Assert.True(commands.CanRedo);
+            }
+            await commands.RedoAsync();
+            Check(manual, manualBounds);
+            await commands.RedoAsync();
+            Check(stretched, manualBounds);
+            await commands.RedoAsync();
+            Check(dragged, draggedBounds);
+            Assert.Equal(3, received.Count);
+            Assert.False(commands.CanRedo);
+            await commands.UndoAsync();
+            await commands.UndoAsync();
+            Check(manual, manualBounds);
+            input.TextInternal = (field < 2 ? 0.25f : 0.75f).ToString(System.Globalization.CultureInfo.CurrentCulture);
+            input.LoseFocus();
+            var branched = initial.ToArray();
+            branched[4 + field] = field < 2 ? 0.25f : 0.75f;
+            var branchBounds = new[] { new[] { 80f, 190f, 440f, 350f }, new[] { 240f, 70f, 440f, 350f },
+                new[] { 240f, 190f, 600f, 350f }, new[] { 240f, 190f, 440f, 470f } }[field];
+            Check(branched, branchBounds);
+            Assert.Equal(4, received.Count);
+            Assert.False(commands.CanRedo);
+            await commands.UndoAsync();
+            Check(manual, manualBounds);
+            await commands.RedoAsync();
+            Check(branched, branchBounds);
+            Assert.Equal(4, received.Count);
+            Assert.Empty(logger.Entries);
+            Assert.Empty(inspector.Logger.Entries);
+
+            void Check(float[] expected, float[] expectedBounds)
+            {
+                var native = new float[20];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, native);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(layout.TryReadLayout(component, out var state));
+                var editor = new[] { state.AnchoredPosition.X, state.AnchoredPosition.Y, state.SizeDelta.X, state.SizeDelta.Y,
+                    vm.AnchorMinX, vm.AnchorMinY, vm.AnchorMaxX, vm.AnchorMaxY };
+                for (var i = 0; i < 8; i++)
+                {
+                    Assert.InRange(MathF.Abs(native[i] - expected[i]), 0f, 0.0001f);
+                    Assert.InRange(MathF.Abs(editor[i] - expected[i]), 0f, 0.0001f);
+                }
+                var left = 640 * native[4] + native[0] - native[8] * native[2];
+                var bottom = 480 * native[5] + native[1] - native[9] * native[3];
+                var actualBounds = new[] { left, bottom, left + 640 * (native[6] - native[4]) + native[2], bottom + 480 * (native[7] - native[5]) + native[3] };
+                for (var i = 0; i < 4; i++) Assert.InRange(MathF.Abs(actualBounds[i] - expectedBounds[i]), 0f, 0.0001f);
+                for (var i = 8; i < native.Length; i++) Assert.InRange(MathF.Abs(native[i] - baseline[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
     }
 
     [NativeCallbackFact]

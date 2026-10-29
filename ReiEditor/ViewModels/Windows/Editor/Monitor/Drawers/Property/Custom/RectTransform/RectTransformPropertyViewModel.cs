@@ -268,10 +268,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
         var before = CalculateRect(parentSize);
         var values = CalculateValuesForRect(parentSize, before, preset.MinX, preset.MinY, preset.MaxX, preset.MaxY);
         SetRectTransformSilently(preset.MinX, preset.MinY, preset.MaxX, preset.MaxY, values);
-        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN,
-            EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX,
-            EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION,
-            EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
+        PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
     }
 
@@ -370,14 +367,14 @@ public class RectTransformPropertyViewModel : BaseViewModel
     private void SetAnchorMin(float x, float y)
     {
         _anchorMin.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
     }
 
     private void SetAnchorMax(float x, float y)
     {
         _anchorMax.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
     }
 
@@ -401,6 +398,14 @@ public class RectTransformPropertyViewModel : BaseViewModel
         _anchoredPosition.SetSilently(values.AnchoredPositionX, values.AnchoredPositionY);
         PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
+    }
+
+    private void PushAnchorsToRuntimeIfNeeded()
+    {
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN,
+            EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX,
+            EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION,
+            EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
     }
 
     private void PushRectTransformToRuntimeIfNeeded(params string[] propertyNames)

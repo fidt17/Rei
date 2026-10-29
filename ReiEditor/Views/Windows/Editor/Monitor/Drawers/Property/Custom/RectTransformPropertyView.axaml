@@ -195,6 +195,7 @@
                         Grid.Column="2"
                         VerticalAlignment="Center"
                         MaxWidth="64"
+                        IsFloat="True"
                         Text="{Binding AnchorMinX, Mode=TwoWay}" />
                     <TextBlock
                         Grid.Column="3"
@@ -207,6 +208,7 @@
                         Grid.Column="4"
                         VerticalAlignment="Center"
                         MaxWidth="64"
+                        IsFloat="True"
                         Text="{Binding AnchorMinY, Mode=TwoWay}" />
                 </Grid>
 
@@ -228,6 +230,7 @@
                         Grid.Column="2"
                         VerticalAlignment="Center"
                         MaxWidth="64"
+                        IsFloat="True"
                         Text="{Binding AnchorMaxX, Mode=TwoWay}" />
                     <TextBlock
                         Grid.Column="3"
@@ -240,6 +243,7 @@
                         Grid.Column="4"
                         VerticalAlignment="Center"
                         MaxWidth="64"
+                        IsFloat="True"
                         Text="{Binding AnchorMaxY, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
