@@ -1001,6 +1001,141 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
+    public Task InspectorRectOffsetsShareHistoryWithHandlesAndPreserveOppositeEdges()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            for (var edge = 0; edge < 4; edge++) await VerifyInspectorRectOffsetAsync(edge);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyInspectorRectOffsetAsync(int edge)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var ids = new int[1];
+            api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, 1, ids);
+            using var inspector = new InspectorTransformFixture(entities, ids[0]);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            var component = inspector.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
+            var registry = new TestBehaviourRegistry();
+            registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            var layout = new RectTransformLayoutService(registry, new TestSceneManagementService(inspector.Entity), null!);
+            entities.SetData(new SetEntityDataRequest
+            {
+                SceneId = ids[0], Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = component.Id,
+                    ["_anchorMin"] = layout.SerializeVector2(new(0, 0)), ["_anchorMax"] = layout.SerializeVector2(new(1, 1)),
+                    ["_sizeDelta"] = layout.SerializeVector2(new(-200, -160)) }]
+            });
+            var baseline = new float[20];
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, baseline);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            using var vm = new RectTransformPropertyViewModel(inspector.Entity, component, inspector.Runner, entities, layout);
+            var properties = new[] { nameof(vm.HorizontalPrimaryValue), nameof(vm.HorizontalSecondaryValue), nameof(vm.VerticalPrimaryValue), nameof(vm.VerticalSecondaryValue) };
+            var initialOffsets = new[] { 120f, 80f, 50f, 110f };
+            var changed = new[] { new[] { 28f, 30f, -216f, -160f }, new[] { 12f, 30f, -216f, -160f },
+                new[] { 20f, 22f, -200f, -176f }, new[] { 20f, 38f, -200f, -176f } }[edge];
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var binding = input.Bind(ReiTextBox.TextProperty, new Binding(properties[edge]) { Mode = BindingMode.TwoWay });
+            Dispatcher.UIThread.RunJobs();
+            input.TextInternal = "1";
+            input.TextInternal = (initialOffsets[edge] + 16).ToString(System.Globalization.CultureInfo.CurrentCulture);
+            Check(baseline);
+            Assert.Empty(received);
+            input.LoseFocus();
+            Check(changed);
+            var offsets = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
+            for (var i = 0; i < 4; i++) Assert.Equal(initialOffsets[i] + (i == edge ? 16 : 0), offsets[i]);
+            Assert.Single(received);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectResize", 2);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+            var dragged = new[] { changed[0] + 12, changed[1] + 8, changed[2] + 24, changed[3] + 16 };
+            Check(dragged);
+            Assert.Single(received);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            Check(dragged);
+            Assert.Equal(2, received.Count);
+            await commands.UndoAsync();
+            Check(changed);
+            await commands.UndoAsync();
+            Check(baseline);
+            Assert.False(commands.CanUndo);
+            foreach (var text in new[] { initialOffsets[edge].ToString(System.Globalization.CultureInfo.CurrentCulture), "invalid", "NaN" })
+            {
+                input.TextInternal = text;
+                input.LoseFocus();
+                Check(baseline);
+                Assert.Equal(2, received.Count);
+                Assert.True(commands.CanRedo);
+            }
+            await commands.RedoAsync();
+            Check(changed);
+            await commands.RedoAsync();
+            Check(dragged);
+            Assert.Equal(2, received.Count);
+            Assert.False(commands.CanRedo);
+            await commands.UndoAsync();
+            Check(changed);
+            input.TextInternal = (initialOffsets[edge] + 32).ToString(System.Globalization.CultureInfo.CurrentCulture);
+            input.LoseFocus();
+            var branched = changed.Select((value, index) => baseline[index] + 2 * (value - baseline[index])).ToArray();
+            Check(branched);
+            Assert.Equal(3, received.Count);
+            Assert.False(commands.CanRedo);
+            await commands.UndoAsync();
+            Check(changed);
+            await commands.RedoAsync();
+            Check(branched);
+            Assert.Equal(3, received.Count);
+            Assert.Empty(logger.Entries);
+            Assert.Empty(inspector.Logger.Entries);
+
+            void Check(float[] expected)
+            {
+                var native = new float[20];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, native);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(layout.TryReadLayout(component, out var state));
+                var editor = new[] { state.AnchoredPosition.X, state.AnchoredPosition.Y, state.SizeDelta.X, state.SizeDelta.Y };
+                for (var i = 0; i < 4; i++)
+                {
+                    Assert.InRange(MathF.Abs(native[i] - expected[i]), 0f, 0.0001f);
+                    Assert.InRange(MathF.Abs(editor[i] - expected[i]), 0f, 0.0001f);
+                }
+                // With full stretch and a centered pivot, offsets follow directly from native position and size delta.
+                var nativeEdges = new[] { native[0] - native[2] / 2, -native[0] - native[2] / 2, -native[1] - native[3] / 2, native[1] - native[3] / 2 };
+                var editorEdges = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
+                for (var i = 0; i < 4; i++) Assert.InRange(MathF.Abs(editorEdges[i] - nativeEdges[i]), 0f, 0.0001f);
+                for (var i = 4; i < native.Length; i++) Assert.InRange(MathF.Abs(native[i] - baseline[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+    }
+
+    [NativeCallbackFact]
     public Task RectTransformPointerMovesShareHistoryWithoutChangingOtherFields()
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);

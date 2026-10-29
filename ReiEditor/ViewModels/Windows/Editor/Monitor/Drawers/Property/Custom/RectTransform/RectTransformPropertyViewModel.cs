@@ -396,11 +396,11 @@ public class RectTransformPropertyViewModel : BaseViewModel
     {
         _sizeDelta.SetSilently(values.SizeDeltaX, values.SizeDeltaY);
         _anchoredPosition.SetSilently(values.AnchoredPositionX, values.AnchoredPositionY);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
     }
 
-    private void PushRectTransformToRuntimeIfNeeded(string? propertyName = null)
+    private void PushRectTransformToRuntimeIfNeeded(params string[] propertyNames)
     {
         if (_entity == null || _component == null || _engineRunner?.IsActive.Value != true || _entityApi == null || _rectTransformLayoutService == null) return;
 
@@ -408,11 +408,11 @@ public class RectTransformPropertyViewModel : BaseViewModel
         {
             [SetEntityDataRequest.REI_BEHAVIOUR_ID] = _component.Id
         };
-        if (propertyName == null || propertyName == EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION)
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION))
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY));
-        if (propertyName == null || propertyName == EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA)
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA))
             data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
-        if (propertyName == null)
+        if (propertyNames.Length == 0)
         {
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
@@ -421,7 +421,8 @@ public class RectTransformPropertyViewModel : BaseViewModel
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
-            RecordTransformChange = propertyName != null && _engineRunner.IsEditorActive.Value && !IsStretchX && !IsStretchY,
+            RecordTransformChange = propertyNames.Length > 0 && _engineRunner.IsEditorActive.Value
+                && (propertyNames.Length == 2 || (!IsStretchX && !IsStretchY)),
             Behaviours = new List<Dictionary<string, object?>> { data }
         });
     }

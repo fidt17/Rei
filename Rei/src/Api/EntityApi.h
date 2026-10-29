@@ -305,8 +305,9 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
                 && behaviourId == GET(e, rei::Transform).GetBehaviourId();
             const bool recordRect = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::ui::RectTransform) && behaviourId == GET(e, rei::ui::RectTransform).GetBehaviourId()
-                && b.size() == 2 && (b.contains("_anchoredPosition") || b.contains("_sizeDelta"))
-                && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax());
+                && ((b.size() == 3 && b.contains("_anchoredPosition") && b.contains("_sizeDelta"))
+                    || (b.size() == 2 && (b.contains("_anchoredPosition") || b.contains("_sizeDelta"))
+                        && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax())));
             const auto beforeRectPosition = recordRect ? GET(e, rei::ui::RectTransform).GetAnchoredPosition() : rei::math::Vector2{};
             const auto beforeRectSize = recordRect ? GET(e, rei::ui::RectTransform).GetSizeDelta() : rei::math::Vector2{};
             const auto beforePosition = recordTransform ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
@@ -317,14 +318,15 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
             {
                 const rei::ecs::ComponentRef<rei::ui::RectTransform> target(_ecs, e);
                 const auto after = target.Get().GetAnchoredPosition();
-                if (b.contains("_anchoredPosition") && glm::vec2(beforeRectPosition) != glm::vec2(after))
-                    rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformMoveAction>(target, beforeRectPosition, after));
-                if (b.contains("_sizeDelta") && glm::vec2(beforeRectSize) != glm::vec2(target.Get().GetSizeDelta()))
+                if (b.contains("_sizeDelta"))
                 {
                     const rei::editor::RectTransformResizeAction::State before{beforeRectPosition, beforeRectSize};
                     const rei::editor::RectTransformResizeAction::State resized{after, target.Get().GetSizeDelta()};
-                    rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformResizeAction>(target, before, resized));
+                    if (glm::vec2(before.AnchoredPosition) != glm::vec2(resized.AnchoredPosition) || glm::vec2(before.SizeDelta) != glm::vec2(resized.SizeDelta))
+                        rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformResizeAction>(target, before, resized));
                 }
+                else if (glm::vec2(beforeRectPosition) != glm::vec2(after))
+                    rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformMoveAction>(target, beforeRectPosition, after));
             }
             if (!recordTransform) continue;
             const rei::ecs::ComponentRef<rei::Transform> transform(_ecs, e);

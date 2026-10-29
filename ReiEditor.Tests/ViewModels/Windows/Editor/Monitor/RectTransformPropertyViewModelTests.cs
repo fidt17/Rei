@@ -230,7 +230,7 @@ public sealed class RectTransformPropertyViewModelTests
     }
 
     [Fact]
-    public void StretchOffsetsAndOtherLayoutEditsDoNotRecordPositionHistory()
+    public void AnchorsAndPivotEditsDoNotRecordRectangleHistory()
     {
         var fixture = TestCreateFixture();
         using var vm = fixture.ViewModel;
@@ -239,9 +239,7 @@ public sealed class RectTransformPropertyViewModelTests
         vm.PivotX = 0.25f;
         vm.AnchorMaxX = 1;
         vm.AnchorMaxY = 1;
-        vm.HorizontalPrimaryValue = 25;
-        vm.VerticalPrimaryValue = 35;
-        Assert.Equal(5, fixture.Api.Requests.Count);
+        Assert.Equal(3, fixture.Api.Requests.Count);
         Assert.All(fixture.Api.Requests, request => Assert.False(request.RecordTransformChange));
         Assert.All(fixture.Api.Requests, request => Assert.Equal(6, Assert.Single(request.Behaviours).Count));
     }
@@ -272,6 +270,46 @@ public sealed class RectTransformPropertyViewModelTests
         TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, horizontal ? 140 : 100, horizontal ? 50 : 140);
         Assert.Equal(10f, TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION)["x"].Value);
         Assert.Equal(20f, TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION)["y"].Value);
+    }
+
+    [Theory]
+    [InlineData(0, true, false)]
+    [InlineData(1, true, false)]
+    [InlineData(2, true, false)]
+    [InlineData(3, true, false)]
+    [InlineData(0, true, true)]
+    [InlineData(1, true, true)]
+    [InlineData(2, true, true)]
+    [InlineData(3, true, true)]
+    [InlineData(0, false, true)]
+    [InlineData(1, false, true)]
+    [InlineData(2, false, true)]
+    [InlineData(3, false, true)]
+    public void OffsetWritesOneRectangleAndPreservesOtherEdges(int edge, bool editor, bool stretchBoth)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        if (edge < 2 || stretchBoth) { vm.AnchorMinX = 0; vm.AnchorMaxX = 1; }
+        if (edge >= 2 || stretchBoth) { vm.AnchorMinY = 0; vm.AnchorMaxY = 1; }
+        var before = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        switch (edge)
+        {
+            case 0: vm.HorizontalPrimaryValue = 25; break;
+            case 1: vm.HorizontalSecondaryValue = 25; break;
+            case 2: vm.VerticalPrimaryValue = 25; break;
+            case 3: vm.VerticalSecondaryValue = 25; break;
+        }
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(editor, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(3, data.Count);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+        Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, data.Keys);
+        Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, data.Keys);
+        var after = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
+        for (var i = 0; i < 4; i++) Assert.InRange(MathF.Abs(after[i] - (i == edge ? 25 : before[i])), 0f, 0.0001f);
     }
 
     private static TestFixture TestCreateFixture()
