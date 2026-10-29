@@ -78,6 +78,7 @@
                             Grid.Column="1"
                             VerticalAlignment="Center"
                             MaxWidth="64"
+                            IsFloat="True"
                             Text="{Binding HorizontalPrimaryValue, Mode=TwoWay}" />
                         <TextBlock
                             Grid.Column="2"
@@ -106,6 +107,7 @@
                             Grid.Column="1"
                             VerticalAlignment="Center"
                             MaxWidth="64"
+                            IsFloat="True"
                             Text="{Binding VerticalPrimaryValue, Mode=TwoWay}" />
                         <TextBlock
                             Grid.Column="2"

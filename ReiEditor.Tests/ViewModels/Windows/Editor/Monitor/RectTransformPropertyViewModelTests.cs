@@ -208,6 +208,49 @@ public sealed class RectTransformPropertyViewModelTests
         Assert.Equal(0.5f, original["x"].Value);
     }
 
+    [Theory]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, false, false, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, false)]
+    public void PositionWritesOnlyPositionAndRecordsOnlyForEditorWithFixedAnchors(bool editor, bool stretchX, bool stretchY, bool expectedRecord)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        if (stretchX) vm.AnchorMaxX = 1;
+        if (stretchY) vm.AnchorMaxY = 1;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+
+        if (stretchX) vm.VerticalPrimaryValue = 35;
+        else vm.HorizontalPrimaryValue = 25;
+
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(expectedRecord, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(2, data.Count);
+        Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, data.Keys);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+    }
+
+    [Fact]
+    public void StretchOffsetsAndOtherLayoutEditsDoNotRecordPositionHistory()
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = true;
+        vm.HorizontalSecondaryValue = 150;
+        vm.PivotX = 0.25f;
+        vm.AnchorMaxX = 1;
+        vm.AnchorMaxY = 1;
+        vm.HorizontalPrimaryValue = 25;
+        vm.VerticalPrimaryValue = 35;
+        Assert.Equal(6, fixture.Api.Requests.Count);
+        Assert.All(fixture.Api.Requests, request => Assert.False(request.RecordTransformChange));
+        Assert.All(fixture.Api.Requests, request => Assert.Equal(6, Assert.Single(request.Behaviours).Count));
+    }
+
     private static TestFixture TestCreateFixture()
     {
         var entity = new GameEntity(7, "UI");

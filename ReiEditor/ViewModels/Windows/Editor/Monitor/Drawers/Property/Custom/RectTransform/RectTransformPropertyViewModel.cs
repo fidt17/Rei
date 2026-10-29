@@ -381,7 +381,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
     private void SetAnchoredPosition(float x, float y)
     {
         _anchoredPosition.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(positionOnly: true);
         RefreshAll();
     }
 
@@ -400,25 +400,27 @@ public class RectTransformPropertyViewModel : BaseViewModel
         RefreshAll();
     }
 
-    private void PushRectTransformToRuntimeIfNeeded()
+    private void PushRectTransformToRuntimeIfNeeded(bool positionOnly = false)
     {
         if (_entity == null || _component == null || _engineRunner?.IsActive.Value != true || _entityApi == null || _rectTransformLayoutService == null) return;
 
+        var data = new Dictionary<string, object?>
+        {
+            [SetEntityDataRequest.REI_BEHAVIOUR_ID] = _component.Id,
+            [EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY))
+        };
+        if (!positionOnly)
+        {
+            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
+            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
+            data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
+            data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
+        }
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
-            Behaviours = new List<Dictionary<string, object?>>
-            {
-                new()
-                {
-                    { SetEntityDataRequest.REI_BEHAVIOUR_ID, _component.Id },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY)) }
-                }
-            }
+            RecordTransformChange = positionOnly && _engineRunner.IsEditorActive.Value && !IsStretchX && !IsStretchY,
+            Behaviours = new List<Dictionary<string, object?>> { data }
         });
     }
 

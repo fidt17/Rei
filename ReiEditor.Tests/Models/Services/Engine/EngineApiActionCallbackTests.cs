@@ -1,5 +1,7 @@
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Engine.SceneSync;
@@ -701,6 +703,145 @@ public sealed class EngineApiActionCallbackTests
                     foreach (var axis in new[] { "x", "y", "z" })
                         Assert.InRange(MathF.Abs(state[name]![axis]!.Value<float>() - actual[id][name]![axis]!.Value<float>()), 0f, 0.0001f);
             }
+        }
+    }
+
+    [NativeCallbackFact]
+    public Task InspectorRectPositionConfirmationsShareHistoryWithGizmoMoves()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            await VerifyInspectorRectPositionAsync(true);
+            await VerifyInspectorRectPositionAsync(false);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyInspectorRectPositionAsync(bool horizontal)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var ids = new int[1];
+            api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 2, 1, ids);
+            using var inspector = new InspectorTransformFixture(entities, ids[0]);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            var component = inspector.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
+            var registry = new TestBehaviourRegistry();
+            registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            var layout = new RectTransformLayoutService(registry, new TestSceneManagementService(inspector.Entity), null!);
+            using var vm = new RectTransformPropertyViewModel(inspector.Entity, component, inspector.Runner, entities, layout);
+            var baseline = new float[20];
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, baseline);
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var binding = input.Bind(ReiTextBox.TextProperty, new Binding(horizontal ? nameof(vm.HorizontalPrimaryValue) : nameof(vm.VerticalPrimaryValue)) { Mode = BindingMode.TwoWay });
+            Dispatcher.UIThread.RunJobs();
+            input.TextInternal = "1";
+            input.TextInternal = "55";
+            Check(20, 30);
+            Assert.Empty(received);
+            input.LoseFocus();
+            var x = horizontal ? 55f : 20f;
+            var y = horizontal ? 30f : 55f;
+            Check(x, y);
+            Assert.Single(received);
+
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectMove", 2);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+            Check(x + 24, y + 16);
+            Assert.Single(received);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            Check(x + 24, y + 16);
+            Assert.Equal(2, received.Count);
+            await commands.UndoAsync();
+            Check(x, y);
+            await commands.UndoAsync();
+            Check(20, 30);
+            Assert.False(commands.CanUndo);
+            Assert.True(commands.CanRedo);
+            foreach (var text in new[] { horizontal ? "20" : "30", "invalid", "NaN" })
+            {
+                input.TextInternal = text;
+                input.LoseFocus();
+                Check(20, 30);
+                Assert.Equal(2, received.Count);
+                Assert.True(commands.CanRedo);
+            }
+            await commands.RedoAsync();
+            Check(x, y);
+            await commands.RedoAsync();
+            Check(x + 24, y + 16);
+            Assert.False(commands.CanRedo);
+            Assert.Equal(2, received.Count);
+            await commands.UndoAsync();
+            Check(x, y);
+            input.TextInternal = "75";
+            input.LoseFocus();
+            Check(horizontal ? 75 : x, horizontal ? y : 75);
+            Assert.Equal(3, received.Count);
+            Assert.False(commands.CanRedo);
+            await commands.UndoAsync();
+            Check(x, y);
+            Assert.Equal(3, received.Count);
+            Assert.Empty(logger.Entries);
+            // Full layout and stretch-position requests remain outside this history step, even if flagged by a caller.
+            var excluded = new SetEntityDataRequest
+            {
+                SceneId = ids[0], RecordTransformChange = true,
+                Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = component.Id,
+                    ["_anchorMax"] = layout.SerializeVector2(new(1, 0.5f)),
+                    ["_anchoredPosition"] = layout.SerializeVector2(new(88, 99)) }]
+            };
+            entities.SetData(excluded);
+            var unsupported = new float[20];
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+            Assert.Equal(88f, unsupported[0]);
+            Assert.Equal(99f, unsupported[1]);
+            excluded.Behaviours[0].Remove("_anchorMax");
+            excluded.Behaviours[0]["_anchoredPosition"] = layout.SerializeVector2(new(90, 100));
+            entities.SetData(excluded);
+            api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+            Assert.Equal(90f, unsupported[0]);
+            Assert.Equal(100f, unsupported[1]);
+            inspector.Apply(entities.GetEntityData(ids[0])!);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(vm.IsStretchX);
+            Assert.Equal(3, received.Count);
+            Assert.Empty(inspector.Logger.Entries);
+
+            void Check(float expectedX, float expectedY)
+            {
+                var native = new float[20];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, native);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.InRange(MathF.Abs(native[0] - expectedX), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(native[1] - expectedY), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(vm.HorizontalPrimaryValue - expectedX), 0f, 0.0001f);
+                Assert.InRange(MathF.Abs(vm.VerticalPrimaryValue - expectedY), 0f, 0.0001f);
+                for (var i = 2; i < native.Length; i++) Assert.InRange(MathF.Abs(native[i] - baseline[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
         }
     }
 
