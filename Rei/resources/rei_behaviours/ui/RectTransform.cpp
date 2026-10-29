@@ -4,10 +4,14 @@
 
 namespace rei::ui
 {
+    math::Vector2& RectTransform::GetAnchorMin() { return _anchorMin; }
+
     const math::Vector2& RectTransform::GetAnchorMin() const
     {
         return _anchorMin;
     }
+
+    math::Vector2& RectTransform::GetAnchorMax() { return _anchorMax; }
 
     const math::Vector2& RectTransform::GetAnchorMax() const
     {

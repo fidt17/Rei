@@ -15,7 +15,9 @@ namespace rei::ui
         SERIALIZE math::Vector2 _sizeDelta = math::Vector2(100, 100);
 
     public:
+        REI_API math::Vector2& GetAnchorMin();
         REI_API const math::Vector2& GetAnchorMin() const;
+        REI_API math::Vector2& GetAnchorMax();
         REI_API const math::Vector2& GetAnchorMax() const;
         REI_API math::Vector2& GetPivot();
         REI_API const math::Vector2& GetPivot() const;

@@ -6,6 +6,7 @@
 #include "Modules/Editor/Actions/RectTransformMoveAction.h"
 #include "Modules/Editor/Actions/RectTransformResizeAction.h"
 #include "Modules/Editor/Actions/RectTransformPivotAction.h"
+#include "Modules/Editor/Actions/RectTransformAnchorsAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
@@ -1593,6 +1594,42 @@ TEST_CASE("Editor action store RectTransform pivot restores pivot position and s
             CHECK(glm::vec2(target.Get().GetSizeDelta()) == glm::vec2(expected.SizeDelta));
             CHECK(glm::vec2(target.Get().GetAnchorMin()) == glm::vec2(0, 0));
             CHECK(glm::vec2(target.Get().GetAnchorMax()) == glm::vec2(1, 1));
+            CheckState(fixture.TargetTransform(), transform);
+        }
+        CHECK(fixture.Recorded.size() == 1);
+        fixture.Native.Registry->Del<ui::RectTransform>(fixture.Target);
+        CHECK_FALSE(fixture.Actions->Undo(id));
+        CHECK_FALSE(fixture.Actions->Redo(id));
+        CHECK(fixture.Recorded.size() == 1);
+    });
+}
+
+TEST_CASE("Editor action store RectTransform anchors restore anchors position and size without touching pivot", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        RectMoveFixture fixture;
+        ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
+        const RectTransformAnchorsAction::State before{{0.5f, 0.5f}, {0.5f, 0.5f}, {10, 20}, {200, 160}};
+        const RectTransformAnchorsAction::State after{{0, 0}, {1, 1}, {10, 20}, {-440, -320}};
+        target.Get().GetAnchorMin() = after.AnchorMin;
+        target.Get().GetAnchorMax() = after.AnchorMax;
+        target.Get().GetAnchoredPosition() = after.AnchoredPosition;
+        target.Get().GetSizeDelta() = after.SizeDelta;
+        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformAnchorsAction>(target, before, after));
+        target.Get().GetPivot() = {0.25f, 0.75f};
+        fixture.TargetTransform().GetLocalScale() = {2, 3, 4};
+        fixture.TargetTransform().SetRotation(math::Vector3(10, 20, 30));
+        const auto transform = ReadState(fixture.TargetTransform());
+        for (const bool undo : {true, false})
+        {
+            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)));
+            const auto& expected = undo ? before : after;
+            CHECK(glm::vec2(target.Get().GetAnchorMin()) == glm::vec2(expected.AnchorMin));
+            CHECK(glm::vec2(target.Get().GetAnchorMax()) == glm::vec2(expected.AnchorMax));
+            CHECK(glm::vec2(target.Get().GetAnchoredPosition()) == glm::vec2(expected.AnchoredPosition));
+            CHECK(glm::vec2(target.Get().GetSizeDelta()) == glm::vec2(expected.SizeDelta));
+            CHECK(glm::vec2(target.Get().GetPivot()) == glm::vec2(0.25f, 0.75f));
             CheckState(fixture.TargetTransform(), transform);
         }
         CHECK(fixture.Recorded.size() == 1);

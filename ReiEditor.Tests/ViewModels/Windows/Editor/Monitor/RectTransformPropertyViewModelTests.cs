@@ -337,6 +337,39 @@ public sealed class RectTransformPropertyViewModelTests
         Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PresetsWriteOneLayoutWithoutPivotAndPreserveBounds(bool editor)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        foreach (var preset in vm.Presets)
+        {
+            fixture.Api.Requests.Clear();
+            preset.ApplyCommand.Execute(null);
+            var request = Assert.Single(fixture.Api.Requests);
+            Assert.Equal(editor, request.RecordTransformChange);
+            var data = Assert.Single(request.Behaviours);
+            Assert.Equal(5, data.Count);
+            Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+            TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, preset.Preset.MinX, preset.Preset.MinY);
+            TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, preset.Preset.MaxX, preset.Preset.MaxY);
+            Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, data.Keys);
+            Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, data.Keys);
+            Assert.Equal(0.5f, vm.PivotX);
+            Assert.Equal(0.5f, vm.PivotY);
+            var position = TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION);
+            var size = TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
+            var rect = RectTransformLayoutCalculator.CalculateRect(fixture.Layout.ParentSize, vm.AnchorMinX, vm.AnchorMinY, vm.AnchorMaxX, vm.AnchorMaxY,
+                vm.PivotX, vm.PivotY, Convert.ToSingle(position["x"].Value), Convert.ToSingle(position["y"].Value), Convert.ToSingle(size["x"].Value), Convert.ToSingle(size["y"].Value));
+            Assert.Equal(new RectTransformRect(210, 195, 310, 245), rect);
+            Assert.True(preset.IsSelected);
+        }
+    }
+
     private static TestFixture TestCreateFixture()
     {
         var entity = new GameEntity(7, "UI");

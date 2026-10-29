@@ -6,6 +6,7 @@
     <ClCompile Include="src\Modules\Editor\Actions\RectTransformMoveAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\RectTransformResizeAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\RectTransformPivotAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\RectTransformAnchorsAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityScaleAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityOrderAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityReparentAction.cpp" />
@@ -120,6 +121,7 @@
     <ClInclude Include="src\Modules\Editor\Actions\RectTransformMoveAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\RectTransformResizeAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\RectTransformPivotAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\RectTransformAnchorsAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityScaleAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityOrderAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityReparentAction.h" />

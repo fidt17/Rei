@@ -268,7 +268,10 @@ public class RectTransformPropertyViewModel : BaseViewModel
         var before = CalculateRect(parentSize);
         var values = CalculateValuesForRect(parentSize, before, preset.MinX, preset.MinY, preset.MaxX, preset.MaxY);
         SetRectTransformSilently(preset.MinX, preset.MinY, preset.MaxX, preset.MaxY, values);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN,
+            EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX,
+            EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION,
+            EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
     }
 
@@ -414,11 +417,10 @@ public class RectTransformPropertyViewModel : BaseViewModel
             data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
         if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT))
             data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
-        if (propertyNames.Length == 0)
-        {
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN))
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX))
             data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
-        }
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
