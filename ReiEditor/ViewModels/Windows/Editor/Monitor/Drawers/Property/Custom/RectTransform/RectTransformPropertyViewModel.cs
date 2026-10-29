@@ -268,7 +268,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
         var before = CalculateRect(parentSize);
         var values = CalculateValuesForRect(parentSize, before, preset.MinX, preset.MinY, preset.MaxX, preset.MaxY);
         SetRectTransformSilently(preset.MinX, preset.MinY, preset.MaxX, preset.MaxY, values);
-        PushRectTransformToRuntimeIfNeeded();
+        PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
     }
 
@@ -367,28 +367,28 @@ public class RectTransformPropertyViewModel : BaseViewModel
     private void SetAnchorMin(float x, float y)
     {
         _anchorMin.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
     }
 
     private void SetAnchorMax(float x, float y)
     {
         _anchorMax.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
     }
 
     private void SetAnchoredPosition(float x, float y)
     {
         _anchoredPosition.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION);
         RefreshAll();
     }
 
     private void SetSizeDelta(float x, float y)
     {
         _sizeDelta.SetSilently(x, y);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
     }
 
@@ -396,29 +396,42 @@ public class RectTransformPropertyViewModel : BaseViewModel
     {
         _sizeDelta.SetSilently(values.SizeDeltaX, values.SizeDeltaY);
         _anchoredPosition.SetSilently(values.AnchoredPositionX, values.AnchoredPositionY);
-        PushRectTransformToRuntimeIfNeeded();
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
     }
 
-    private void PushRectTransformToRuntimeIfNeeded()
+    private void PushAnchorsToRuntimeIfNeeded()
+    {
+        PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN,
+            EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX,
+            EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION,
+            EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
+    }
+
+    private void PushRectTransformToRuntimeIfNeeded(params string[] propertyNames)
     {
         if (_entity == null || _component == null || _engineRunner?.IsActive.Value != true || _entityApi == null || _rectTransformLayoutService == null) return;
 
+        var data = new Dictionary<string, object?>
+        {
+            [SetEntityDataRequest.REI_BEHAVIOUR_ID] = _component.Id
+        };
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION))
+            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY));
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA))
+            data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT))
+            data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN))
+            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
+        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX))
+            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
-            Behaviours = new List<Dictionary<string, object?>>
-            {
-                new()
-                {
-                    { SetEntityDataRequest.REI_BEHAVIOUR_ID, _component.Id },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY)) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY)) }
-                }
-            }
+            RecordTransformChange = propertyNames.Length > 0 && _engineRunner.IsEditorActive.Value
+                && (propertyNames.Length >= 2 || (!IsStretchX && !IsStretchY)),
+            Behaviours = new List<Dictionary<string, object?>> { data }
         });
     }
 
@@ -431,7 +444,9 @@ public class RectTransformPropertyViewModel : BaseViewModel
             _pivot.SetSilently(preservedLayout.Pivot.X, preservedLayout.Pivot.Y);
             _anchoredPosition.SetSilently(preservedLayout.AnchoredPosition.X, preservedLayout.AnchoredPosition.Y);
             _sizeDelta.SetSilently(preservedLayout.SizeDelta.X, preservedLayout.SizeDelta.Y);
-            PushRectTransformToRuntimeIfNeeded();
+            PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT,
+                EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION,
+                EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
             RefreshAll();
             return;
         }

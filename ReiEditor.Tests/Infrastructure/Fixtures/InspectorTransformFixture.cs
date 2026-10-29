@@ -16,21 +16,22 @@ namespace ReiEditor.Tests.Infrastructure.Fixtures;
 
 internal sealed class InspectorTransformFixture : IDisposable
 {
-    private sealed class Registry(BehaviourAssetInfo transform) : IBehaviourRegistry
+    private sealed class Registry(BehaviourAssetInfo transform, BehaviourAssetInfo rect) : IBehaviourRegistry
     {
-        public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours { get; } = new Dictionary<int, BehaviourAssetInfo> { [transform.BehaviourId] = transform };
-        public int? GetIdByName(string name) => name == EngineBehavioursConstants.TRANSFORM ? transform.BehaviourId : null;
-        public bool TryGetById(int id, [NotNullWhen(true)] out BehaviourAssetInfo? behaviour)
+        public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours { get; } = new Dictionary<int, BehaviourAssetInfo>
         {
-            behaviour = id == transform.BehaviourId ? transform : null;
-            return behaviour != null;
-        }
+            [transform.BehaviourId] = transform, [rect.BehaviourId] = rect
+        };
+        public int? GetIdByName(string name) => name == EngineBehavioursConstants.TRANSFORM ? transform.BehaviourId
+            : name == EngineBehavioursConstants.RECT_TRANSFORM ? rect.BehaviourId : null;
+        public bool TryGetById(int id, [NotNullWhen(true)] out BehaviourAssetInfo? behaviour) => Behaviours.TryGetValue(id, out behaviour);
         public int AllocateBehaviourId() => throw new NotSupportedException();
         public Task RefreshBehaviours() => throw new NotSupportedException();
     }
 
     // Same Transform ID as the shared native project fixture (PROBE_TRANSFORM).
     public const int TRANSFORM_ID = 7199;
+    public const int RECT_TRANSFORM_ID = 7303;
     public GameEntity Entity { get; }
     public BehaviourComponent Transform { get; }
     public TestEngineRunner Runner { get; } = new();
@@ -51,11 +52,20 @@ internal sealed class InspectorTransformFixture : IDisposable
             ["_position"] = vectorData, ["_rotation"] = vectorData, ["_scale"] = vectorData,
             ["_parent"] = Data(SerializedTypeEnum.Integer, "int"), ["_order"] = Data(SerializedTypeEnum.Integer, "int")
         }, [], "");
-        var registry = new Registry(transformInfo);
+        var vector2Data = Data(SerializedTypeEnum.Custom, "Vector2");
+        var rectInfo = new BehaviourAssetInfo("rei::ui", "RectTransform", RECT_TRANSFORM_ID, new ObjectFile<string>("", ""), new()
+        {
+            ["_anchorMin"] = vector2Data, ["_anchorMax"] = vector2Data, ["_pivot"] = vector2Data,
+            ["_anchoredPosition"] = vector2Data, ["_sizeDelta"] = vector2Data
+        }, [], "");
+        var registry = new Registry(transformInfo, rectInfo);
         var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
         objects.Replace([new SerializableObjectInfo("rei::math", "Vector3", false, new ObjectFile<string>("", ""), new()
         {
             ["x"] = Data(SerializedTypeEnum.Float, "float"), ["y"] = Data(SerializedTypeEnum.Float, "float"), ["z"] = Data(SerializedTypeEnum.Float, "float")
+        }, ""), new SerializableObjectInfo("rei::math", "Vector2", false, new ObjectFile<string>("", ""), new()
+        {
+            ["x"] = Data(SerializedTypeEnum.Float, "float"), ["y"] = Data(SerializedTypeEnum.Float, "float")
         }, "")], []);
         var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
         var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);

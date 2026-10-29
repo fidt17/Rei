@@ -18,6 +18,7 @@ namespace rei::editor
         std::shared_ptr<EditorActionStore> _actions;
 
         void RecordTransformChange(const TransformationControl& control) const;
+        void RecordRectTransformChange(const TransformationControl& control) const;
         void ResetDragState(TransformationControl& control) const;
     };
 }

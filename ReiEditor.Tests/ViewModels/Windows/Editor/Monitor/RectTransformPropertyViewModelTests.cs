@@ -99,10 +99,10 @@ public sealed class RectTransformPropertyViewModelTests
     }
 
     /// <summary>
-    /// Active engine receives one complete RectTransform payload after serialized edit.
+    /// Active engine receives only SizeDelta after a width edit.
     /// </summary>
     [Fact]
-    public void ActiveEngineReceivesCompleteLayoutPayload()
+    public void ActiveEngineReceivesSizeOnlyPayload()
     {
         var fixture = TestCreateFixture();
         using var viewModel = fixture.ViewModel;
@@ -114,11 +114,7 @@ public sealed class RectTransformPropertyViewModelTests
         Assert.Equal(fixture.Entity.Id, request.SceneId);
         var behaviour = Assert.Single(request.Behaviours);
         Assert.Equal(fixture.Component.Id, behaviour[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
-        Assert.Equal(6, behaviour.Count);
-        TestAssertSerializedVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, 0.5f, 0.5f);
-        TestAssertSerializedVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, 0.5f, 0.5f);
-        TestAssertSerializedVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, 0.5f, 0.5f);
-        TestAssertSerializedVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, 10f, 20f);
+        Assert.Equal(2, behaviour.Count);
         TestAssertSerializedVector(behaviour, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, 140f, 50f);
     }
 
@@ -206,6 +202,193 @@ public sealed class RectTransformPropertyViewModelTests
         vm.PivotX = 0.4f;
         Assert.Equal(0.4f, Assert.IsType<Dictionary<string, SerializedProperty>>(pivot.Value)["x"].Value);
         Assert.Equal(0.5f, original["x"].Value);
+    }
+
+    [Theory]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, false, false, false)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, false)]
+    public void PositionWritesOnlyPositionAndRecordsOnlyForEditorWithFixedAnchors(bool editor, bool stretchX, bool stretchY, bool expectedRecord)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        if (stretchX) vm.AnchorMaxX = 1;
+        if (stretchY) vm.AnchorMaxY = 1;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+
+        if (stretchX) vm.VerticalPrimaryValue = 35;
+        else vm.HorizontalPrimaryValue = 25;
+
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(expectedRecord, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(2, data.Count);
+        Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, data.Keys);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(3, true)]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    public void ManualAnchorsRecordOneLayoutWithoutRecalculatingPositionOrSize(int field, bool editor)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        var value = field < 2 ? 0.375f : 0.625f;
+        switch (field)
+        {
+            case 0: vm.AnchorMinX = value; break;
+            case 1: vm.AnchorMinY = value; break;
+            case 2: vm.AnchorMaxX = value; break;
+            case 3: vm.AnchorMaxY = value; break;
+        }
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(editor, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(5, data.Count);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, field == 0 ? value : 0.5f, field == 1 ? value : 0.5f);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, field == 2 ? value : 0.5f, field == 3 ? value : 0.5f);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, 10, 20);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, 100, 50);
+        Assert.Equal(0.5f, vm.PivotX);
+        Assert.Equal(0.5f, vm.PivotY);
+    }
+
+    [Theory]
+    [InlineData(true, false, false, true, true)]
+    [InlineData(true, false, false, false, true)]
+    [InlineData(false, false, false, true, false)]
+    [InlineData(true, true, false, false, false)]
+    [InlineData(true, false, true, true, false)]
+    public void SizeWritesOnlySizeAndRecordsOnlyForEditorWithFixedAnchors(bool editor, bool stretchX, bool stretchY, bool horizontal, bool expectedRecord)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        if (stretchX) vm.AnchorMaxX = 1;
+        if (stretchY) vm.AnchorMaxY = 1;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+
+        if (horizontal) vm.HorizontalSecondaryValue = 140;
+        else vm.VerticalSecondaryValue = 140;
+
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(expectedRecord, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(2, data.Count);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, horizontal ? 140 : 100, horizontal ? 50 : 140);
+        Assert.Equal(10f, TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION)["x"].Value);
+        Assert.Equal(20f, TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION)["y"].Value);
+    }
+
+    [Theory]
+    [InlineData(0, true, false)]
+    [InlineData(1, true, false)]
+    [InlineData(2, true, false)]
+    [InlineData(3, true, false)]
+    [InlineData(0, true, true)]
+    [InlineData(1, true, true)]
+    [InlineData(2, true, true)]
+    [InlineData(3, true, true)]
+    [InlineData(0, false, true)]
+    [InlineData(1, false, true)]
+    [InlineData(2, false, true)]
+    [InlineData(3, false, true)]
+    public void OffsetWritesOneRectangleAndPreservesOtherEdges(int edge, bool editor, bool stretchBoth)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        if (edge < 2 || stretchBoth) { vm.AnchorMinX = 0; vm.AnchorMaxX = 1; }
+        if (edge >= 2 || stretchBoth) { vm.AnchorMinY = 0; vm.AnchorMaxY = 1; }
+        var before = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        switch (edge)
+        {
+            case 0: vm.HorizontalPrimaryValue = 25; break;
+            case 1: vm.HorizontalSecondaryValue = 25; break;
+            case 2: vm.VerticalPrimaryValue = 25; break;
+            case 3: vm.VerticalSecondaryValue = 25; break;
+        }
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(editor, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(3, data.Count);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+        Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, data.Keys);
+        Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, data.Keys);
+        var after = new[] { vm.HorizontalPrimaryValue, vm.HorizontalSecondaryValue, vm.VerticalPrimaryValue, vm.VerticalSecondaryValue };
+        for (var i = 0; i < 4; i++) Assert.InRange(MathF.Abs(after[i] - (i == edge ? 25 : before[i])), 0f, 0.0001f);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void PivotWritesOnePreservedLayoutAndRecordsOnlyInEditor(bool horizontal, bool editor)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        var pivot = horizontal ? new RectTransformVector2(0.25f, 0.5f) : new RectTransformVector2(0.5f, 0.25f);
+        var position = horizontal ? new RectTransformVector2(-15, 20) : new RectTransformVector2(10, 7.5f);
+        fixture.Layout.PreservedPivot = new RectTransformLayoutData(new(0.5f, 0.5f), new(0.5f, 0.5f), pivot, position, new(100, 50));
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        if (horizontal) vm.PivotX = 0.25f;
+        else vm.PivotY = 0.25f;
+        var request = Assert.Single(fixture.Api.Requests);
+        Assert.Equal(editor, request.RecordTransformChange);
+        var data = Assert.Single(request.Behaviours);
+        Assert.Equal(4, data.Count);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, pivot.X, pivot.Y);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, position.X, position.Y);
+        TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, 100, 50);
+        Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PresetsWriteOneLayoutWithoutPivotAndPreserveBounds(bool editor)
+    {
+        var fixture = TestCreateFixture();
+        using var vm = fixture.ViewModel;
+        fixture.Runner.Active.Value = true;
+        fixture.Runner.EditorActive.Value = editor;
+        foreach (var preset in vm.Presets)
+        {
+            fixture.Api.Requests.Clear();
+            preset.ApplyCommand.Execute(null);
+            var request = Assert.Single(fixture.Api.Requests);
+            Assert.Equal(editor, request.RecordTransformChange);
+            var data = Assert.Single(request.Behaviours);
+            Assert.Equal(5, data.Count);
+            Assert.Equal(fixture.Component.Id, data[SetEntityDataRequest.REI_BEHAVIOUR_ID]);
+            TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, preset.Preset.MinX, preset.Preset.MinY);
+            TestAssertSerializedVector(data, EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, preset.Preset.MaxX, preset.Preset.MaxY);
+            Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, data.Keys);
+            Assert.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, data.Keys);
+            Assert.Equal(0.5f, vm.PivotX);
+            Assert.Equal(0.5f, vm.PivotY);
+            var position = TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION);
+            var size = TestVector(fixture.Component, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
+            var rect = RectTransformLayoutCalculator.CalculateRect(fixture.Layout.ParentSize, vm.AnchorMinX, vm.AnchorMinY, vm.AnchorMaxX, vm.AnchorMaxY,
+                vm.PivotX, vm.PivotY, Convert.ToSingle(position["x"].Value), Convert.ToSingle(position["y"].Value), Convert.ToSingle(size["x"].Value), Convert.ToSingle(size["y"].Value));
+            Assert.Equal(new RectTransformRect(210, 195, 310, 245), rect);
+            Assert.True(preset.IsSelected);
+        }
     }
 
     private static TestFixture TestCreateFixture()

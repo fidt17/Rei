@@ -81,6 +81,8 @@ namespace rei::tests
         std::function<std::unique_ptr<internal::engine::Engine>()> EngineFactory;
         std::function<void()> BeforeStartAction;
         std::string LastSceneId;
+        std::shared_ptr<window::Window> Window;
+        WindowCreationSettings WindowSettings{"Rei native integration", 32, 24, true, false, false};
 
         explicit NativeEngineFixture(const internal::engine::EngineMode mode = internal::engine::PlayMode, const std::string& marker = "first-session", const std::function<void(TemporaryDirectory&)>& prepareResources = {}, const bool isEditor = false)
             : Resources([&](TemporaryDirectory& files) { if (prepareResources) prepareResources(files); else PrepareEngineResources(files, marker); }),
@@ -125,8 +127,7 @@ namespace rei::tests
                         if (!_stopRequested)
                         {
                             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-                            const WindowCreationSettings settings{"Rei native integration", 32, 24, true, false, false};
-                            Engine->CreateMainWindow(settings);
+                            Window = Engine->CreateMainWindow(WindowSettings);
                             if (!_stopRequested) Engine->Start(LastSceneId);
                         }
                     }
@@ -157,6 +158,11 @@ namespace rei::tests
                 auto pending = ActionState::Pending;
                 if (!request->State.compare_exchange_strong(pending, ActionState::Running)) return;
                 try { action(); request->Completion.set_value(); }
+                catch (const std::exception& error)
+                {
+                    LOG_ERROR("Native fixture action failed: {}", error.what());
+                    request->Completion.set_exception(std::current_exception());
+                }
                 catch (...) { request->Completion.set_exception(std::current_exception()); }
                 request->State = ActionState::Complete;
             });
@@ -182,12 +188,11 @@ namespace rei::tests
 
         void QueueMouse(const UINT message, const i32 x, const i32 y)
         {
-            OnEngineThread([message, x, y]
+            OnEngineThread([this, message, x, y]
             {
-                const auto window = glfwGetCurrentContext();
-                if (!window) throw std::runtime_error("Engine input prerequisite unavailable: current native context");
+                if (!Window) throw std::runtime_error("Engine input prerequisite unavailable: owned native window");
                 // Poll native events after Input::Update; direct task callbacks lose edges.
-                const auto hwnd = glfwGetWin32Window(window);
+                const auto hwnd = Window->GetWindowHandle();
                 const auto position = static_cast<LPARAM>((static_cast<u32>(y) << 16) | (static_cast<u32>(x) & 0xffff));
                 const WPARAM flags = message == WM_LBUTTONDOWN ? MK_LBUTTON : message == WM_RBUTTONDOWN ? MK_RBUTTON : 0;
                 if (!PostMessageW(hwnd, message, flags, position)) throw std::runtime_error("Could not queue mouse event to owned hidden engine window");
