@@ -172,6 +172,7 @@ public class EntityManagementService : IEntityManagementService
         {
             if (entities.Any(entity => _rectTransformLayoutService.TryGetRectTransform(entity, out _)))
             {
+                if (TryReparentRectTransformGroup(entities, parent, insertionIndex)) return;
                 var index = Math.Max(0, insertionIndex);
                 foreach (var entity in entities)
                 {
@@ -186,6 +187,24 @@ public class EntityManagementService : IEntityManagementService
         {
             _logger.LogException(exception);
         }
+    }
+
+    private bool TryReparentRectTransformGroup(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex)
+    {
+        if (entities.Any(entity => entity.Transform.Parent != entities[0].Transform.Parent)) return false;
+        var rects = new List<BehaviourComponent>();
+        var layouts = new List<RectTransformLayoutData>();
+        foreach (var entity in entities)
+        {
+            if (!_rectTransformLayoutService.TryGetRectTransform(entity, out var rect)
+                || !_rectTransformLayoutService.TryPreserveRectForParent(entity, parent, out var layout)) return false;
+            rects.Add(rect);
+            layouts.Add(layout);
+        }
+        _entityApi.ReparentEntities(entities.Select(entity => entity.Id).ToArray(), parent?.Id ?? 0, insertionIndex,
+            _engineRunner.IsEditorActive.Value, layouts);
+        for (var i = 0; i < rects.Count; i++) _rectTransformLayoutService.ApplyLayoutToEditor(rects[i], layouts[i]);
+        return true;
     }
 
     public void AddBehaviour(GameEntity e, int behaviourId)

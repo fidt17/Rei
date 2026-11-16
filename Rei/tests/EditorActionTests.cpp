@@ -1684,3 +1684,77 @@ TEST_CASE("Editor action store restores RectTransform layout with parent and sib
         CHECK(target.Get().GetChildOrder() == 0);
     });
 }
+
+TEST_CASE("Editor action store restores grouped RectTransform parent layouts atomically", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto oldParent = fixture.Entity(10);
+        const auto newParent = fixture.Entity(11);
+        const auto first = fixture.Entity(1);
+        const auto second = fixture.Entity(2);
+        std::vector<ecs::Entity> entities{first, second};
+        std::vector<EntityReparentAction::Change> changes;
+        for (i32 i = 0; i < 2; i++)
+        {
+            ecs::ComponentRef<Transform> target(fixture.Registry, entities[i]);
+            target.Get().SetParent(oldParent);
+            target.Get().SetChildOrder(i * 2);
+            auto& rect = fixture.Registry->Get<ui::RectTransform>(entities[i]);
+            rect.GetAnchoredPosition() = {20.0f + i * 10.0f, 30};
+            rect.GetSizeDelta() = {200, 160.0f + i * 10.0f};
+            const EntityReparentAction::State before(target.Get());
+            changes.push_back({target, before, before});
+        }
+        auto& sourceSibling = fixture.Registry->Get<Transform>(fixture.Entity(3));
+        sourceSibling.SetParent(oldParent);
+        sourceSibling.SetChildOrder(1);
+        auto& destinationSibling = fixture.Registry->Get<Transform>(fixture.Entity(4));
+        destinationSibling.SetParent(newParent);
+        destinationSibling.SetChildOrder(0);
+        std::vector<EntityOrderAction::Change> orders;
+        for (const auto parent : {oldParent, newParent})
+        {
+            for (const auto entity : transform_utility::CollectSiblings(parent))
+            {
+                ecs::ComponentRef<Transform> target(fixture.Registry, entity);
+                orders.push_back({target, target.Get().GetChildOrder(), 0});
+            }
+        }
+        REQUIRE(transform_utility::ReparentEntities(entities, newParent, 1, true));
+        for (i32 i = 0; i < 2; i++)
+        {
+            auto& rect = fixture.Registry->Get<ui::RectTransform>(entities[i]);
+            rect.GetAnchoredPosition() = {-40.0f - i * 10.0f, 80};
+            rect.GetSizeDelta() = {-100, 60.0f + i * 10.0f};
+            changes[i].After = EntityReparentAction::State(changes[i].Target.Get());
+        }
+        for (auto& order : orders) order.After = order.Target.Get().GetChildOrder();
+        EditorActionStore actions;
+        i32 records = 0;
+        actions.ActionRecorded.append([&](u64) { records++; });
+        const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(changes, orders));
+        for (const bool undo : {true, false})
+        {
+            REQUIRE((undo ? actions.Undo(id) : actions.Redo(id)));
+            for (const auto& change : changes)
+            {
+                const auto& state = undo ? change.Before : change.After;
+                CHECK(change.Target.Get().GetParent() == state.Parent);
+                const auto& rect = fixture.Registry->Get<ui::RectTransform>(change.Target.Get().GetEntity());
+                CHECK(rect.GetAnchoredPosition().x == state.Rect->AnchoredPosition.x);
+                CHECK(rect.GetAnchoredPosition().y == state.Rect->AnchoredPosition.y);
+                CHECK(rect.GetSizeDelta().x == state.Rect->SizeDelta.x);
+                CHECK(rect.GetSizeDelta().y == state.Rect->SizeDelta.y);
+            }
+            for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == (undo ? order.Before : order.After));
+        }
+        CHECK(records == 1);
+        fixture.Registry->Del<ui::RectTransform>(second);
+        CHECK_FALSE(actions.Undo(id));
+        CHECK(changes[0].Target.Get().GetParent() == newParent);
+        CHECK(fixture.Registry->Get<ui::RectTransform>(first).GetAnchoredPosition().x == -40);
+        for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.After);
+    });
+}

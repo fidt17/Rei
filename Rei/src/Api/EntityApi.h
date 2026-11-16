@@ -228,11 +228,13 @@ REI_EXTERN_API inline void ReorderEntities(const i32* entityIds, const i32 count
     });
 }
 
-REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 count, const i32 parentSceneEntityId, const i32 insertionIndex, const i32 recordHierarchyChange)
+REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 count, const i32 parentSceneEntityId, const i32 insertionIndex, const i32 recordHierarchyChange, const f32* rectLayouts = nullptr)
 {
     if (entityIds == nullptr || count <= 0) return;
     std::vector<i32> ids(entityIds, entityIds + count);
-    rei::GetEngine().ExecuteOnMainThread([ids = std::move(ids), parentSceneEntityId, insertionIndex, recordHierarchyChange]
+    std::vector<f32> layouts;
+    if (rectLayouts != nullptr) layouts.assign(rectLayouts, rectLayouts + count * 4);
+    rei::GetEngine().ExecuteOnMainThread([ids = std::move(ids), layouts = std::move(layouts), parentSceneEntityId, insertionIndex, recordHierarchyChange]
     {
         ECS_WORLD(rei::GetInternalWorld());
         const auto parent = parentSceneEntityId == 0 ? rei::ecs::NULL_ENTITY : rei::GetEntityManager().GetBySceneId(parentSceneEntityId);
@@ -244,7 +246,17 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
             if (IS_DEAD(entity) || !HAS(entity, rei::Transform)) return;
             entities.push_back(entity);
         }
-        const bool record = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode();
+        bool record = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode();
+        if (!layouts.empty())
+        {
+            const auto sourceParent = GET(entities.front(), rei::Transform).GetParent();
+            for (const auto entity : entities)
+            {
+                if (!HAS(entity, rei::ui::RectTransform) || GET(entity, rei::Transform).GetParent() != sourceParent) return;
+            }
+            const auto canvas = rei::ui_utility::FindCanvasEntity(entities.front());
+            record &= canvas != rei::ecs::NULL_ENTITY && canvas == rei::ui_utility::FindCanvasEntity(parent);
+        }
         std::vector<rei::editor::EntityReparentAction::Change> changes;
         std::vector<rei::editor::EntityOrderAction::Change> orders;
         if (record)
@@ -266,7 +278,13 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
                 }
             }
         }
-        if (!rei::transform_utility::ReparentEntities(entities, parent, insertionIndex)) return;
+        if (!rei::transform_utility::ReparentEntities(entities, parent, insertionIndex, !layouts.empty())) return;
+        for (i32 i = 0; i < static_cast<i32>(layouts.size() / 4); i++)
+        {
+            auto& rect = GET(entities[i], rei::ui::RectTransform);
+            rect.GetAnchoredPosition() = {layouts[i * 4], layouts[i * 4 + 1]};
+            rect.GetSizeDelta() = {layouts[i * 4 + 2], layouts[i * 4 + 3]};
+        }
         if (!record) return;
         for (auto& change : changes) change.After = rei::editor::EntityReparentAction::State(change.Target.Get());
         for (auto& order : orders) order.After = order.Target.Get().GetChildOrder();

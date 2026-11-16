@@ -26,6 +26,7 @@ public sealed class EntityManagementAdvancedTests
         public Action<int, int, int>? OnSetParent { get; set; }
         public List<bool> RecordHierarchyChangeCalls { get; } = new();
         public List<RectTransformLayoutData?> ParentLayouts { get; } = new();
+        public IReadOnlyList<RectTransformLayoutData>? ReparentLayouts { get; private set; }
         public Action<IReadOnlyList<int>, int, bool>? OnReorderEntities { get; set; }
         public Action<IReadOnlyList<int>, int, int, bool>? OnReparentEntities { get; set; }
         public Action<SetEntityDataRequest>? OnSetData { get; set; }
@@ -68,9 +69,10 @@ public sealed class EntityManagementAdvancedTests
             Calls.Add("reorder");
             (OnReorderEntities ?? throw UnexpectedCall())(entityIds, insertionIndex, recordHierarchyChange);
         }
-        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false)
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null)
         {
             Calls.Add("reparent");
+            ReparentLayouts = rectLayouts;
             (OnReparentEntities ?? throw UnexpectedCall())(entityIds, parentEntityId, insertionIndex, recordHierarchyChange);
         }
         public void SetData(SetEntityDataRequest request)
@@ -607,6 +609,36 @@ public sealed class EntityManagementAdvancedTests
         Assert.Equal(2, batch.Index);
         Assert.Equal(editorActive, batch.Record);
         Assert.Empty(singles);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RectGroupSendsAllPreservedLayoutsInOneCall(bool editorActive)
+    {
+        var batches = new List<(int[] Ids, int Parent, int Index, bool Record)>();
+        var api = new TestEntityApi
+        {
+            OnReparentEntities = (ids, parent, index, record) => batches.Add((ids.ToArray(), parent, index, record))
+        };
+        var layout = Layout();
+        var rect = new TestRectTransformLayoutService { HasRectTransform = true, PreserveResult = true, PreservedLayout = layout };
+        var service = CreateService(new Scene("Scene"), true, api, rect: rect, editorActive: editorActive);
+        var first = new GameEntity(7, "First");
+        var second = new GameEntity(2, "Second");
+        first.Transform.SetParent(10);
+        second.Transform.SetParent(10);
+
+        service.ReparentEntities([first, second], new(11, "Destination"), 1);
+
+        var batch = Assert.Single(batches);
+        Assert.Equal(new[] { 7, 2 }, batch.Ids);
+        Assert.Equal(11, batch.Parent);
+        Assert.Equal(1, batch.Index);
+        Assert.Equal(editorActive, batch.Record);
+        Assert.Equal(new[] { layout, layout }, api.ReparentLayouts);
+        Assert.Equal(new[] { "reparent" }, api.Calls);
+        Assert.Equal(2, rect.Calls.Count(call => call == "apply-editor"));
     }
 
     [Fact]

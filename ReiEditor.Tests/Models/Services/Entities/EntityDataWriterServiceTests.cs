@@ -37,7 +37,7 @@ public sealed class EntityDataWriterServiceTests
         public bool ThrowOnSetData { get; init; }
 
         public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
-        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request)
         {
             if (ThrowOnSetData) throw new InvalidOperationException("set failed");

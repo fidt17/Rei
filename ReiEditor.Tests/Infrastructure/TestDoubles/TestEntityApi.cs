@@ -22,7 +22,7 @@ public sealed class TestEntityApi : IEntityApi
     public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();
     public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null) => throw UnexpectedCall();
     public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
-    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
+    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null) => throw new NotSupportedException();
     public void SetData(SetEntityDataRequest request) => (OnSetData ?? throw UnexpectedCall())(request);
     public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request) => throw UnexpectedCall();
     public void AddBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();

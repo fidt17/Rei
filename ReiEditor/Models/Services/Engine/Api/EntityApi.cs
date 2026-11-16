@@ -132,12 +132,14 @@ public class EntityApi : IEntityApi
         _engineApi.Invoke(typeof(ReorderEntitiesDelegate), "ReorderEntities", ids, ids.Length, insertionIndex, recordHierarchyChange ? 1 : 0);
     }
 
-    private delegate void ReparentEntitiesDelegate([In] int[] entityIds, int count, int parentEntityId, int insertionIndex, int recordHierarchyChange);
-    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false)
+    private delegate void ReparentEntitiesDelegate([In] int[] entityIds, int count, int parentEntityId, int insertionIndex, int recordHierarchyChange, [In] float[]? rectLayouts);
+    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null)
     {
         if (!_engineApi.IsEngineRunning || entityIds.Count == 0) return;
+        if (rectLayouts != null && rectLayouts.Count != entityIds.Count) throw new ArgumentException("Each entity must have a RectTransform layout.", nameof(rectLayouts));
         var ids = entityIds.ToArray();
-        _engineApi.Invoke(typeof(ReparentEntitiesDelegate), "ReparentEntities", ids, ids.Length, parentEntityId, insertionIndex, recordHierarchyChange ? 1 : 0);
+        var values = rectLayouts?.SelectMany(layout => new[] { layout.AnchoredPosition.X, layout.AnchoredPosition.Y, layout.SizeDelta.X, layout.SizeDelta.Y }).ToArray();
+        _engineApi.Invoke(typeof(ReparentEntitiesDelegate), "ReparentEntities", ids, ids.Length, parentEntityId, insertionIndex, recordHierarchyChange ? 1 : 0, values);
     }
 
     private delegate void SetEntityDataDelegate(string json);
