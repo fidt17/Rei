@@ -18,11 +18,12 @@ namespace rei
 namespace rei::ui_utility
 {
     REI_API ecs::Entity FindCanvasEntity(ecs::Entity entity);
-    f32 CalculateCanvasScaleFactor(const ui::Canvas& canvas, i32 width, i32 height);
+    REI_API bool HaveSameCanvasScale(ecs::Entity first, ecs::Entity second);
+    REI_API f32 CalculateCanvasScaleFactor(const ui::Canvas& canvas, i32 width, i32 height);
     f32 CalculateCanvasScaleFactor(const ui::Canvas& canvas, const render::CameraModule& cameraModule);
     math::Rect GetCanvasRect(const ui::Canvas& canvas, i32 width, i32 height);
     math::Rect GetCanvasRect(const ui::Canvas& canvas, const render::CameraModule& cameraModule);
-    math::Rect CalculateRect(ecs::Entity entity, ecs::Entity canvasEntity, i32 width, i32 height);
+    REI_API math::Rect CalculateRect(ecs::Entity entity, ecs::Entity canvasEntity, i32 width, i32 height);
     math::Rect CalculateRect(ecs::Entity entity, ecs::Entity canvasEntity, const render::CameraModule& cameraModule);
     math::Rect ApplyAspectPreservation(const math::Rect& rect, const ui::Image& image);
     math::Vector2 GetPivotPosition(const math::Rect& rect, const ui::RectTransform& rectTransform);

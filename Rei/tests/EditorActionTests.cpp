@@ -12,6 +12,7 @@
 #include "Modules/Editor/Actions/EntityOrderAction.h"
 #include "Modules/Editor/Actions/EntityReparentAction.h"
 #include "Common/Transform/TransformHierarchyUtility.h"
+#include "Common/Transform/RectTransformUtility.h"
 #include "support/InputTestFixture.h"
 #include "Modules/Editor/TransformationControls/Systems/Drag/ResetTransformationControlsDragSystem.h"
 #include "Modules/Editor/TransformationControls/Systems/Drag/TransformationControlDragUtilities.h"
@@ -1760,5 +1761,31 @@ TEST_CASE("Editor action store restores grouped RectTransform parent layouts ato
         CHECK(changes[0].Target.Get().GetParent() == newParent);
         CHECK(fixture.Registry->Get<ui::RectTransform>(first).GetAnchoredPosition().x == -40);
         for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.After);
+    });
+}
+
+TEST_CASE("Editor action store compares actual Canvas scale before cross-Canvas reparenting", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        RectMoveFixture fixture;
+        const auto secondEntity = fixture.Native.Entity(12);
+        auto& second = fixture.Native.Registry->Get<ui::Canvas>(secondEntity);
+        second = ui::Canvas(7302, secondEntity);
+        second.REI_SET({{"_referenceResolution", {{"Value", {{"x", {{"Value", 640}}}, {"y", {{"Value", 480}}}}}}}});
+        CHECK(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, secondEntity));
+        second.REI_SET({{"_referenceResolution", {{"Value", {{"x", {{"Value", 320}}}, {"y", {{"Value", 240}}}}}}}});
+        CHECK_FALSE(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, secondEntity));
+        auto& first = fixture.Native.Registry->Get<ui::Canvas>(fixture.CanvasEntity);
+        first.REI_SET({{"_scaleMode", {{"Value", static_cast<i32>(ui::ScaleWithScreenSize)}}},
+            {"_referenceResolution", {{"Value", {{"x", {{"Value", 320}}}, {"y", {{"Value", 480}}}}}}}});
+        second.REI_SET({{"_matchWidthOrHeight", {{"Value", 1.0f}}}});
+        CHECK(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, secondEntity));
+        fixture.Native.Registry->Get<render::Camera>(fixture.CameraEntity).SetOutputSize(320, 480);
+        CHECK_FALSE(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, secondEntity));
+        CHECK_FALSE(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, ecs::NULL_ENTITY));
+        fixture.Native.Registry->Del<render::Camera>(fixture.CameraEntity);
+        CHECK_FALSE(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, secondEntity));
+        CHECK(ui_utility::HaveSameCanvasScale(fixture.CanvasEntity, fixture.CanvasEntity));
     });
 }

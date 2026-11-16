@@ -68,6 +68,8 @@ public sealed class EngineApiActionCallbackTests
     private delegate void MoveRectPointerDelegate(int dx, int dy);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void ReadRectMoveDelegate(int index, [Out] float[] values);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void PrepareRectCanvasesDelegate(float scale, [Out] int[] canvasIds);
 
     [NativeCallbackFact]
     public Task NativeCallbacksRecordTransformActionsInCommonHistoryAndReplayWithoutRecordingAgain()
@@ -1474,7 +1476,20 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false)
+    [NativeCallbackFact]
+    public Task RectTransformCrossCanvasReparentPreservesScreenBoundsAndSharesHistory()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scale in new[] { 1f, 2f })
+                foreach (var stretch in new[] { false, true })
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, crossCanvasScale: scale);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false, float? crossCanvasScale = null)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
@@ -1497,6 +1512,14 @@ public sealed class EngineApiActionCallbackTests
             api.MarkEngineStarted();
             var ids = new int[grouped ? 6 : 5];
             api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, ids.Length, ids);
+            var canvasIds = new int[2];
+            var scale = crossCanvasScale ?? 1f;
+            var canvasSize = new RectTransformVector2(640 / scale, 480 / scale);
+            if (crossCanvasScale.HasValue)
+            {
+                api.Invoke(typeof(PrepareRectCanvasesDelegate), "NativeProjectPrepareRectCanvases", scale, canvasIds);
+                entities.SetEntityParent(ids[2], canvasIds[1], 0);
+            }
             foreach (var id in ids)
             {
                 var editor = new InspectorTransformFixture(entities, id);
@@ -1505,13 +1528,15 @@ public sealed class EngineApiActionCallbackTests
             }
             var target = editors[0];
             var canvasId = Convert.ToInt32(target.Transform.GetProperty("_parent").Value);
-            var canvas = new GameEntity(canvasId, "Canvas bounds");
-            canvas.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
-                new(new(0, 0), new(0, 0), new(0, 0), new(0, 0), new(640, 480))));
-            var scenes = new TestSceneManagementService(editors.Select(e => e.Entity).Prepend(canvas).ToArray());
+            var canvas = CreateCanvasBounds(canvasId, "Source Canvas");
+            var destinationCanvas = crossCanvasScale.HasValue ? CreateCanvasBounds(canvasIds[1], "Destination Canvas") : canvas;
+            var sceneEntities = editors.Select(e => e.Entity).Prepend(canvas);
+            if (destinationCanvas != canvas) sceneEntities = sceneEntities.Append(destinationCanvas);
+            var scenes = new TestSceneManagementService(sceneEntities.ToArray());
             var scene = scenes.Scene.Value!;
             scene.SetAssetInfo(new AssetInfo(new AssetMeta("render-empty-scene"), ""));
             foreach (var editor in editors) Assert.True(scene.MoveEntity(editor.Entity, canvas, int.MaxValue));
+            if (crossCanvasScale.HasValue) Assert.True(scene.MoveEntity(editors[2].Entity, destinationCanvas, 0));
             var registry = new TestBehaviourRegistry();
             registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
             var layout = new RectTransformLayoutService(registry, scenes, null!);
@@ -1533,9 +1558,12 @@ public sealed class EngineApiActionCallbackTests
             entities.SelectEntity(target.Entity.Id);
             var before = await ReadAsync();
             var initialCount = received.Count;
-            var destination = toCanvas ? canvas : editors[2].Entity;
+            var destination = toCanvas ? destinationCanvas : editors[2].Entity;
             var bounds = Bounds(before, 0);
-            CheckFloats(new[] { 240f, 190f, 440f, 350f }, bounds);
+            var expectedPixels = scale == 1f ? new[] { 240f, 190f, 440f, 350f } : new[] { 160f, 140f, 560f, 460f };
+            CheckFloats(expectedPixels.Select(value => value / scale).ToArray(), bounds);
+            var screenBefore = crossCanvasScale.HasValue ? ReadScreenBounds() : null;
+            if (screenBefore != null) CheckFloats(expectedPixels, screenBefore);
             int[] movedIds = grouped ? [ids[5], ids[0]] : [ids[0]];
             if (grouped)
             {
@@ -1555,6 +1583,7 @@ public sealed class EngineApiActionCallbackTests
             Assert.Equal(destination.Id, after.Parents[0]);
             Assert.Equal(expectedIndex, after.Orders[0]);
             CheckFloats(bounds, Bounds(after, 0));
+            if (screenBefore != null) CheckFloats(screenBefore, ReadScreenBounds());
             if (grouped)
             {
                 Assert.Equal(destination.Id, after.Parents[5]);
@@ -1632,13 +1661,30 @@ public sealed class EngineApiActionCallbackTests
                         value.AnchorMin.X, value.AnchorMin.Y, value.AnchorMax.X, value.AnchorMax.Y, value.Pivot.X, value.Pivot.Y]);
                     Assert.Empty(editors[i].Logger.Entries);
                 }
+                if (crossCanvasScale.HasValue)
+                    CheckFloats(Bounds((rects, parents, orders), 0).Select(value => value * scale).ToArray(), ReadScreenBounds());
                 return (rects, parents, orders);
+            }
+
+            GameEntity CreateCanvasBounds(int id, string name)
+            {
+                var result = new GameEntity(id, name);
+                result.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
+                    new(new(0, 0), new(0, 0), new(0, 0), new(0, 0), canvasSize)));
+                return result;
+            }
+
+            float[] ReadScreenBounds()
+            {
+                var result = new float[4];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectScreenBounds", 0, result);
+                return result;
             }
 
             float[] Bounds((float[][] Rects, int[] Parents, int[] Orders) state, int index)
             {
                 var parentIndex = Array.IndexOf(ids, state.Parents[index]);
-                var parent = parentIndex < 0 ? new[] { 0f, 0f, 640f, 480f } : Bounds(state, parentIndex);
+                var parent = parentIndex < 0 ? new[] { 0f, 0f, canvasSize.X, canvasSize.Y } : Bounds(state, parentIndex);
                 var rect = state.Rects[index];
                 var width = parent[2] - parent[0];
                 var height = parent[3] - parent[1];
@@ -1662,6 +1708,7 @@ public sealed class EngineApiActionCallbackTests
         }
         finally
         {
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngineLoop");
             source.Disconnect();
             foreach (var editor in editors) editor.Dispose();
             api.MarkEngineStopped();

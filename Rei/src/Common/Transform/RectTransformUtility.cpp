@@ -3,6 +3,7 @@
 #include "RectTransformUtility.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "glm/gtc/quaternion.hpp"
 #include "rei_behaviours/transformation/Transform.h"
@@ -57,6 +58,20 @@ namespace rei::ui_utility
         }
 
         return rei::ecs::NULL_ENTITY;
+    }
+
+    bool HaveSameCanvasScale(const ecs::Entity first, const ecs::Entity second)
+    {
+        ECS_WORLD(GetInternalWorld())
+        if (IS_DEAD(first) || IS_DEAD(second) || !HAS(first, ui::Canvas) || !HAS(second, ui::Canvas)) return false;
+        if (first == second) return true;
+        const auto camera = render::Camera::GetMainCamera();
+        if (camera.IsNull()) return false;
+        i32 width, height;
+        camera.Get().GetOutputSize(width, height);
+        const f32 firstScale = CalculateCanvasScaleFactor(GET(first, ui::Canvas), width, height);
+        const f32 secondScale = CalculateCanvasScaleFactor(GET(second, ui::Canvas), width, height);
+        return std::abs(firstScale - secondScale) <= 1e-5f;
     }
 
     f32 CalculateCanvasScaleFactor(const rei::ui::Canvas& canvas, const i32 width, const i32 height)

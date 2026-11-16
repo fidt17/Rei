@@ -9,6 +9,7 @@
 #include "Modules/Editor/Actions/EntityMoveAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
+#include "Common/Transform/RectTransformUtility.h"
 #include "glm/gtc/quaternion.hpp"
 #include <mutex>
 #include <chrono>
@@ -220,6 +221,11 @@ REI_EXTERN_API void NativeProjectStartRectMoveEngine(CreateEngineCallback create
     StartActionEngine(createEngine, true);
 }
 
+REI_EXTERN_API void NativeProjectStopActionEngineLoop()
+{
+    if (ActionEngine) ActionEngine->Stop();
+}
+
 REI_EXTERN_API void NativeProjectStopActionEngine()
 {
     ActionTargets.clear();
@@ -349,6 +355,49 @@ REI_EXTERN_API void NativeProjectPrepareRectMove(const i32 kind, const i32 targe
         rei::tests::Refresh();
     });
     ActionEngine->WaitForNextFrames(3);
+}
+
+REI_EXTERN_API void NativeProjectPrepareRectCanvases(const f32 scale, i32* canvasIds)
+{
+    ActionEngine->OnEngineThread([&]
+    {
+        auto registry = rei::GetInternalWorld()->GetRegistry();
+        const auto source = rei::ui_utility::FindCanvasEntity(RectMoveTargets.at(0));
+        const auto destination = rei::tests::CreateCanvas();
+        if (scale != 1.0f)
+        {
+            auto& first = registry->Get<rei::ui::Canvas>(source);
+            first.REI_SET(rei::tests::SerializedField("_scaleMode", static_cast<i32>(rei::ui::ScaleWithScreenSize)));
+            first.REI_SET(rei::tests::SerializedField("_referenceResolution", {{"x", {{"Value", 640.0f / scale}}}, {"y", {{"Value", 480.0f / scale}}}}));
+            auto& second = registry->Get<rei::ui::Canvas>(destination);
+            second.REI_SET(rei::tests::SerializedField("_scaleMode", static_cast<i32>(rei::ui::ScaleWithScreenSize)));
+            second.REI_SET(rei::tests::SerializedField("_referenceResolution", {{"x", {{"Value", 640.0f}}}, {"y", {{"Value", 480.0f / scale}}}}));
+            second.REI_SET(rei::tests::SerializedField("_matchWidthOrHeight", 1.0f));
+        }
+        canvasIds[0] = registry->Get<EntityInfo>(source).Id;
+        canvasIds[1] = registry->Get<EntityInfo>(destination).Id;
+        rei::tests::Refresh();
+    });
+    ActionEngine->WaitForNextFrames(3);
+}
+
+REI_EXTERN_API void NativeProjectReadRectScreenBounds(const i32 index, f32* values)
+{
+    ActionEngine->OnEngineThread([=]
+    {
+        auto registry = rei::GetInternalWorld()->GetRegistry();
+        const auto entity = RectMoveTargets.at(index);
+        const auto canvas = rei::ui_utility::FindCanvasEntity(entity);
+        const auto camera = rei::render::Camera::GetMainCamera();
+        i32 width, height;
+        camera.Get().GetOutputSize(width, height);
+        const auto rect = rei::ui_utility::CalculateRect(entity, canvas, width, height);
+        const f32 scale = rei::ui_utility::CalculateCanvasScaleFactor(registry->Get<rei::ui::Canvas>(canvas), width, height);
+        values[0] = rect.Min.x * scale;
+        values[1] = rect.Min.y * scale;
+        values[2] = rect.Max.x * scale;
+        values[3] = rect.Max.y * scale;
+    });
 }
 
 REI_EXTERN_API void NativeProjectBeginRectMove(const i32 kind)
