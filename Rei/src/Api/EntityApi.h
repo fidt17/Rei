@@ -249,13 +249,13 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
         bool record = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode();
         if (!layouts.empty())
         {
-            const auto sourceParent = GET(entities.front(), rei::Transform).GetParent();
+            const auto canvas = rei::ui_utility::FindCanvasEntity(parent);
+            record = record && canvas != rei::ecs::NULL_ENTITY;
             for (const auto entity : entities)
             {
-                if (!HAS(entity, rei::ui::RectTransform) || GET(entity, rei::Transform).GetParent() != sourceParent) return;
+                if (!HAS(entity, rei::ui::RectTransform)) return;
+                record = record && rei::ui_utility::FindCanvasEntity(entity) == canvas;
             }
-            const auto canvas = rei::ui_utility::FindCanvasEntity(entities.front());
-            record &= canvas != rei::ecs::NULL_ENTITY && canvas == rei::ui_utility::FindCanvasEntity(parent);
         }
         std::vector<rei::editor::EntityReparentAction::Change> changes;
         std::vector<rei::editor::EntityOrderAction::Change> orders;

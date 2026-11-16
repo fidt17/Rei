@@ -612,9 +612,11 @@ public sealed class EntityManagementAdvancedTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void RectGroupSendsAllPreservedLayoutsInOneCall(bool editorActive)
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    public void RectGroupSendsAllPreservedLayoutsInOneCall(bool editorActive, bool mixedParents)
     {
         var batches = new List<(int[] Ids, int Parent, int Index, bool Record)>();
         var api = new TestEntityApi
@@ -627,7 +629,7 @@ public sealed class EntityManagementAdvancedTests
         var first = new GameEntity(7, "First");
         var second = new GameEntity(2, "Second");
         first.Transform.SetParent(10);
-        second.Transform.SetParent(10);
+        second.Transform.SetParent(mixedParents ? 12 : 10);
 
         service.ReparentEntities([first, second], new(11, "Destination"), 1);
 

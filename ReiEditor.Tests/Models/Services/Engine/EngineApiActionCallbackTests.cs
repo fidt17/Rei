@@ -1462,7 +1462,19 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas, bool grouped = false, bool disjoint = false)
+    [NativeCallbackFact]
+    public Task RectTransformMixedParentDragKeepsHierarchyOrderAndSharesOneHistoryEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var stretch in new[] { false, true })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, mixedParents: true);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
@@ -1517,7 +1529,7 @@ public sealed class EngineApiActionCallbackTests
             management.SetParent(editors[3].Entity, editors[1].Entity, 0);
             management.SetParent(editors[4].Entity, editors[2].Entity, 0);
             management.SetParent(target.Entity, editors[1].Entity, 0);
-            if (grouped) management.SetParent(editors[5].Entity, editors[1].Entity, disjoint ? 2 : 1);
+            if (grouped) management.SetParent(editors[5].Entity, editors[mixedParents ? 2 : 1].Entity, mixedParents ? 0 : disjoint ? 2 : 1);
             entities.SelectEntity(target.Entity.Id);
             var before = await ReadAsync();
             var initialCount = received.Count;
@@ -1532,22 +1544,23 @@ public sealed class EngineApiActionCallbackTests
                 entities.ReparentEntities([ids[0], int.MaxValue], destination.Id, 1, true, [preserved, preserved]);
                 entities.ReparentEntities([ids[0], ids[0]], destination.Id, 1, true, [preserved, preserved]);
                 entities.ReparentEntities(movedIds, ids[0], 1, true, [preserved, preserved]);
-                entities.ReparentEntities([ids[0], ids[2]], destination.Id, 1, true, [preserved, preserved]);
+                entities.ReparentEntities([ids[0], canvasId], destination.Id, 1, true, [preserved, preserved]);
                 entities.ReparentEntities(movedIds, destination.Id, 1, true);
                 Check(before, await ReadAsync());
                 Assert.Equal(initialCount, received.Count);
             }
             drag.ViewModel.MoveEntities(movedIds, destination.Id, 1);
             var after = await ReadAsync();
+            var expectedIndex = 1 - movedIds.Count(id => before.Parents[Array.IndexOf(ids, id)] == destination.Id && before.Orders[Array.IndexOf(ids, id)] < 1);
             Assert.Equal(destination.Id, after.Parents[0]);
-            Assert.Equal(1, after.Orders[0]);
+            Assert.Equal(expectedIndex, after.Orders[0]);
             CheckFloats(bounds, Bounds(after, 0));
             if (grouped)
             {
                 Assert.Equal(destination.Id, after.Parents[5]);
-                Assert.Equal(2, after.Orders[5]);
+                Assert.Equal(expectedIndex + 1, after.Orders[5]);
                 CheckFloats(Bounds(before, 5), Bounds(after, 5));
-                drag.ViewModel.MoveEntities(movedIds, destination.Id, 3);
+                drag.ViewModel.MoveEntities(movedIds, destination.Id, expectedIndex + 2);
                 Check(after, await ReadAsync());
             }
             Assert.Equal(initialCount + 1, received.Count);
@@ -1569,7 +1582,8 @@ public sealed class EngineApiActionCallbackTests
             Check(after, await ReadAsync());
             await commands.UndoAsync();
             Check(before, await ReadAsync());
-            drag.ViewModel.MoveEntities(grouped && !disjoint ? movedIds : [ids[0]], editors[1].Entity.Id, grouped && !disjoint ? 2 : 1);
+            var groupNoOp = grouped && !disjoint && !mixedParents;
+            drag.ViewModel.MoveEntities(groupNoOp ? movedIds : [ids[0]], editors[1].Entity.Id, groupNoOp ? 2 : 1);
             Check(before, await ReadAsync());
             Assert.Equal(initialCount + 3, received.Count);
             Assert.True(commands.CanRedo);

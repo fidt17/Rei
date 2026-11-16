@@ -1691,6 +1691,7 @@ TEST_CASE("Editor action store restores grouped RectTransform parent layouts ato
     {
         BehaviourFixture fixture;
         const auto oldParent = fixture.Entity(10);
+        const auto secondParent = fixture.Entity(12);
         const auto newParent = fixture.Entity(11);
         const auto first = fixture.Entity(1);
         const auto second = fixture.Entity(2);
@@ -1699,8 +1700,8 @@ TEST_CASE("Editor action store restores grouped RectTransform parent layouts ato
         for (i32 i = 0; i < 2; i++)
         {
             ecs::ComponentRef<Transform> target(fixture.Registry, entities[i]);
-            target.Get().SetParent(oldParent);
-            target.Get().SetChildOrder(i * 2);
+            target.Get().SetParent(i == 0 ? oldParent : secondParent);
+            target.Get().SetChildOrder(i);
             auto& rect = fixture.Registry->Get<ui::RectTransform>(entities[i]);
             rect.GetAnchoredPosition() = {20.0f + i * 10.0f, 30};
             rect.GetSizeDelta() = {200, 160.0f + i * 10.0f};
@@ -1713,8 +1714,11 @@ TEST_CASE("Editor action store restores grouped RectTransform parent layouts ato
         auto& destinationSibling = fixture.Registry->Get<Transform>(fixture.Entity(4));
         destinationSibling.SetParent(newParent);
         destinationSibling.SetChildOrder(0);
+        auto& secondSourceSibling = fixture.Registry->Get<Transform>(fixture.Entity(5));
+        secondSourceSibling.SetParent(secondParent);
+        secondSourceSibling.SetChildOrder(0);
         std::vector<EntityOrderAction::Change> orders;
-        for (const auto parent : {oldParent, newParent})
+        for (const auto parent : {oldParent, secondParent, newParent})
         {
             for (const auto entity : transform_utility::CollectSiblings(parent))
             {

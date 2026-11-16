@@ -191,7 +191,6 @@ public class EntityManagementService : IEntityManagementService
 
     private bool TryReparentRectTransformGroup(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex)
     {
-        if (entities.Any(entity => entity.Transform.Parent != entities[0].Transform.Parent)) return false;
         var rects = new List<BehaviourComponent>();
         var layouts = new List<RectTransformLayoutData>();
         foreach (var entity in entities)
