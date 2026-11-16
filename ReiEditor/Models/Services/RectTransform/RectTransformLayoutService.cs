@@ -90,6 +90,13 @@ public sealed class RectTransformLayoutService : IRectTransformLayoutService
         if (!TryReadLayout(rectTransform, out var layout)) return false;
         if (!TryGetAbsoluteRect(entity, out var absoluteRect)) return false;
 
+        if (layout.AnchorMin == layout.AnchorMax && newParent != null
+            && TryFindCanvasSize(entity, out var sourceSize) && TryFindCanvasSize(newParent, out var destinationSize) && sourceSize.X > 0f)
+        {
+            // Both canvases use the same viewport: logical width ratio equals source scale / destination scale.
+            var ratio = destinationSize.X / sourceSize.X;
+            absoluteRect = new RectTransformRect(absoluteRect.MinX * ratio, absoluteRect.MinY * ratio, absoluteRect.MaxX * ratio, absoluteRect.MaxY * ratio);
+        }
         var newParentRect = GetParentAbsoluteRect(entity, newParent);
         var localRect = OffsetRect(absoluteRect, -newParentRect.MinX, -newParentRect.MinY);
         var parentSize = new RectTransformVector2(newParentRect.Width, newParentRect.Height);

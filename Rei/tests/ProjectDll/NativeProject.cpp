@@ -357,21 +357,24 @@ REI_EXTERN_API void NativeProjectPrepareRectMove(const i32 kind, const i32 targe
     ActionEngine->WaitForNextFrames(3);
 }
 
-REI_EXTERN_API void NativeProjectPrepareRectCanvases(const f32 scale, i32* canvasIds)
+REI_EXTERN_API void NativeProjectPrepareRectCanvases(const f32 sourceScale, const f32 destinationScale, i32* canvasIds)
 {
     ActionEngine->OnEngineThread([&]
     {
         auto registry = rei::GetInternalWorld()->GetRegistry();
         const auto source = rei::ui_utility::FindCanvasEntity(RectMoveTargets.at(0));
         const auto destination = rei::tests::CreateCanvas();
-        if (scale != 1.0f)
+        if (sourceScale != 1.0f)
         {
             auto& first = registry->Get<rei::ui::Canvas>(source);
             first.REI_SET(rei::tests::SerializedField("_scaleMode", static_cast<i32>(rei::ui::ScaleWithScreenSize)));
-            first.REI_SET(rei::tests::SerializedField("_referenceResolution", {{"x", {{"Value", 640.0f / scale}}}, {"y", {{"Value", 480.0f / scale}}}}));
+            first.REI_SET(rei::tests::SerializedField("_referenceResolution", {{"x", {{"Value", 640.0f / sourceScale}}}, {"y", {{"Value", 480.0f / sourceScale}}}}));
+        }
+        if (destinationScale != 1.0f)
+        {
             auto& second = registry->Get<rei::ui::Canvas>(destination);
             second.REI_SET(rei::tests::SerializedField("_scaleMode", static_cast<i32>(rei::ui::ScaleWithScreenSize)));
-            second.REI_SET(rei::tests::SerializedField("_referenceResolution", {{"x", {{"Value", 640.0f}}}, {"y", {{"Value", 480.0f / scale}}}}));
+            second.REI_SET(rei::tests::SerializedField("_referenceResolution", {{"x", {{"Value", 640.0f}}}, {"y", {{"Value", 480.0f / destinationScale}}}}));
             second.REI_SET(rei::tests::SerializedField("_matchWidthOrHeight", 1.0f));
         }
         canvasIds[0] = registry->Get<EntityInfo>(source).Id;

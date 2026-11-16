@@ -3,10 +3,8 @@ using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.RectTransform;
 using ReiEditor.Models.Services.Scenes;
-using ReiEditor.Models.Services.Windows.Playmode;
 using ReiEditor.Tests.Infrastructure.Builders;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
-using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Tests.Models.Services.RectTransform;
 
@@ -15,19 +13,9 @@ namespace ReiEditor.Tests.Models.Services.RectTransform;
 [Trait("Area", "RectTransform")]
 public sealed class RectTransformLayoutServiceTests
 {
-    private sealed class TestWindowController : IEngineWindowController
-    {
-        public Observable<(int Width, int Height)?> Size { get; } = new(null);
-        public ReiEditor.Utils.Common.IObservable<(int Width, int Height)?> ViewportSize => Size;
-        public ReiEditor.Utils.Common.IObservable<IntPtr?> WindowPointer => throw new NotSupportedException();
-        public void SetupWindow() => throw new NotSupportedException();
-        public void DestroyWindow() => throw new NotSupportedException();
-        public void SetViewportSize(int width, int height) => throw new NotSupportedException();
-    }
-
     private readonly TestBehaviourRegistry _registry = new();
     private readonly TestSceneManagementService _scenes = new();
-    private readonly TestWindowController _window = new();
+    private readonly TestEngineWindowController _window = new();
     private const int RECT_ID = 10;
     private const int CANVAS_ID = 20;
 
@@ -143,6 +131,50 @@ public sealed class RectTransformLayoutServiceTests
         Assert.Equal(0, child.Transform.Parent);
     }
 
+    [Theory]
+    [InlineData(1f, 2f, false, -30f, -30f, 40f, 20f)]
+    [InlineData(2f, 1f, false, 450f, 240f, 160f, 80f)]
+    [InlineData(1f, 2f, true, 105f, 65f, 180f, 60f)]
+    [InlineData(2f, 1f, true, 105f, 65f, 180f, 60f)]
+    public void ReparentAcrossCanvasScalesConvertsOnlyFixedAnchors(float sourceScale, float destinationScale, bool stretch, float x, float y, float width, float height)
+    {
+        _window.Size.Value = (1600, 900);
+        var scene = new Scene("layout");
+        _scenes.Scene.Value = scene;
+        var source = CreateCanvas(1600 / sourceScale, 900 / sourceScale, 1, 0, 1);
+        var destination = CreateCanvas(1600 / destinationScale, 900 / destinationScale, 1, 0, 2);
+        var parent = new GameEntity(3, "source parent");
+        parent.AddBehaviour(SceneComponentBuilder.RectTransform(RECT_ID, new(new(0, 0), new(0, 0), new(0, 0), new(100, 50), new(400, 200))));
+        var newParent = new GameEntity(4, "destination parent");
+        newParent.AddBehaviour(SceneComponentBuilder.RectTransform(RECT_ID, new(new(0, 0), new(0, 0), new(0, 0), new(40, 30), new(300, 180))));
+        var child = new GameEntity(5, "child");
+        var original = new RectTransformLayoutData(stretch ? new(0, 0) : new(0.5f, 0.5f), stretch ? new(1, 1) : new(0.5f, 0.5f), new(0.25f, 0.75f), new(20, 30), new(80, 40));
+        var component = SceneComponentBuilder.RectTransform(RECT_ID, original);
+        child.AddBehaviour(component);
+        foreach (var entity in new[] { source, destination, parent, newParent, child }) scene.AddEntity(entity);
+        scene.MoveEntity(parent, source, 0);
+        scene.MoveEntity(newParent, destination, 0);
+        scene.MoveEntity(child, parent, 0);
+        var service = CreateService();
+
+        Assert.True(service.TryPreserveRectForParent(child, newParent, out var preserved));
+
+        Assert.Equal(new RectTransformVector2(x, y), preserved.AnchoredPosition);
+        Assert.Equal(new RectTransformVector2(width, height), preserved.SizeDelta);
+        Assert.Equal(original.AnchorMin, preserved.AnchorMin);
+        Assert.Equal(original.AnchorMax, preserved.AnchorMax);
+        Assert.Equal(original.Pivot, preserved.Pivot);
+        Assert.True(service.TryReadLayout(component, out var unchanged));
+        Assert.Equal(original, unchanged);
+        Assert.Equal(parent.Id, child.Transform.Parent);
+        if (!stretch)
+        {
+            var rect = RectTransformLayoutCalculator.CalculateRect(new(300, 180), preserved);
+            Assert.Equal(new RectTransformRect(300 * sourceScale, 150 * sourceScale, 380 * sourceScale, 190 * sourceScale),
+                new((rect.MinX + 40) * destinationScale, (rect.MinY + 30) * destinationScale, (rect.MaxX + 40) * destinationScale, (rect.MaxY + 30) * destinationScale));
+        }
+    }
+
     /// <summary>Applying a layout updates all vectors and emits exactly one complete-value notification per vector.</summary>
     [Fact]
     public void ApplyLayoutPublishesCompleteVectorsOnce()
@@ -183,9 +215,9 @@ public sealed class RectTransformLayoutServiceTests
 
     private RectTransformLayoutService CreateService() => new(_registry, _scenes, _window);
 
-    private static GameEntity CreateCanvas(float width, float height, int mode, float match)
+    private static GameEntity CreateCanvas(float width, float height, int mode, float match, int id = 1)
     {
-        var entity = new GameEntity(1, "canvas");
+        var entity = new GameEntity(id, "canvas");
         var component = new BehaviourComponent(CANVAS_ID);
         component.AddProperty(SceneComponentBuilder.Vector(EngineBehavioursConstants.CANVAS_REFERENCE_RESOLUTION, ("x", width), ("y", height)));
         component.AddProperty(SerializedPropertyBuilder.Integer(EngineBehavioursConstants.CANVAS_SCALE_MODE, mode));

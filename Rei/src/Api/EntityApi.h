@@ -152,9 +152,12 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
         const bool parentChanged = transform.GetParent() != parent;
         const bool isRect = HAS(e, rei::ui::RectTransform);
         const auto canvas = isRect ? rei::ui_utility::FindCanvasEntity(e) : rei::ecs::NULL_ENTITY;
-        const bool sameScale = rei::ui_utility::HaveSameCanvasScale(canvas, rei::ui_utility::FindCanvasEntity(parent));
+        const auto destinationCanvas = rei::ui_utility::FindCanvasEntity(parent);
+        const bool fixedAnchors = isRect && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax());
+        const bool recordRect = hasRectLayout && canvas != rei::ecs::NULL_ENTITY && destinationCanvas != rei::ecs::NULL_ENTITY
+            && (fixedAnchors || rei::ui_utility::HaveSameCanvasScale(canvas, destinationCanvas));
         const bool recordChange = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode()
-            && (!parentChanged || !isRect || (hasRectLayout && sameScale));
+            && (!parentChanged || !isRect || recordRect);
         const auto applyParent = [&]
         {
             transform.SetParent(parent, order);
