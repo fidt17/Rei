@@ -1639,3 +1639,48 @@ TEST_CASE("Editor action store RectTransform anchors restore anchors position an
         CHECK(fixture.Recorded.size() == 1);
     });
 }
+
+TEST_CASE("Editor action store restores RectTransform layout with parent and sibling order", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto oldParent = fixture.Entity(10);
+        const auto newParent = fixture.Entity(11);
+        const auto entity = fixture.Entity(1);
+        ecs::ComponentRef<Transform> target(fixture.Registry, entity);
+        auto& rect = fixture.Registry->Get<ui::RectTransform>(entity);
+        target.Get().SetParent(oldParent);
+        rect.GetAnchoredPosition() = {20, 30};
+        rect.GetSizeDelta() = {200, 160};
+        const EntityReparentAction::State before(target.Get());
+        target.Get().SetParent(newParent, 0);
+        rect.GetAnchoredPosition() = {-40, 80};
+        rect.GetSizeDelta() = {-100, 60};
+        const EntityReparentAction::State after(target.Get());
+        EditorActionStore actions;
+        i32 records = 0;
+        actions.ActionRecorded.append([&](u64) { records++; });
+        const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(target, before, after,
+            std::vector<EntityOrderAction::Change>{{target, 2, 0}}));
+        REQUIRE(actions.Undo(id));
+        CHECK(target.Get().GetParent() == oldParent);
+        CHECK(target.Get().GetChildOrder() == 2);
+        CHECK(rect.GetAnchoredPosition().x == 20);
+        CHECK(rect.GetAnchoredPosition().y == 30);
+        CHECK(rect.GetSizeDelta().x == 200);
+        CHECK(rect.GetSizeDelta().y == 160);
+        REQUIRE(actions.Redo(id));
+        CHECK(target.Get().GetParent() == newParent);
+        CHECK(target.Get().GetChildOrder() == 0);
+        CHECK(rect.GetAnchoredPosition().x == -40);
+        CHECK(rect.GetAnchoredPosition().y == 80);
+        CHECK(rect.GetSizeDelta().x == -100);
+        CHECK(rect.GetSizeDelta().y == 60);
+        CHECK(records == 1);
+        fixture.Registry->Del<ui::RectTransform>(entity);
+        CHECK_FALSE(actions.Undo(id));
+        CHECK(target.Get().GetParent() == newParent);
+        CHECK(target.Get().GetChildOrder() == 0);
+    });
+}

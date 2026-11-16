@@ -1438,6 +1438,190 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
+    public Task RectTransformReparentSharesHistoryWithInspectorAndHandles()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var stretch in new[] { false, true })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        var editors = new List<InspectorTransformFixture>();
+        var source = new EngineSceneSyncEventSource(api, new TestLogger<EngineSceneSyncEventSource>());
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var ids = new int[5];
+            api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, ids.Length, ids);
+            foreach (var id in ids)
+            {
+                var editor = new InspectorTransformFixture(entities, id);
+                editor.Apply(entities.GetEntityData(id)!);
+                editors.Add(editor);
+            }
+            var target = editors[0];
+            var canvasId = Convert.ToInt32(target.Transform.GetProperty("_parent").Value);
+            var canvas = new GameEntity(canvasId, "Canvas bounds");
+            canvas.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
+                new(new(0, 0), new(0, 0), new(0, 0), new(0, 0), new(640, 480))));
+            var scenes = new TestSceneManagementService(editors.Select(e => e.Entity).Prepend(canvas).ToArray());
+            var scene = scenes.Scene.Value!;
+            scene.SetAssetInfo(new AssetInfo(new AssetMeta("render-empty-scene"), ""));
+            foreach (var editor in editors) Assert.True(scene.MoveEntity(editor.Entity, canvas, int.MaxValue));
+            var registry = new TestBehaviourRegistry();
+            registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            var layout = new RectTransformLayoutService(registry, scenes, null!);
+            var managementLogger = new TestLogger<EntityManagementService>();
+            var entitySync = new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entities.GetEntityData(entity.Id)!) };
+            var management = new EntityManagementService(managementLogger, scenes, null!, entities, registry, target.Runner, entitySync, layout);
+            using var sync = new SceneSyncService(source, scenes, new EngineSelectionSyncService(new SelectionService(new TestEntityApi())),
+                new TestLogger<SceneSyncService>(), entitySync);
+            using var drag = new HierarchyDragFixture(scene.Hierarchy, management);
+            source.Connect();
+            var component = target.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
+            using var vm = new RectTransformPropertyViewModel(target.Entity, component, target.Runner, entities, layout);
+            if (stretch) vm.Presets.Single(p => p.DisplayName == "Stretch Both").ApplyCommand.Execute(null);
+            // Preparation is outside the recorded drag; both parents belong to the fixture Canvas.
+            management.SetParent(editors[3].Entity, editors[1].Entity, 0);
+            management.SetParent(editors[4].Entity, editors[2].Entity, 0);
+            management.SetParent(target.Entity, editors[1].Entity, 0);
+            entities.SelectEntity(target.Entity.Id);
+            var before = await ReadAsync();
+            var initialCount = received.Count;
+            var destination = toCanvas ? canvas : editors[2].Entity;
+            var bounds = Bounds(before, 0);
+            CheckFloats(new[] { 240f, 190f, 440f, 350f }, bounds);
+            drag.ViewModel.MoveEntities([target.Entity.Id], destination.Id, 1);
+            var after = await ReadAsync();
+            Assert.Equal(destination.Id, after.Parents[0]);
+            Assert.Equal(1, after.Orders[0]);
+            CheckFloats(bounds, Bounds(after, 0));
+            Assert.Equal(initialCount + 1, received.Count);
+            // Inspector and real pointer handles append entries to the same stream.
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var binding = input.Bind(ReiTextBox.TextProperty, new Binding(nameof(vm.HorizontalSecondaryValue)) { Mode = BindingMode.TwoWay });
+            input.TextInternal = "220";
+            input.LoseFocus();
+            var resized = await ReadAsync();
+            Assert.Equal(initialCount + 2, received.Count);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectResize", 2);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            var handled = await ReadAsync();
+            Assert.Equal(initialCount + 3, received.Count);
+            await commands.UndoAsync();
+            Check(resized, await ReadAsync());
+            await commands.UndoAsync();
+            Check(after, await ReadAsync());
+            await commands.UndoAsync();
+            Check(before, await ReadAsync());
+            drag.ViewModel.MoveEntities([target.Entity.Id], editors[1].Entity.Id, 1);
+            Check(before, await ReadAsync());
+            Assert.Equal(initialCount + 3, received.Count);
+            Assert.True(commands.CanRedo);
+            await commands.RedoAsync();
+            Check(after, await ReadAsync());
+            await commands.RedoAsync();
+            Check(resized, await ReadAsync());
+            await commands.RedoAsync();
+            Check(handled, await ReadAsync());
+            Assert.False(commands.CanRedo);
+            Assert.Equal(initialCount + 3, received.Count);
+            Assert.Empty(logger.Entries);
+            Assert.Empty(managementLogger.Entries);
+
+            async Task<(float[][] Rects, int[] Parents, int[] Orders)> ReadAsync()
+            {
+                var rects = new float[ids.Length][];
+                var parents = new int[ids.Length];
+                var orders = new int[ids.Length];
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    rects[i] = new float[20];
+                    api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", i, rects[i]);
+                    var state = entities.GetEntityData(ids[i])!;
+                    var transform = JObject.FromObject(state.Behaviours.Single(b => b["REI_TYPE"].ToString() == "Transform"));
+                    parents[i] = transform["_parent"]!.Value<int>();
+                    orders[i] = transform["_order"]!.Value<int>();
+                    editors[i].Apply(state);
+                }
+                source.RequestSnapshot();
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (editors.Where((e, i) => e.Entity.Transform.Parent != parents[i] || e.Entity.Transform.Order != orders[i]).Any())
+                {
+                    Assert.True(DateTime.UtcNow < deadline, "SceneSync did not apply the native hierarchy.");
+                    Dispatcher.UIThread.RunJobs();
+                    await Task.Delay(10);
+                }
+                Dispatcher.UIThread.RunJobs();
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    var node = scene.Hierarchy.GetNode(editors[i].Entity)!;
+                    Assert.Equal(parents[i], node.Parent?.Content.Id ?? 0);
+                    Assert.Equal(orders[i], scene.Hierarchy.GetNodeOrder(node));
+                    Assert.True(layout.TryReadLayout(editors[i].Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!, out var value));
+                    CheckFloats(rects[i].Take(10).ToArray(), [value.AnchoredPosition.X, value.AnchoredPosition.Y, value.SizeDelta.X, value.SizeDelta.Y,
+                        value.AnchorMin.X, value.AnchorMin.Y, value.AnchorMax.X, value.AnchorMax.Y, value.Pivot.X, value.Pivot.Y]);
+                    Assert.Empty(editors[i].Logger.Entries);
+                }
+                return (rects, parents, orders);
+            }
+
+            float[] Bounds((float[][] Rects, int[] Parents, int[] Orders) state, int index)
+            {
+                var parentIndex = Array.IndexOf(ids, state.Parents[index]);
+                var parent = parentIndex < 0 ? new[] { 0f, 0f, 640f, 480f } : Bounds(state, parentIndex);
+                var rect = state.Rects[index];
+                var width = parent[2] - parent[0];
+                var height = parent[3] - parent[1];
+                var left = parent[0] + width * rect[4] + rect[0] - rect[8] * rect[2];
+                var bottom = parent[1] + height * rect[5] + rect[1] - rect[9] * rect[3];
+                return [left, bottom, left + width * (rect[6] - rect[4]) + rect[2], bottom + height * (rect[7] - rect[5]) + rect[3]];
+            }
+
+            static void Check((float[][] Rects, int[] Parents, int[] Orders) expected, (float[][] Rects, int[] Parents, int[] Orders) actual)
+            {
+                Assert.Equal(expected.Parents, actual.Parents);
+                Assert.Equal(expected.Orders, actual.Orders);
+                for (var i = 0; i < expected.Rects.Length; i++) CheckFloats(expected.Rects[i], actual.Rects[i]);
+            }
+
+            static void CheckFloats(float[] expected, float[] actual)
+            {
+                Assert.Equal(expected.Length, actual.Length);
+                for (var i = 0; i < expected.Length; i++) Assert.InRange(MathF.Abs(expected[i] - actual[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            source.Disconnect();
+            foreach (var editor in editors) editor.Dispose();
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+    }
+
+    [NativeCallbackFact]
     public Task InspectorManualRectAnchorsShareHistoryWithPresetsAndHandles()
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);

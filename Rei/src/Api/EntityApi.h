@@ -16,6 +16,7 @@
 #include "Modules/Editor/Actions/EntityOrderAction.h"
 #include "Modules/Editor/Actions/EntityReparentAction.h"
 #include "Common/Transform/TransformHierarchyUtility.h"
+#include "Common/Transform/RectTransformUtility.h"
 #include "rei_behaviours/ui/RectTransform.h"
 #include "rei_behaviours/transformation/Transform.h"
 
@@ -128,8 +129,11 @@ REI_EXTERN_API inline void RenameEntity(const i32 sceneEntityId, const char* new
     task->WaitForCompletion();
 }
 
-REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 parentSceneEntityId, const i32 order, const i32 recordHierarchyChange)
+REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 parentSceneEntityId, const i32 order, const i32 recordHierarchyChange, const f32* rectLayout = nullptr)
 {
+    const bool hasRectLayout = rectLayout != nullptr;
+    const rei::math::Vector2 position = hasRectLayout ? rei::math::Vector2(rectLayout[0], rectLayout[1]) : rei::math::Vector2(0, 0);
+    const rei::math::Vector2 size = hasRectLayout ? rei::math::Vector2(rectLayout[2], rectLayout[3]) : rei::math::Vector2(0, 0);
     rei::GetEngine().ExecuteOnMainThread([=]
     {
         ECS_WORLD(rei::GetInternalWorld());
@@ -146,11 +150,22 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
 
         auto& transform = GET(e, rei::Transform);
         const bool parentChanged = transform.GetParent() != parent;
+        const bool isRect = HAS(e, rei::ui::RectTransform);
+        const auto canvas = isRect ? rei::ui_utility::FindCanvasEntity(e) : rei::ecs::NULL_ENTITY;
+        const bool sameCanvas = canvas != rei::ecs::NULL_ENTITY && canvas == rei::ui_utility::FindCanvasEntity(parent);
         const bool recordChange = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode()
-            && (!parentChanged || !HAS(e, rei::ui::RectTransform));
-        if (!recordChange)
+            && (!parentChanged || !isRect || (hasRectLayout && sameCanvas));
+        const auto applyParent = [&]
         {
             transform.SetParent(parent, order);
+            if (!isRect || !hasRectLayout) return;
+            auto& rect = GET(e, rei::ui::RectTransform);
+            rect.GetAnchoredPosition() = position;
+            rect.GetSizeDelta() = size;
+        };
+        if (!recordChange)
+        {
+            applyParent();
             return;
         }
 
@@ -167,7 +182,7 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
             rei::ecs::ComponentRef<rei::Transform> target(rei::GetInternalWorld()->GetRegistry(), sibling);
             changes.push_back({target, target.Get().GetChildOrder(), 0});
         }
-        transform.SetParent(parent, order);
+        applyParent();
         for (auto& change : changes) change.After = change.Target.Get().GetChildOrder();
         std::erase_if(changes, [](const auto& change) { return change.Before == change.After; });
         if (parentChanged)

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Engine.Api.DTO;
+using ReiEditor.Models.Services.RectTransform;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -105,14 +106,17 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order, int recordHierarchyChange);
-    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false)
+    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order, int recordHierarchyChange, [In] float[]? rectLayout);
+    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null)
     {
         if (!_engineApi.IsEngineRunning) return;
 
         try
         {
-            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order, recordHierarchyChange ? 1 : 0);
+            float[]? values = rectLayout is { } layout
+                ? [layout.AnchoredPosition.X, layout.AnchoredPosition.Y, layout.SizeDelta.X, layout.SizeDelta.Y]
+                : null;
+            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order, recordHierarchyChange ? 1 : 0, values);
         }
         catch (Exception)
         {

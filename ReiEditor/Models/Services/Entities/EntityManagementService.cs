@@ -139,10 +139,11 @@ public class EntityManagementService : IEntityManagementService
         try
         {
             var shouldPreserveRectTransform = _rectTransformLayoutService.TryPreserveRectForParent(e, parent, out var preservedLayout);
-            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordHierarchyChange && _engineRunner.IsEditorActive.Value);
+            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordHierarchyChange && _engineRunner.IsEditorActive.Value,
+                shouldPreserveRectTransform ? preservedLayout : null);
             if (shouldPreserveRectTransform && _rectTransformLayoutService.TryGetRectTransform(e, out var rectTransform))
             {
-                ApplyRectTransformLayout(e, rectTransform, preservedLayout);
+                _rectTransformLayoutService.ApplyLayoutToEditor(rectTransform, preservedLayout);
             }
         }
         catch (Exception exception)
@@ -415,26 +416,5 @@ public class EntityManagementService : IEntityManagementService
 
         transform.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value = entity.Transform.Parent;
         transform.GetProperty(EngineBehavioursConstants.TRANSFORM_ORDER).Value = entity.Transform.Order;
-    }
-
-    private void ApplyRectTransformLayout(GameEntity entity, BehaviourComponent rectTransform, RectTransformLayoutData layout)
-    {
-        _rectTransformLayoutService.ApplyLayoutToEditor(rectTransform, layout);
-        _entityApi.SetData(new SetEntityDataRequest
-        {
-            SceneId = entity.Id,
-            Behaviours = new List<Dictionary<string, object?>>
-            {
-                new()
-                {
-                    { SetEntityDataRequest.REI_BEHAVIOUR_ID, rectTransform.Id },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, _rectTransformLayoutService.SerializeVector2(layout.AnchorMin) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, _rectTransformLayoutService.SerializeVector2(layout.AnchorMax) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, _rectTransformLayoutService.SerializeVector2(layout.Pivot) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, _rectTransformLayoutService.SerializeVector2(layout.AnchoredPosition) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, _rectTransformLayoutService.SerializeVector2(layout.SizeDelta) }
-                }
-            }
-        });
     }
 }

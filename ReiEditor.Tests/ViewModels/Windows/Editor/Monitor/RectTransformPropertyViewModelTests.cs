@@ -28,7 +28,7 @@ public sealed class RectTransformPropertyViewModelTests
         public InstantiateEntityResponse? CreateNewEntity(string name) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId) => throw new NotSupportedException();
         public void Rename(int sceneEntityId, string newName) => throw new NotSupportedException();
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null) => throw new NotSupportedException();
         public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => Requests.Add(request);

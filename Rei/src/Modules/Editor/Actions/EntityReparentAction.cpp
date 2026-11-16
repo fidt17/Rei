@@ -7,6 +7,10 @@ namespace rei::editor
     EntityReparentAction::State::State(const Transform& transform) :
         Parent(transform.GetParent()), Position(transform.GetLocalPosition()), Scale(transform.GetLocalScale()), Rotation(transform.GetLocalRotation())
     {
+        ECS_WORLD(GetInternalWorld())
+        if (!HAS(transform.GetEntity(), ui::RectTransform)) return;
+        const auto& rect = GET(transform.GetEntity(), ui::RectTransform);
+        Rect = RectTransformResizeAction::State{rect.GetAnchoredPosition(), rect.GetSizeDelta()};
     }
 
     EntityReparentAction::EntityReparentAction(ecs::ComponentRef<Transform> target, State before, State after, std::vector<EntityOrderAction::Change> orders) :
@@ -30,6 +34,7 @@ namespace rei::editor
         {
             if (change.Target.IsNull()) return false;
             const auto& state = undo ? change.Before : change.After;
+            if (state.Rect && !HAS(change.Target.Get().GetEntity(), ui::RectTransform)) return false;
             if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return false;
         }
         for (const auto& change : _orders)
@@ -45,6 +50,12 @@ namespace rei::editor
             transform.GetLocalPosition() = state.Position;
             transform.GetLocalScale() = state.Scale;
             transform.SetRotation(state.Rotation);
+            if (state.Rect)
+            {
+                auto& rect = GET(transform.GetEntity(), ui::RectTransform);
+                rect.GetAnchoredPosition() = state.Rect->AnchoredPosition;
+                rect.GetSizeDelta() = state.Rect->SizeDelta;
+            }
         }
         for (const auto& change : _orders)
         {
