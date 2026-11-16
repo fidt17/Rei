@@ -1489,6 +1489,32 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
+    [NativeCallbackFact]
+    public Task RectTransformCrossCanvasGroupReparentPreservesScreenBoundsAndSharesOneEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scale in new[] { 1f, 2f })
+                foreach (var stretch in new[] { false, true })
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, crossCanvasScale: scale);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformCrossCanvasMixedParentDragPreservesScreenBoundsAndHierarchyOrder()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scale in new[] { 1f, 2f })
+                foreach (var stretch in new[] { false, true })
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, mixedParents: true, crossCanvasScale: scale);
+            return true;
+        }, CancellationToken.None);
+    }
+
     private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false, float? crossCanvasScale = null)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
@@ -1550,7 +1576,7 @@ public sealed class EngineApiActionCallbackTests
             var component = target.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
             using var vm = new RectTransformPropertyViewModel(target.Entity, component, target.Runner, entities, layout);
             if (stretch) vm.Presets.Single(p => p.DisplayName == "Stretch Both").ApplyCommand.Execute(null);
-            // Preparation is outside the recorded drag; both parents belong to the fixture Canvas.
+            // Prepare the hierarchy without recording the setup moves.
             management.SetParent(editors[3].Entity, editors[1].Entity, 0);
             management.SetParent(editors[4].Entity, editors[2].Entity, 0);
             management.SetParent(target.Entity, editors[1].Entity, 0);
@@ -1564,6 +1590,7 @@ public sealed class EngineApiActionCallbackTests
             CheckFloats(expectedPixels.Select(value => value / scale).ToArray(), bounds);
             var screenBefore = crossCanvasScale.HasValue ? ReadScreenBounds() : null;
             if (screenBefore != null) CheckFloats(expectedPixels, screenBefore);
+            var secondScreenBefore = crossCanvasScale.HasValue && grouped ? ReadScreenBounds(5) : null;
             int[] movedIds = grouped ? [ids[5], ids[0]] : [ids[0]];
             if (grouped)
             {
@@ -1589,6 +1616,7 @@ public sealed class EngineApiActionCallbackTests
                 Assert.Equal(destination.Id, after.Parents[5]);
                 Assert.Equal(expectedIndex + 1, after.Orders[5]);
                 CheckFloats(Bounds(before, 5), Bounds(after, 5));
+                if (secondScreenBefore != null) CheckFloats(secondScreenBefore, ReadScreenBounds(5));
                 drag.ViewModel.MoveEntities(movedIds, destination.Id, expectedIndex + 2);
                 Check(after, await ReadAsync());
             }
@@ -1662,7 +1690,10 @@ public sealed class EngineApiActionCallbackTests
                     Assert.Empty(editors[i].Logger.Entries);
                 }
                 if (crossCanvasScale.HasValue)
-                    CheckFloats(Bounds((rects, parents, orders), 0).Select(value => value * scale).ToArray(), ReadScreenBounds());
+                {
+                    for (var i = 0; i < ids.Length; i++)
+                        CheckFloats(Bounds((rects, parents, orders), i).Select(value => value * scale).ToArray(), ReadScreenBounds(i));
+                }
                 return (rects, parents, orders);
             }
 
@@ -1674,10 +1705,10 @@ public sealed class EngineApiActionCallbackTests
                 return result;
             }
 
-            float[] ReadScreenBounds()
+            float[] ReadScreenBounds(int index = 0)
             {
                 var result = new float[4];
-                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectScreenBounds", 0, result);
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectScreenBounds", index, result);
                 return result;
             }
 

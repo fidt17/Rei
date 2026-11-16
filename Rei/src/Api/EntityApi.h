@@ -254,7 +254,7 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
             for (const auto entity : entities)
             {
                 if (!HAS(entity, rei::ui::RectTransform)) return;
-                record = record && rei::ui_utility::FindCanvasEntity(entity) == canvas;
+                record = record && rei::ui_utility::HaveSameCanvasScale(rei::ui_utility::FindCanvasEntity(entity), canvas);
             }
         }
         std::vector<rei::editor::EntityReparentAction::Change> changes;
