@@ -256,6 +256,14 @@ public sealed class ReiEditorMcpTools
         return Execute(() => _gateway.GetLogsAsync(operationId, minimumLevel, limit, cancellationToken));
     }
 
+    [McpServerTool(Name = "rei_editor_send_input", Title = "Send native viewport input", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Runs 1-128 synthetic input events in Editor viewport, one per engine frame. Types: move, button_down, button_up, key_down, key_up, scroll, wait. X/Y are capture_frame pixels from top-left (scroll uses offsets); Code is mouse 0=left/1=right/2=middle or GLFW key code (W=87, Z=90, Y=89, LeftControl=341, LeftShift=340). Releases held inputs at end. Can invoke Editor shortcuts, including Delete and Ctrl+D. Does not move OS cursor, type text in Inspector, save, or set Transform directly. Completed means delivered; inspect native/Editor state independently.")]
+    public Task<ReiViewportInputResult> SendInput(ReiViewportInputEvent[] events, CancellationToken cancellationToken) => Execute(() => _gateway.SendInputAsync(events, cancellationToken));
+
+    [McpServerTool(Name = "rei_editor_drag_pointer", Title = "Drag native viewport pointer", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Left-button drag through native viewport input and gizmo hit testing. Coordinates are capture_frame pixels from top-left, with DPI conversion. Moves to start, presses, interpolates eight moves, releases. No Save. Does not drag Avalonia Hierarchy. Inspect resulting scene and history; do not retry blindly after timeout.")]
+    public Task<ReiViewportInputResult> DragPointer(double fromX, double fromY, double toX, double toY, CancellationToken cancellationToken) => Execute(() => _gateway.DragPointerAsync(fromX, fromY, toX, toY, cancellationToken));
+
     [McpServerTool(Name = "rei_editor_capture_frame", Title = "Capture Rei engine frame", ReadOnly = true, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description("Captures final engine framebuffer after post-processing, UI, and debug overlay. Returns PNG image content and frame metadata.")]
     public async Task<CallToolResult> CaptureFrame(CancellationToken cancellationToken)

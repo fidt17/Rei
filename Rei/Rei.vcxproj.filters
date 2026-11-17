@@ -171,6 +171,7 @@
     <ClInclude Include="src\Modules\Scenes\Scene.h" />
     <ClInclude Include="src\Modules\Scenes\SceneManager.h" />
     <ClInclude Include="src\Api\EditorApi.h" />
+    <ClInclude Include="src\Api\ViewportInputApi.h" />
     <ClInclude Include="src\Startup\App.h" />
     <ClInclude Include="src\Startup\AppEntryPoint.h" />
     <ClInclude Include="src\Modules\Behaviour\Behaviour.h" />
@@ -748,6 +749,7 @@
     <ClInclude Include="src\Ecs\Systems\CallbackSystem.h" />
     <ClInclude Include="src\Ecs\Systems\DeleteHere.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
+    <ClInclude Include="src\Modules\Input\SimulatedInput.h" />
     <ClInclude Include="src\Modules\Render\Color\Color.h" />
     <ClInclude Include="src\Modules\Render\Shaders\ShaderGenerator.h" />
     <ClInclude Include="src\Modules\Render\Shaders\Shader.h" />

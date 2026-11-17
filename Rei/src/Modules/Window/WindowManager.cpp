@@ -29,6 +29,7 @@ namespace rei::window
 
         Input::Update();
         glfwPollEvents();
+        Input::StepSimulation();
 
         for (const auto& window : _windows)
         {

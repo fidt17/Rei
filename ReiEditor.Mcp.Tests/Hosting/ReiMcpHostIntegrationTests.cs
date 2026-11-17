@@ -15,6 +15,8 @@ public sealed class ReiMcpHostIntegrationTests
         private static readonly DateTimeOffset NOW = new(2026, 7, 30, 12, 0, 0, TimeSpan.Zero);
         private static readonly byte[] PNG_DATA = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
+        public IReadOnlyList<ReiViewportInputEvent>? InputEvents { get; private set; }
+        public double[]? DragCoordinates { get; private set; }
         public int UndoCalls { get; private set; }
         public int RedoCalls { get; private set; }
         public int? RenamedEntityId { get; private set; }
@@ -258,6 +260,17 @@ public sealed class ReiMcpHostIntegrationTests
                 1,
                 false,
                 [new ReiLogEntry(NOW, "editor", "info", "Build complete.", string.Empty)]));
+        }
+
+        public Task<ReiViewportInputResult> SendInputAsync(IReadOnlyList<ReiViewportInputEvent> events, CancellationToken cancellationToken)
+        {
+            InputEvents = events;
+            return Task.FromResult(new ReiViewportInputResult("completed", events.Count));
+        }
+        public Task<ReiViewportInputResult> DragPointerAsync(double fromX, double fromY, double toX, double toY, CancellationToken cancellationToken)
+        {
+            DragCoordinates = [fromX, fromY, toX, toY];
+            return Task.FromResult(new ReiViewportInputResult("completed", 11));
         }
 
         public Task<ReiFrameCapture> CaptureFrameAsync(CancellationToken cancellationToken)
@@ -669,6 +682,32 @@ public sealed class ReiMcpHostIntegrationTests
             Assert.Equal(parentId, packet.RootElement.GetProperty("parentId").GetInt32());
             Assert.Equal(int.MaxValue, packet.RootElement.GetProperty("order").GetInt32());
         }
+    }
+
+    [Fact]
+    public async Task ViewportInputTransportPreservesEventsCoordinatesAndNonIdempotentContract()
+    {
+        var gateway = new FakeEditorGateway();
+        await using var host = CreateHost(gateway);
+        await host.StartAsync();
+        await using var client = await CreateClient(host.Endpoint!);
+        var tools = await client.ListToolsAsync();
+        foreach (var name in new[] { "rei_editor_send_input", "rei_editor_drag_pointer" })
+        {
+            var tool = Assert.Single(tools, tool => tool.Name == name);
+            Assert.False(tool.ProtocolTool.Annotations?.ReadOnlyHint);
+            Assert.False(tool.ProtocolTool.Annotations?.IdempotentHint);
+            Assert.Equal(name == "rei_editor_send_input", tool.ProtocolTool.Annotations?.DestructiveHint);
+        }
+        var events = new[] { new ReiViewportInputEvent("move", 12.5, 34.25), new ReiViewportInputEvent("key_down", Code: 341), new ReiViewportInputEvent("key_up", Code: 341) };
+        var input = await client.CallToolAsync("rei_editor_send_input", new Dictionary<string, object?> { ["events"] = events });
+        Assert.NotEqual(true, input.IsError);
+        Assert.Equal(events, gateway.InputEvents);
+        using var packet = JsonDocument.Parse(GetText(input));
+        Assert.Equal("completed", packet.RootElement.GetProperty("status").GetString());
+        var drag = await client.CallToolAsync("rei_editor_drag_pointer", new Dictionary<string, object?> { ["fromX"] = 10.5, ["fromY"] = 20.25, ["toX"] = 42, ["toY"] = 65 });
+        Assert.NotEqual(true, drag.IsError);
+        Assert.Equal(new double[] { 10.5, 20.25, 42, 65 }, gateway.DragCoordinates);
     }
 
     private static ReiMcpHost CreateHost(IReiEditorGateway gateway)

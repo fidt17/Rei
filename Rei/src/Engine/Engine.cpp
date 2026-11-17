@@ -161,6 +161,7 @@ namespace rei::internal::engine
 
         _exitCode = exitCode;
 
+        Input::CancelSimulation();
         _profiler->Shutdown();
         _app->OnShutdown();
         _sceneManager->Shutdown();

@@ -129,6 +129,6 @@ public sealed class McpEntityRenameTests
     {
         var commands = new EditorCommandService();
         var decorated = new EntityRenameCommandDecorator(rename, commands);
-        return new(new McpEditorSessionAccessor(), null!, scenes, null!, decorated, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, commands);
+        return new(new McpEditorSessionAccessor(), null!, scenes, null!, decorated, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, commands, null!);
     }
 }
