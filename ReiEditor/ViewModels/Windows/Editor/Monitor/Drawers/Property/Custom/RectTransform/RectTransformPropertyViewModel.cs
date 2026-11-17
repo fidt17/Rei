@@ -416,21 +416,20 @@ public class RectTransformPropertyViewModel : BaseViewModel
         {
             [SetEntityDataRequest.REI_BEHAVIOUR_ID] = _component.Id
         };
-        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION))
-            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PositionX, PositionY));
-        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA))
-            data[EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(SizeDeltaX, SizeDeltaY));
-        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT))
-            data[EngineBehavioursConstants.RECT_TRANSFORM_PIVOT] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(PivotX, PivotY));
-        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN))
-            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMinX, AnchorMinY));
-        if (propertyNames.Length == 0 || propertyNames.Contains(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX))
-            data[EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(AnchorMaxX, AnchorMaxY));
+        void AddVector(string name, float x, float y)
+        {
+            if (propertyNames.Length == 0 || propertyNames.Contains(name))
+                data[name] = _rectTransformLayoutService.SerializeVector2(new RectTransformVector2(x, y));
+        }
+        AddVector(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, PositionX, PositionY);
+        AddVector(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, SizeDeltaX, SizeDeltaY);
+        AddVector(EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, PivotX, PivotY);
+        AddVector(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, AnchorMinX, AnchorMinY);
+        AddVector(EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, AnchorMaxX, AnchorMaxY);
         _entityApi.SetData(new SetEntityDataRequest
         {
             SceneId = _entity.Id,
-            RecordTransformChange = propertyNames.Length > 0 && _engineRunner.IsEditorActive.Value
-                && (propertyNames.Length >= 2 || (!IsStretchX && !IsStretchY)),
+            RecordTransformChange = propertyNames.Length > 0 && _engineRunner.IsEditorActive.Value,
             Behaviours = new List<Dictionary<string, object?>> { data }
         });
     }

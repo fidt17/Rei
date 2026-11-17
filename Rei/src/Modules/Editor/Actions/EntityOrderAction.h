@@ -16,6 +16,8 @@ namespace rei::editor
             i32 After;
         };
 
+        REI_API static std::vector<Change> CaptureSiblings(const std::vector<ecs::Entity>& parents);
+        REI_API static void CompleteChanges(std::vector<Change>& changes);
         REI_API explicit EntityOrderAction(std::vector<Change> changes);
         REI_API bool Undo() override;
         REI_API bool Redo() override;

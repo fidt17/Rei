@@ -2,6 +2,7 @@ using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTr
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Engine.SceneSync;
@@ -35,14 +36,18 @@ namespace ReiEditor.Tests.Models.Services.Engine;
 [Trait("Area", "EngineActionCallbacks")]
 public sealed class EngineApiActionCallbackTests
 {
+    private static string? NativeSkipReason => !OperatingSystem.IsWindows() ? "Native callbacks require Windows x64."
+        : Environment.GetEnvironmentVariable("REI_RUN_ENGINE_TESTS") != "1"
+            ? "Set REI_RUN_ENGINE_TESTS=1 and REI_TEST_NATIVE_PROJECT_DLL to the built native project fixture." : null;
+
     private sealed class NativeCallbackFactAttribute : FactAttribute
     {
-        public NativeCallbackFactAttribute()
-        {
-            if (!OperatingSystem.IsWindows()) Skip = "Native callbacks require Windows x64.";
-            else if (Environment.GetEnvironmentVariable("REI_RUN_ENGINE_TESTS") != "1")
-                Skip = "Set REI_RUN_ENGINE_TESTS=1 and REI_TEST_NATIVE_PROJECT_DLL to the built native project fixture.";
-        }
+        public NativeCallbackFactAttribute() { Skip = NativeSkipReason; }
+    }
+
+    private sealed class NativeCallbackTheoryAttribute : TheoryAttribute
+    {
+        public NativeCallbackTheoryAttribute() { Skip = NativeSkipReason; }
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -68,6 +73,8 @@ public sealed class EngineApiActionCallbackTests
     private delegate void MoveRectPointerDelegate(int dx, int dy);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void ReadRectMoveDelegate(int index, [Out] float[] values);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void PrepareRectCanvasesDelegate(float sourceScale, float destinationScale, [Out] int[] canvasIds);
 
     [NativeCallbackFact]
     public Task NativeCallbacksRecordTransformActionsInCommonHistoryAndReplayWithoutRecordingAgain()
@@ -800,7 +807,7 @@ public sealed class EngineApiActionCallbackTests
             Check(x, y);
             Assert.Equal(3, received.Count);
             Assert.Empty(logger.Entries);
-            // Full layout and stretch-position requests remain outside this history step, even if flagged by a caller.
+            // Partial anchor payloads stay unrecorded; explicit position edits support stretch.
             var excluded = new SetEntityDataRequest
             {
                 SceneId = ids[0], RecordTransformChange = true,
@@ -813,6 +820,8 @@ public sealed class EngineApiActionCallbackTests
             api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
             Assert.Equal(88f, unsupported[0]);
             Assert.Equal(99f, unsupported[1]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(3, received.Count);
             excluded.Behaviours[0].Remove("_anchorMax");
             excluded.Behaviours[0]["_anchoredPosition"] = layout.SerializeVector2(new(90, 100));
             entities.SetData(excluded);
@@ -822,7 +831,24 @@ public sealed class EngineApiActionCallbackTests
             inspector.Apply(entities.GetEntityData(ids[0])!);
             Dispatcher.UIThread.RunJobs();
             Assert.True(vm.IsStretchX);
-            Assert.Equal(3, received.Count);
+            Assert.Equal(4, received.Count);
+            foreach (var undo in new[] { true, false })
+            {
+                if (undo) await commands.UndoAsync();
+                else await commands.RedoAsync();
+                var expected = undo ? new RectTransformVector2(88, 99) : new RectTransformVector2(90, 100);
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+                Assert.Equal(expected.X, unsupported[0]);
+                Assert.Equal(expected.Y, unsupported[1]);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(layout.TryReadLayout(component, out var state));
+                Assert.Equal(expected, state.AnchoredPosition);
+                Assert.Equal(new RectTransformVector2(1, 0.5f), state.AnchorMax);
+                Assert.Equal(1f, unsupported[6]);
+                Assert.Equal(0.5f, unsupported[7]);
+                Assert.Equal(4, received.Count);
+            }
             Assert.Empty(inspector.Logger.Entries);
 
             void Check(float expectedX, float expectedY)
@@ -950,7 +976,7 @@ public sealed class EngineApiActionCallbackTests
             await commands.RedoAsync();
             Check(x, y, horizontal ? 75 : width, horizontal ? height : 75);
             Assert.Equal(4, received.Count);
-            // Native rejects history for full-layout and stretch-size requests even if a caller flags them.
+            // Partial anchor payloads stay unrecorded; explicit size edits support stretch.
             var excluded = new SetEntityDataRequest
             {
                 SceneId = ids[0], RecordTransformChange = true,
@@ -963,6 +989,8 @@ public sealed class EngineApiActionCallbackTests
             api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
             Assert.Equal(88f, unsupported[2]);
             Assert.Equal(99f, unsupported[3]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(4, received.Count);
             excluded.Behaviours[0].Remove("_anchorMax");
             excluded.Behaviours[0]["_sizeDelta"] = layout.SerializeVector2(new(90, 100));
             entities.SetData(excluded);
@@ -972,7 +1000,24 @@ public sealed class EngineApiActionCallbackTests
             inspector.Apply(entities.GetEntityData(ids[0])!);
             Dispatcher.UIThread.RunJobs();
             Assert.True(vm.IsStretchX);
-            Assert.Equal(4, received.Count);
+            Assert.Equal(5, received.Count);
+            foreach (var undo in new[] { true, false })
+            {
+                if (undo) await commands.UndoAsync();
+                else await commands.RedoAsync();
+                var expected = undo ? new RectTransformVector2(88, 99) : new RectTransformVector2(90, 100);
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+                Assert.Equal(expected.X, unsupported[2]);
+                Assert.Equal(expected.Y, unsupported[3]);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(layout.TryReadLayout(component, out var state));
+                Assert.Equal(expected, state.SizeDelta);
+                Assert.Equal(new RectTransformVector2(1, 0.5f), state.AnchorMax);
+                Assert.Equal(1f, unsupported[6]);
+                Assert.Equal(0.5f, unsupported[7]);
+                Assert.Equal(5, received.Count);
+            }
             Assert.Empty(logger.Entries);
             Assert.Empty(inspector.Logger.Entries);
 
@@ -1435,6 +1480,372 @@ public sealed class EngineApiActionCallbackTests
             }
             return true;
         }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformReparentSharesHistoryWithInspectorAndHandles()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var stretch in new[] { false, true })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformGroupReparentKeepsHierarchyOrderAndSharesOneHistoryEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var stretch in new[] { false, true })
+                foreach (var toCanvas in new[] { false, true })
+                    foreach (var disjoint in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, disjoint: disjoint);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformMixedParentDragKeepsHierarchyOrderAndSharesOneHistoryEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var stretch in new[] { false, true })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, mixedParents: true);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformCrossCanvasReparentPreservesScreenBoundsAndSharesHistory()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scale in new[] { 1f, 2f })
+                foreach (var stretch in new[] { false, true })
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, canvasScales: (scale, scale));
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformCrossCanvasGroupReparentPreservesScreenBoundsAndSharesOneEntry()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scale in new[] { 1f, 2f })
+                foreach (var stretch in new[] { false, true })
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, canvasScales: (scale, scale));
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformCrossCanvasMixedParentDragPreservesScreenBoundsAndHierarchyOrder()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scale in new[] { 1f, 2f })
+                foreach (var stretch in new[] { false, true })
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, mixedParents: true, canvasScales: (scale, scale));
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task RectTransformFixedAnchorsReparentAcrossDifferentCanvasScalesPreservesPixelsAndHistory()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scales in new[] { (1f, 2f), (2f, 1f) })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(null, toCanvas, canvasScales: scales);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackTheory]
+    [InlineData("Middle Stretch X", false, false)]
+    [InlineData("Center Stretch Y", false, false)]
+    [InlineData("Stretch Both", false, false)]
+    [InlineData(null, true, false)]
+    [InlineData("Stretch Both", true, false)]
+    [InlineData("Stretch Both", true, true)]
+    public Task RectTransformReparentAcrossAllCanvasScales(string? preset, bool grouped, bool mixedParents)
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scales in new[] { (1f, 2f), (2f, 1f) })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(preset, toCanvas, grouped: grouped, mixedParents: mixedParents, canvasScales: scales);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectReparentAsync(string? preset, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false, (float Source, float Destination)? canvasScales = null)
+    {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        var entities = new EntityApi(api);
+        using var commands = new EditorCommandService();
+        var logger = new TestLogger<NativeEditorHistoryRecorder>();
+        using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, logger);
+        var received = new List<ulong>();
+        api.ActionRecorded += received.Add;
+        var editors = new List<InspectorTransformFixture>();
+        var source = new EngineSceneSyncEventSource(api, new TestLogger<EngineSceneSyncEventSource>());
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var ids = new int[grouped ? 6 : 5];
+            api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, ids.Length, ids);
+            var canvasIds = new int[2];
+            var sourceScale = canvasScales?.Source ?? 1f;
+            var destinationScale = canvasScales?.Destination ?? 1f;
+            if (canvasScales.HasValue)
+            {
+                api.Invoke(typeof(PrepareRectCanvasesDelegate), "NativeProjectPrepareRectCanvases", sourceScale, destinationScale, canvasIds);
+                entities.SetEntityParent(ids[2], canvasIds[1], 0);
+            }
+            foreach (var id in ids)
+            {
+                var editor = new InspectorTransformFixture(entities, id);
+                editor.Apply(entities.GetEntityData(id)!);
+                editors.Add(editor);
+            }
+            var target = editors[0];
+            var canvasId = Convert.ToInt32(target.Transform.GetProperty("_parent").Value);
+            var canvas = CreateCanvasBounds(canvasId, "Source Canvas", sourceScale);
+            var destinationCanvas = canvasScales.HasValue ? CreateCanvasBounds(canvasIds[1], "Destination Canvas", destinationScale) : canvas;
+            var sceneEntities = editors.Select(e => e.Entity).Prepend(canvas);
+            if (destinationCanvas != canvas) sceneEntities = sceneEntities.Append(destinationCanvas);
+            var scenes = new TestSceneManagementService(sceneEntities.ToArray());
+            var scene = scenes.Scene.Value!;
+            scene.SetAssetInfo(new AssetInfo(new AssetMeta("render-empty-scene"), ""));
+            foreach (var editor in editors) Assert.True(scene.MoveEntity(editor.Entity, canvas, int.MaxValue));
+            if (canvasScales.HasValue) Assert.True(scene.MoveEntity(editors[2].Entity, destinationCanvas, 0));
+            var registry = new TestBehaviourRegistry();
+            registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            registry.Ids[EngineBehavioursConstants.CANVAS] = 7302;
+            var window = new TestEngineWindowController();
+            window.Size.Value = (640, 480);
+            var layout = new RectTransformLayoutService(registry, scenes, window);
+            var managementLogger = new TestLogger<EntityManagementService>();
+            var entitySync = new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entities.GetEntityData(entity.Id)!) };
+            var management = new EntityManagementService(managementLogger, scenes, null!, entities, registry, target.Runner, entitySync, layout);
+            using var sync = new SceneSyncService(source, scenes, new EngineSelectionSyncService(new SelectionService(new TestEntityApi())),
+                new TestLogger<SceneSyncService>(), entitySync);
+            using var drag = new HierarchyDragFixture(scene.Hierarchy, management);
+            source.Connect();
+            var component = target.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
+            using var vm = new RectTransformPropertyViewModel(target.Entity, component, target.Runner, entities, layout);
+            if (preset != null) vm.Presets.Single(p => p.DisplayName == preset).ApplyCommand.Execute(null);
+            // Prepare the hierarchy without recording the setup moves.
+            management.SetParent(editors[3].Entity, editors[1].Entity, 0);
+            management.SetParent(editors[4].Entity, editors[2].Entity, 0);
+            management.SetParent(target.Entity, editors[1].Entity, 0);
+            if (grouped) management.SetParent(editors[5].Entity, editors[mixedParents ? 2 : 1].Entity, mixedParents ? 0 : disjoint ? 2 : 1);
+            entities.SelectEntity(target.Entity.Id);
+            var before = await ReadAsync();
+            var initialCount = received.Count;
+            var destination = toCanvas ? destinationCanvas : editors[2].Entity;
+            var bounds = PixelBounds(before, 0);
+            var expectedPixels = sourceScale == 1f ? new[] { 240f, 190f, 440f, 350f } : new[] { 160f, 140f, 560f, 460f };
+            CheckFloats(expectedPixels, bounds);
+            var screenBefore = canvasScales.HasValue ? ReadScreenBounds() : null;
+            if (screenBefore != null) CheckFloats(expectedPixels, screenBefore);
+            var secondScreenBefore = canvasScales.HasValue && grouped ? ReadScreenBounds(5) : null;
+            int[] movedIds = grouped ? [ids[5], ids[0]] : [ids[0]];
+            if (grouped)
+            {
+                Assert.True(layout.TryPreserveRectForParent(target.Entity, destination, out var preserved));
+                Assert.Throws<ArgumentException>(() => entities.ReparentEntities(movedIds, destination.Id, 1, true, [preserved]));
+                entities.ReparentEntities([ids[0], int.MaxValue], destination.Id, 1, true, [preserved, preserved]);
+                entities.ReparentEntities([ids[0], ids[0]], destination.Id, 1, true, [preserved, preserved]);
+                entities.ReparentEntities(movedIds, ids[0], 1, true, [preserved, preserved]);
+                entities.ReparentEntities([ids[0], canvasId], destination.Id, 1, true, [preserved, preserved]);
+                entities.ReparentEntities(movedIds, destination.Id, 1, true);
+                Check(before, await ReadAsync());
+                Assert.Equal(initialCount, received.Count);
+            }
+            drag.ViewModel.MoveEntities(movedIds, destination.Id, 1);
+            var after = await ReadAsync();
+            var expectedIndex = 1 - movedIds.Count(id => before.Parents[Array.IndexOf(ids, id)] == destination.Id && before.Orders[Array.IndexOf(ids, id)] < 1);
+            Assert.Equal(destination.Id, after.Parents[0]);
+            Assert.Equal(expectedIndex, after.Orders[0]);
+            CheckFloats(bounds, PixelBounds(after, 0));
+            if (screenBefore != null) CheckFloats(screenBefore, ReadScreenBounds());
+            if (grouped)
+            {
+                Assert.Equal(destination.Id, after.Parents[5]);
+                Assert.Equal(expectedIndex + 1, after.Orders[5]);
+                CheckFloats(PixelBounds(before, 5), PixelBounds(after, 5));
+                if (secondScreenBefore != null) CheckFloats(secondScreenBefore, ReadScreenBounds(5));
+                drag.ViewModel.MoveEntities(movedIds, destination.Id, expectedIndex + 2);
+                Check(after, await ReadAsync());
+            }
+            Assert.Equal(initialCount + 1, received.Count);
+            // Inspector and real pointer handles append entries to the same stream.
+            var input = new ReiTextBox { DataContext = vm, IsFloat = true };
+            using var binding = input.Bind(ReiTextBox.TextProperty, new Binding(nameof(vm.HorizontalSecondaryValue)) { Mode = BindingMode.TwoWay });
+            input.TextInternal = (vm.HorizontalSecondaryValue + (vm.IsStretchX ? -10 : 20)).ToString(System.Globalization.CultureInfo.CurrentCulture);
+            input.LoseFocus();
+            var resized = await ReadAsync();
+            Assert.Equal(initialCount + 2, received.Count);
+            api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectResize", 2);
+            api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+            var handled = await ReadAsync();
+            Assert.Equal(initialCount + 3, received.Count);
+            await commands.UndoAsync();
+            Check(resized, await ReadAsync());
+            await commands.UndoAsync();
+            Check(after, await ReadAsync());
+            await commands.UndoAsync();
+            Check(before, await ReadAsync());
+            var groupNoOp = grouped && !disjoint && !mixedParents;
+            drag.ViewModel.MoveEntities(groupNoOp ? movedIds : [ids[0]], editors[1].Entity.Id, groupNoOp ? 2 : 1);
+            Check(before, await ReadAsync());
+            Assert.Equal(initialCount + 3, received.Count);
+            Assert.True(commands.CanRedo);
+            await commands.RedoAsync();
+            Check(after, await ReadAsync());
+            await commands.RedoAsync();
+            Check(resized, await ReadAsync());
+            await commands.RedoAsync();
+            Check(handled, await ReadAsync());
+            Assert.False(commands.CanRedo);
+            Assert.Equal(initialCount + 3, received.Count);
+            Assert.Empty(logger.Entries);
+            Assert.Empty(managementLogger.Entries);
+
+            async Task<(float[][] Rects, int[] Parents, int[] Orders)> ReadAsync()
+            {
+                var rects = new float[ids.Length][];
+                var parents = new int[ids.Length];
+                var orders = new int[ids.Length];
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    rects[i] = new float[20];
+                    api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", i, rects[i]);
+                    var state = entities.GetEntityData(ids[i])!;
+                    var transform = JObject.FromObject(state.Behaviours.Single(b => b["REI_TYPE"].ToString() == "Transform"));
+                    parents[i] = transform["_parent"]!.Value<int>();
+                    orders[i] = transform["_order"]!.Value<int>();
+                    editors[i].Apply(state);
+                }
+                source.RequestSnapshot();
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (editors.Where((e, i) => e.Entity.Transform.Parent != parents[i] || e.Entity.Transform.Order != orders[i]).Any())
+                {
+                    Assert.True(DateTime.UtcNow < deadline, "SceneSync did not apply the native hierarchy.");
+                    Dispatcher.UIThread.RunJobs();
+                    await Task.Delay(10);
+                }
+                Dispatcher.UIThread.RunJobs();
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    var node = scene.Hierarchy.GetNode(editors[i].Entity)!;
+                    Assert.Equal(parents[i], node.Parent?.Content.Id ?? 0);
+                    Assert.Equal(orders[i], scene.Hierarchy.GetNodeOrder(node));
+                    Assert.True(layout.TryReadLayout(editors[i].Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!, out var value));
+                    CheckFloats(rects[i].Take(10).ToArray(), [value.AnchoredPosition.X, value.AnchoredPosition.Y, value.SizeDelta.X, value.SizeDelta.Y,
+                        value.AnchorMin.X, value.AnchorMin.Y, value.AnchorMax.X, value.AnchorMax.Y, value.Pivot.X, value.Pivot.Y]);
+                    Assert.Empty(editors[i].Logger.Entries);
+                }
+                if (canvasScales.HasValue)
+                {
+                    for (var i = 0; i < ids.Length; i++)
+                        CheckFloats(PixelBounds((rects, parents, orders), i), ReadScreenBounds(i));
+                }
+                return (rects, parents, orders);
+            }
+
+            GameEntity CreateCanvasBounds(int id, string name, float scale)
+            {
+                var result = new GameEntity(id, name);
+                result.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
+                    new(new(0, 0), new(0, 0), new(0, 0), new(0, 0), new(640 / scale, 480 / scale))));
+                if (canvasScales.HasValue)
+                {
+                    var data = JObject.FromObject(entities.GetEntityData(id)!.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Canvas"));
+                    var settings = new BehaviourComponent(7302);
+                    settings.AddProperty(SceneComponentBuilder.Vector(EngineBehavioursConstants.CANVAS_REFERENCE_RESOLUTION,
+                        ("x", data["_referenceResolution"]!["x"]!.Value<float>()), ("y", data["_referenceResolution"]!["y"]!.Value<float>())));
+                    settings.AddProperty(SerializedPropertyBuilder.Integer(EngineBehavioursConstants.CANVAS_SCALE_MODE, data["_scaleMode"]!.Value<int>()));
+                    settings.AddProperty(new(EngineBehavioursConstants.CANVAS_MATCH_WIDTH_OR_HEIGHT, SerializedTypeEnum.Float, data["_matchWidthOrHeight"]!.Value<float>(), "float", null));
+                    result.AddBehaviour(settings);
+                }
+                return result;
+            }
+
+            float[] ReadScreenBounds(int index = 0)
+            {
+                var result = new float[4];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectScreenBounds", index, result);
+                return result;
+            }
+
+            float[] Bounds((float[][] Rects, int[] Parents, int[] Orders) state, int index)
+            {
+                var parentIndex = Array.IndexOf(ids, state.Parents[index]);
+                var scale = state.Parents[index] == destinationCanvas.Id ? destinationScale : sourceScale;
+                var parent = parentIndex < 0 ? new[] { 0f, 0f, 640 / scale, 480 / scale } : Bounds(state, parentIndex);
+                var rect = state.Rects[index];
+                var width = parent[2] - parent[0];
+                var height = parent[3] - parent[1];
+                var left = parent[0] + width * rect[4] + rect[0] - rect[8] * rect[2];
+                var bottom = parent[1] + height * rect[5] + rect[1] - rect[9] * rect[3];
+                return [left, bottom, left + width * (rect[6] - rect[4]) + rect[2], bottom + height * (rect[7] - rect[5]) + rect[3]];
+            }
+
+            float[] PixelBounds((float[][] Rects, int[] Parents, int[] Orders) state, int index)
+            {
+                var root = index;
+                var parentIndex = Array.IndexOf(ids, state.Parents[root]);
+                while (parentIndex >= 0)
+                {
+                    root = parentIndex;
+                    parentIndex = Array.IndexOf(ids, state.Parents[root]);
+                }
+                var scale = state.Parents[root] == destinationCanvas.Id ? destinationScale : sourceScale;
+                return Bounds(state, index).Select(value => value * scale).ToArray();
+            }
+
+            static void Check((float[][] Rects, int[] Parents, int[] Orders) expected, (float[][] Rects, int[] Parents, int[] Orders) actual)
+            {
+                Assert.Equal(expected.Parents, actual.Parents);
+                Assert.Equal(expected.Orders, actual.Orders);
+                for (var i = 0; i < expected.Rects.Length; i++) CheckFloats(expected.Rects[i], actual.Rects[i]);
+            }
+
+            static void CheckFloats(float[] expected, float[] actual)
+            {
+                Assert.Equal(expected.Length, actual.Length);
+                for (var i = 0; i < expected.Length; i++) Assert.InRange(MathF.Abs(expected[i] - actual[i]), 0f, 0.0001f);
+            }
+        }
+        finally
+        {
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngineLoop");
+            source.Disconnect();
+            foreach (var editor in editors) editor.Dispose();
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
     }
 
     [NativeCallbackFact]

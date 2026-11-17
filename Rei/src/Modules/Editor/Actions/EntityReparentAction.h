@@ -1,5 +1,7 @@
 #pragma once
 #include "EntityOrderAction.h"
+#include "RectTransformChangeAction.h"
+#include <optional>
 
 namespace rei::editor
 {
@@ -12,6 +14,7 @@ namespace rei::editor
             math::Vector3 Position;
             math::Vector3 Scale;
             glm::quat Rotation;
+            std::optional<RectTransformChangeAction::State> Rect;
 
             REI_API explicit State(const Transform& transform);
         };

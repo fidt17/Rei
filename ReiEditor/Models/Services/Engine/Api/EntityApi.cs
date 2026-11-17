@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using ReiEditor.Models.Services.Engine.Api.DTO;
+using ReiEditor.Models.Services.RectTransform;
 using ReiEditor.Utils.Common;
 
 namespace ReiEditor.Models.Services.Engine.Api;
@@ -105,14 +106,17 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order, int recordHierarchyChange);
-    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false)
+    private delegate void SetEntityParentDelegate(int sceneEntityId, int parentSceneEntityId, int order, int recordHierarchyChange, [In] float[]? rectLayout);
+    public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null)
     {
         if (!_engineApi.IsEngineRunning) return;
 
         try
         {
-            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order, recordHierarchyChange ? 1 : 0);
+            float[]? values = rectLayout is { } layout
+                ? [layout.AnchoredPosition.X, layout.AnchoredPosition.Y, layout.SizeDelta.X, layout.SizeDelta.Y]
+                : null;
+            _engineApi.Invoke(typeof(SetEntityParentDelegate), "SetEntityParent", sceneEntityId, parentSceneEntityId, order, recordHierarchyChange ? 1 : 0, values);
         }
         catch (Exception)
         {
@@ -128,12 +132,14 @@ public class EntityApi : IEntityApi
         _engineApi.Invoke(typeof(ReorderEntitiesDelegate), "ReorderEntities", ids, ids.Length, insertionIndex, recordHierarchyChange ? 1 : 0);
     }
 
-    private delegate void ReparentEntitiesDelegate([In] int[] entityIds, int count, int parentEntityId, int insertionIndex, int recordHierarchyChange);
-    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false)
+    private delegate void ReparentEntitiesDelegate([In] int[] entityIds, int count, int parentEntityId, int insertionIndex, int recordHierarchyChange, [In] float[]? rectLayouts);
+    public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null)
     {
         if (!_engineApi.IsEngineRunning || entityIds.Count == 0) return;
+        if (rectLayouts != null && rectLayouts.Count != entityIds.Count) throw new ArgumentException("Each entity must have a RectTransform layout.", nameof(rectLayouts));
         var ids = entityIds.ToArray();
-        _engineApi.Invoke(typeof(ReparentEntitiesDelegate), "ReparentEntities", ids, ids.Length, parentEntityId, insertionIndex, recordHierarchyChange ? 1 : 0);
+        var values = rectLayouts?.SelectMany(layout => new[] { layout.AnchoredPosition.X, layout.AnchoredPosition.Y, layout.SizeDelta.X, layout.SizeDelta.Y }).ToArray();
+        _engineApi.Invoke(typeof(ReparentEntitiesDelegate), "ReparentEntities", ids, ids.Length, parentEntityId, insertionIndex, recordHierarchyChange ? 1 : 0, values);
     }
 
     private delegate void SetEntityDataDelegate(string json);

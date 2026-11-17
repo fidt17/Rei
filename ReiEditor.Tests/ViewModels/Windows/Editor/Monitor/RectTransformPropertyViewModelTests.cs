@@ -28,9 +28,9 @@ public sealed class RectTransformPropertyViewModelTests
         public InstantiateEntityResponse? CreateNewEntity(string name) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId) => throw new NotSupportedException();
         public void Rename(int sceneEntityId, string newName) => throw new NotSupportedException();
-        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null) => throw new NotSupportedException();
         public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
-        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();
+        public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => Requests.Add(request);
         public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request) => throw new NotSupportedException();
         public void AddBehaviour(int sceneEntityId, int behaviourId) => throw new NotSupportedException();
@@ -207,9 +207,9 @@ public sealed class RectTransformPropertyViewModelTests
     [Theory]
     [InlineData(true, false, false, true)]
     [InlineData(false, false, false, false)]
-    [InlineData(true, true, false, false)]
-    [InlineData(true, false, true, false)]
-    public void PositionWritesOnlyPositionAndRecordsOnlyForEditorWithFixedAnchors(bool editor, bool stretchX, bool stretchY, bool expectedRecord)
+    [InlineData(true, true, false, true)]
+    [InlineData(true, false, true, true)]
+    public void PositionWritesOnlyPositionAndRecordsConfirmedEditsInEditor(bool editor, bool stretchX, bool stretchY, bool expectedRecord)
     {
         var fixture = TestCreateFixture();
         using var vm = fixture.ViewModel;
@@ -268,9 +268,9 @@ public sealed class RectTransformPropertyViewModelTests
     [InlineData(true, false, false, true, true)]
     [InlineData(true, false, false, false, true)]
     [InlineData(false, false, false, true, false)]
-    [InlineData(true, true, false, false, false)]
-    [InlineData(true, false, true, true, false)]
-    public void SizeWritesOnlySizeAndRecordsOnlyForEditorWithFixedAnchors(bool editor, bool stretchX, bool stretchY, bool horizontal, bool expectedRecord)
+    [InlineData(true, true, false, false, true)]
+    [InlineData(true, false, true, true, true)]
+    public void SizeWritesOnlySizeAndRecordsConfirmedEditsInEditor(bool editor, bool stretchX, bool stretchY, bool horizontal, bool expectedRecord)
     {
         var fixture = TestCreateFixture();
         using var vm = fixture.ViewModel;

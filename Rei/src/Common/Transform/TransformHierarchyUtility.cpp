@@ -194,14 +194,15 @@ namespace rei::transform_utility
         return true;
     }
 
-    bool ReparentEntities(const std::vector<ecs::Entity>& entities, const ecs::Entity parent, const i32 insertionIndex)
+    bool ReparentEntities(const std::vector<ecs::Entity>& entities, const ecs::Entity parent, const i32 insertionIndex, const bool allowRectTransforms)
     {
         if (entities.empty()) return false;
         ECS_WORLD(GetInternalWorld())
         std::unordered_set<ecs::Entity> selected;
         for (const auto entity : entities)
         {
-            if (IS_DEAD(entity) || !HAS(entity, Transform) || !HAS(entity, EntityInfo) || HAS(entity, ui::RectTransform)) return false;
+            if (IS_DEAD(entity) || !HAS(entity, Transform) || !HAS(entity, EntityInfo)) return false;
+            if (!allowRectTransforms && HAS(entity, ui::RectTransform)) return false;
             if (!selected.insert(entity).second) return false;
         }
         if (!CanReparentUnder(parent, selected)) return false;

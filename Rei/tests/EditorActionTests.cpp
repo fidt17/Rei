@@ -3,10 +3,7 @@
 #include "support/GeometryTestSupport.h"
 #include "Modules/Editor/Actions/EditorActionStore.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
-#include "Modules/Editor/Actions/RectTransformMoveAction.h"
-#include "Modules/Editor/Actions/RectTransformResizeAction.h"
-#include "Modules/Editor/Actions/RectTransformPivotAction.h"
-#include "Modules/Editor/Actions/RectTransformAnchorsAction.h"
+#include "Modules/Editor/Actions/RectTransformChangeAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
@@ -27,6 +24,7 @@
 using namespace rei;
 using namespace rei::editor;
 using namespace rei::tests;
+using RectFields = RectTransformChangeAction::Fields;
 
 namespace
 {
@@ -1111,7 +1109,7 @@ TEST_CASE("Editor action store RectTransform move restores only anchored positio
         RectMoveFixture fixture;
         ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
         target.Get().GetAnchoredPosition() = {34, 36};
-        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformMoveAction>(target, math::Vector2(10, 20), math::Vector2(34, 36)));
+        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformChangeAction>(RectFields::Position, target, RectTransformChangeAction::State{{10, 20}}, RectTransformChangeAction::State{{34, 36}}));
         target.Get().GetSizeDelta() = {250, 190};
         const nlohmann::json vector = {{"Value", {{"x", {{"Value", 0.25f}}}, {"y", {{"Value", 0.75f}}}}}};
         target.Get().REI_SET({{"_anchorMin", vector}, {"_anchorMax", vector}, {"_pivot", vector}});
@@ -1207,11 +1205,11 @@ TEST_CASE("Editor action store RectTransform resize restores position and size w
     {
         RectMoveFixture fixture;
         ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
-        const RectTransformResizeAction::State before{{10, 20}, {200, 160}};
-        const RectTransformResizeAction::State after{{22, 28}, {224, 176}};
+        const RectTransformChangeAction::State before{{10, 20}, {200, 160}};
+        const RectTransformChangeAction::State after{{22, 28}, {224, 176}};
         fixture.Rect().GetAnchoredPosition() = after.AnchoredPosition;
         fixture.Rect().GetSizeDelta() = after.SizeDelta;
-        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformResizeAction>(target, before, after));
+        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformChangeAction>(RectFields::Rectangle, target, before, after));
         const nlohmann::json vector = {{"Value", {{"x", {{"Value", 0.25f}}}, {"y", {{"Value", 0.75f}}}}}};
         fixture.Rect().REI_SET({{"_anchorMin", vector}, {"_anchorMax", vector}, {"_pivot", vector}});
         fixture.TargetTransform().GetLocalScale() = {2, 3, 4};
@@ -1398,7 +1396,7 @@ TEST_CASE("Editor action store RectTransform group move rejects missing targets 
         const auto second = fixture.AddRectTarget(2, {40, 50});
         ecs::ComponentRef<ui::RectTransform> first(fixture.Native.Registry, fixture.Target);
         ecs::ComponentRef<ui::RectTransform> other(fixture.Native.Registry, second);
-        RectTransformMoveAction action(std::vector<RectTransformMoveAction::Change>{{first, {10, 20}, {34, 36}}, {other, {40, 50}, {64, 66}}});
+        RectTransformChangeAction action(RectFields::Position, std::vector<RectTransformChangeAction::Change>{{first, {{10, 20}}, {{34, 36}}}, {other, {{40, 50}}, {{64, 66}}}});
         first.Get().GetAnchoredPosition() = {34, 36};
         fixture.Native.Registry->Del<ui::RectTransform>(second);
         CHECK_FALSE(action.Undo());
@@ -1406,7 +1404,7 @@ TEST_CASE("Editor action store RectTransform group move rejects missing targets 
         first.Get().GetAnchoredPosition() = {10, 20};
         CHECK_FALSE(action.Redo());
         CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(10, 20));
-        RectTransformMoveAction empty(std::vector<RectTransformMoveAction::Change>{});
+        RectTransformChangeAction empty(RectFields::Position, std::vector<RectTransformChangeAction::Change>{});
         CHECK_FALSE(empty.Undo());
         CHECK_FALSE(empty.Redo());
     });
@@ -1514,9 +1512,9 @@ TEST_CASE("Editor action store RectTransform group resize checks all targets bef
         const auto second = fixture.AddRectTarget(2, {40, 50});
         ecs::ComponentRef<ui::RectTransform> first(fixture.Native.Registry, fixture.Target);
         ecs::ComponentRef<ui::RectTransform> other(fixture.Native.Registry, second);
-        const RectTransformResizeAction::State before{{10, 20}, {200, 160}};
-        const RectTransformResizeAction::State after{{22, 28}, {224, 176}};
-        RectTransformResizeAction action(std::vector<RectTransformResizeAction::Change>{
+        const RectTransformChangeAction::State before{{10, 20}, {200, 160}};
+        const RectTransformChangeAction::State after{{22, 28}, {224, 176}};
+        RectTransformChangeAction action(RectFields::Rectangle, std::vector<RectTransformChangeAction::Change>{
             {first, before, after}, {other, {{40, 50}, {100, 80}}, {{52, 58}, {124, 96}}}});
         first.Get().GetAnchoredPosition() = after.AnchoredPosition;
         first.Get().GetSizeDelta() = after.SizeDelta;
@@ -1529,7 +1527,7 @@ TEST_CASE("Editor action store RectTransform group resize checks all targets bef
         CHECK_FALSE(action.Redo());
         CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(before.AnchoredPosition));
         CHECK(glm::vec2(first.Get().GetSizeDelta()) == glm::vec2(before.SizeDelta));
-        RectTransformResizeAction empty(std::vector<RectTransformResizeAction::Change>{});
+        RectTransformChangeAction empty(RectFields::Rectangle, std::vector<RectTransformChangeAction::Change>{});
         CHECK_FALSE(empty.Undo());
         CHECK_FALSE(empty.Redo());
     });
@@ -1573,12 +1571,12 @@ TEST_CASE("Editor action store RectTransform pivot restores pivot position and s
     {
         RectMoveFixture fixture;
         ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
-        const RectTransformPivotAction::State before{{0.5f, 0.5f}, {10, 20}, {200, 160}};
-        const RectTransformPivotAction::State after{{0.25f, 0.75f}, {-40, 60}, {220, 180}};
+        const RectTransformChangeAction::State before{{10, 20}, {200, 160}, {0.5f, 0.5f}};
+        const RectTransformChangeAction::State after{{-40, 60}, {220, 180}, {0.25f, 0.75f}};
         target.Get().GetPivot() = after.Pivot;
         target.Get().GetAnchoredPosition() = after.AnchoredPosition;
         target.Get().GetSizeDelta() = after.SizeDelta;
-        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformPivotAction>(target, before, after));
+        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformChangeAction>(RectFields::Pivot, target, before, after));
         const nlohmann::json min = {{"Value", {{"x", {{"Value", 0}}}, {"y", {{"Value", 0}}}}}};
         const nlohmann::json max = {{"Value", {{"x", {{"Value", 1}}}, {"y", {{"Value", 1}}}}}};
         target.Get().REI_SET({{"_anchorMin", min}, {"_anchorMax", max}});
@@ -1610,13 +1608,13 @@ TEST_CASE("Editor action store RectTransform anchors restore anchors position an
     {
         RectMoveFixture fixture;
         ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
-        const RectTransformAnchorsAction::State before{{0.5f, 0.5f}, {0.5f, 0.5f}, {10, 20}, {200, 160}};
-        const RectTransformAnchorsAction::State after{{0, 0}, {1, 1}, {10, 20}, {-440, -320}};
+        const RectTransformChangeAction::State before{{10, 20}, {200, 160}, {0.5f, 0.5f}, {0.5f, 0.5f}, {0.5f, 0.5f}};
+        const RectTransformChangeAction::State after{{10, 20}, {-440, -320}, {0.5f, 0.5f}, {0, 0}, {1, 1}};
         target.Get().GetAnchorMin() = after.AnchorMin;
         target.Get().GetAnchorMax() = after.AnchorMax;
         target.Get().GetAnchoredPosition() = after.AnchoredPosition;
         target.Get().GetSizeDelta() = after.SizeDelta;
-        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformAnchorsAction>(target, before, after));
+        const auto id = fixture.Actions->RecordApplied(std::make_unique<RectTransformChangeAction>(RectFields::Anchors, target, before, after));
         target.Get().GetPivot() = {0.25f, 0.75f};
         fixture.TargetTransform().GetLocalScale() = {2, 3, 4};
         fixture.TargetTransform().SetRotation(math::Vector3(10, 20, 30));
@@ -1637,5 +1635,198 @@ TEST_CASE("Editor action store RectTransform anchors restore anchors position an
         CHECK_FALSE(fixture.Actions->Undo(id));
         CHECK_FALSE(fixture.Actions->Redo(id));
         CHECK(fixture.Recorded.size() == 1);
+    });
+}
+
+TEST_CASE("Editor action store restores RectTransform layout with parent and sibling order", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto oldParent = fixture.Entity(10);
+        const auto newParent = fixture.Entity(11);
+        const auto entity = fixture.Entity(1);
+        ecs::ComponentRef<Transform> target(fixture.Registry, entity);
+        auto& rect = fixture.Registry->Get<ui::RectTransform>(entity);
+        target.Get().SetParent(oldParent);
+        rect.GetAnchoredPosition() = {20, 30};
+        rect.GetSizeDelta() = {200, 160};
+        const EntityReparentAction::State before(target.Get());
+        target.Get().SetParent(newParent, 0);
+        rect.GetAnchoredPosition() = {-40, 80};
+        rect.GetSizeDelta() = {-100, 60};
+        const EntityReparentAction::State after(target.Get());
+        EditorActionStore actions;
+        i32 records = 0;
+        actions.ActionRecorded.append([&](u64) { records++; });
+        const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(target, before, after,
+            std::vector<EntityOrderAction::Change>{{target, 2, 0}}));
+        REQUIRE(actions.Undo(id));
+        CHECK(target.Get().GetParent() == oldParent);
+        CHECK(target.Get().GetChildOrder() == 2);
+        CHECK(rect.GetAnchoredPosition().x == 20);
+        CHECK(rect.GetAnchoredPosition().y == 30);
+        CHECK(rect.GetSizeDelta().x == 200);
+        CHECK(rect.GetSizeDelta().y == 160);
+        REQUIRE(actions.Redo(id));
+        CHECK(target.Get().GetParent() == newParent);
+        CHECK(target.Get().GetChildOrder() == 0);
+        CHECK(rect.GetAnchoredPosition().x == -40);
+        CHECK(rect.GetAnchoredPosition().y == 80);
+        CHECK(rect.GetSizeDelta().x == -100);
+        CHECK(rect.GetSizeDelta().y == 60);
+        CHECK(records == 1);
+        fixture.Registry->Del<ui::RectTransform>(entity);
+        CHECK_FALSE(actions.Undo(id));
+        CHECK(target.Get().GetParent() == newParent);
+        CHECK(target.Get().GetChildOrder() == 0);
+    });
+}
+
+TEST_CASE("Editor action store restores grouped RectTransform parent layouts atomically", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto oldParent = fixture.Entity(10);
+        const auto secondParent = fixture.Entity(12);
+        const auto newParent = fixture.Entity(11);
+        const auto first = fixture.Entity(1);
+        const auto second = fixture.Entity(2);
+        std::vector<ecs::Entity> entities{first, second};
+        std::vector<EntityReparentAction::Change> changes;
+        for (i32 i = 0; i < 2; i++)
+        {
+            ecs::ComponentRef<Transform> target(fixture.Registry, entities[i]);
+            target.Get().SetParent(i == 0 ? oldParent : secondParent);
+            target.Get().SetChildOrder(i);
+            auto& rect = fixture.Registry->Get<ui::RectTransform>(entities[i]);
+            rect.GetAnchoredPosition() = {20.0f + i * 10.0f, 30};
+            rect.GetSizeDelta() = {200, 160.0f + i * 10.0f};
+            const EntityReparentAction::State before(target.Get());
+            changes.push_back({target, before, before});
+        }
+        auto& sourceSibling = fixture.Registry->Get<Transform>(fixture.Entity(3));
+        sourceSibling.SetParent(oldParent);
+        sourceSibling.SetChildOrder(1);
+        auto& destinationSibling = fixture.Registry->Get<Transform>(fixture.Entity(4));
+        destinationSibling.SetParent(newParent);
+        destinationSibling.SetChildOrder(0);
+        auto& secondSourceSibling = fixture.Registry->Get<Transform>(fixture.Entity(5));
+        secondSourceSibling.SetParent(secondParent);
+        secondSourceSibling.SetChildOrder(0);
+        std::vector<EntityOrderAction::Change> orders;
+        for (const auto parent : {oldParent, secondParent, newParent})
+        {
+            for (const auto entity : transform_utility::CollectSiblings(parent))
+            {
+                ecs::ComponentRef<Transform> target(fixture.Registry, entity);
+                orders.push_back({target, target.Get().GetChildOrder(), 0});
+            }
+        }
+        REQUIRE(transform_utility::ReparentEntities(entities, newParent, 1, true));
+        for (i32 i = 0; i < 2; i++)
+        {
+            auto& rect = fixture.Registry->Get<ui::RectTransform>(entities[i]);
+            rect.GetAnchoredPosition() = {-40.0f - i * 10.0f, 80};
+            rect.GetSizeDelta() = {-100, 60.0f + i * 10.0f};
+            changes[i].After = EntityReparentAction::State(changes[i].Target.Get());
+        }
+        for (auto& order : orders) order.After = order.Target.Get().GetChildOrder();
+        EditorActionStore actions;
+        i32 records = 0;
+        actions.ActionRecorded.append([&](u64) { records++; });
+        const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(changes, orders));
+        for (const bool undo : {true, false})
+        {
+            REQUIRE((undo ? actions.Undo(id) : actions.Redo(id)));
+            for (const auto& change : changes)
+            {
+                const auto& state = undo ? change.Before : change.After;
+                CHECK(change.Target.Get().GetParent() == state.Parent);
+                const auto& rect = fixture.Registry->Get<ui::RectTransform>(change.Target.Get().GetEntity());
+                CHECK(rect.GetAnchoredPosition().x == state.Rect->AnchoredPosition.x);
+                CHECK(rect.GetAnchoredPosition().y == state.Rect->AnchoredPosition.y);
+                CHECK(rect.GetSizeDelta().x == state.Rect->SizeDelta.x);
+                CHECK(rect.GetSizeDelta().y == state.Rect->SizeDelta.y);
+            }
+            for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == (undo ? order.Before : order.After));
+        }
+        CHECK(records == 1);
+        fixture.Registry->Del<ui::RectTransform>(second);
+        CHECK_FALSE(actions.Undo(id));
+        CHECK(changes[0].Target.Get().GetParent() == newParent);
+        CHECK(fixture.Registry->Get<ui::RectTransform>(first).GetAnchoredPosition().x == -40);
+        for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.After);
+    });
+}
+
+TEST_CASE("Editor action store RectTransform changes ignore unrelated fields and empty edits", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        RectMoveFixture fixture;
+        ecs::ComponentRef<ui::RectTransform> target(fixture.Native.Registry, fixture.Target);
+        for (const auto fields : {RectFields::Position, RectFields::Rectangle, RectFields::Pivot, RectFields::Anchors})
+        {
+            const auto before = RectTransformChangeAction::State::Capture(target.Get());
+            auto after = before;
+            if (fields == RectFields::Position) after.SizeDelta.x += 10;
+            else if (fields == RectFields::Rectangle) after.Pivot.x += 0.1f;
+            else if (fields == RectFields::Pivot) after.AnchorMin.x += 0.1f;
+            else after.Pivot.x += 0.1f;
+            RectTransformChangeAction empty(fields, target, before, after);
+            CHECK_FALSE(empty.HasChanges());
+            CHECK_FALSE(empty.Undo());
+            CHECK_FALSE(empty.Redo());
+            if (fields == RectFields::Position) after.AnchoredPosition.x += 10;
+            else if (fields == RectFields::Rectangle) after.SizeDelta.x += 10;
+            else if (fields == RectFields::Pivot) after.Pivot.x += 0.1f;
+            else after.AnchorMax.x += 0.1f;
+            RectTransformChangeAction changed(fields, target, before, after);
+            CHECK(changed.HasChanges());
+            REQUIRE(changed.Redo());
+            CHECK(RectTransformChangeAction::State::Capture(target.Get()).Matches(after, fields));
+            REQUIRE(changed.Undo());
+            CHECK(RectTransformChangeAction::State::Capture(target.Get()).Matches(before, fields));
+        }
+    });
+}
+
+TEST_CASE("Editor action store captures each sibling once and retains only changed orders", "[native][editor-actions][isolated]")
+{
+    Isolated([]
+    {
+        BehaviourFixture fixture;
+        const auto source = fixture.Entity(10);
+        const auto destination = fixture.Entity(11);
+        const auto first = fixture.Entity(1);
+        const auto second = fixture.Entity(2);
+        const auto third = fixture.Entity(3);
+        fixture.Registry->Get<Transform>(first).SetParent(source, 0);
+        fixture.Registry->Get<Transform>(second).SetParent(source, 1);
+        fixture.Registry->Get<Transform>(third).SetParent(destination, 0);
+        auto unchanged = EntityOrderAction::CaptureSiblings({source, source, destination});
+        CHECK(unchanged.size() == 3);
+        EntityOrderAction::CompleteChanges(unchanged);
+        CHECK(unchanged.empty());
+        auto changed = EntityOrderAction::CaptureSiblings({source, source, destination});
+        fixture.Registry->Get<Transform>(first).SetParent(destination, 1);
+        EntityOrderAction::CompleteChanges(changed);
+        REQUIRE(changed.size() == 2);
+        for (const auto& change : changed)
+        {
+            if (change.Target.Get().GetEntity() == first)
+            {
+                CHECK(change.Before == 0);
+                CHECK(change.After == 1);
+            }
+            else
+            {
+                CHECK(change.Target.Get().GetEntity() == second);
+                CHECK(change.Before == 1);
+                CHECK(change.After == 0);
+            }
+        }
     });
 }

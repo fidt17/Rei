@@ -139,10 +139,11 @@ public class EntityManagementService : IEntityManagementService
         try
         {
             var shouldPreserveRectTransform = _rectTransformLayoutService.TryPreserveRectForParent(e, parent, out var preservedLayout);
-            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordHierarchyChange && _engineRunner.IsEditorActive.Value);
+            _entityApi.SetEntityParent(e.Id, parent?.Id ?? 0, idx, recordHierarchyChange && _engineRunner.IsEditorActive.Value,
+                shouldPreserveRectTransform ? preservedLayout : null);
             if (shouldPreserveRectTransform && _rectTransformLayoutService.TryGetRectTransform(e, out var rectTransform))
             {
-                ApplyRectTransformLayout(e, rectTransform, preservedLayout);
+                _rectTransformLayoutService.ApplyLayoutToEditor(rectTransform, preservedLayout);
             }
         }
         catch (Exception exception)
@@ -171,6 +172,7 @@ public class EntityManagementService : IEntityManagementService
         {
             if (entities.Any(entity => _rectTransformLayoutService.TryGetRectTransform(entity, out _)))
             {
+                if (TryReparentRectTransformGroup(entities, parent, insertionIndex)) return;
                 var index = Math.Max(0, insertionIndex);
                 foreach (var entity in entities)
                 {
@@ -185,6 +187,23 @@ public class EntityManagementService : IEntityManagementService
         {
             _logger.LogException(exception);
         }
+    }
+
+    private bool TryReparentRectTransformGroup(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex)
+    {
+        var rects = new List<BehaviourComponent>();
+        var layouts = new List<RectTransformLayoutData>();
+        foreach (var entity in entities)
+        {
+            if (!_rectTransformLayoutService.TryGetRectTransform(entity, out var rect)
+                || !_rectTransformLayoutService.TryPreserveRectForParent(entity, parent, out var layout)) return false;
+            rects.Add(rect);
+            layouts.Add(layout);
+        }
+        _entityApi.ReparentEntities(entities.Select(entity => entity.Id).ToArray(), parent?.Id ?? 0, insertionIndex,
+            _engineRunner.IsEditorActive.Value, layouts);
+        for (var i = 0; i < rects.Count; i++) _rectTransformLayoutService.ApplyLayoutToEditor(rects[i], layouts[i]);
+        return true;
     }
 
     public void AddBehaviour(GameEntity e, int behaviourId)
@@ -415,26 +434,5 @@ public class EntityManagementService : IEntityManagementService
 
         transform.GetProperty(EngineBehavioursConstants.TRANSFORM_PARENT).Value = entity.Transform.Parent;
         transform.GetProperty(EngineBehavioursConstants.TRANSFORM_ORDER).Value = entity.Transform.Order;
-    }
-
-    private void ApplyRectTransformLayout(GameEntity entity, BehaviourComponent rectTransform, RectTransformLayoutData layout)
-    {
-        _rectTransformLayoutService.ApplyLayoutToEditor(rectTransform, layout);
-        _entityApi.SetData(new SetEntityDataRequest
-        {
-            SceneId = entity.Id,
-            Behaviours = new List<Dictionary<string, object?>>
-            {
-                new()
-                {
-                    { SetEntityDataRequest.REI_BEHAVIOUR_ID, rectTransform.Id },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MIN, _rectTransformLayoutService.SerializeVector2(layout.AnchorMin) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHOR_MAX, _rectTransformLayoutService.SerializeVector2(layout.AnchorMax) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_PIVOT, _rectTransformLayoutService.SerializeVector2(layout.Pivot) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, _rectTransformLayoutService.SerializeVector2(layout.AnchoredPosition) },
-                    { EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA, _rectTransformLayoutService.SerializeVector2(layout.SizeDelta) }
-                }
-            }
-        });
     }
 }

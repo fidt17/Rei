@@ -4,8 +4,7 @@
 #include "Modules/Input/Input.h"
 #include "Modules/Editor/Actions/EditorActionStore.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
-#include "Modules/Editor/Actions/RectTransformMoveAction.h"
-#include "Modules/Editor/Actions/RectTransformResizeAction.h"
+#include "Modules/Editor/Actions/RectTransformChangeAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "rei_behaviours/ui/RectTransform.h"
@@ -108,35 +107,24 @@ namespace rei::editor
         const bool resize = control.Mode == RectTransform && (control.TopLeftRectHandle.DragActive || control.TopRectHandle.DragActive
             || control.TopRightRectHandle.DragActive || control.LeftRectHandle.DragActive || control.RightRectHandle.DragActive
             || control.BottomLeftRectHandle.DragActive || control.BottomRectHandle.DragActive || control.BottomRightRectHandle.DragActive);
-        if (resize)
-        {
-            std::vector<RectTransformResizeAction::Change> changes;
-            for (const auto& start : control.DragStartTargetStates)
-            {
-                const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
-                const RectTransformResizeAction::State before{start.AnchoredPosition, start.SizeDelta};
-                const RectTransformResizeAction::State after{target.Get().GetAnchoredPosition(), target.Get().GetSizeDelta()};
-                if (glm::vec2(before.AnchoredPosition) == glm::vec2(after.AnchoredPosition) && glm::vec2(before.SizeDelta) == glm::vec2(after.SizeDelta)) continue;
-                changes.push_back({target, before, after});
-            }
-            if (!changes.empty()) _actions->RecordApplied(std::make_unique<RectTransformResizeAction>(std::move(changes)));
-            return;
-        }
-
         const bool movement = control.Mode == Movement && (control.RightMovementArrow.DragActive || control.UpMovementArrow.DragActive || control.RightUpMovementPlane.DragActive);
         const bool body = control.Mode == RectTransform && control.RectTransformBodyDragActive;
-        if (!movement && !body) return;
+        if (!resize && !movement && !body) return;
 
-        std::vector<RectTransformMoveAction::Change> changes;
+        std::vector<RectTransformChangeAction::Change> changes;
         for (const auto& start : control.DragStartTargetStates)
         {
             const ecs::ComponentRef<ui::RectTransform> target(_ecs, start.Entity);
-            if (glm::vec2(start.SizeDelta) != glm::vec2(target.Get().GetSizeDelta())) return;
-            const auto after = target.Get().GetAnchoredPosition();
-            if (glm::vec2(start.AnchoredPosition) == glm::vec2(after)) continue;
-            changes.push_back({target, start.AnchoredPosition, after});
+            const auto after = RectTransformChangeAction::State::Capture(target.Get());
+            if (!resize && glm::vec2(start.SizeDelta) != glm::vec2(after.SizeDelta)) return;
+            auto before = after;
+            before.AnchoredPosition = start.AnchoredPosition;
+            before.SizeDelta = start.SizeDelta;
+            changes.push_back({target, before, after});
         }
-        if (!changes.empty()) _actions->RecordApplied(std::make_unique<RectTransformMoveAction>(std::move(changes)));
+        const auto fields = resize ? RectTransformChangeAction::Fields::Rectangle : RectTransformChangeAction::Fields::Position;
+        auto action = std::make_unique<RectTransformChangeAction>(fields, std::move(changes));
+        if (action->HasChanges()) _actions->RecordApplied(std::move(action));
     }
 
     void ResetTransformationControlsDragSystem::ResetDragState(TransformationControl& control) const
