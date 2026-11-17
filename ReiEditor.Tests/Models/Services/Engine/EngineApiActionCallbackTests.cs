@@ -36,14 +36,18 @@ namespace ReiEditor.Tests.Models.Services.Engine;
 [Trait("Area", "EngineActionCallbacks")]
 public sealed class EngineApiActionCallbackTests
 {
+    private static string? NativeSkipReason => !OperatingSystem.IsWindows() ? "Native callbacks require Windows x64."
+        : Environment.GetEnvironmentVariable("REI_RUN_ENGINE_TESTS") != "1"
+            ? "Set REI_RUN_ENGINE_TESTS=1 and REI_TEST_NATIVE_PROJECT_DLL to the built native project fixture." : null;
+
     private sealed class NativeCallbackFactAttribute : FactAttribute
     {
-        public NativeCallbackFactAttribute()
-        {
-            if (!OperatingSystem.IsWindows()) Skip = "Native callbacks require Windows x64.";
-            else if (Environment.GetEnvironmentVariable("REI_RUN_ENGINE_TESTS") != "1")
-                Skip = "Set REI_RUN_ENGINE_TESTS=1 and REI_TEST_NATIVE_PROJECT_DLL to the built native project fixture.";
-        }
+        public NativeCallbackFactAttribute() { Skip = NativeSkipReason; }
+    }
+
+    private sealed class NativeCallbackTheoryAttribute : TheoryAttribute
+    {
+        public NativeCallbackTheoryAttribute() { Skip = NativeSkipReason; }
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -803,7 +807,7 @@ public sealed class EngineApiActionCallbackTests
             Check(x, y);
             Assert.Equal(3, received.Count);
             Assert.Empty(logger.Entries);
-            // Full layout and stretch-position requests remain outside this history step, even if flagged by a caller.
+            // Partial anchor payloads stay unrecorded; explicit position edits support stretch.
             var excluded = new SetEntityDataRequest
             {
                 SceneId = ids[0], RecordTransformChange = true,
@@ -816,6 +820,8 @@ public sealed class EngineApiActionCallbackTests
             api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
             Assert.Equal(88f, unsupported[0]);
             Assert.Equal(99f, unsupported[1]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(3, received.Count);
             excluded.Behaviours[0].Remove("_anchorMax");
             excluded.Behaviours[0]["_anchoredPosition"] = layout.SerializeVector2(new(90, 100));
             entities.SetData(excluded);
@@ -825,7 +831,24 @@ public sealed class EngineApiActionCallbackTests
             inspector.Apply(entities.GetEntityData(ids[0])!);
             Dispatcher.UIThread.RunJobs();
             Assert.True(vm.IsStretchX);
-            Assert.Equal(3, received.Count);
+            Assert.Equal(4, received.Count);
+            foreach (var undo in new[] { true, false })
+            {
+                if (undo) await commands.UndoAsync();
+                else await commands.RedoAsync();
+                var expected = undo ? new RectTransformVector2(88, 99) : new RectTransformVector2(90, 100);
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+                Assert.Equal(expected.X, unsupported[0]);
+                Assert.Equal(expected.Y, unsupported[1]);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(layout.TryReadLayout(component, out var state));
+                Assert.Equal(expected, state.AnchoredPosition);
+                Assert.Equal(new RectTransformVector2(1, 0.5f), state.AnchorMax);
+                Assert.Equal(1f, unsupported[6]);
+                Assert.Equal(0.5f, unsupported[7]);
+                Assert.Equal(4, received.Count);
+            }
             Assert.Empty(inspector.Logger.Entries);
 
             void Check(float expectedX, float expectedY)
@@ -953,7 +976,7 @@ public sealed class EngineApiActionCallbackTests
             await commands.RedoAsync();
             Check(x, y, horizontal ? 75 : width, horizontal ? height : 75);
             Assert.Equal(4, received.Count);
-            // Native rejects history for full-layout and stretch-size requests even if a caller flags them.
+            // Partial anchor payloads stay unrecorded; explicit size edits support stretch.
             var excluded = new SetEntityDataRequest
             {
                 SceneId = ids[0], RecordTransformChange = true,
@@ -966,6 +989,8 @@ public sealed class EngineApiActionCallbackTests
             api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
             Assert.Equal(88f, unsupported[2]);
             Assert.Equal(99f, unsupported[3]);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(4, received.Count);
             excluded.Behaviours[0].Remove("_anchorMax");
             excluded.Behaviours[0]["_sizeDelta"] = layout.SerializeVector2(new(90, 100));
             entities.SetData(excluded);
@@ -975,7 +1000,24 @@ public sealed class EngineApiActionCallbackTests
             inspector.Apply(entities.GetEntityData(ids[0])!);
             Dispatcher.UIThread.RunJobs();
             Assert.True(vm.IsStretchX);
-            Assert.Equal(4, received.Count);
+            Assert.Equal(5, received.Count);
+            foreach (var undo in new[] { true, false })
+            {
+                if (undo) await commands.UndoAsync();
+                else await commands.RedoAsync();
+                var expected = undo ? new RectTransformVector2(88, 99) : new RectTransformVector2(90, 100);
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, unsupported);
+                Assert.Equal(expected.X, unsupported[2]);
+                Assert.Equal(expected.Y, unsupported[3]);
+                inspector.Apply(entities.GetEntityData(ids[0])!);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(layout.TryReadLayout(component, out var state));
+                Assert.Equal(expected, state.SizeDelta);
+                Assert.Equal(new RectTransformVector2(1, 0.5f), state.AnchorMax);
+                Assert.Equal(1f, unsupported[6]);
+                Assert.Equal(0.5f, unsupported[7]);
+                Assert.Equal(5, received.Count);
+            }
             Assert.Empty(logger.Entries);
             Assert.Empty(inspector.Logger.Entries);
 
@@ -1447,7 +1489,7 @@ public sealed class EngineApiActionCallbackTests
         return ui.Dispatch(async () =>
         {
             foreach (var stretch in new[] { false, true })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas);
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas);
             return true;
         }, CancellationToken.None);
     }
@@ -1460,7 +1502,7 @@ public sealed class EngineApiActionCallbackTests
         {
             foreach (var stretch in new[] { false, true })
                 foreach (var toCanvas in new[] { false, true })
-                    foreach (var disjoint in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, disjoint: disjoint);
+                    foreach (var disjoint in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, disjoint: disjoint);
             return true;
         }, CancellationToken.None);
     }
@@ -1472,7 +1514,7 @@ public sealed class EngineApiActionCallbackTests
         return ui.Dispatch(async () =>
         {
             foreach (var stretch in new[] { false, true })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, mixedParents: true);
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, mixedParents: true);
             return true;
         }, CancellationToken.None);
     }
@@ -1485,7 +1527,7 @@ public sealed class EngineApiActionCallbackTests
         {
             foreach (var scale in new[] { 1f, 2f })
                 foreach (var stretch in new[] { false, true })
-                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, canvasScales: (scale, scale));
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, canvasScales: (scale, scale));
             return true;
         }, CancellationToken.None);
     }
@@ -1498,7 +1540,7 @@ public sealed class EngineApiActionCallbackTests
         {
             foreach (var scale in new[] { 1f, 2f })
                 foreach (var stretch in new[] { false, true })
-                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, canvasScales: (scale, scale));
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, canvasScales: (scale, scale));
             return true;
         }, CancellationToken.None);
     }
@@ -1511,7 +1553,7 @@ public sealed class EngineApiActionCallbackTests
         {
             foreach (var scale in new[] { 1f, 2f })
                 foreach (var stretch in new[] { false, true })
-                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch, toCanvas, grouped: true, mixedParents: true, canvasScales: (scale, scale));
+                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, mixedParents: true, canvasScales: (scale, scale));
             return true;
         }, CancellationToken.None);
     }
@@ -1523,12 +1565,30 @@ public sealed class EngineApiActionCallbackTests
         return ui.Dispatch(async () =>
         {
             foreach (var scales in new[] { (1f, 2f), (2f, 1f) })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(false, toCanvas, canvasScales: scales);
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(null, toCanvas, canvasScales: scales);
             return true;
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyRectReparentAsync(bool stretch, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false, (float Source, float Destination)? canvasScales = null)
+    [NativeCallbackTheory]
+    [InlineData("Middle Stretch X", false, false)]
+    [InlineData("Center Stretch Y", false, false)]
+    [InlineData("Stretch Both", false, false)]
+    [InlineData(null, true, false)]
+    [InlineData("Stretch Both", true, false)]
+    [InlineData("Stretch Both", true, true)]
+    public Task RectTransformReparentAcrossAllCanvasScales(string? preset, bool grouped, bool mixedParents)
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            foreach (var scales in new[] { (1f, 2f), (2f, 1f) })
+                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(preset, toCanvas, grouped: grouped, mixedParents: mixedParents, canvasScales: scales);
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task VerifyRectReparentAsync(string? preset, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false, (float Source, float Destination)? canvasScales = null)
     {
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
@@ -1591,7 +1651,7 @@ public sealed class EngineApiActionCallbackTests
             source.Connect();
             var component = target.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
             using var vm = new RectTransformPropertyViewModel(target.Entity, component, target.Runner, entities, layout);
-            if (stretch) vm.Presets.Single(p => p.DisplayName == "Stretch Both").ApplyCommand.Execute(null);
+            if (preset != null) vm.Presets.Single(p => p.DisplayName == preset).ApplyCommand.Execute(null);
             // Prepare the hierarchy without recording the setup moves.
             management.SetParent(editors[3].Entity, editors[1].Entity, 0);
             management.SetParent(editors[4].Entity, editors[2].Entity, 0);
@@ -1640,7 +1700,7 @@ public sealed class EngineApiActionCallbackTests
             // Inspector and real pointer handles append entries to the same stream.
             var input = new ReiTextBox { DataContext = vm, IsFloat = true };
             using var binding = input.Bind(ReiTextBox.TextProperty, new Binding(nameof(vm.HorizontalSecondaryValue)) { Mode = BindingMode.TwoWay });
-            input.TextInternal = "220";
+            input.TextInternal = (vm.HorizontalSecondaryValue + (vm.IsStretchX ? -10 : 20)).ToString(System.Globalization.CultureInfo.CurrentCulture);
             input.LoseFocus();
             var resized = await ReadAsync();
             Assert.Equal(initialCount + 2, received.Count);

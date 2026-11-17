@@ -90,7 +90,7 @@ public sealed class RectTransformLayoutService : IRectTransformLayoutService
         if (!TryReadLayout(rectTransform, out var layout)) return false;
         if (!TryGetAbsoluteRect(entity, out var absoluteRect)) return false;
 
-        if (layout.AnchorMin == layout.AnchorMax && newParent != null
+        if (newParent != null
             && TryFindCanvasSize(entity, out var sourceSize) && TryFindCanvasSize(newParent, out var destinationSize) && sourceSize.X > 0f)
         {
             // Both canvases use the same viewport: logical width ratio equals source scale / destination scale.

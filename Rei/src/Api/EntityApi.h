@@ -1,16 +1,12 @@
 ﻿#pragma once
 #include <string>
-#include <unordered_set>
 
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
 #include "Modules/Components/EntityInfo.h"
 #include "Modules/Editor/EntitySelectionUtility.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "Modules/Editor/Actions/EntityMoveAction.h"
-#include "Modules/Editor/Actions/RectTransformMoveAction.h"
-#include "Modules/Editor/Actions/RectTransformResizeAction.h"
-#include "Modules/Editor/Actions/RectTransformPivotAction.h"
-#include "Modules/Editor/Actions/RectTransformAnchorsAction.h"
+#include "Modules/Editor/Actions/RectTransformChangeAction.h"
 #include "Modules/Editor/Actions/EntityScaleAction.h"
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
@@ -153,9 +149,7 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
         const bool isRect = HAS(e, rei::ui::RectTransform);
         const auto canvas = isRect ? rei::ui_utility::FindCanvasEntity(e) : rei::ecs::NULL_ENTITY;
         const auto destinationCanvas = rei::ui_utility::FindCanvasEntity(parent);
-        const bool fixedAnchors = isRect && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax());
-        const bool recordRect = hasRectLayout && canvas != rei::ecs::NULL_ENTITY && destinationCanvas != rei::ecs::NULL_ENTITY
-            && (fixedAnchors || rei::ui_utility::HaveSameCanvasScale(canvas, destinationCanvas));
+        const bool recordRect = hasRectLayout && canvas != rei::ecs::NULL_ENTITY && destinationCanvas != rei::ecs::NULL_ENTITY;
         const bool recordChange = recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode()
             && (!parentChanged || !isRect || recordRect);
         const auto applyParent = [&]
@@ -173,21 +167,9 @@ REI_EXTERN_API inline void SetEntityParent(const i32 sceneEntityId, const i32 pa
         }
 
         const rei::editor::EntityReparentAction::State before(transform);
-        auto siblings = rei::transform_utility::CollectSiblings(before.Parent);
-        if (parentChanged)
-        {
-            const auto destination = rei::transform_utility::CollectSiblings(parent);
-            siblings.insert(siblings.end(), destination.begin(), destination.end());
-        }
-        std::vector<rei::editor::EntityOrderAction::Change> changes;
-        for (const auto sibling : siblings)
-        {
-            rei::ecs::ComponentRef<rei::Transform> target(rei::GetInternalWorld()->GetRegistry(), sibling);
-            changes.push_back({target, target.Get().GetChildOrder(), 0});
-        }
+        auto changes = rei::editor::EntityOrderAction::CaptureSiblings({before.Parent, parent});
         applyParent();
-        for (auto& change : changes) change.After = change.Target.Get().GetChildOrder();
-        std::erase_if(changes, [](const auto& change) { return change.Before == change.After; });
+        rei::editor::EntityOrderAction::CompleteChanges(changes);
         if (parentChanged)
         {
             rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityReparentAction>(
@@ -218,15 +200,10 @@ REI_EXTERN_API inline void ReorderEntities(const i32* entityIds, const i32 count
         std::vector<rei::editor::EntityOrderAction::Change> changes;
         if (recordHierarchyChange != 0 && rei::GetEngine().IsEditorMode())
         {
-            for (const auto sibling : rei::transform_utility::CollectSiblings(GET(entities.front(), rei::Transform).GetParent()))
-            {
-                rei::ecs::ComponentRef<rei::Transform> target(_ecs, sibling);
-                changes.push_back({target, target.Get().GetChildOrder(), 0});
-            }
+            changes = rei::editor::EntityOrderAction::CaptureSiblings({GET(entities.front(), rei::Transform).GetParent()});
         }
         if (!rei::transform_utility::ReorderSiblings(entities, insertionIndex)) return;
-        for (auto& change : changes) change.After = change.Target.Get().GetChildOrder();
-        std::erase_if(changes, [](const auto& change) { return change.Before == change.After; });
+        rei::editor::EntityOrderAction::CompleteChanges(changes);
         if (!changes.empty()) rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityOrderAction>(std::move(changes)));
     });
 }
@@ -257,7 +234,7 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
             for (const auto entity : entities)
             {
                 if (!HAS(entity, rei::ui::RectTransform)) return;
-                record = record && rei::ui_utility::HaveSameCanvasScale(rei::ui_utility::FindCanvasEntity(entity), canvas);
+                record = record && rei::ui_utility::FindCanvasEntity(entity) != rei::ecs::NULL_ENTITY;
             }
         }
         std::vector<rei::editor::EntityReparentAction::Change> changes;
@@ -270,16 +247,9 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
                 const rei::editor::EntityReparentAction::State before(target.Get());
                 changes.push_back({target, before, before});
             }
-            std::unordered_set<rei::ecs::Entity> parents{parent};
-            for (const auto entity : entities) parents.insert(GET(entity, rei::Transform).GetParent());
-            for (const auto affectedParent : parents)
-            {
-                for (const auto sibling : rei::transform_utility::CollectSiblings(affectedParent))
-                {
-                    rei::ecs::ComponentRef<rei::Transform> target(_ecs, sibling);
-                    orders.push_back({target, target.Get().GetChildOrder(), 0});
-                }
-            }
+            std::vector<rei::ecs::Entity> parents{parent};
+            for (const auto entity : entities) parents.push_back(GET(entity, rei::Transform).GetParent());
+            orders = rei::editor::EntityOrderAction::CaptureSiblings(parents);
         }
         if (!rei::transform_utility::ReparentEntities(entities, parent, insertionIndex, !layouts.empty())) return;
         for (i32 i = 0; i < static_cast<i32>(layouts.size() / 4); i++)
@@ -290,8 +260,7 @@ REI_EXTERN_API inline void ReparentEntities(const i32* entityIds, const i32 coun
         }
         if (!record) return;
         for (auto& change : changes) change.After = rei::editor::EntityReparentAction::State(change.Target.Get());
-        for (auto& order : orders) order.After = order.Target.Get().GetChildOrder();
-        std::erase_if(orders, [](const auto& order) { return order.Before == order.After; });
+        rei::editor::EntityOrderAction::CompleteChanges(orders);
         rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntityReparentAction>(std::move(changes), std::move(orders)));
     });
 }
@@ -346,45 +315,22 @@ REI_EXTERN_API inline void SetEntityData(const char* json)
             const bool recordRect = data.value("RecordTransformChange", false) && rei::GetEngine().IsEditorMode()
                 && HAS(e, rei::ui::RectTransform) && behaviourId == GET(e, rei::ui::RectTransform).GetBehaviourId()
                 && (anchorsEdit || pivotEdit || (b.size() == 3 && b.contains("_anchoredPosition") && b.contains("_sizeDelta"))
-                    || (b.size() == 2 && (b.contains("_anchoredPosition") || b.contains("_sizeDelta"))
-                        && glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMin()) == glm::vec2(GET(e, rei::ui::RectTransform).GetAnchorMax())));
-            const auto beforeAnchorMin = recordRect ? GET(e, rei::ui::RectTransform).GetAnchorMin() : rei::math::Vector2{};
-            const auto beforeAnchorMax = recordRect ? GET(e, rei::ui::RectTransform).GetAnchorMax() : rei::math::Vector2{};
-            const auto beforeRectPivot = recordRect ? GET(e, rei::ui::RectTransform).GetPivot() : rei::math::Vector2{};
-            const auto beforeRectPosition = recordRect ? GET(e, rei::ui::RectTransform).GetAnchoredPosition() : rei::math::Vector2{};
-            const auto beforeRectSize = recordRect ? GET(e, rei::ui::RectTransform).GetSizeDelta() : rei::math::Vector2{};
+                    || (b.size() == 2 && (b.contains("_anchoredPosition") || b.contains("_sizeDelta"))));
+            using RectAction = rei::editor::RectTransformChangeAction;
+            const auto beforeRect = recordRect ? RectAction::State::Capture(GET(e, rei::ui::RectTransform)) : RectAction::State{};
             const auto beforePosition = recordTransform ? GET(e, rei::Transform).GetLocalPosition() : rei::math::Vector3{};
             const auto beforeScale = recordTransform ? GET(e, rei::Transform).GetLocalScale() : rei::math::Vector3{};
             const auto beforeRotation = recordTransform ? GET(e, rei::Transform).GetLocalRotation() : glm::quat(1, 0, 0, 0);
             rei::GetEntityManager().GetBehaviourRegistry().SetBehaviourData(e, behaviourId, b);
             if (recordRect)
             {
+                auto fields = RectAction::Fields::Position;
+                if (anchorsEdit) fields = RectAction::Fields::Anchors;
+                else if (pivotEdit) fields = RectAction::Fields::Pivot;
+                else if (b.contains("_sizeDelta")) fields = RectAction::Fields::Rectangle;
                 const rei::ecs::ComponentRef<rei::ui::RectTransform> target(_ecs, e);
-                const auto after = target.Get().GetAnchoredPosition();
-                if (anchorsEdit)
-                {
-                    const rei::editor::RectTransformAnchorsAction::State before{beforeAnchorMin, beforeAnchorMax, beforeRectPosition, beforeRectSize};
-                    const rei::editor::RectTransformAnchorsAction::State changed{target.Get().GetAnchorMin(), target.Get().GetAnchorMax(), after, target.Get().GetSizeDelta()};
-                    if (glm::vec2(before.AnchorMin) != glm::vec2(changed.AnchorMin) || glm::vec2(before.AnchorMax) != glm::vec2(changed.AnchorMax)
-                        || glm::vec2(before.AnchoredPosition) != glm::vec2(changed.AnchoredPosition) || glm::vec2(before.SizeDelta) != glm::vec2(changed.SizeDelta))
-                        rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformAnchorsAction>(target, before, changed));
-                }
-                else if (pivotEdit)
-                {
-                    const rei::editor::RectTransformPivotAction::State before{beforeRectPivot, beforeRectPosition, beforeRectSize};
-                    const rei::editor::RectTransformPivotAction::State changed{target.Get().GetPivot(), after, target.Get().GetSizeDelta()};
-                    if (glm::vec2(before.Pivot) != glm::vec2(changed.Pivot) || glm::vec2(before.AnchoredPosition) != glm::vec2(changed.AnchoredPosition) || glm::vec2(before.SizeDelta) != glm::vec2(changed.SizeDelta))
-                        rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformPivotAction>(target, before, changed));
-                }
-                else if (b.contains("_sizeDelta"))
-                {
-                    const rei::editor::RectTransformResizeAction::State before{beforeRectPosition, beforeRectSize};
-                    const rei::editor::RectTransformResizeAction::State resized{after, target.Get().GetSizeDelta()};
-                    if (glm::vec2(before.AnchoredPosition) != glm::vec2(resized.AnchoredPosition) || glm::vec2(before.SizeDelta) != glm::vec2(resized.SizeDelta))
-                        rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformResizeAction>(target, before, resized));
-                }
-                else if (glm::vec2(beforeRectPosition) != glm::vec2(after))
-                    rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::RectTransformMoveAction>(target, beforeRectPosition, after));
+                auto action = std::make_unique<RectAction>(fields, target, beforeRect, RectAction::State::Capture(target.Get()));
+                if (action->HasChanges()) rei::GetEngine().GetEditorActions().RecordApplied(std::move(action));
             }
             if (!recordTransform) continue;
             const rei::ecs::ComponentRef<rei::Transform> transform(_ecs, e);

@@ -134,9 +134,9 @@ public sealed class RectTransformLayoutServiceTests
     [Theory]
     [InlineData(1f, 2f, false, -30f, -30f, 40f, 20f)]
     [InlineData(2f, 1f, false, 450f, 240f, 160f, 80f)]
-    [InlineData(1f, 2f, true, 105f, 65f, 180f, 60f)]
-    [InlineData(2f, 1f, true, 105f, 65f, 180f, 60f)]
-    public void ReparentAcrossCanvasScalesConvertsOnlyFixedAnchors(float sourceScale, float destinationScale, bool stretch, float x, float y, float width, float height)
+    [InlineData(1f, 2f, true, -5f, -50f, -60f, -60f)]
+    [InlineData(2f, 1f, true, 325f, 295f, 660f, 300f)]
+    public void ReparentAcrossCanvasScalesPreservesPixelsForAllAnchors(float sourceScale, float destinationScale, bool stretch, float x, float y, float width, float height)
     {
         _window.Size.Value = (1600, 900);
         var scene = new Scene("layout");
@@ -167,12 +167,10 @@ public sealed class RectTransformLayoutServiceTests
         Assert.True(service.TryReadLayout(component, out var unchanged));
         Assert.Equal(original, unchanged);
         Assert.Equal(parent.Id, child.Transform.Parent);
-        if (!stretch)
-        {
-            var rect = RectTransformLayoutCalculator.CalculateRect(new(300, 180), preserved);
-            Assert.Equal(new RectTransformRect(300 * sourceScale, 150 * sourceScale, 380 * sourceScale, 190 * sourceScale),
-                new((rect.MinX + 40) * destinationScale, (rect.MinY + 30) * destinationScale, (rect.MaxX + 40) * destinationScale, (rect.MaxY + 30) * destinationScale));
-        }
+        var rect = RectTransformLayoutCalculator.CalculateRect(new(300, 180), preserved);
+        var expected = stretch ? new RectTransformRect(100, 50, 580, 290) : new RectTransformRect(300, 150, 380, 190);
+        Assert.Equal(new RectTransformRect(expected.MinX * sourceScale, expected.MinY * sourceScale, expected.MaxX * sourceScale, expected.MaxY * sourceScale),
+            new((rect.MinX + 40) * destinationScale, (rect.MinY + 30) * destinationScale, (rect.MaxX + 40) * destinationScale, (rect.MaxY + 30) * destinationScale));
     }
 
     /// <summary>Applying a layout updates all vectors and emits exactly one complete-value notification per vector.</summary>

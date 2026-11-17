@@ -18,7 +18,6 @@ namespace rei
 namespace rei::ui_utility
 {
     REI_API ecs::Entity FindCanvasEntity(ecs::Entity entity);
-    REI_API bool HaveSameCanvasScale(ecs::Entity first, ecs::Entity second);
     REI_API f32 CalculateCanvasScaleFactor(const ui::Canvas& canvas, i32 width, i32 height);
     f32 CalculateCanvasScaleFactor(const ui::Canvas& canvas, const render::CameraModule& cameraModule);
     math::Rect GetCanvasRect(const ui::Canvas& canvas, i32 width, i32 height);

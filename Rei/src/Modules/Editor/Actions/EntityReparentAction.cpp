@@ -10,7 +10,7 @@ namespace rei::editor
         ECS_WORLD(GetInternalWorld())
         if (!HAS(transform.GetEntity(), ui::RectTransform)) return;
         const auto& rect = GET(transform.GetEntity(), ui::RectTransform);
-        Rect = RectTransformResizeAction::State{rect.GetAnchoredPosition(), rect.GetSizeDelta()};
+        Rect = RectTransformChangeAction::State::Capture(rect);
     }
 
     EntityReparentAction::EntityReparentAction(ecs::ComponentRef<Transform> target, State before, State after, std::vector<EntityOrderAction::Change> orders) :
@@ -53,8 +53,7 @@ namespace rei::editor
             if (state.Rect)
             {
                 auto& rect = GET(transform.GetEntity(), ui::RectTransform);
-                rect.GetAnchoredPosition() = state.Rect->AnchoredPosition;
-                rect.GetSizeDelta() = state.Rect->SizeDelta;
+                state.Rect->ApplyTo(rect, RectTransformChangeAction::Fields::Rectangle);
             }
         }
         for (const auto& change : _orders)
