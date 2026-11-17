@@ -96,7 +96,9 @@ public sealed class ViewportGizmoChecklistTests(ITestOutputHelper output)
         await engine.CallAsync("rei_editor_capture_frame");
         await File.WriteAllTextAsync(Path.Combine(engine.RunDirectory, $"{scenario.ToString().Replace('/', '-')}.json"), JsonSerializer.Serialize(new { before, after }));
 
-        for (var replay = 0; replay < 2; replay++)
+        // Regression: stretch-corner Undo once gained an extra history entry without input.
+        var replayCount = scenario is { Rect: true, Stretch: true, Part: "rect_br", Count: 1 } ? 20 : 2;
+        for (var replay = 0; replay < replayCount; replay++)
         {
             await engine.CallAsync("rei_editor_undo");
             await AssertState(engine, before);
@@ -266,7 +268,9 @@ public sealed class ViewportGizmoChecklistTests(ITestOutputHelper output)
         {
             try
             {
-                using var document = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(engine.ProjectDirectory, "gizmo-state.json")));
+                // Permit the native probe to publish while polling; denying writes can lose its one-shot response.
+                await using var file = new FileStream(Path.Combine(engine.ProjectDirectory, "gizmo-state.json"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var document = await JsonDocument.ParseAsync(file);
                 if (document.RootElement.GetProperty("Step").GetInt32() == _step) state = document.RootElement.Clone();
             }
             catch (IOException) { }

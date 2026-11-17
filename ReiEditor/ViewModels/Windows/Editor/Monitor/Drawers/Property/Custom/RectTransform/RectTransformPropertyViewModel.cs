@@ -40,6 +40,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
     private readonly Vector2PropertyBinding _pivot;
     private readonly Vector2PropertyBinding _anchoredPosition;
     private readonly Vector2PropertyBinding _sizeDelta;
+    private bool _isRefreshing;
 
     private string _anchorModeName = "Preset";
     public string AnchorModeName
@@ -235,11 +236,11 @@ public class RectTransformPropertyViewModel : BaseViewModel
             Presets.Add(new RectTransformAnchorPresetViewModel(preset, ApplyPreset));
         }
 
-        _anchorMin.Changed += HandleAnchorChanged;
-        _anchorMax.Changed += HandleAnchorChanged;
-        _pivot.Changed += HandleLayoutValueChanged;
-        _anchoredPosition.Changed += HandleLayoutValueChanged;
-        _sizeDelta.Changed += HandleLayoutValueChanged;
+        _anchorMin.Changed += RefreshAll;
+        _anchorMax.Changed += RefreshAll;
+        _pivot.Changed += RefreshAll;
+        _anchoredPosition.Changed += RefreshAll;
+        _sizeDelta.Changed += RefreshAll;
 
         RefreshAll();
     }
@@ -250,11 +251,11 @@ public class RectTransformPropertyViewModel : BaseViewModel
     {
         base.Dispose();
 
-        _anchorMin.Changed -= HandleAnchorChanged;
-        _anchorMax.Changed -= HandleAnchorChanged;
-        _pivot.Changed -= HandleLayoutValueChanged;
-        _anchoredPosition.Changed -= HandleLayoutValueChanged;
-        _sizeDelta.Changed -= HandleLayoutValueChanged;
+        _anchorMin.Changed -= RefreshAll;
+        _anchorMax.Changed -= RefreshAll;
+        _pivot.Changed -= RefreshAll;
+        _anchoredPosition.Changed -= RefreshAll;
+        _sizeDelta.Changed -= RefreshAll;
         _anchorMin.Dispose();
         _anchorMax.Dispose();
         _pivot.Dispose();
@@ -366,6 +367,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
 
     private void SetAnchorMin(float x, float y)
     {
+        if (_isRefreshing) return;
         _anchorMin.SetSilently(x, y);
         PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
@@ -373,6 +375,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
 
     private void SetAnchorMax(float x, float y)
     {
+        if (_isRefreshing) return;
         _anchorMax.SetSilently(x, y);
         PushAnchorsToRuntimeIfNeeded();
         RefreshAll();
@@ -380,6 +383,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
 
     private void SetAnchoredPosition(float x, float y)
     {
+        if (_isRefreshing) return;
         _anchoredPosition.SetSilently(x, y);
         PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION);
         RefreshAll();
@@ -387,6 +391,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
 
     private void SetSizeDelta(float x, float y)
     {
+        if (_isRefreshing) return;
         _sizeDelta.SetSilently(x, y);
         PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
         RefreshAll();
@@ -394,6 +399,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
 
     private void ApplyLayoutValues(RectTransformLayoutValues values)
     {
+        if (_isRefreshing) return;
         _sizeDelta.SetSilently(values.SizeDeltaX, values.SizeDeltaY);
         _anchoredPosition.SetSilently(values.AnchoredPositionX, values.AnchoredPositionY);
         PushRectTransformToRuntimeIfNeeded(EngineBehavioursConstants.RECT_TRANSFORM_ANCHORED_POSITION, EngineBehavioursConstants.RECT_TRANSFORM_SIZE_DELTA);
@@ -436,6 +442,7 @@ public class RectTransformPropertyViewModel : BaseViewModel
 
     private void SetPivot(float pivotX, float pivotY)
     {
+        if (_isRefreshing) return;
         if (_entity != null
             && _component != null
             && _rectTransformLayoutService?.TryPreserveRectForPivot(_entity, _component, pivotX, pivotY, out var preservedLayout) == true)
@@ -462,25 +469,19 @@ public class RectTransformPropertyViewModel : BaseViewModel
             : _rectTransformLayoutService.GetParentSize(_entity);
     }
 
-    private void HandleAnchorChanged()
-    {
-        RefreshAnchorState();
-        RaiseAnchorPropertyChanges();
-        RaiseCurrentValuePropertyChanges();
-    }
-
-    private void HandleLayoutValueChanged()
-    {
-        RaiseLayoutPropertyChanges();
-        RaiseCurrentValuePropertyChanges();
-    }
-
     private void RefreshAll()
     {
-        RefreshAnchorState();
-        RaiseAnchorPropertyChanges();
-        RaiseLayoutPropertyChanges();
-        RaiseCurrentValuePropertyChanges();
+        if (_isRefreshing) return;
+        // TwoWay bindings can call setters while the native snapshot is still being applied.
+        _isRefreshing = true;
+        try
+        {
+            RefreshAnchorState();
+            RaiseAnchorPropertyChanges();
+            RaiseLayoutPropertyChanges();
+            RaiseCurrentValuePropertyChanges();
+        }
+        finally { _isRefreshing = false; }
     }
 
     private void RefreshAnchorState()
