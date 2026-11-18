@@ -48,24 +48,20 @@ public class EntityManagementService : IEntityManagementService
 
     }
 
-    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, GameEntity? existingEntity = null)
+    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null)
     {
         try
         {
-            var scene = _sceneManagement.CurrentScene.Value;
-            if (scene == null) throw new InvalidOperationException("Current scene is missing");
-            if (existingEntity != null && (parent != null || existingEntity.Transform.HasParent() || scene.GetById(existingEntity.Id) != null))
-                return Task.FromResult<GameEntity?>(null);
-
             if (_engineRunner.IsActive.Value)
             {
-                var existingIds = scene.Entities.Select(x => x.Id).ToHashSet();
-                var response = _entityApi.CreateNewEntity(name, requestedId: existingEntity?.Id ?? 0);
-                if (existingEntity != null && response?.EntityId != existingEntity.Id) return Task.FromResult<GameEntity?>(null);
+                var scene = _sceneManagement.CurrentScene.Value;
+                if (scene == null) throw new Exception("Current scene is missing");
 
+                var existingIds = scene.Entities.Select(x => x.Id).ToHashSet();
+                var response = _entityApi.CreateNewEntity(name);
                 var entity = response?.EntityId == null
                     ? WaitForCreatedEntity(name, existingIds)
-                    : CreateSyncedEntity(scene, response.EntityId.Value, existingEntity);
+                    : CreateSyncedEntity(scene, response.EntityId.Value);
                 if (entity != null && parent != null)
                 {
                     SetParent(entity, parent, GetChildInsertionIndex(parent));
@@ -73,28 +69,28 @@ public class EntityManagementService : IEntityManagementService
                 return Task.FromResult(entity);
             }
 
-            scene.NormalizeTransformOrders();
-            var maxRootOrder = scene.Entities
+            if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
+
+            var s = _sceneManagement.CurrentScene.Value;
+            s.NormalizeTransformOrders();
+            var maxRootOrder = s.Entities
                 .Where(x => !x.Transform.HasParent())
                 .Select(x => x.Transform.Order)
                 .DefaultIfEmpty(-1)
                 .Max();
             
-            var e = existingEntity ?? new GameEntity(scene.AllocateEntityId(), name);
-            if (existingEntity == null)
-            {
-                var transformBehaviourId = _behaviourRegistry.GetIdByName("Transform")!.Value;
-                AddBehaviour(e, transformBehaviourId);
-            }
+            var e = new GameEntity(s.AllocateEntityId(), name);
+            var transformBehaviourId = _behaviourRegistry.GetIdByName("Transform")!.Value;
+            AddBehaviour(e, transformBehaviourId);
             
             e.Transform.SetParent(0);
             e.Transform.SetOrder(maxRootOrder + 1);
             SyncTransformBehaviourProperties(e);
             
-            scene.AddEntity(e);
+            s.AddEntity(e);
             if (parent != null)
             {
-                scene.MoveEntity(e, parent, int.MaxValue);
+                s.MoveEntity(e, parent, int.MaxValue);
                 SyncTransformBehaviourProperties(e);
             }
             return Task.FromResult<GameEntity?>(e);
@@ -359,7 +355,7 @@ public class EntityManagementService : IEntityManagementService
         }
     }
 
-    private GameEntity? CreateSyncedEntity(Scene scene, int entityId, GameEntity? existingEntity = null)
+    private GameEntity? CreateSyncedEntity(Scene scene, int entityId)
     {
         var state = _entityApi.GetEntityData(entityId);
         if (state == null) return null;
@@ -367,16 +363,16 @@ public class EntityManagementService : IEntityManagementService
         var gameEntity = scene.GetById(entityId);
         if (gameEntity != null) return gameEntity;
 
-        gameEntity = AddSyncedEntity(scene, entityId, state, existingEntity);
+        gameEntity = AddSyncedEntity(scene, entityId, state);
         _entitySyncService.UpdateEntityState(gameEntity);
         scene.SynchronizeHierarchy();
         return gameEntity;
     }
 
     // Creation commands return an initialized entity immediately; subsequent metadata comes from SceneSync.
-    private static GameEntity AddSyncedEntity(Scene scene, int entityId, GetEntityDataResponse? state, GameEntity? existingEntity = null)
+    private static GameEntity AddSyncedEntity(Scene scene, int entityId, GetEntityDataResponse? state)
     {
-        var entity = existingEntity ?? new GameEntity(entityId, state?.Name ?? $"Entity {entityId}");
+        var entity = new GameEntity(entityId, state?.Name ?? $"Entity {entityId}");
         scene.AddEntity(entity);
         if (state != null && EntitySyncUtility.TryGetTransformData(state.Behaviours, out var parent, out var order) && parent.HasValue && order.HasValue)
         {

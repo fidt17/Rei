@@ -16,6 +16,12 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.RectTransform;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Themes.Fluent;
+using Avalonia.VisualTree;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
 using Avalonia.Data;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
@@ -82,13 +88,130 @@ public sealed class EngineApiActionCallbackTests
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void PrepareRectCanvasesDelegate(float sourceScale, float destinationScale, [Out] int[] canvasIds);
 
-    private sealed class NumericComponentRegistry(params BehaviourAssetInfo[] behaviours) : IBehaviourRegistry
+    private sealed class InspectorComponentRegistry(params BehaviourAssetInfo[] behaviours) : IBehaviourRegistry
     {
         public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours { get; } = behaviours.ToDictionary(behaviour => behaviour.BehaviourId);
         public bool TryGetById(int id, [NotNullWhen(true)] out BehaviourAssetInfo? behaviour) => Behaviours.TryGetValue(id, out behaviour);
         public int? GetIdByName(string name) => behaviours.FirstOrDefault(behaviour => behaviour.ObjectName == name)?.BehaviourId;
         public int AllocateBehaviourId() => throw new NotSupportedException();
         public Task RefreshBehaviours() => throw new NotSupportedException();
+    }
+
+    [NativeCallbackFact]
+    public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                const int BUTTON_ID = 7310;
+                const string INTERACTABLE = "_interactable";
+                var id = entities.CreateNewEntity("Checkbox history")!.EntityId!.Value;
+                entities.AddBehaviour(id, BUTTON_ID);
+                var entity = new GameEntity(id, "Checkbox history");
+                var scenes = new TestSceneManagementService(entity);
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var registry = new InspectorComponentRegistry(new BehaviourAssetInfo("", "Button", BUTTON_ID, new ObjectFile<string>("", ""), new()
+                {
+                    [INTERACTABLE] = new(SerializedTypeEnum.Boolean, "bool", null, SerializedTypeEnum.Invalid, null, null, "true", false)
+                }, [], ""));
+                var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
+                var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
+                var syncLogger = new TestLogger<EntitySyncService>();
+                var applier = new EntityStateApplier(syncLogger, registry, components, properties);
+                var importer = new TestAssetImporter();
+                using var sync = new EntitySyncService(importer, entities, runner, components,
+                    new BehaviourSyncService(importer, runner, entities, syncLogger, applier), applier);
+                using var commands = new EditorCommandService();
+                var command = new SetComponentPropertyCommand(commands, scenes, runner);
+                var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
+                RefreshInspector();
+                using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(BUTTON_ID)!,
+                    registry, null!, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, command);
+                var value = Assert.IsType<BooleanPropertyViewModel>(Assert.Single(drawer.Properties));
+                var theme = new FluentTheme();
+                var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
+                Application.Current!.Styles.Add(theme);
+                Application.Current.Styles.Add(styles);
+                var view = new BooleanPropertyView { DataContext = value };
+                var window = new Window { Content = view, Width = 400, Height = 140 };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    var checkbox = Assert.Single(view.GetVisualDescendants().OfType<CheckBox>());
+                    AssertValues(true);
+                    entities.SetData(new SetEntityDataRequest
+                    {
+                        SceneId = id,
+                        Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = BUTTON_ID, [INTERACTABLE] = new { Value = false } }]
+                    });
+                    RefreshInspector();
+                    AssertValues(false);
+                    Assert.False(commands.CanUndo);
+                    Assert.False(commands.CanRedo);
+
+                    var center = checkbox.TranslatePoint(new Point(checkbox.Bounds.Width / 2, checkbox.Bounds.Height / 2), window)!.Value;
+                    window.MouseDown(center, MouseButton.Left);
+                    window.MouseUp(center, MouseButton.Left);
+                    Dispatcher.UIThread.RunJobs();
+                    AssertValues(true);
+                    Assert.True(commands.CanUndo);
+
+                    await commands.UndoAsync();
+                    AssertValues(false);
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+                    await commands.RedoAsync();
+                    AssertValues(true);
+                    Assert.False(commands.CanRedo);
+                    Assert.Empty(syncLogger.Entries);
+
+                    void AssertValues(bool expected)
+                    {
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.Equal(expected, checkbox.IsChecked);
+                        Assert.Equal(expected, value.Value);
+                        Assert.Equal(expected, ReadNativeButton()[INTERACTABLE]);
+                    }
+                }
+                finally
+                {
+                    window.Close();
+                    Application.Current.Styles.Remove(styles);
+                    Application.Current.Styles.Remove(theme);
+                }
+
+                Dictionary<string, object> ReadNativeButton() =>
+                    entities.GetEntityData(id)!.Behaviours.Single(behaviour => Equals(behaviour["REI_TYPE"], "Button"));
+
+                void RefreshInspector()
+                {
+                    applier.Apply(entity, new GetEntityDataResponse { Name = entity.Name, Behaviours = [ReadNativeButton()] });
+                    Dispatcher.UIThread.RunJobs();
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
     }
 
     [NativeCallbackFact]
@@ -118,7 +241,7 @@ public sealed class EngineApiActionCallbackTests
                 var scenes = new TestSceneManagementService(entity);
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var registry = new NumericComponentRegistry(
+                var registry = new InspectorComponentRegistry(
                     Schema("SpotLight", SPOT_LIGHT, "_range", SerializedTypeEnum.Float, "f32"),
                     Schema("ProbeA", PROBE, "Number", SerializedTypeEnum.Integer, "i32"));
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
@@ -215,97 +338,6 @@ public sealed class EngineApiActionCallbackTests
             {
                 [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, "0", false)
             }, [], "");
-    }
-
-    [NativeCallbackFact]
-    public Task RootHierarchyCreationUndoRedoRestoresSameSceneId()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
-            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
-            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
-            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
-            using var session = factory.CreateIsolatedSession(path!);
-            var api = session.EngineApi;
-            var entities = new EntityApi(api);
-            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
-            try
-            {
-                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
-                api.MarkEngineStarted();
-                var scene = new ReiEditor.Models.Services.Scenes.Scene("Create history");
-                var scenes = new TestSceneManagementService();
-                scenes.Scene.Value = scene;
-                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
-                runner.Active.Value = true;
-                var registry = new TestBehaviourRegistry();
-                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, null!, entities, registry, runner,
-                    new TestEntitySyncService
-                    {
-                        OnUpdate = entity =>
-                        {
-                            var state = entities.GetEntityData(entity.Id)!;
-                            Assert.Equal(entity.Name, state.Name);
-                            if (!entity.Behaviours.Any()) entity.AddBehaviour(new BehaviourComponent(InspectorTransformFixture.TRANSFORM_ID));
-                        }
-                    },
-                    new RectTransformLayoutService(registry, scenes, null!));
-                using var commands = new EditorCommandService();
-                using var hierarchy = new HierarchyDragFixture(scene.Hierarchy, management, scenes, commands, runner);
-
-                hierarchy.ViewModel.RootContextMenu.Options.Single(option => option.Text == "New Entity").Command.Execute(null);
-
-                var created = Assert.Single(scene.Entities);
-                var id = created.Id;
-                var siblingId = id + 10;
-                Assert.True(id > 0);
-                AssertPresent();
-                Assert.False(commands.CanRedo);
-                for (var i = 0; i < 2; i++)
-                {
-                    await commands.UndoAsync();
-                    Assert.Empty(scene.Entities);
-                    Assert.Empty(hierarchy.ViewModel.Nodes);
-                    using (var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
-                    {
-                        while (entities.GetSceneEntities()!.Entities.Any(entity => entity.Id == id))
-                            await Task.Delay(10, timeout.Token);
-                    }
-                    Assert.False(commands.CanUndo);
-                    Assert.True(commands.CanRedo);
-
-                    // Advance the next automatic ID so this test requires Redo to request the old ID.
-                    if (i == 0)
-                        Assert.Equal(siblingId, entities.CreateNewEntity("Native sibling", requestedId: siblingId)?.EntityId);
-                    await commands.RedoAsync();
-                    AssertPresent();
-                    Assert.Equal("Native sibling", entities.GetEntityData(siblingId)?.Name);
-                    Assert.True(commands.CanUndo);
-                    Assert.False(commands.CanRedo);
-                }
-
-                void AssertPresent()
-                {
-                    Assert.Same(created, scene.GetById(id));
-                    Assert.Same(created, Assert.Single(hierarchy.ViewModel.Nodes).Node.Content);
-                    var native = entities.GetEntityData(id)!;
-                    Assert.Equal("New Entity", native.Name);
-                    var transform = Assert.Single(native.Behaviours);
-                    Assert.Equal("Transform", transform["REI_TYPE"].ToString());
-                    Assert.Equal(0, Convert.ToInt32(transform["_parent"]));
-                    Assert.Null(entities.CreateNewEntity("Occupied ID", requestedId: id)?.EntityId);
-                }
-            }
-            finally
-            {
-                api.MarkEngineStopped();
-                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
-                GC.KeepAlive(createEngine);
-            }
-            return true;
-        }, CancellationToken.None);
     }
 
     [NativeCallbackFact]

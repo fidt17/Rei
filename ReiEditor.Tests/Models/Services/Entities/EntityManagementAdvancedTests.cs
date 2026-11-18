@@ -81,7 +81,7 @@ public sealed class EntityManagementAdvancedTests
             (OnSetData ?? throw UnexpectedCall())(request);
         }
 
-        public InstantiateEntityResponse? CreateNewEntity(string name, int requestedId = 0) => throw UnexpectedCall();
+        public InstantiateEntityResponse? CreateNewEntity(string name) => throw UnexpectedCall();
         public void DestroyEntity(int sceneEntityId) => throw UnexpectedCall();
         public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();
         public void AddBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();

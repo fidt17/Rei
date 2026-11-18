@@ -64,13 +64,13 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void CreateNewEntityDelegate(string name, StringBuilder outputBuffer, int bufferSize, int requestedId);
-    public InstantiateEntityResponse? CreateNewEntity(string name, int requestedId = 0)
+    private delegate void CreateNewEntityDelegate(string name, StringBuilder outputBuffer, int bufferSize);
+    public InstantiateEntityResponse? CreateNewEntity(string name)
     {
         if (!_engineApi.IsEngineRunning) return null;
 
         var buffer = _responseBufferPool.Get();
-        _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name, buffer, buffer.Capacity, requestedId);
+        _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name, buffer, buffer.Capacity);
         var response = JsonConvert.DeserializeObject<InstantiateEntityResponse>(buffer.ToString());
         _responseBufferPool.Put(buffer);
         return response;

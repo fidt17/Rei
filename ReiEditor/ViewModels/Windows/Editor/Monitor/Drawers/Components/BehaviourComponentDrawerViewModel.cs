@@ -137,7 +137,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _textEditorFileOpener.Open(behaviourInfo.Source.FullPath);
     }
     
-    private async void CommitNumericProperty(SerializedProperty property, object value) =>
+    private async void CommitProperty(SerializedProperty property, object value) =>
         await _setComponentProperty.SetAsync(_entity, BehaviourComponent, property, value);
 
     private void SetupProperties()
@@ -162,7 +162,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
                      PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata,
                          Name is EngineBehavioursConstants.TRANSFORM or EngineBehavioursConstants.RECT_TRANSFORM
-                             ? null : value => CommitNumericProperty(property, value))))
+                             ? null : value => CommitProperty(property, value))))
         {
             Properties.Add(row);
         }

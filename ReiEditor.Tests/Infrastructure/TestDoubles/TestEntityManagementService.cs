@@ -23,14 +23,10 @@ internal sealed class TestEntityManagementService : IEntityManagementService
     public Action<GameEntity, string>? OnRename { get; set; }
     public Func<GameEntity, string?, bool, int?>? OnInstantiate { get; set; }
 
-    public Func<GameEntity, Task<GameEntity?>>? OnRecreate { get; set; }
-
-    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, GameEntity? existingEntity = null)
+    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null)
     {
         CreateCalls.Add((name, parent));
-        return existingEntity != null
-            ? (OnRecreate ?? throw new NotSupportedException())(existingEntity)
-            : (OnCreate ?? throw new NotSupportedException())(name, parent);
+        return (OnCreate ?? throw new NotSupportedException())(name, parent);
     }
 
     public void AddBehaviour(GameEntity e, int behaviourId)

@@ -16,18 +16,18 @@
 #include "rei_behaviours/ui/RectTransform.h"
 #include "rei_behaviours/transformation/Transform.h"
 
-REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer, const i32 bufferSize, const i32 requestedId = 0)
+REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer, const i32 bufferSize)
 {
     std::string nameStr = name;
     std::string response;
-    auto task = rei::GetEngine().ExecuteOnMainThread([&response, nameStr, requestedId]
+    auto task = rei::GetEngine().ExecuteOnMainThread([&response, nameStr]
     {
         ECS_WORLD(rei::GetInternalWorld());
 
-        const auto e = rei::GetEntityManager().CreateNewEntity(nameStr, requestedId);
+        const auto e = rei::GetEntityManager().CreateNewEntity(nameStr);
 
         nlohmann::json data;
-        data["EntityId"] = e == rei::ecs::NULL_ENTITY ? nlohmann::json(nullptr) : nlohmann::json(GET(e, EntityInfo).Id);
+        data["EntityId"] = GET(e, EntityInfo).Id;
         response = data.dump();
     });
 

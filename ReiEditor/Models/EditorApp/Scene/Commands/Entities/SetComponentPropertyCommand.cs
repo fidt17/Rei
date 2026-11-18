@@ -72,6 +72,7 @@ public sealed class SetComponentPropertyCommand(
 
     private static object? Normalize(SerializedProperty property, object? value) => property.Type switch
     {
+        SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer when value is int integer => (object)integer,
         SerializedTypeEnum.Integer when value is long integer && integer is >= int.MinValue and <= int.MaxValue => (object)(int)integer,
         SerializedTypeEnum.Float when value is float or double or int or long && float.IsFinite(Convert.ToSingle(value)) => Convert.ToSingle(value),

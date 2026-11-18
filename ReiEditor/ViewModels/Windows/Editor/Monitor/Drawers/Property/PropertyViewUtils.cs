@@ -29,16 +29,16 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
-        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitNumeric = null)
+        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitProperty = null)
     {
-        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commitNumeric);
+        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commitProperty);
 
         return property.Type switch
         {
-            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commitNumeric),
+            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.String => new StringPropertyViewModel(property),
-            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
-            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitNumeric),
+            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property, commitProperty),
+            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
             SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
             SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
