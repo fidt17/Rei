@@ -93,7 +93,7 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal))
         {
-            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService);
+            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService, commitProperty);
         }
 
         return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry);

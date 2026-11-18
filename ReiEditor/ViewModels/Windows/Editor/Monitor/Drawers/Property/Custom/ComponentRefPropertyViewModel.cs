@@ -27,6 +27,7 @@ public class ComponentRefPropertyViewModel : BaseCustomPropertyViewModel
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
+    private readonly Action<object>? _commitProperty;
 
     private Scene? _activeScene;
     private AssetPickerViewModel? _picker;
@@ -40,13 +41,14 @@ public class ComponentRefPropertyViewModel : BaseCustomPropertyViewModel
         IAssetRegistry assetRegistry,
         IBehaviourRegistry behaviourRegistry,
         ISceneManagementService sceneManagementService,
-        ISelectionService selectionService) : base(property)
+        ISelectionService selectionService, Action<object>? commitProperty = null) : base(property)
     {
         _requiredComponentName = property.TemplateTypeName ?? "Unknown";
         _assetRegistry = assetRegistry;
         _behaviourRegistry = behaviourRegistry;
         _sceneManagementService = sceneManagementService;
         _selectionService = selectionService;
+        _commitProperty = commitProperty;
 
         _sceneManagementService.CurrentScene.Subscribe(HandleCurrentSceneChanged);
         RebuildPicker();
@@ -157,7 +159,13 @@ public class ComponentRefPropertyViewModel : BaseCustomPropertyViewModel
         var nestedProperty = GetNestedProperty("SceneEntityId");
         if (nestedProperty == null) return;
 
-        nestedProperty.Value = ParseSceneEntityId(sceneEntityId);
+        var id = ParseSceneEntityId(sceneEntityId);
+        if (_commitProperty == null) nestedProperty.Value = id;
+        else
+        {
+            _commitProperty(id);
+            Picker?.SyncSelectedAsset(GetSceneEntityIdString());
+        }
     }
 
     private (string Name, bool IsMissing) BuildMissingState(string selectedId)

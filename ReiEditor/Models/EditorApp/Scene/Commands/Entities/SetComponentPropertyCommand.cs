@@ -54,8 +54,8 @@ public sealed class SetComponentPropertyCommand(
     Task<object?> IEditorCommand<Target, object?>.ExecuteAsync(Target target)
     {
         if (!IsCurrent(target)) return Task.FromResult<object?>(null);
-        var before = Normalize(target.Property, target.Property.Value);
-        var after = Normalize(target.Property, target.Value);
+        var before = Read(target.Property);
+        var after = Normalize(GetValueProperty(target.Property), target.Value);
         if (before == null || after == null || before.Equals(after)) return Task.FromResult<object?>(null);
 
         Write(target.Property, after);
@@ -64,7 +64,7 @@ public sealed class SetComponentPropertyCommand(
 
     IEditorHistoryEntry? IUndoableEditorCommand<Target, object?>.CreateHistoryEntry(Target target, object? before)
     {
-        var after = Normalize(target.Property, target.Value);
+        var after = Normalize(GetValueProperty(target.Property), target.Value);
         return before != null && after != null ? new HistoryEntry(this, target, before, after) : null;
     }
 
@@ -78,23 +78,24 @@ public sealed class SetComponentPropertyCommand(
         && target.Component.Properties.TryGetValue(target.Property.Name, out var property)
         && ReferenceEquals(property, target.Property);
 
-    private static bool Matches(SerializedProperty property, object expected) => Equals(Normalize(property, property.Value), expected);
+    private static bool Matches(SerializedProperty property, object expected) => Equals(Read(property), expected);
+
+    private static object? Read(SerializedProperty property)
+    {
+        var valueProperty = GetValueProperty(property);
+        return Normalize(valueProperty, valueProperty.Value);
+    }
 
     private static void Write(SerializedProperty property, object value)
     {
         if (value is SerializedColorValue color) color.Apply(property);
-        else if (IsAssetReference(property))
-        {
-            if (GetAssetIdProperty(property.Value) is { } id) id.Value = value;
-        }
-        else property.Value = value;
+        else GetValueProperty(property).Value = value;
     }
 
     private static object? Normalize(SerializedProperty property, object? value) => property.Type switch
     {
         SerializedTypeEnum.Custom when property.SourceType == "Color" =>
             value is SerializedColorValue color ? color : SerializedColorValue.Read(value),
-        SerializedTypeEnum.Custom when IsAssetReference(property) => value as string ?? GetAssetIdProperty(value)?.Value as string,
         SerializedTypeEnum.String when value is string text => text,
         SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is int integer => (object)integer,
@@ -103,9 +104,11 @@ public sealed class SetComponentPropertyCommand(
         _ => null
     };
 
-    private static bool IsAssetReference(SerializedProperty property) =>
-        property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal);
-
-    private static SerializedProperty? GetAssetIdProperty(object? value) =>
-        value is Dictionary<string, SerializedProperty> children && children.TryGetValue("Id", out var id) ? id : null;
+    private static SerializedProperty GetValueProperty(SerializedProperty property)
+    {
+        if (property.Type != SerializedTypeEnum.Custom || property.Value is not Dictionary<string, SerializedProperty> children) return property;
+        if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("Id") ?? property;
+        if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("SceneEntityId") ?? property;
+        return property;
+    }
 }

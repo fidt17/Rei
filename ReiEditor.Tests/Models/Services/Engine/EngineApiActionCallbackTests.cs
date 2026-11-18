@@ -142,11 +142,14 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorTextureClearRecordsOneUndoForImage() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, assetEdit: AssetEdit.Clear);
 
+    [NativeCallbackFact]
+    public Task InspectorTargetImageSelectionRecordsOneUndoForButton() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, selectComponent: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
-        string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None)
+        string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -163,8 +166,9 @@ public sealed class EngineApiActionCallbackTests
             {
                 const string TEXTURE_ID = "REI_WHITE_FALLBACK_TEXTURE";
                 const string TEXTURE_PATH = "C:/Assets/white.png";
+                const int IMAGE_COMPONENT_ID = 7304;
                 var isAssetField = assetEdit != AssetEdit.None;
-                var startEngine = isAssetField ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
+                var startEngine = isAssetField || selectComponent ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
                 api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
                 var (componentId, componentName, field, sourceType, defaultValue) = type switch
@@ -172,7 +176,8 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
-                    SerializedTypeEnum.Custom when isAssetField => (7304, "Image", "_texture", "AssetRef<Texture>", null),
+                    SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
+                    SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
                     SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -183,6 +188,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
+                    SerializedTypeEnum.Custom when selectComponent => (0, 0, 0),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
                         new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -191,12 +197,26 @@ public sealed class EngineApiActionCallbackTests
                 entities.AddBehaviour(id, componentId);
                 var entity = new GameEntity(id, "Inspector property history");
                 var scenes = new TestSceneManagementService(entity);
+                GameEntity? image = null;
+                if (selectComponent)
+                {
+                    var imageId = entities.CreateNewEntity("Target Image")!.EntityId!.Value;
+                    entities.AddBehaviour(imageId, IMAGE_COMPONENT_ID);
+                    image = new GameEntity(imageId, "Target Image");
+                    image.AddBehaviour(new BehaviourComponent(IMAGE_COMPONENT_ID));
+                    scenes.Scene.Value!.AddEntity(image);
+                    values.Initial = values.External = id;
+                    values.Edited = imageId;
+                }
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var registry = new InspectorComponentRegistry(new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
+                var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
                     [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
-                }, [], ""));
+                }, [], "");
+                var registry = selectComponent
+                    ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Image", IMAGE_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
+                    : new InspectorComponentRegistry(component);
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
                 if (type == SerializedTypeEnum.Enum)
                 {
@@ -212,6 +232,13 @@ public sealed class EngineApiActionCallbackTests
                         null, SerializedTypeEnum.Invalid, null, null, "", false);
                     objects.Replace([new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", ""),
                         new() { ["Id"] = idProperty }, "")], []);
+                }
+                else if (selectComponent)
+                {
+                    var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Integer, "i32",
+                        null, SerializedTypeEnum.Invalid, null, null, "0", false);
+                    objects.Replace([new SerializableObjectInfo("rei::ecs", "ComponentRef", true, new ObjectFile<string>("", ""),
+                        new() { ["SceneEntityId"] = idProperty }, "")], []);
                 }
                 else if (type == SerializedTypeEnum.Custom)
                 {
@@ -248,6 +275,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Enum => new EnumPropertyView(),
                     SerializedTypeEnum.String => new StringPropertyView(),
                     SerializedTypeEnum.Custom when isAssetField => new AssetPropertyView(),
+                    SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -296,6 +324,7 @@ public sealed class EngineApiActionCallbackTests
                     {
                         SerializedColorValue rgba => new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } },
                         string idValue when isAssetField => new { Id = new { Value = idValue } },
+                        int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
                         _ => values.External
                     };
                     entities.SetData(new SetEntityDataRequest
@@ -347,6 +376,13 @@ public sealed class EngineApiActionCallbackTests
                         var picker = asset.AssetPicker!;
                         picker.RefreshSearchResultsForAll();
                         Assert.Single(picker.SearchResults).SelectCommand.Execute(null);
+                    }
+                    else if (value is ComponentRefPropertyViewModel reference)
+                    {
+                        var picker = reference.Picker!;
+                        picker.RefreshSearchResultsForAll();
+                        var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
+                        Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
                     }
                     else if (text != null)
                     {
@@ -498,6 +534,13 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expectedLabel, view.GetVisualDescendants().OfType<Label>().Single().Content);
                                 Assert.Equal((string)expected, JObject.FromObject(native).Value<string>("Id"));
                                 break;
+                            case ComponentRefPropertyViewModel reference:
+                                var expectedId = (int)expected;
+                                var expectedEntity = expectedId == entity.Id ? entity : image!;
+                                Assert.Equal(expectedId.ToString(CultureInfo.InvariantCulture), reference.Picker!.SelectedAssetId);
+                                Assert.Equal($"{expectedEntity.Name} ({expectedId})", view.GetVisualDescendants().OfType<Label>().Single().Content);
+                                Assert.Equal(expectedId, JObject.FromObject(native).Value<int>("SceneEntityId"));
+                                break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");
                         }
@@ -531,7 +574,10 @@ public sealed class EngineApiActionCallbackTests
 
                 void RefreshInspector()
                 {
-                    applier.Apply(entity, new GetEntityDataResponse { Name = entity.Name, Behaviours = [ReadNativeComponent()] });
+                    var behaviours = entities.GetEntityData(id)!.Behaviours
+                        .Where(behaviour => Equals(behaviour["REI_TYPE"], componentName) || selectComponent && Equals(behaviour["REI_TYPE"], "Image"))
+                        .ToList();
+                    applier.Apply(entity, new GetEntityDataResponse { Name = entity.Name, Behaviours = behaviours });
                     Dispatcher.UIThread.RunJobs();
                 }
             }
