@@ -49,6 +49,7 @@ using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 using Vector2 = System.Numerics.Vector2;
+using Vector3 = System.Numerics.Vector3;
 
 namespace ReiEditor.Tests.Models.Services.Engine;
 
@@ -151,12 +152,18 @@ public sealed class EngineApiActionCallbackTests
     [InlineData("Y")]
     public Task InspectorReferenceResolutionEditsPreserveOtherCoordinate(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis);
 
+    [NativeCallbackTheory]
+    [InlineData("X")]
+    [InlineData("Y")]
+    [InlineData("Z")]
+    public Task InspectorProbeOffsetEditsPreserveOtherCoordinates(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis, editVector3: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
-        string? vectorAxis = null)
+        string? vectorAxis = null, bool editVector3 = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -185,6 +192,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
+                    SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
                     SerializedTypeEnum.Custom when vectorAxis != null => (7302, "Canvas", "_referenceResolution", "Vector2", null),
                     SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -197,6 +205,14 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
                     SerializedTypeEnum.Custom when selectComponent => (0, 0, 0),
+                    SerializedTypeEnum.Custom when editVector3 => (new Vector3(1, 2, 3), new Vector3(4.25f, 5.5f, 6.75f),
+                        vectorAxis switch
+                        {
+                            "X" => new Vector3(1200.75f, 5.5f, 6.75f),
+                            "Y" => new Vector3(4.25f, 1200.75f, 6.75f),
+                            "Z" => new Vector3(4.25f, 5.5f, 1200.75f),
+                            _ => throw new ArgumentOutOfRangeException(nameof(vectorAxis))
+                        }),
                     SerializedTypeEnum.Custom when vectorAxis != null => (new Vector2(1920, 1080), new Vector2(1600.25f, 900.5f),
                         vectorAxis == "X" ? new Vector2(1200.75f, 900.5f) : new Vector2(1600.25f, 1200.75f)),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
@@ -254,8 +270,9 @@ public sealed class EngineApiActionCallbackTests
                 {
                     var coordinate = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
                         null, SerializedTypeEnum.Invalid, null, null, "0", false);
-                    objects.Replace([new SerializableObjectInfo("rei::math", "Vector2", false, new ObjectFile<string>("", ""),
-                        new() { ["x"] = coordinate, ["y"] = coordinate }, "")], []);
+                    var coordinates = new Dictionary<string, SerializableObjectInfo.SerializedPropertyData> { ["x"] = coordinate, ["y"] = coordinate };
+                    if (editVector3) coordinates.Add("z", coordinate);
+                    objects.Replace([new SerializableObjectInfo("rei::math", sourceType, false, new ObjectFile<string>("", ""), coordinates, "")], []);
                 }
                 else if (type == SerializedTypeEnum.Custom)
                 {
@@ -293,6 +310,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.String => new StringPropertyView(),
                     SerializedTypeEnum.Custom when isAssetField => new AssetPropertyView(),
                     SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
+                    SerializedTypeEnum.Custom when editVector3 => new Vector3PropertyView(),
                     SerializedTypeEnum.Custom when vectorAxis != null => new Vector2PropertyView(),
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -306,7 +324,13 @@ public sealed class EngineApiActionCallbackTests
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var textInputs = view.GetVisualDescendants().OfType<ReiTextBox>().ToArray();
-                    var text = vectorAxis == null ? textInputs.SingleOrDefault() : textInputs[vectorAxis == "X" ? 0 : 1];
+                    var text = vectorAxis switch
+                    {
+                        "X" => textInputs[0],
+                        "Y" => textInputs[1],
+                        "Z" => textInputs[2],
+                        _ => textInputs.SingleOrDefault()
+                    };
                     ReiTextBox? channelInput = null;
                     ColorWheelPicker? wheel = null;
                     Slider? alpha = null;
@@ -345,6 +369,7 @@ public sealed class EngineApiActionCallbackTests
                         string idValue when isAssetField => new { Id = new { Value = idValue } },
                         int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
                         Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
+                        Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
                         _ => values.External
                     };
                     entities.SetData(new SetEntityDataRequest
@@ -576,6 +601,15 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expectedVector.Y, float.Parse(textInputs[1].Text, CultureInfo.CurrentCulture));
                                 var nativeVector = JObject.FromObject(native);
                                 Assert.Equal(expectedVector, new Vector2(nativeVector.Value<float>("x"), nativeVector.Value<float>("y")));
+                                break;
+                            case Vector3PropertyViewModel vector:
+                                var expectedVector3 = (Vector3)expected;
+                                Assert.Equal(expectedVector3, new Vector3(vector.X, vector.Y, vector.Z));
+                                Assert.Equal(expectedVector3.X, float.Parse(textInputs[0].Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedVector3.Y, float.Parse(textInputs[1].Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedVector3.Z, float.Parse(textInputs[2].Text, CultureInfo.CurrentCulture));
+                                var nativeVector3 = JObject.FromObject(native);
+                                Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
                                 break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");

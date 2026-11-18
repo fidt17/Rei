@@ -95,6 +95,12 @@ public sealed class SetComponentPropertyCommand(
             if (previous.X != vector.X) coordinates["x"].Value = vector.X;
             if (previous.Y != vector.Y) coordinates["y"].Value = vector.Y;
         }
+        else if (value is Vector3 vector3 && property.Value is Dictionary<string, SerializedProperty> coordinates3 && Read(property) is Vector3 previous3)
+        {
+            if (previous3.X != vector3.X) coordinates3["x"].Value = vector3.X;
+            if (previous3.Y != vector3.Y) coordinates3["y"].Value = vector3.Y;
+            if (previous3.Z != vector3.Z) coordinates3["z"].Value = vector3.Z;
+        }
         else GetValueProperty(property).Value = value;
     }
 
@@ -105,9 +111,15 @@ public sealed class SetComponentPropertyCommand(
         SerializedTypeEnum.Custom when property.SourceType == "Vector2" => value switch
         {
             Vector2 vector when float.IsFinite(vector.X) && float.IsFinite(vector.Y) => vector,
-            Dictionary<string, SerializedProperty> coordinates when coordinates.TryGetValue("x", out var x)
-                && coordinates.TryGetValue("y", out var y) && Normalize(x, x.Value) is float xValue
-                && Normalize(y, y.Value) is float yValue => new Vector2(xValue, yValue),
+            Dictionary<string, SerializedProperty> coordinates when ReadCoordinate(coordinates, "x") is { } x
+                && ReadCoordinate(coordinates, "y") is { } y => new Vector2(x, y),
+            _ => null
+        },
+        SerializedTypeEnum.Custom when property.SourceType == "Vector3" => value switch
+        {
+            Vector3 vector when float.IsFinite(vector.X) && float.IsFinite(vector.Y) && float.IsFinite(vector.Z) => vector,
+            Dictionary<string, SerializedProperty> coordinates when ReadCoordinate(coordinates, "x") is { } x
+                && ReadCoordinate(coordinates, "y") is { } y && ReadCoordinate(coordinates, "z") is { } z => new Vector3(x, y, z),
             _ => null
         },
         SerializedTypeEnum.String when value is string text => text,
@@ -117,6 +129,9 @@ public sealed class SetComponentPropertyCommand(
         SerializedTypeEnum.Float when value is float or double or int or long && float.IsFinite(Convert.ToSingle(value)) => Convert.ToSingle(value),
         _ => null
     };
+
+    private static float? ReadCoordinate(Dictionary<string, SerializedProperty> coordinates, string name) =>
+        coordinates.TryGetValue(name, out var coordinate) && Normalize(coordinate, coordinate.Value) is float value ? value : null;
 
     private static SerializedProperty GetValueProperty(SerializedProperty property)
     {

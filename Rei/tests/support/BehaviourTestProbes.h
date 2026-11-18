@@ -91,6 +91,7 @@ namespace rei::tests
         REI_TEST_PROBE_BODY(ProbeA)
         SERIALIZE i32 Number = 7;
         SERIALIZE f32 Ratio = 1.25f;
+        SERIALIZE math::Vector3 Offset = math::Vector3(1.0f, 2.0f, 3.0f);
         SERIALIZE bool Flag = true;
         SERIALIZE std::string Text = "seed";
         SERIALIZE ProbeMode Mode = ProbeMode::Warm;

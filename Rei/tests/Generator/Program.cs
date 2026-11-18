@@ -32,6 +32,7 @@ var behaviours = new Dictionary<int, BehaviourAssetInfo>
 {
     [7101] = Behaviour("ProbeA", 7101, new()
     {
+        ["Offset"] = Custom("rei::math::Vector3"),
         ["Number"] = Scalar(SerializedTypeEnum.Integer, "i32"), ["Ratio"] = Scalar(SerializedTypeEnum.Float, "f32"),
         ["Flag"] = Scalar(SerializedTypeEnum.Boolean, "bool"), ["Text"] = Scalar(SerializedTypeEnum.String, "std::string"),
         ["Mode"] = Scalar(SerializedTypeEnum.Enum, "rei::tests::ProbeMode"), ["Settings"] = Custom("rei::tests::ProbeNested"),

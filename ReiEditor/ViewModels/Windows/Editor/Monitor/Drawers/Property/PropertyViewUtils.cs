@@ -81,7 +81,7 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType == "Vector3")
         {
-            return new Vector3PropertyViewModel(property);
+            return new Vector3PropertyViewModel(property, commitProperty);
         }
         else if (property.SourceType == "Color")
         {
