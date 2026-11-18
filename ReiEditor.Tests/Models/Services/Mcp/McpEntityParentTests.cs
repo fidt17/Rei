@@ -78,5 +78,5 @@ public sealed class McpEntityParentTests
         Assert.Empty(_entities.ParentCalls);
     }
 
-    private McpEditorSessionRegistration Create() => new(new McpEditorSessionAccessor(), null!, _scenes, null!, null!, _entities, null!, null!, null!, null!, null!, null!, null!, null!, null!, _automation, null!, null!, null!, null!, null!, null!, new EditorCommandService());
+    private McpEditorSessionRegistration Create() => new(new McpEditorSessionAccessor(), null!, _scenes, null!, null!, _entities, null!, null!, null!, null!, null!, null!, null!, null!, null!, _automation, null!, null!, null!, null!, null!, null!, new EditorCommandService(), null!);
 }

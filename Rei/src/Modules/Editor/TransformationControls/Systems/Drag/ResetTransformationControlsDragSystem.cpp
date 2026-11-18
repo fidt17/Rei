@@ -55,7 +55,11 @@ namespace rei::editor
                 const ecs::ComponentRef<Transform> transform(_ecs, start.Entity);
                 const auto before = start.LocalPosition;
                 const auto after = transform.Get().GetLocalPosition();
-                if (glm::vec3(before) == glm::vec3(after)) continue;
+                if (glm::distance(glm::vec3(before), glm::vec3(after)) <= 1e-6f)
+                {
+                    transform.Get().GetLocalPosition() = before;
+                    continue;
+                }
                 changes.push_back({transform, before, after});
             }
             if (!changes.empty()) _actions->RecordApplied(std::make_unique<EntityMoveAction>(std::move(changes)));

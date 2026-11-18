@@ -37,6 +37,8 @@ public sealed class SceneManagementServiceTests
     private sealed class NativeApi : TestEngineApi, IEngineNativeAccess
     {
         public string? SceneId = "before";
+        public object? InstanceToken { get; } = new object();
+
         public bool TryInvoke(Action<IEngineApi> action) { action(this); return true; }
         public override bool LoadEditorScene(string json)
         {

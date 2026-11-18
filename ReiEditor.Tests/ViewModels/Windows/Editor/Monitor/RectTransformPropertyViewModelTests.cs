@@ -14,7 +14,7 @@ namespace ReiEditor.Tests.ViewModels.Windows.Editor.Monitor;
 /// Verifies full RectTransform editor state, serialized writes, preservation, runtime sync, and disposal.
 /// </summary>
 [Trait("Area", "PropertyEditors")]
-public sealed class RectTransformPropertyViewModelTests
+public sealed partial class RectTransformPropertyViewModelTests
 {
     /// <summary>
     /// Records runtime layout payloads while rejecting unrelated entity API calls.

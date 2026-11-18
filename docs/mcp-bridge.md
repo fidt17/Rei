@@ -49,7 +49,7 @@ Parameter names below match MCP input schema. `—` means no parameters. Results
 | `rei_editor_undo` | — | Undo one applicable recorded command; returns updated command state. No Save. |
 | `rei_editor_redo` | — | Redo one applicable recorded command; returns updated command state. No Save. |
 
-Rename from Hierarchy, Inspector and MCP uses the same `EditorCommandService`. Hierarchy confirms with Enter; Inspector's existing ReiTextBox commits on Enter/focus loss. Ctrl+Z / Ctrl+Y use the service outside text editing, including the native Editor viewport; focused text fields retain their own draft Undo. Only Rename currently creates history entries. Other mutations are not yet undoable.
+Rename from Hierarchy, Inspector and MCP uses the same `EditorCommandService`. Hierarchy confirms with Enter; Inspector's existing ReiTextBox commits on Enter/focus loss. Ctrl+Z / Ctrl+Y use the service outside text editing, including the native Editor viewport; focused text fields retain their own draft Undo. Supported Editor commands and committed native gizmo changes share the same ordered history.
 
 History is scoped to the open Editor project, not to a scene. Each entry decides its own eligibility; changing scenes does not discard unrelated history. Rename rejects Play/startup, replaced/missing entities and conflicting names. Closing the project or restarting Editor releases history. `command_in_progress`, `undo_unavailable`, `redo_unavailable`, `undo_failed`, `redo_failed`, `rename_failed` distinguish failures. Undo/Redo are not idempotent: each call traverses one entry. After an uncertain transport result, inspect Editor/native values before retrying. Save/persistence is separate from in-memory Undo/Redo.
 
@@ -93,7 +93,11 @@ History is scoped to the open Editor project, not to a scene. Each entry decides
 | `rei_editor_get_operation` | `operationId` | Status, progress, message, timestamps, log count and safe error. |
 | `rei_editor_cancel_operation` | `operationId` | Requests cooperative cancellation. |
 | `rei_editor_get_logs` | `operationId=null`, `minimumLevel="debug"`, `limit=100` | Console snapshot or retained operation logs. Levels: `debug`, `info`, `warning`, `error`; limit `1..500`. |
+| `rei_editor_send_input` | `events` | 1-128 native viewport events, one per engine frame. Types: `move`, `button_down`, `button_up`, `key_down`, `key_up`, `scroll`, `wait`. Fields: `type`, `x=0`, `y=0`, `code=0`. Pointer coordinates are capture-frame pixels from top-left, converted for DPI; scroll uses offsets. Mouse codes: 0 left, 1 right, 2 middle. Keys: GLFW (W=87, Z=90, Y=89, LeftShift=340, LeftControl=341). Key-down/up support chords. Held inputs are released at sequence end, source replacement, shutdown, and timeout cleanup. |
+| `rei_editor_drag_pointer` | `fromX`, `fromY`, `toX`, `toY` | Left-button drag: move, down, eight interpolated moves, up. Same native input service as `send_input`; hit testing and gizmo commit run normally. No direct Transform edits or Save. |
 | `rei_editor_capture_frame` | — | Final engine frame after post-processing, UI and debug overlay. Returns `image/png` and `width`, `height`, `capturedAtUtc`, `engineMode`. No disk file is created. |
+
+Viewport input is Editor-mode only and synthetic: it does not move the OS cursor or exercise Windows focus/capture, Avalonia text fields, or Hierarchy drag/drop. Results contain `status=completed` and `eventCount`, meaning delivery through native Input, not proof of a scene change. Inspect independent native state, Editor state, and history. Automatic release may commit a partial drag after failure. Errors: `invalid_input`, `input_unsupported` (rebuild project DLL), `engine_unavailable`, `input_unavailable`, `input_busy`, `input_timeout`, `input_failed`. Calls are non-idempotent; never retry uncertain input blindly. Cancellation waits for the bounded native call to finish cleanup; native timeout is 10 seconds. Coordinates outside the viewport are rejected before applying any events. Do not interleave calls with user input or lifecycle operations.
 
 ### CPU profiling
 
@@ -102,7 +106,7 @@ History is scoped to the open Editor project, not to a scene. Each entry decides
 | `rei_editor_get_profiling_snapshot` | `source="runtime"`, `view="recent"`, `expectedSessionId=null`, `limit=256` | Copies completed-frame native CPU aggregates. Views: `recent`, `last_capture`; limit `1..256`. Does not enable recording. |
 | `rei_editor_start_profiling_capture` | `frameCount` | Requests `1..3600` frames; returns status and session/capture ids. No scene/asset edits or save. |
 
-Annotations: read tools are read-only. Mutations are idempotent except `create_data_asset`, `set_entity_parent`, `open_scene` and `start_profiling_capture`. `capture_frame` is read-only but non-idempotent. `save_project`, `refresh_assets` and `start_build` are marked destructive. All tools have `OpenWorld=false`.
+Annotations: read tools are read-only. Mutations are idempotent except `create_data_asset`, `set_entity_parent`, `open_scene`, `start_profiling_capture`, `undo`, `redo`, `send_input` and `drag_pointer`. `capture_frame` is read-only but non-idempotent. `save_project`, `refresh_assets`, `start_build`, and `send_input` (can invoke Delete/Ctrl+D shortcuts) are marked destructive. All tools have `OpenWorld=false`.
 
 ## Property writes and persistence
 

@@ -18,21 +18,33 @@ public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<
         GameEntity entity,
         EntityRenameCommandResult result) : IEditorHistoryEntry
     {
-        public bool CanUndo => CanRename(_afterName);
-        public bool CanRedo => CanRename(_beforeName);
+        public bool CanUndo => FindTarget(_afterName) != null;
+        public bool CanRedo => FindTarget(_beforeName) != null;
         private readonly string _beforeName = result.BeforeName;
         private readonly string _afterName = result.AfterName;
 
-        private bool CanRename(string expectedName) => ReferenceEquals(scene, scenes.CurrentScene.Value)
-            && command.CanExecute(entity) && entity.Name == expectedName;
+        private GameEntity? FindTarget(string expectedName)
+        {
+            var currentScene = scenes.CurrentScene.Value;
+            var target = entity;
+            if (!ReferenceEquals(scene, currentScene))
+            {
+                if (currentScene == null || string.IsNullOrEmpty(scene.AssetId) || currentScene.AssetId != scene.AssetId) return null;
+                if (!ReferenceEquals(scene.GetById(entity.Id), entity)) return null;
+                var reloaded = currentScene.GetById(entity.Id);
+                if (reloaded == null) return null;
+                target = reloaded;
+            }
+            return command.CanExecute(target) && target.Name == expectedName ? target : null;
+        }
 
         public Task UndoAsync() => RenameAsync(_afterName, _beforeName);
         public Task RedoAsync() => RenameAsync(_beforeName, _afterName);
 
         private async Task RenameAsync(string expectedName, string name)
         {
-            if (!CanRename(expectedName)) throw new InvalidOperationException("The entity cannot be renamed in the current context.");
-            var applied = await command.ExecuteAsync(new EntityRenameCommandTarget(entity, name));
+            var target = FindTarget(expectedName) ?? throw new InvalidOperationException("The entity cannot be renamed in the current context.");
+            var applied = await command.ExecuteAsync(new EntityRenameCommandTarget(target, name));
             if (applied.AfterName != name) throw new InvalidOperationException("The history rename was not applied.");
         }
     }

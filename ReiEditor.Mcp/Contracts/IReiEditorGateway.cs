@@ -42,5 +42,7 @@ public interface IReiEditorGateway
     Task<ReiOperationInfo> GetOperationAsync(string operationId, CancellationToken cancellationToken);
     Task<ReiOperationInfo> CancelOperationAsync(string operationId, CancellationToken cancellationToken);
     Task<ReiLogList> GetLogsAsync(string? operationId, string minimumLevel, int limit, CancellationToken cancellationToken);
+    Task<ReiViewportInputResult> SendInputAsync(IReadOnlyList<ReiViewportInputEvent> events, CancellationToken cancellationToken);
+    Task<ReiViewportInputResult> DragPointerAsync(double fromX, double fromY, double toX, double toY, CancellationToken cancellationToken);
     Task<ReiFrameCapture> CaptureFrameAsync(CancellationToken cancellationToken);
 }

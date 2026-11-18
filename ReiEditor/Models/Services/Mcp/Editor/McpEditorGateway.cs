@@ -25,6 +25,12 @@ internal sealed class McpEditorGateway : IReiEditorGateway
         return _dispatcher.InvokeAsync(() => GetRequiredSession().StartProfilingCapture(frameCount), cancellationToken);
     }
 
+    public Task<ReiViewportInputResult> SendInputAsync(System.Collections.Generic.IReadOnlyList<ReiViewportInputEvent> events, CancellationToken cancellationToken) =>
+        _dispatcher.InvokeTaskAsync(() => GetRequiredSession().SendInputAsync(events, cancellationToken), cancellationToken);
+
+    public Task<ReiViewportInputResult> DragPointerAsync(double fromX, double fromY, double toX, double toY, CancellationToken cancellationToken) =>
+        _dispatcher.InvokeTaskAsync(() => GetRequiredSession().DragPointerAsync(fromX, fromY, toX, toY, cancellationToken), cancellationToken);
+
     public Task<ReiSelectionState> GetSelectionStateAsync(string source, CancellationToken cancellationToken) =>
         _dispatcher.InvokeAsync(() => GetRequiredSession().GetSelectionState(source), cancellationToken);
 

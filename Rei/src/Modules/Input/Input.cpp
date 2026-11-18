@@ -1,11 +1,13 @@
 ﻿#include "pch.h"
 #include "Api/EditorApi.h"
 #include "Input.h"
+#include <cmath>
 
 namespace rei
 {
     void Input::SetSource(GLFWwindow* window)
     {
+        CancelSimulation();
         _window = window;
         ++_sourceRevision;
 
@@ -189,5 +191,96 @@ namespace rei
     {
         _scrollX = static_cast<f32>(xOffset);
         _scrollY = static_cast<f32>(yOffset);
+    }
+
+    void Input::StartSimulation(const std::shared_ptr<SimulatedInput>& input)
+    {
+        if (_simulation) { input->Completion.set_value(-2); return; }
+        if (!_window || input->Cancelled) { input->Completion.set_value(-1); return; }
+        glfwGetFramebufferSize(_window, &input->Width, &input->Height);
+        if (input->Width <= 0 || input->Height <= 0 || input->Events.empty() || input->Events.size() > 128)
+        { input->Completion.set_value(-3); return; }
+        for (const auto& event : input->Events)
+        {
+            const bool pointer = event.Kind == SimulatedInputEvent::Move;
+            const bool button = event.Kind == SimulatedInputEvent::ButtonDown || event.Kind == SimulatedInputEvent::ButtonUp;
+            const bool key = event.Kind == SimulatedInputEvent::KeyDown || event.Kind == SimulatedInputEvent::KeyUp;
+            if (!std::isfinite(event.X) || !std::isfinite(event.Y) ||
+                (pointer && (event.X < 0 || event.Y < 0 || event.X >= input->Width || event.Y >= input->Height)) ||
+                (button && (event.Code < 0 || event.Code >= GLFW_MOUSE_BUTTON_LAST)) ||
+                (key && (event.Code < 0 || event.Code >= GLFW_KEY_LAST)))
+            { input->Completion.set_value(-3); return; }
+        }
+        _simulation = input;
+    }
+
+    i32 Input::GetModifiers()
+    {
+        i32 mods = 0;
+        if (IsKeyDown(GLFW_KEY_LEFT_SHIFT) || IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) mods |= GLFW_MOD_SHIFT;
+        if (IsKeyDown(GLFW_KEY_LEFT_CONTROL) || IsKeyDown(GLFW_KEY_RIGHT_CONTROL)) mods |= GLFW_MOD_CONTROL;
+        if (IsKeyDown(GLFW_KEY_LEFT_ALT) || IsKeyDown(GLFW_KEY_RIGHT_ALT)) mods |= GLFW_MOD_ALT;
+        if (IsKeyDown(GLFW_KEY_LEFT_SUPER) || IsKeyDown(GLFW_KEY_RIGHT_SUPER)) mods |= GLFW_MOD_SUPER;
+        return mods;
+    }
+
+    void Input::FinishSimulation(const i32 result)
+    {
+        if (!_simulation) return;
+        for (const auto code : _simulation->Buttons) MouseButtonCallback(_window, code, GLFW_RELEASE, GetModifiers());
+        for (const auto code : _simulation->Keys) KeyCallback(_window, code, 0, GLFW_RELEASE, GetModifiers());
+        _simulation->Completion.set_value(result);
+        _simulation.reset();
+    }
+
+    void Input::CancelSimulation() { FinishSimulation(-1); }
+
+    void Input::StepSimulation()
+    {
+        if (!_simulation) return;
+        if (_simulation->Cancelled) { FinishSimulation(-4); return; }
+        if (_simulation->Next == _simulation->Events.size())
+        {
+            // Release unbalanced sequences, then give gizmos one frame to commit.
+            if (!_simulation->Buttons.empty() || !_simulation->Keys.empty())
+            {
+                for (const auto code : _simulation->Buttons) MouseButtonCallback(_window, code, GLFW_RELEASE, GetModifiers());
+                for (const auto code : _simulation->Keys) KeyCallback(_window, code, 0, GLFW_RELEASE, GetModifiers());
+                _simulation->Buttons.clear();
+                _simulation->Keys.clear();
+                return;
+            }
+            FinishSimulation(1);
+            return;
+        }
+        const auto& event = _simulation->Events[_simulation->Next++];
+        switch (event.Kind)
+        {
+            case SimulatedInputEvent::Move:
+            {
+                i32 width = 0, height = 0;
+                glfwGetWindowSize(_window, &width, &height);
+                MousePositionCallback(_window, event.X * width / _simulation->Width, event.Y * height / _simulation->Height);
+                break;
+            }
+            case SimulatedInputEvent::ButtonDown:
+                _simulation->Buttons.insert(event.Code);
+                MouseButtonCallback(_window, event.Code, GLFW_PRESS, GetModifiers());
+                break;
+            case SimulatedInputEvent::ButtonUp:
+                _simulation->Buttons.erase(event.Code);
+                MouseButtonCallback(_window, event.Code, GLFW_RELEASE, GetModifiers());
+                break;
+            case SimulatedInputEvent::KeyDown:
+                _simulation->Keys.insert(event.Code);
+                KeyCallback(_window, event.Code, 0, GLFW_PRESS, GetModifiers());
+                break;
+            case SimulatedInputEvent::KeyUp:
+                _simulation->Keys.erase(event.Code);
+                KeyCallback(_window, event.Code, 0, GLFW_RELEASE, GetModifiers());
+                break;
+            case SimulatedInputEvent::Scroll: ScrollCallback(_window, event.X, event.Y); break;
+            case SimulatedInputEvent::Wait: break;
+        }
     }
 }

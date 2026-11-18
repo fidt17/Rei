@@ -1,6 +1,7 @@
 using System;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Engine.Api;
+using ReiEditor.Models.Services.Engine.Input;
 using ReiEditor.Models.Services.Engine.Profiling;
 using System.Collections.Generic;
 using System.IO;
@@ -60,6 +61,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IEngineProfilingService _profiling;
     private readonly IMcpEntitySelectionService _entitySelection;
     private readonly IEditorThreadDispatcher _dispatcher;
+    private readonly IEngineViewportInputService _viewportInput;
 
     public McpEditorSessionRegistration(
         IMcpEditorSessionAccessor sessionAccessor,
@@ -84,13 +86,15 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IEngineProfilingService profiling,
         IMcpEntitySelectionService entitySelection,
         IEditorThreadDispatcher dispatcher,
-        IEditorCommandService commands)
+        IEditorCommandService commands,
+        IEngineViewportInputService viewportInput)
     {
         _activeProjectService = activeProjectService;
         _sceneManagementService = sceneManagementService;
         _behaviourRegistry = behaviourRegistry;
         _entityRenameCommand = entityRenameCommand;
         _commands = commands;
+        _viewportInput = viewportInput;
         _entityManagementService = entityManagementService;
         _behaviourComponentsService = behaviourComponentsService;
         _serializedPropertiesService = serializedPropertiesService;
@@ -113,6 +117,9 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
 
     public System.Text.Json.JsonElement GetProfilingSnapshot(string source, string view, string? expectedSessionId, int limit) => _profiling.Read(source, view, expectedSessionId, limit);
     public System.Text.Json.JsonElement StartProfilingCapture(int frameCount) => _profiling.StartCapture(frameCount);
+
+    public Task<ReiViewportInputResult> SendInputAsync(IReadOnlyList<ReiViewportInputEvent> events, CancellationToken cancellationToken) => _viewportInput.SendAsync(events, cancellationToken);
+    public Task<ReiViewportInputResult> DragPointerAsync(double fromX, double fromY, double toX, double toY, CancellationToken cancellationToken) => _viewportInput.DragAsync(fromX, fromY, toX, toY, cancellationToken);
 
     public ReiSelectionState GetSelectionState(string source) => _entitySelection.Read(source);
     public ReiSelectionState SetEntitySelection(IReadOnlyList<int> entityIds) => _entitySelection.Set(entityIds);

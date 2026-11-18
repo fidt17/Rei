@@ -26,6 +26,7 @@ public class EngineModule : Module
 		
         builder.RegisterSingleton<EngineLogger>().As<IEngineLogger>();
         builder.RegisterSingleton<EngineInputService>().As<IEngineInputService>();
+        builder.RegisterSingleton<EngineViewportInputService>().As<IEngineViewportInputService>();
         builder.RegisterSingleton<EngineShutdownListener>().As<IEngineShutdownListener>();
     }
 }

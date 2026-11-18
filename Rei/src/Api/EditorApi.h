@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "EditorInputEvent.h"
+#include "ViewportInputApi.h"
 #include "EditorEventsRelay.h"
 #include "SceneSyncRelay.h"
 #include <future>

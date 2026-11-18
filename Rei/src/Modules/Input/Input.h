@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "GLFW/glfw3.h"
+#include "SimulatedInput.h"
 
 namespace rei
 {
@@ -18,6 +19,9 @@ namespace rei
         static void SetSource(GLFWwindow* window);
         static u64 GetSourceRevision() { return _sourceRevision; }
         static void Update();
+        REI_API static void StartSimulation(const std::shared_ptr<SimulatedInput>& input);
+        static void StepSimulation();
+        static void CancelSimulation();
     
         REI_API static bool IsKeyDown(i32 key);
         REI_API static bool IsKeyUp(i32 key);
@@ -39,6 +43,9 @@ namespace rei
         REI_API static f64 GetScrollY();
 
     private:
+        inline static std::shared_ptr<SimulatedInput> _simulation;
+        static void FinishSimulation(i32 result);
+        static i32 GetModifiers();
         inline static GLFWwindow* _window = nullptr;
         inline static u64 _sourceRevision = 0;
 

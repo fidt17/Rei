@@ -37,5 +37,7 @@ internal interface IMcpEditorSession
     ReiOperationInfo GetOperation(string operationId);
     ReiOperationInfo CancelOperation(string operationId);
     ReiLogList GetLogs(string? operationId, string minimumLevel, int limit);
+    Task<ReiViewportInputResult> SendInputAsync(System.Collections.Generic.IReadOnlyList<ReiViewportInputEvent> events, CancellationToken cancellationToken);
+    Task<ReiViewportInputResult> DragPointerAsync(double fromX, double fromY, double toX, double toY, CancellationToken cancellationToken);
     Task<ReiFrameCapture> CaptureFrameAsync(CancellationToken cancellationToken);
 }

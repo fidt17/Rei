@@ -683,6 +683,7 @@
     <ClInclude Include="src\Modules\Editor\TransformationControls\TransformationMode.h" />
     <ClInclude Include="src\Modules\EntityManagement\EntityManager.h" />
     <ClInclude Include="src\Modules\Input\Input.h" />
+    <ClInclude Include="src\Modules\Input\SimulatedInput.h" />
     <ClInclude Include="src\Modules\Physics\Collider.h" />
     <ClInclude Include="src\Modules\Physics\ColliderType.h" />
     <ClInclude Include="src\Modules\Physics\ModelCollider.h" />
@@ -754,6 +755,7 @@
     <ClInclude Include="src\Modules\Window\WindowManager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Api\EditorApi.h" />
+    <ClInclude Include="src\Api\ViewportInputApi.h" />
     <ClInclude Include="src\Common\Primitives.h" />
     <ClInclude Include="src\Engine\Engine.h" />
     <ClInclude Include="src\Common\Logging\Log.h" />
