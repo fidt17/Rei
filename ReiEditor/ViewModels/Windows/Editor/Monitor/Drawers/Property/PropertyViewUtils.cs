@@ -29,16 +29,16 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
-        SerializableObjectInfo.SerializedPropertyData? metadata = null)
+        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitNumeric = null)
     {
-        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range);
+        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commitNumeric);
 
         return property.Type switch
         {
-            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property),
+            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commitNumeric),
             SerializedTypeEnum.String => new StringPropertyViewModel(property),
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property),
-            SerializedTypeEnum.Float => new FloatPropertyViewModel(property),
+            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitNumeric),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry),
             SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
             SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),

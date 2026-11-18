@@ -38,13 +38,17 @@ public sealed class RangePropertyViewModel : BaseViewModel
     }
     public bool HasStatus => StatusText.Length != 0;
 
+    internal bool RecordsConfirmedEdits => _commit != null;
+
     private readonly SerializedProperty _property;
+    private readonly Action<object>? _commit;
     private string _displayText = "";
     private bool _disposed;
 
-    public RangePropertyViewModel(SerializedProperty property, SerializedNumericRange range)
+    public RangePropertyViewModel(SerializedProperty property, SerializedNumericRange range, Action<object>? commit = null)
     {
         _property = property;
+        _commit = commit;
         Range = range;
         PropertyName = new(property);
         _property.ValueChangedEvent += HandleValueChanged;
@@ -85,8 +89,12 @@ public sealed class RangePropertyViewModel : BaseViewModel
     private void Commit(double value)
     {
         // Compare numeric values, not their boxed JSON representation (long/double).
-        if (Convert.ToDouble(_property.Value, CultureInfo.InvariantCulture) != Convert.ToDouble(Range.ToFieldValue(value), CultureInfo.InvariantCulture))
-            _property.Value = Range.ToFieldValue(value);
+        var fieldValue = Range.ToFieldValue(value);
+        if (Convert.ToDouble(_property.Value, CultureInfo.InvariantCulture) != Convert.ToDouble(fieldValue, CultureInfo.InvariantCulture))
+        {
+            if (_commit != null) _commit(fieldValue);
+            else _property.Value = fieldValue;
+        }
         RefreshDisplay();
     }
 

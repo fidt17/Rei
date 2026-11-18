@@ -7,7 +7,7 @@ public class IntegerPropertyViewModel : BasePropertyViewModel<int>
 {
     public IntegerPropertyViewModel() { }
 
-    public IntegerPropertyViewModel(SerializedProperty property) : base(property) { }
+    public IntegerPropertyViewModel(SerializedProperty property, Action<object>? commit = null) : base(property, commit) { }
 
     protected override int ParseValue(object? value)
     {

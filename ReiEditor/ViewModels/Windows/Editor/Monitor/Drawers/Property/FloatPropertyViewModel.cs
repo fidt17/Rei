@@ -7,7 +7,7 @@ public class FloatPropertyViewModel : BasePropertyViewModel<float>
 {
     public FloatPropertyViewModel() { }
 
-    public FloatPropertyViewModel(SerializedProperty property) : base(property) { }
+    public FloatPropertyViewModel(SerializedProperty property, Action<object>? commit = null) : base(property, commit) { }
 
     protected override float ParseValue(object? value)
     {

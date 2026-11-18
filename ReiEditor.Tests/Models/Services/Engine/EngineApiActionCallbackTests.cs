@@ -1,3 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using ReiEditor.Models.Resources;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
@@ -75,6 +81,141 @@ public sealed class EngineApiActionCallbackTests
     private delegate void ReadRectMoveDelegate(int index, [Out] float[] values);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void PrepareRectCanvasesDelegate(float sourceScale, float destinationScale, [Out] int[] canvasIds);
+
+    private sealed class NumericComponentRegistry(params BehaviourAssetInfo[] behaviours) : IBehaviourRegistry
+    {
+        public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours { get; } = behaviours.ToDictionary(behaviour => behaviour.BehaviourId);
+        public bool TryGetById(int id, [NotNullWhen(true)] out BehaviourAssetInfo? behaviour) => Behaviours.TryGetValue(id, out behaviour);
+        public int? GetIdByName(string name) => behaviours.FirstOrDefault(behaviour => behaviour.ObjectName == name)?.BehaviourId;
+        public int AllocateBehaviourId() => throw new NotSupportedException();
+        public Task RefreshBehaviours() => throw new NotSupportedException();
+    }
+
+    [NativeCallbackFact]
+    public Task ConfirmedNumericInspectorEditsUndoAndRedoAcrossComponents()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                const int SPOT_LIGHT = 7311;
+                const int PROBE = 7101;
+                var id = entities.CreateNewEntity("Numeric history")!.EntityId!.Value;
+                entities.AddBehaviour(id, SPOT_LIGHT);
+                entities.AddBehaviour(id, PROBE);
+                var entity = new GameEntity(id, "Numeric history");
+                var scenes = new TestSceneManagementService(entity);
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var registry = new NumericComponentRegistry(
+                    Schema("SpotLight", SPOT_LIGHT, "_range", SerializedTypeEnum.Float, "f32"),
+                    Schema("ProbeA", PROBE, "Number", SerializedTypeEnum.Integer, "i32"));
+                var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
+                var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
+                var syncLogger = new TestLogger<EntitySyncService>();
+                var applier = new EntityStateApplier(syncLogger, registry, components, properties);
+                var importer = new TestAssetImporter();
+                using var sync = new EntitySyncService(importer, entities, runner, components,
+                    new BehaviourSyncService(importer, runner, entities, syncLogger, applier), applier);
+                using var commands = new EditorCommandService();
+                var command = new SetComponentPropertyCommand(commands, scenes, runner);
+                var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
+                RefreshFromNative();
+                using var spot = Drawer(SPOT_LIGHT);
+                using var number = Drawer(PROBE);
+                var spotValue = Assert.IsType<FloatPropertyViewModel>(Assert.Single(spot.Properties));
+                var numberValue = Assert.IsType<IntegerPropertyViewModel>(Assert.Single(number.Properties));
+                var rangeInput = new ReiTextBox { DataContext = spotValue, IsFloat = true };
+                var numberInput = new ReiTextBox { DataContext = numberValue };
+                using var rangeBinding = rangeInput.Bind(ReiTextBox.TextProperty, new Binding("Value") { Mode = BindingMode.TwoWay });
+                using var numberBinding = numberInput.Bind(ReiTextBox.TextProperty, new Binding("Value") { Mode = BindingMode.TwoWay });
+                Dispatcher.UIThread.RunJobs();
+
+                entities.SetData(new SetEntityDataRequest
+                {
+                    SceneId = id,
+                    Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = SPOT_LIGHT, ["_range"] = new { Value = 12f } }]
+                });
+                RefreshFromNative();
+                AssertValues(12f, 7);
+                Assert.False(commands.CanUndo);
+
+                rangeInput.TextInternal = 6.25f.ToString(CultureInfo.CurrentCulture);
+                numberInput.TextInternal = "23";
+                AssertValues(12f, 7);
+                Assert.False(commands.CanUndo);
+                rangeInput.LoseFocus();
+                AssertValues(6.25f, 7);
+                numberInput.LoseFocus();
+                AssertValues(6.25f, 23);
+
+                await commands.UndoAsync();
+                AssertValues(6.25f, 7);
+                await commands.UndoAsync();
+                AssertValues(12f, 7);
+                Assert.False(commands.CanUndo);
+                Assert.True(commands.CanRedo);
+                rangeInput.LoseFocus();
+                Assert.True(commands.CanRedo);
+                Assert.False(commands.CanUndo);
+
+                await commands.RedoAsync();
+                AssertValues(6.25f, 7);
+                await commands.RedoAsync();
+                AssertValues(6.25f, 23);
+                Assert.False(commands.CanRedo);
+
+                Assert.True(components.DeleteComponent(entity, number.BehaviourComponent));
+                Assert.False(commands.CanUndo);
+                Assert.Empty(syncLogger.Entries);
+
+                BehaviourComponentDrawerViewModel Drawer(int componentId) => new(entity, entity.GetBehaviour(componentId)!,
+                    registry, null!, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, command);
+
+                void RefreshFromNative()
+                {
+                    var state = entities.GetEntityData(id)!;
+                    state.Behaviours = state.Behaviours.Where(behaviour => registry.GetIdByName((string)behaviour["REI_TYPE"]) != null).ToList();
+                    applier.Apply(entity, state);
+                    Dispatcher.UIThread.RunJobs();
+                }
+
+                void AssertValues(float range, int integer)
+                {
+                    Assert.Equal(range, spotValue.Value);
+                    Assert.Equal(integer, numberValue.Value);
+                    var native = entities.GetEntityData(id)!.Behaviours;
+                    Assert.Equal(range, Convert.ToSingle(native.Single(behaviour => Equals(behaviour["REI_TYPE"], "SpotLight"))["_range"]));
+                    Assert.Equal(integer, Convert.ToInt32(native.Single(behaviour => Equals(behaviour["REI_TYPE"], "ProbeA"))["Number"]));
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
+
+        static BehaviourAssetInfo Schema(string name, int id, string field, SerializedTypeEnum type, string sourceType) =>
+            new("", name, id, new ObjectFile<string>("", ""), new()
+            {
+                [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, "0", false)
+            }, [], "");
+    }
 
     [NativeCallbackFact]
     public Task RootHierarchyCreationUndoRedoRestoresSameSceneId()

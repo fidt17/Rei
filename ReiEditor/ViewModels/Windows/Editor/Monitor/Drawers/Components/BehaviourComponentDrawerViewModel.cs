@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
@@ -42,6 +43,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly ISelectionService _selectionService;
     private readonly ITextEditorFileOpener _textEditorFileOpener;
     private readonly IRectTransformCustomPropertiesProvider _rectTransformCustomPropertiesProvider;
+    private readonly SetComponentPropertyCommand _setComponentProperty;
 
 #pragma warning disable CS8618
     public BehaviourComponentDrawerViewModel() { }
@@ -62,7 +64,8 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         ITextEditorFileOpener textEditorFileOpener,
-        IRectTransformCustomPropertiesProvider rectTransformCustomPropertiesProvider)
+        IRectTransformCustomPropertiesProvider rectTransformCustomPropertiesProvider,
+        SetComponentPropertyCommand setComponentProperty)
     {
         _entity = entity;
         BehaviourComponent = behaviourComponent;
@@ -79,6 +82,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _selectionService = selectionService;
         _textEditorFileOpener = textEditorFileOpener;
         _rectTransformCustomPropertiesProvider = rectTransformCustomPropertiesProvider;
+        _setComponentProperty = setComponentProperty;
 
         if (!behaviourRegistry.TryGetById(behaviourComponent.Id, out var behaviourInfo))
         {
@@ -133,6 +137,9 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         _textEditorFileOpener.Open(behaviourInfo.Source.FullPath);
     }
     
+    private async void CommitNumericProperty(SerializedProperty property, object value) =>
+        await _setComponentProperty.SetAsync(_entity, BehaviourComponent, property, value);
+
     private void SetupProperties()
     {
         Properties.ClearAndDispose();
@@ -153,7 +160,9 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(BehaviourComponent.Properties.Values.Where(property => schema.ContainsKey(property.Name)), schema)
             .Where(property => !_rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, property.Name));
         foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
-                     PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata)))
+                     PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata,
+                         Name is EngineBehavioursConstants.TRANSFORM or EngineBehavioursConstants.RECT_TRANSFORM
+                             ? null : value => CommitNumericProperty(property, value))))
         {
             Properties.Add(row);
         }
