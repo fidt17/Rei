@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Commands;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -89,6 +90,11 @@ public sealed class SetComponentPropertyCommand(
     private static void Write(SerializedProperty property, object value)
     {
         if (value is SerializedColorValue color) color.Apply(property);
+        else if (value is Vector2 vector && property.Value is Dictionary<string, SerializedProperty> coordinates && Read(property) is Vector2 previous)
+        {
+            if (previous.X != vector.X) coordinates["x"].Value = vector.X;
+            if (previous.Y != vector.Y) coordinates["y"].Value = vector.Y;
+        }
         else GetValueProperty(property).Value = value;
     }
 
@@ -96,6 +102,14 @@ public sealed class SetComponentPropertyCommand(
     {
         SerializedTypeEnum.Custom when property.SourceType == "Color" =>
             value is SerializedColorValue color ? color : SerializedColorValue.Read(value),
+        SerializedTypeEnum.Custom when property.SourceType == "Vector2" => value switch
+        {
+            Vector2 vector when float.IsFinite(vector.X) && float.IsFinite(vector.Y) => vector,
+            Dictionary<string, SerializedProperty> coordinates when coordinates.TryGetValue("x", out var x)
+                && coordinates.TryGetValue("y", out var y) && Normalize(x, x.Value) is float xValue
+                && Normalize(y, y.Value) is float yValue => new Vector2(xValue, yValue),
+            _ => null
+        },
         SerializedTypeEnum.String when value is string text => text,
         SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is int integer => (object)integer,

@@ -77,7 +77,7 @@ public static class PropertyViewUtils
     {
         if (property.SourceType == "Vector2")
         {
-            return new Vector2PropertyViewModel(property);
+            return new Vector2PropertyViewModel(property, commitProperty);
         }
         else if (property.SourceType == "Vector3")
         {
