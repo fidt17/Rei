@@ -173,7 +173,8 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         }
         if (subscriptions.ContainsKey(property)) return;
 
-        if (property.Value is Dictionary<string, SerializedProperty> children)
+        // Color commits all channels before raising one change on the parent property.
+        if (property.SourceType != "Color" && property.Value is Dictionary<string, SerializedProperty> children)
         {
             foreach (var nested in children.Values)
             {

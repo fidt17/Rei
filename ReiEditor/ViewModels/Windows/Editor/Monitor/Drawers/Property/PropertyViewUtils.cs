@@ -41,7 +41,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commitProperty),
             SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -70,7 +70,8 @@ public static class PropertyViewUtils
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
-        IDataAssetTypeRegistry? dataAssetTypeRegistry)
+        IDataAssetTypeRegistry? dataAssetTypeRegistry,
+        Action<object>? commitProperty)
     {
         if (property.SourceType == "Vector2")
         {
@@ -82,7 +83,7 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType == "Color")
         {
-            return new ColorPropertyViewModel(property);
+            return new ColorPropertyViewModel(property, commitProperty);
         }
         else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
         {

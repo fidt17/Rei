@@ -27,7 +27,7 @@ public sealed class SetComponentPropertyCommand(
         private Task Apply(bool allowed, object value)
         {
             if (!allowed) throw new InvalidOperationException("The component property has changed or is unavailable.");
-            target.Property.Value = value;
+            Write(target.Property, value);
             if (!Matches(target.Property, value)) throw new InvalidOperationException("The component property could not be updated.");
             return Task.CompletedTask;
         }
@@ -48,7 +48,7 @@ public sealed class SetComponentPropertyCommand(
         var after = Normalize(target.Property, target.Value);
         if (before == null || after == null || before.Equals(after)) return Task.FromResult<object?>(null);
 
-        target.Property.Value = after;
+        Write(target.Property, after);
         return Task.FromResult(Matches(target.Property, after) ? before : null);
     }
 
@@ -70,8 +70,16 @@ public sealed class SetComponentPropertyCommand(
 
     private static bool Matches(SerializedProperty property, object expected) => Equals(Normalize(property, property.Value), expected);
 
+    private static void Write(SerializedProperty property, object value)
+    {
+        if (value is SerializedColorValue color) color.Apply(property);
+        else property.Value = value;
+    }
+
     private static object? Normalize(SerializedProperty property, object? value) => property.Type switch
     {
+        SerializedTypeEnum.Custom when property.SourceType == "Color" =>
+            value is SerializedColorValue color ? color : SerializedColorValue.Read(value),
         SerializedTypeEnum.String when value is string text => text,
         SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is int integer => (object)integer,

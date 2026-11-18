@@ -18,10 +18,14 @@ using ReiEditor.Models.Services.RectTransform;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Themes.Fluent;
 using Avalonia.VisualTree;
 using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.Models.Services.Render;
 using Avalonia.Data;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
@@ -106,6 +110,9 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task ConfirmedInspectorTextRecordsOneUndoForUiText() => VerifyInspectorFieldAsync(SerializedTypeEnum.String);
 
+    [NativeCallbackFact]
+    public Task ConfirmedInspectorHexRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom);
+
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
@@ -128,6 +135,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
+                    SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
                 (object Initial, object External, object Edited) values = type switch
@@ -135,6 +143,8 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
+                        new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
                 var id = entities.CreateNewEntity("Inspector property history")!.EntityId!.Value;
@@ -156,6 +166,13 @@ public sealed class EngineApiActionCallbackTests
                         Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
                     }]);
                 }
+                if (type == SerializedTypeEnum.Custom)
+                {
+                    var channel = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
+                        null, SerializedTypeEnum.Invalid, null, null, "1", false);
+                    objects.Replace([new SerializableObjectInfo("rei::render", "Color", false, new ObjectFile<string>("", ""),
+                        new() { ["r"] = channel, ["g"] = channel, ["b"] = channel, ["a"] = channel }, "")], []);
+                }
                 var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
                 var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
                 var syncLogger = new TestLogger<EntitySyncService>();
@@ -163,6 +180,8 @@ public sealed class EngineApiActionCallbackTests
                 var importer = new TestAssetImporter();
                 using var sync = new EntitySyncService(importer, entities, runner, components,
                     new BehaviourSyncService(importer, runner, entities, syncLogger, applier), applier);
+                var writes = 0;
+                components.BehaviourPropertyChangedEvent += _ => { if (!applier.IsApplyingEngineState) writes++; };
                 using var commands = new EditorCommandService();
                 var command = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
@@ -179,6 +198,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => new BooleanPropertyView(),
                     SerializedTypeEnum.Enum => new EnumPropertyView(),
                     SerializedTypeEnum.String => new StringPropertyView(),
+                    SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
                 view.DataContext = value;
@@ -190,21 +210,41 @@ public sealed class EngineApiActionCallbackTests
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var text = view.GetVisualDescendants().OfType<ReiTextBox>().SingleOrDefault();
+                    if (view is ColorPropertyView)
+                    {
+                        view.FindControl<Button>("HexButton")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.True(view.Resources.TryGetResource("ColorEditorFlyout", null, out var resource));
+                        text = ((Control)Assert.IsType<Flyout>(resource).Content!).GetLogicalDescendants().OfType<ReiTextBox>()
+                            .Single(input => input.Name == "HexInput");
+                    }
                     AssertValues(values.Initial);
+                    var external = values.External is SerializedColorValue rgba
+                        ? (object)new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } }
+                        : values.External;
                     entities.SetData(new SetEntityDataRequest
                     {
                         SceneId = id,
                         Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = componentId,
-                            [field] = new { Value = values.External } }]
+                            [field] = new { Value = external } }]
                     });
                     RefreshInspector();
                     AssertValues(values.External);
                     Assert.False(commands.CanUndo);
                     Assert.False(commands.CanRedo);
+                    Assert.Equal(0, writes);
 
                     if (text != null)
                     {
-                        text.TextInternal = (string)values.Edited;
+                        if (type == SerializedTypeEnum.Custom)
+                        {
+                            text.TextInternal = "invalid";
+                            text.LoseFocus();
+                            AssertValues(values.External);
+                            Assert.False(commands.CanUndo);
+                            Assert.Equal(0, writes);
+                        }
+                        text.TextInternal = values.Edited is SerializedColorValue color ? ColorHex(color) : (string)values.Edited;
                         Dispatcher.UIThread.RunJobs();
                         AssertValues(values.External);
                         Assert.False(commands.CanUndo);
@@ -225,17 +265,20 @@ public sealed class EngineApiActionCallbackTests
                     Dispatcher.UIThread.RunJobs();
                     AssertValues(values.Edited);
                     Assert.True(commands.CanUndo);
+                    Assert.Equal(1, writes);
 
                     await commands.UndoAsync();
                     AssertValues(values.External);
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
+                    Assert.Equal(2, writes);
                     text?.LoseFocus();
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
                     await commands.RedoAsync();
                     AssertValues(values.Edited);
                     Assert.False(commands.CanRedo);
+                    Assert.Equal(3, writes);
                     Assert.Empty(syncLogger.Entries);
 
                     void AssertValues(object expected)
@@ -261,6 +304,14 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expected, stringValue.Value);
                                 Assert.Equal(expected, native);
                                 break;
+                            case ColorPropertyViewModel color:
+                                var channels = JObject.FromObject(native);
+                                var expectedColor = (SerializedColorValue)expected;
+                                Assert.Equal(ColorHex(expectedColor), text!.Text);
+                                Assert.Equal(expectedColor, new SerializedColorValue(color.R, color.G, color.B, color.A));
+                                Assert.Equal(expectedColor, new SerializedColorValue(channels.Value<float>("r"), channels.Value<float>("g"),
+                                    channels.Value<float>("b"), channels.Value<float>("a")));
+                                break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");
                         }
@@ -272,6 +323,8 @@ public sealed class EngineApiActionCallbackTests
                     Application.Current.Styles.Remove(styles);
                     Application.Current.Styles.Remove(theme);
                 }
+
+                static string ColorHex(SerializedColorValue color) => ColorConversionUtility.ToHex(color.R, color.G, color.B, color.A);
 
                 Dictionary<string, object> ReadNativeComponent() =>
                     entities.GetEntityData(id)!.Behaviours.Single(behaviour => Equals(behaviour["REI_TYPE"], componentName));

@@ -60,7 +60,8 @@
                                Margin="0,0,4,0"
                                VerticalAlignment="Center"
                                Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1"
+                    <textBoxes:ReiTextBox x:Name="HexInput"
+                                          Grid.Column="1"
                                           Text="{Binding Hex, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>

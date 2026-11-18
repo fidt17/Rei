@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using Avalonia.Media;
 using Newtonsoft.Json.Linq;
@@ -10,6 +11,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 {
     private bool _isSyncing;
     private bool _suppressComponentValueChanged;
+    private readonly Action<object>? _commitHex;
 
     private float _r;
     public float R
@@ -101,10 +103,17 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         get => _hex;
         set
         {
-            if (!SetField(ref _hex, value) || _isSyncing) return;
+            if (_isSyncing || value == _hex) return;
+            if (_commitHex == null) SetField(ref _hex, value);
 
             if (!ColorConversionUtility.TryParseHex(value, out var r, out var g, out var b, out var a))
             {
+                return;
+            }
+
+            if (_commitHex != null)
+            {
+                if (ColorConversionUtility.ToHex(r, g, b, a) != _hex) _commitHex(new SerializedColorValue(r, g, b, a));
                 return;
             }
 
@@ -143,7 +152,10 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     public ColorPropertyViewModel() { }
 
-    public ColorPropertyViewModel(SerializedProperty property) : base(property) { }
+    public ColorPropertyViewModel(SerializedProperty property, Action<object>? commitHex = null) : base(property)
+    {
+        _commitHex = commitHex;
+    }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
