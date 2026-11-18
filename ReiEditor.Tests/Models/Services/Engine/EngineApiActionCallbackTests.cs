@@ -98,12 +98,15 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
-    public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable() => VerifyInspectorChoiceAsync(useEnum: false);
+    public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable() => VerifyInspectorFieldAsync(SerializedTypeEnum.Boolean);
 
     [NativeCallbackFact]
-    public Task InspectorEnumSelectionRecordsOneUndoForCameraPerspective() => VerifyInspectorChoiceAsync(useEnum: true);
+    public Task InspectorEnumSelectionRecordsOneUndoForCameraPerspective() => VerifyInspectorFieldAsync(SerializedTypeEnum.Enum);
 
-    private static Task VerifyInspectorChoiceAsync(bool useEnum)
+    [NativeCallbackFact]
+    public Task ConfirmedInspectorTextRecordsOneUndoForUiText() => VerifyInspectorFieldAsync(SerializedTypeEnum.String);
+
+    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -120,23 +123,32 @@ public sealed class EngineApiActionCallbackTests
             {
                 api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
-                var componentId = useEnum ? 7301 : 7310;
-                var componentName = useEnum ? "Camera" : "Button";
-                var field = useEnum ? "_perspective" : "_interactable";
-                var id = entities.CreateNewEntity("Inspector choice history")!.EntityId!.Value;
+                var (componentId, componentName, field, sourceType, defaultValue) = type switch
+                {
+                    SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
+                    SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
+                    SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type))
+                };
+                (object Initial, object External, object Edited) values = type switch
+                {
+                    SerializedTypeEnum.Boolean => (true, false, true),
+                    SerializedTypeEnum.Enum => (0, 1, 0),
+                    SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type))
+                };
+                var id = entities.CreateNewEntity("Inspector property history")!.EntityId!.Value;
                 entities.AddBehaviour(id, componentId);
-                var entity = new GameEntity(id, "Inspector choice history");
+                var entity = new GameEntity(id, "Inspector property history");
                 var scenes = new TestSceneManagementService(entity);
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var type = useEnum ? SerializedTypeEnum.Enum : SerializedTypeEnum.Boolean;
-                var sourceType = useEnum ? "rei::render::CameraPerspectiveEnum" : "bool";
                 var registry = new InspectorComponentRegistry(new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
-                    [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, useEnum ? "0" : "true", false)
+                    [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
                 }, [], ""));
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
-                if (useEnum)
+                if (type == SerializedTypeEnum.Enum)
                 {
                     objects.Replace([], [new SerializableEnum
                     {
@@ -162,7 +174,13 @@ public sealed class EngineApiActionCallbackTests
                 var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
                 Application.Current!.Styles.Add(theme);
                 Application.Current.Styles.Add(styles);
-                Control view = useEnum ? new EnumPropertyView() : new BooleanPropertyView();
+                Control view = type switch
+                {
+                    SerializedTypeEnum.Boolean => new BooleanPropertyView(),
+                    SerializedTypeEnum.Enum => new EnumPropertyView(),
+                    SerializedTypeEnum.String => new StringPropertyView(),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type))
+                };
                 view.DataContext = value;
                 var window = new Window { Content = view, Width = 400, Height = 140 };
                 try
@@ -171,19 +189,28 @@ public sealed class EngineApiActionCallbackTests
                     Dispatcher.UIThread.RunJobs();
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
-                    AssertValues(original: true);
+                    var text = view.GetVisualDescendants().OfType<ReiTextBox>().SingleOrDefault();
+                    AssertValues(values.Initial);
                     entities.SetData(new SetEntityDataRequest
                     {
                         SceneId = id,
                         Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = componentId,
-                            [field] = new { Value = useEnum ? (object)1 : false } }]
+                            [field] = new { Value = values.External } }]
                     });
                     RefreshInspector();
-                    AssertValues(false);
+                    AssertValues(values.External);
                     Assert.False(commands.CanUndo);
                     Assert.False(commands.CanRedo);
 
-                    if (combo != null)
+                    if (text != null)
+                    {
+                        text.TextInternal = (string)values.Edited;
+                        Dispatcher.UIThread.RunJobs();
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        text.LoseFocus();
+                    }
+                    else if (combo != null)
                     {
                         combo.Focus();
                         combo.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Up });
@@ -196,36 +223,46 @@ public sealed class EngineApiActionCallbackTests
                         window.MouseUp(center, MouseButton.Left);
                     }
                     Dispatcher.UIThread.RunJobs();
-                    AssertValues(true);
+                    AssertValues(values.Edited);
                     Assert.True(commands.CanUndo);
 
                     await commands.UndoAsync();
-                    AssertValues(false);
+                    AssertValues(values.External);
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+                    text?.LoseFocus();
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
                     await commands.RedoAsync();
-                    AssertValues(true);
+                    AssertValues(values.Edited);
                     Assert.False(commands.CanRedo);
                     Assert.Empty(syncLogger.Entries);
 
-                    void AssertValues(bool original)
+                    void AssertValues(object expected)
                     {
                         Dispatcher.UIThread.RunJobs();
                         var native = ReadNativeComponent()[field];
-                        if (useEnum)
+                        switch (value)
                         {
-                            var editor = Assert.IsType<EnumPropertyViewModel>(value);
-                            var label = original ? "Perspective" : "Orthographic";
-                            Assert.Equal(label, combo!.SelectedItem);
-                            Assert.Equal(label, editor.SelectedValue);
-                            Assert.Equal(original ? 0 : 1, editor.Value);
-                            Assert.Equal(editor.Value, Convert.ToInt32(native));
-                        }
-                        else
-                        {
-                            Assert.Equal(original, toggle!.IsChecked);
-                            Assert.Equal(original, Assert.IsType<BooleanPropertyViewModel>(value).Value);
-                            Assert.Equal(original, native);
+                            case BooleanPropertyViewModel flag:
+                                Assert.Equal((bool)expected, toggle!.IsChecked);
+                                Assert.Equal(expected, flag.Value);
+                                Assert.Equal(expected, native);
+                                break;
+                            case EnumPropertyViewModel choice:
+                                var label = (int)expected == 0 ? "Perspective" : "Orthographic";
+                                Assert.Equal(label, combo!.SelectedItem);
+                                Assert.Equal(label, choice.SelectedValue);
+                                Assert.Equal(expected, choice.Value);
+                                Assert.Equal(choice.Value, Convert.ToInt32(native));
+                                break;
+                            case StringPropertyViewModel stringValue:
+                                Assert.Equal((string)expected, text!.Text);
+                                Assert.Equal(expected, stringValue.Value);
+                                Assert.Equal(expected, native);
+                                break;
+                            default:
+                                throw new InvalidOperationException("Unexpected Inspector property editor.");
                         }
                     }
                 }

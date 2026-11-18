@@ -36,7 +36,7 @@ public static class PropertyViewUtils
         return property.Type switch
         {
             SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.String => new StringPropertyViewModel(property),
+            SerializedTypeEnum.String => new StringPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commitProperty),

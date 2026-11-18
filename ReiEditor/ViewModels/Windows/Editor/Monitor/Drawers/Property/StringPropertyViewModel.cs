@@ -7,7 +7,7 @@ public class StringPropertyViewModel : BasePropertyViewModel<string>
 {
     public StringPropertyViewModel() { }
 
-    public StringPropertyViewModel(SerializedProperty property) : base(property) { }
+    public StringPropertyViewModel(SerializedProperty property, Action<object>? commit = null) : base(property, commit) { }
 
     protected override string ParseValue(object? value)
     {
