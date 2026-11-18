@@ -1,6 +1,8 @@
+using System;
 using System.Globalization;
 using Avalonia.Media;
 using Newtonsoft.Json.Linq;
+using ReactiveUI;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Render;
 
@@ -10,6 +12,10 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 {
     private bool _isSyncing;
     private bool _suppressComponentValueChanged;
+    private readonly Action<object>? _commitColor;
+    private readonly Action<SerializedColorValue>? _recordColorDrag;
+    private readonly SerializedProperty? _colorProperty;
+    private SerializedColorValue? _colorBeforeDrag;
 
     private float _r;
     public float R
@@ -18,7 +24,9 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _r, clamped) || _isSyncing) return;
+            if (_isSyncing || clamped == _r) return;
+            if (TryCommitChannel(color => color with { R = clamped })) return;
+            SetField(ref _r, clamped);
             ApplyFromRgba();
         }
     }
@@ -30,7 +38,9 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _g, clamped) || _isSyncing) return;
+            if (_isSyncing || clamped == _g) return;
+            if (TryCommitChannel(color => color with { G = clamped })) return;
+            SetField(ref _g, clamped);
             ApplyFromRgba();
         }
     }
@@ -42,7 +52,9 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _b, clamped) || _isSyncing) return;
+            if (_isSyncing || clamped == _b) return;
+            if (TryCommitChannel(color => color with { B = clamped })) return;
+            SetField(ref _b, clamped);
             ApplyFromRgba();
         }
     }
@@ -54,8 +66,19 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _a, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetAlpha(clamped)) return;
             ApplyFromRgba();
+        }
+    }
+
+    public float AlphaInput
+    {
+        get => A;
+        set
+        {
+            var clamped = ColorConversionUtility.Clamp01(value);
+            if (_isSyncing || clamped == _a) return;
+            if (!TryCommitChannel(color => color with { A = clamped })) A = clamped;
         }
     }
 
@@ -66,7 +89,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.ClampHue(value);
-            if (!SetField(ref _h, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetField(ref _h, clamped)) return;
             ApplyFromHsv();
         }
     }
@@ -78,7 +101,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _s, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetField(ref _s, clamped)) return;
             ApplyFromHsv();
         }
     }
@@ -90,7 +113,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _v, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetField(ref _v, clamped)) return;
             ApplyFromHsv();
         }
     }
@@ -101,10 +124,17 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         get => _hex;
         set
         {
-            if (!SetField(ref _hex, value) || _isSyncing) return;
+            if (_isSyncing || value == _hex) return;
+            if (_commitColor == null) SetField(ref _hex, value);
 
             if (!ColorConversionUtility.TryParseHex(value, out var r, out var g, out var b, out var a))
             {
+                return;
+            }
+
+            if (_commitColor != null)
+            {
+                if (ColorConversionUtility.ToHex(r, g, b, a) != _hex) _commitColor(new SerializedColorValue(r, g, b, a));
                 return;
             }
 
@@ -113,7 +143,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
                 SetField(ref _r, r, nameof(R));
                 SetField(ref _g, g, nameof(G));
                 SetField(ref _b, b, nameof(B));
-                SetField(ref _a, a, nameof(A));
+                SetAlpha(a);
                 ColorConversionUtility.RgbToHsv(r, g, b, out var h, out var s, out var v);
                 SetField(ref _h, h, nameof(H));
                 SetField(ref _s, s, nameof(S));
@@ -143,7 +173,25 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     public ColorPropertyViewModel() { }
 
-    public ColorPropertyViewModel(SerializedProperty property) : base(property) { }
+    public ColorPropertyViewModel(SerializedProperty property, Action<object>? commitColor = null,
+        Action<SerializedColorValue>? recordColorDrag = null) : base(property)
+    {
+        _colorProperty = property;
+        _commitColor = commitColor;
+        _recordColorDrag = recordColorDrag;
+    }
+
+    public void BeginColorDrag()
+    {
+        if (_recordColorDrag != null) _colorBeforeDrag = SerializedColorValue.Read(_colorProperty?.Value);
+    }
+
+    public void EndColorDrag()
+    {
+        if (_colorBeforeDrag is not { } before) return;
+        _colorBeforeDrag = null;
+        _recordColorDrag?.Invoke(before);
+    }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
@@ -159,7 +207,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
             SetField(ref _r, ColorConversionUtility.Clamp01(r), nameof(R));
             SetField(ref _g, ColorConversionUtility.Clamp01(g), nameof(G));
             SetField(ref _b, ColorConversionUtility.Clamp01(b), nameof(B));
-            SetField(ref _a, ColorConversionUtility.Clamp01(a), nameof(A));
+            SetAlpha(ColorConversionUtility.Clamp01(a));
 
             ColorConversionUtility.RgbToHsv(_r, _g, _b, out var h, out var s, out var v);
             if (s <= 0.0001f) h = _h;
@@ -171,6 +219,20 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
             SetField(ref _colorHex, ColorConversionUtility.ToHex(_r, _g, _b, 1f), nameof(ColorHex));
             SetField(ref _previewBrush, new SolidColorBrush(ColorConversionUtility.FromRgba01(_r, _g, _b, 1f)), nameof(PreviewBrush));
         });
+    }
+
+    private bool TryCommitChannel(Func<SerializedColorValue, SerializedColorValue> edit)
+    {
+        if (_commitColor == null) return false;
+        if (SerializedColorValue.Read(_colorProperty?.Value) is { } color) _commitColor(edit(color));
+        return true;
+    }
+
+    private bool SetAlpha(float value)
+    {
+        if (!SetField(ref _a, value, nameof(A))) return false;
+        this.RaisePropertyChanged(nameof(AlphaInput));
+        return true;
     }
 
     private void ApplyFromRgba()
@@ -192,6 +254,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
     private void ApplyFromHsv()
     {
         ColorConversionUtility.HsvToRgb(_h, _s, _v, out var r, out var g, out var b);
+        if (_colorBeforeDrag == null && TryCommitChannel(color => color with { R = r, G = g, B = b })) return;
 
         RunSync(() =>
         {
@@ -208,6 +271,16 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     private void PushRgbaToProperty()
     {
+        if (_colorBeforeDrag != null && _colorProperty != null)
+        {
+            var color = new SerializedColorValue(_r, _g, _b, _a);
+            if (SerializedColorValue.Read(_colorProperty.Value) == color) return;
+            _suppressComponentValueChanged = true;
+            try { color.Apply(_colorProperty); }
+            finally { _suppressComponentValueChanged = false; }
+            return;
+        }
+
         var rProperty = GetNestedProperty("r");
         var gProperty = GetNestedProperty("g");
         var bProperty = GetNestedProperty("b");

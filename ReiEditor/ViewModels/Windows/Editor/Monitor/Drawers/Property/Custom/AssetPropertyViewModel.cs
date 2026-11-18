@@ -18,6 +18,7 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
 
     private bool _isInitialized;
     private readonly IProjectAssetFocusService? _projectAssetFocusService;
+    private readonly Action<object>? _commitProperty;
 
 #pragma warning disable CS8618
     public AssetPropertyViewModel() { }
@@ -29,11 +30,13 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
         IProjectAssetFocusService projectAssetFocusService,
-        IDataAssetTypeRegistry? dataAssetTypeRegistry = null) : base(property)
+        IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
+        Action<object>? commitProperty = null) : base(property)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
 
         _projectAssetFocusService = projectAssetFocusService;
+        _commitProperty = commitProperty;
 
         var templateTypeName = property.TemplateTypeName;
         var assetType = assetTypeMapper.GetAssetTypeForTemplateType(templateTypeName);
@@ -92,7 +95,13 @@ public class AssetPropertyViewModel : BaseCustomPropertyViewModel
         var idProperty = GetNestedProperty("Id");
         if (idProperty == null) return;
 
-        idProperty.Value = assetId ?? "";
+        var id = assetId ?? "";
+        if (_commitProperty == null) idProperty.Value = id;
+        else
+        {
+            _commitProperty(id);
+            AssetPicker?.SyncSelectedAsset(GetAssetId());
+        }
     }
 
     private void HandleAssetActivatedEvent()

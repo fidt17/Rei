@@ -7,7 +7,7 @@ public class BooleanPropertyViewModel : BasePropertyViewModel<bool>
 {
     public BooleanPropertyViewModel() { }
 
-    public BooleanPropertyViewModel(SerializedProperty property) : base(property) { }
+    public BooleanPropertyViewModel(SerializedProperty property, Action<object>? commit = null) : base(property, commit) { }
     
     protected override bool ParseValue(object? value)
     {

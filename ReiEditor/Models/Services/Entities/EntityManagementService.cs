@@ -70,7 +70,7 @@ public class EntityManagementService : IEntityManagementService
             }
 
             if (_sceneManagement.CurrentScene.Value == null) throw new Exception("Current scene is missing");
-            
+
             var s = _sceneManagement.CurrentScene.Value;
             s.NormalizeTransformOrders();
             var maxRootOrder = s.Entities

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using ReiEditor.Models.Services.Components;
 
 namespace ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Vector;
@@ -11,17 +12,7 @@ public class Vector2PropertyViewModel : BaseCustomPropertyViewModel
     public float X
     {
         get => _x;
-        set
-        {
-            if (SetField(ref _x, value))
-            {
-                var property = GetNestedProperty("x");
-                if (property != null)
-                {
-                    property.Value = value;
-                }
-            }
-        }
+        set => SetCoordinate("x", value, new Vector2(value, ReadCoordinate("y")));
     }
 
     #endregion
@@ -32,28 +23,32 @@ public class Vector2PropertyViewModel : BaseCustomPropertyViewModel
     public float Y
     {
         get => _y;
-        set
-        {
-            if (SetField(ref _y, value))
-            {
-                var property = GetNestedProperty("y");
-                if (property != null)
-                {
-                    property.Value = value;
-                }
-            }
-        }
+        set => SetCoordinate("y", value, new Vector2(ReadCoordinate("x"), value));
     }
 
     #endregion
 
+    private readonly Action<object>? _commitProperty;
+
     public Vector2PropertyViewModel() { }
 
-    public Vector2PropertyViewModel(SerializedProperty property) : base(property) { }
+    public Vector2PropertyViewModel(SerializedProperty property, Action<object>? commitProperty = null) : base(property)
+    {
+        _commitProperty = commitProperty;
+    }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
     {
-        SetField(ref _x, Convert.ToSingle(GetNestedProperty("x")?.Value ?? 0), nameof(X));
-        SetField(ref _y, Convert.ToSingle(GetNestedProperty("y")?.Value ?? 0), nameof(Y));
+        SetField(ref _x, ReadCoordinate("x"), nameof(X));
+        SetField(ref _y, ReadCoordinate("y"), nameof(Y));
+    }
+
+    private float ReadCoordinate(string name) => Convert.ToSingle(GetNestedProperty(name)?.Value ?? 0);
+
+    private void SetCoordinate(string name, float value, Vector2 vector)
+    {
+        if (!float.IsFinite(value) || GetNestedProperty(name) is not { } coordinate || Convert.ToSingle(coordinate.Value) == value) return;
+        if (_commitProperty == null) coordinate.Value = value;
+        else _commitProperty(vector);
     }
 }

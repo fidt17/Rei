@@ -17,7 +17,7 @@ public class CreateSceneEntityCommand : ICommand, IDisposable
 	{
 		_sceneManagement = sceneManagement;
 		_entityManagementService = entityManagementService;
-		
+
 		_sceneManagement.CurrentScene.Subscribe(HandleCurrentSceneChanged);
 	}
 

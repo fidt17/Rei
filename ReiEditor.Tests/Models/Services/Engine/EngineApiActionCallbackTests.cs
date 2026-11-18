@@ -1,6 +1,13 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using ReiEditor.Models.Resources;
+using ReiEditor.Models.Services.Assets.Scripting.Serialization;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -10,6 +17,19 @@ using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.RectTransform;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.LogicalTree;
+using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Themes.Fluent;
+using Avalonia.VisualTree;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.Models.Services.Render;
+using ReiEditor.Views.Controls.ColorPicker;
+using ReiEditor.Views.Controls.Assets;
 using Avalonia.Data;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
@@ -28,6 +48,8 @@ using ReiEditor.Models.Services.Engine.Api;
 using ReiEditor.Models.Services.Engine.Playmode;
 using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
+using Vector2 = System.Numerics.Vector2;
+using Vector3 = System.Numerics.Vector3;
 
 namespace ReiEditor.Tests.Models.Services.Engine;
 
@@ -75,6 +97,695 @@ public sealed class EngineApiActionCallbackTests
     private delegate void ReadRectMoveDelegate(int index, [Out] float[] values);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void PrepareRectCanvasesDelegate(float sourceScale, float destinationScale, [Out] int[] canvasIds);
+
+    private sealed class InspectorComponentRegistry(params BehaviourAssetInfo[] behaviours) : IBehaviourRegistry
+    {
+        public IReadOnlyDictionary<int, BehaviourAssetInfo> Behaviours { get; } = behaviours.ToDictionary(behaviour => behaviour.BehaviourId);
+        public bool TryGetById(int id, [NotNullWhen(true)] out BehaviourAssetInfo? behaviour) => Behaviours.TryGetValue(id, out behaviour);
+        public int? GetIdByName(string name) => behaviours.FirstOrDefault(behaviour => behaviour.ObjectName == name)?.BehaviourId;
+        public int AllocateBehaviourId() => throw new NotSupportedException();
+        public Task RefreshBehaviours() => throw new NotSupportedException();
+    }
+
+    [NativeCallbackFact]
+    public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable() => VerifyInspectorFieldAsync(SerializedTypeEnum.Boolean);
+
+    [NativeCallbackFact]
+    public Task InspectorEnumSelectionRecordsOneUndoForCameraPerspective() => VerifyInspectorFieldAsync(SerializedTypeEnum.Enum);
+
+    [NativeCallbackFact]
+    public Task ConfirmedInspectorTextRecordsOneUndoForUiText() => VerifyInspectorFieldAsync(SerializedTypeEnum.String);
+
+    [NativeCallbackFact]
+    public Task ConfirmedInspectorHexRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom);
+
+    [NativeCallbackFact]
+    public Task InspectorColorWheelDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, ColorDrag.Wheel);
+
+    [NativeCallbackFact]
+    public Task InspectorAlphaSliderDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, ColorDrag.Alpha);
+
+    [NativeCallbackTheory]
+    [InlineData("R")]
+    [InlineData("G")]
+    [InlineData("B")]
+    [InlineData("A")]
+    [InlineData("H")]
+    [InlineData("S")]
+    [InlineData("V")]
+    public Task InspectorManualColorChannelRecordsOneUndoForSpotLightColor(string channel) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: channel);
+
+    [NativeCallbackFact]
+    public Task InspectorColorEditsUndoAndRedoInOrder() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: "H", mixedColorHistory: true);
+
+    [NativeCallbackFact]
+    public Task InspectorTextureSelectionRecordsOneUndoForImage() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, assetEdit: AssetEdit.Select);
+
+    [NativeCallbackFact]
+    public Task InspectorTextureClearRecordsOneUndoForImage() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, assetEdit: AssetEdit.Clear);
+
+    [NativeCallbackFact]
+    public Task InspectorTargetImageSelectionRecordsOneUndoForButton() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, selectComponent: true);
+
+    [NativeCallbackTheory]
+    [InlineData("X")]
+    [InlineData("Y")]
+    public Task InspectorReferenceResolutionEditsPreserveOtherCoordinate(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis);
+
+    [NativeCallbackTheory]
+    [InlineData("X")]
+    [InlineData("Y")]
+    [InlineData("Z")]
+    public Task InspectorProbeOffsetEditsPreserveOtherCoordinates(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis, editVector3: true);
+
+    private enum ColorDrag { None, Wheel, Alpha }
+    private enum AssetEdit { None, Select, Clear }
+
+    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
+        string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
+        string? vectorAxis = null, bool editVector3 = false)
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                const string TEXTURE_ID = "REI_WHITE_FALLBACK_TEXTURE";
+                const string TEXTURE_PATH = "C:/Assets/white.png";
+                const int IMAGE_COMPONENT_ID = 7304;
+                var isAssetField = assetEdit != AssetEdit.None;
+                var startEngine = isAssetField || selectComponent ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
+                api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                var (componentId, componentName, field, sourceType, defaultValue) = type switch
+                {
+                    SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
+                    SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
+                    SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
+                    SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
+                    SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
+                    SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
+                    SerializedTypeEnum.Custom when vectorAxis != null => (7302, "Canvas", "_referenceResolution", "Vector2", null),
+                    SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type))
+                };
+                (object Initial, object External, object Edited) values = type switch
+                {
+                    SerializedTypeEnum.Boolean => (true, false, true),
+                    SerializedTypeEnum.Enum => (0, 1, 0),
+                    SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
+                    SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
+                    SerializedTypeEnum.Custom when selectComponent => (0, 0, 0),
+                    SerializedTypeEnum.Custom when editVector3 => (new Vector3(1, 2, 3), new Vector3(4.25f, 5.5f, 6.75f),
+                        vectorAxis switch
+                        {
+                            "X" => new Vector3(1200.75f, 5.5f, 6.75f),
+                            "Y" => new Vector3(4.25f, 1200.75f, 6.75f),
+                            "Z" => new Vector3(4.25f, 5.5f, 1200.75f),
+                            _ => throw new ArgumentOutOfRangeException(nameof(vectorAxis))
+                        }),
+                    SerializedTypeEnum.Custom when vectorAxis != null => (new Vector2(1920, 1080), new Vector2(1600.25f, 900.5f),
+                        vectorAxis == "X" ? new Vector2(1200.75f, 900.5f) : new Vector2(1600.25f, 1200.75f)),
+                    SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
+                        new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type))
+                };
+                var id = entities.CreateNewEntity("Inspector property history")!.EntityId!.Value;
+                entities.AddBehaviour(id, componentId);
+                var entity = new GameEntity(id, "Inspector property history");
+                var scenes = new TestSceneManagementService(entity);
+                GameEntity? image = null;
+                if (selectComponent)
+                {
+                    var imageId = entities.CreateNewEntity("Target Image")!.EntityId!.Value;
+                    entities.AddBehaviour(imageId, IMAGE_COMPONENT_ID);
+                    image = new GameEntity(imageId, "Target Image");
+                    image.AddBehaviour(new BehaviourComponent(IMAGE_COMPONENT_ID));
+                    scenes.Scene.Value!.AddEntity(image);
+                    values.Initial = values.External = id;
+                    values.Edited = imageId;
+                }
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
+                {
+                    [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
+                }, [], "");
+                var registry = selectComponent
+                    ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Image", IMAGE_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
+                    : new InspectorComponentRegistry(component);
+                var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                if (type == SerializedTypeEnum.Enum)
+                {
+                    objects.Replace([], [new SerializableEnum
+                    {
+                        EnumName = "CameraPerspectiveEnum",
+                        Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
+                    }]);
+                }
+                if (isAssetField)
+                {
+                    var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.String, "std::string",
+                        null, SerializedTypeEnum.Invalid, null, null, "", false);
+                    objects.Replace([new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", ""),
+                        new() { ["Id"] = idProperty }, "")], []);
+                }
+                else if (selectComponent)
+                {
+                    var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Integer, "i32",
+                        null, SerializedTypeEnum.Invalid, null, null, "0", false);
+                    objects.Replace([new SerializableObjectInfo("rei::ecs", "ComponentRef", true, new ObjectFile<string>("", ""),
+                        new() { ["SceneEntityId"] = idProperty }, "")], []);
+                }
+                else if (vectorAxis != null)
+                {
+                    var coordinate = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
+                        null, SerializedTypeEnum.Invalid, null, null, "0", false);
+                    var coordinates = new Dictionary<string, SerializableObjectInfo.SerializedPropertyData> { ["x"] = coordinate, ["y"] = coordinate };
+                    if (editVector3) coordinates.Add("z", coordinate);
+                    objects.Replace([new SerializableObjectInfo("rei::math", sourceType, false, new ObjectFile<string>("", ""), coordinates, "")], []);
+                }
+                else if (type == SerializedTypeEnum.Custom)
+                {
+                    var channel = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
+                        null, SerializedTypeEnum.Invalid, null, null, "1", false);
+                    objects.Replace([new SerializableObjectInfo("rei::render", "Color", false, new ObjectFile<string>("", ""),
+                        new() { ["r"] = channel, ["g"] = channel, ["b"] = channel, ["a"] = channel }, "")], []);
+                }
+                var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
+                var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
+                var syncLogger = new TestLogger<EntitySyncService>();
+                var applier = new EntityStateApplier(syncLogger, registry, components, properties);
+                var importer = new TestAssetImporter();
+                using var sync = new EntitySyncService(importer, entities, runner, components,
+                    new BehaviourSyncService(importer, runner, entities, syncLogger, applier), applier);
+                var writes = 0;
+                components.BehaviourPropertyChangedEvent += _ => { if (!applier.IsApplyingEngineState) writes++; };
+                using var commands = new EditorCommandService();
+                var command = new SetComponentPropertyCommand(commands, scenes, runner);
+                var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
+                var assets = new AssetRegistry(new TestLogger<AssetRegistry>());
+                if (isAssetField) assets.RegisterNewAssets([new AssetInfo(new AssetMeta(TEXTURE_ID), TEXTURE_PATH)]);
+                RefreshInspector();
+                using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(componentId)!,
+                    registry, null!, components, objects, null!, new AssetSearchService(null!), assets, new AssetTypeMapper(), null!, scenes, null!, null!, custom, command);
+                var value = Assert.Single(drawer.Properties);
+                var theme = new FluentTheme();
+                var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
+                Application.Current!.Styles.Add(theme);
+                Application.Current.Styles.Add(styles);
+                Control view = type switch
+                {
+                    SerializedTypeEnum.Boolean => new BooleanPropertyView(),
+                    SerializedTypeEnum.Enum => new EnumPropertyView(),
+                    SerializedTypeEnum.String => new StringPropertyView(),
+                    SerializedTypeEnum.Custom when isAssetField => new AssetPropertyView(),
+                    SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
+                    SerializedTypeEnum.Custom when editVector3 => new Vector3PropertyView(),
+                    SerializedTypeEnum.Custom when vectorAxis != null => new Vector2PropertyView(),
+                    SerializedTypeEnum.Custom => new ColorPropertyView(),
+                    _ => throw new ArgumentOutOfRangeException(nameof(type))
+                };
+                view.DataContext = value;
+                var window = new Window { Content = view, Width = 400, Height = type == SerializedTypeEnum.Custom ? 480 : 140 };
+                try
+                {
+                    window.Show();
+                    Dispatcher.UIThread.RunJobs();
+                    var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
+                    var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
+                    var textInputs = view.GetVisualDescendants().OfType<ReiTextBox>().ToArray();
+                    var text = vectorAxis switch
+                    {
+                        "X" => textInputs[0],
+                        "Y" => textInputs[1],
+                        "Z" => textInputs[2],
+                        _ => textInputs.SingleOrDefault()
+                    };
+                    ReiTextBox? channelInput = null;
+                    ColorWheelPicker? wheel = null;
+                    Slider? alpha = null;
+                    if (view is ColorPropertyView)
+                    {
+                        view.FindControl<Button>("HexButton")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.True(view.Resources.TryGetResource("ColorEditorFlyout", null, out var resource));
+                        var content = (Control)Assert.IsType<Flyout>(resource).Content!;
+                        text = content.GetLogicalDescendants().OfType<ReiTextBox>().Single(input => input.Name == "HexInput");
+                        if (colorChannel != null)
+                            channelInput = content.GetLogicalDescendants().OfType<ReiTextBox>().Single(input => input.Name == colorChannel + "Input");
+                        wheel = content.GetLogicalDescendants().OfType<ColorWheelPicker>().Single();
+                        alpha = content.GetLogicalDescendants().OfType<Slider>().Single(slider => slider.Name == "AlphaSlider");
+                    }
+                    AssertValues(values.Initial);
+                    if (colorDrag == ColorDrag.Wheel)
+                    {
+                        // With zero saturation, turning the hue ring leaves the stored RGBA unchanged.
+                        var picker = wheel!;
+                        var surface = TopLevel.GetTopLevel(picker)!;
+                        var center = new Point(picker.Bounds.Width / 2, picker.Bounds.Height / 2);
+                        var start = picker.TranslatePoint(center + new Vector(95, 0), surface)!.Value;
+                        var end = picker.TranslatePoint(center + new Vector(0, 95), surface)!.Value;
+                        surface.MouseDown(start, MouseButton.Left);
+                        surface.MouseMove(end);
+                        surface.MouseUp(end, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.True(picker.Hue > 0);
+                        AssertValues(values.Initial);
+                        Assert.False(commands.CanUndo);
+                    }
+                    var external = values.External switch
+                    {
+                        SerializedColorValue rgba => new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } },
+                        string idValue when isAssetField => new { Id = new { Value = idValue } },
+                        int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
+                        Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
+                        Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
+                        _ => values.External
+                    };
+                    entities.SetData(new SetEntityDataRequest
+                    {
+                        SceneId = id,
+                        Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = componentId,
+                            [field] = new { Value = external } }]
+                    });
+                    RefreshInspector();
+                    AssertValues(values.External);
+                    Assert.False(commands.CanUndo);
+                    Assert.False(commands.CanRedo);
+                    Assert.Equal(0, writes);
+
+                    if (colorDrag != ColorDrag.None)
+                    {
+                        values.Edited = DragColor(colorDrag, (SerializedColorValue)values.External);
+                    }
+                    else if (channelInput != null)
+                    {
+                        var editedChannel = colorChannel == "H" ? 120f : 0.75f;
+                        var before = (SerializedColorValue)values.External;
+                        values.Edited = colorChannel switch
+                        {
+                            "R" => before with { R = editedChannel },
+                            "G" => before with { G = editedChannel },
+                            "B" => before with { B = editedChannel },
+                            "A" => before with { A = editedChannel },
+                            "H" or "S" or "V" => EditHsvChannel(before, colorChannel, editedChannel),
+                            _ => throw new ArgumentOutOfRangeException(nameof(colorChannel))
+                        };
+                        channelInput.TextInternal = editedChannel.ToString(CultureInfo.CurrentCulture);
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        Assert.Equal(0, writes);
+                        channelInput.LoseFocus();
+                    }
+                    else if (assetEdit == AssetEdit.Clear)
+                    {
+                        var pickerView = view.GetVisualDescendants().OfType<AssetPickerView>().Single();
+                        pickerView.FindControl<Border>("LabelBorder")!.RaiseEvent(new KeyEventArgs
+                        {
+                            RoutedEvent = InputElement.KeyDownEvent,
+                            Key = Key.Delete
+                        });
+                    }
+                    else if (value is AssetPropertyViewModel asset)
+                    {
+                        var picker = asset.AssetPicker!;
+                        picker.RefreshSearchResultsForAll();
+                        Assert.Single(picker.SearchResults).SelectCommand.Execute(null);
+                    }
+                    else if (value is ComponentRefPropertyViewModel reference)
+                    {
+                        var picker = reference.Picker!;
+                        picker.RefreshSearchResultsForAll();
+                        var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
+                        Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
+                    }
+                    else if (vectorAxis != null)
+                    {
+                        text!.TextInternal = 1200.75f.ToString(CultureInfo.CurrentCulture);
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        Assert.Equal(0, writes);
+                        text.LoseFocus();
+                    }
+                    else if (text != null)
+                    {
+                        if (type == SerializedTypeEnum.Custom)
+                        {
+                            text.TextInternal = "invalid";
+                            text.LoseFocus();
+                            AssertValues(values.External);
+                            Assert.False(commands.CanUndo);
+                            Assert.Equal(0, writes);
+                        }
+                        text.TextInternal = values.Edited is SerializedColorValue color ? ColorHex(color) : (string)values.Edited;
+                        Dispatcher.UIThread.RunJobs();
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        text.LoseFocus();
+                    }
+                    else if (combo != null)
+                    {
+                        combo.Focus();
+                        combo.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Up });
+                    }
+                    else
+                    {
+                        var checkbox = Assert.IsType<CheckBox>(toggle);
+                        var center = checkbox.TranslatePoint(new Point(checkbox.Bounds.Width / 2, checkbox.Bounds.Height / 2), window)!.Value;
+                        window.MouseDown(center, MouseButton.Left);
+                        window.MouseUp(center, MouseButton.Left);
+                    }
+                    Dispatcher.UIThread.RunJobs();
+                    AssertValues(values.Edited);
+                    Assert.True(commands.CanUndo);
+                    var editWrites = colorDrag != ColorDrag.None ? writes : 1;
+                    Assert.Equal(editWrites, writes);
+
+                    if (mixedColorHistory)
+                    {
+                        var afterInput = (SerializedColorValue)values.Edited;
+                        var afterWheel = DragColor(ColorDrag.Wheel, afterInput);
+                        AssertValues(afterWheel);
+                        var afterAlpha = DragColor(ColorDrag.Alpha, afterWheel);
+                        AssertValues(afterAlpha);
+                        var writesBeforeReplay = writes;
+
+                        foreach (var expected in new[] { afterWheel, afterInput, (SerializedColorValue)values.External })
+                        {
+                            Assert.True(commands.CanUndo);
+                            await commands.UndoAsync();
+                            AssertValues(expected);
+                        }
+                        Assert.False(commands.CanUndo);
+
+                        foreach (var expected in new[] { afterInput, afterWheel, afterAlpha })
+                        {
+                            Assert.True(commands.CanRedo);
+                            await commands.RedoAsync();
+                            AssertValues(expected);
+                        }
+                        Assert.False(commands.CanRedo);
+                        Assert.Equal(writesBeforeReplay + 6, writes);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    await commands.UndoAsync();
+                    AssertValues(values.External);
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+                    Assert.Equal(editWrites + 1, writes);
+                    (channelInput ?? text)?.LoseFocus();
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+                    await commands.RedoAsync();
+                    AssertValues(values.Edited);
+                    Assert.False(commands.CanRedo);
+                    Assert.Equal(editWrites + 2, writes);
+                    Assert.Empty(syncLogger.Entries);
+
+                    SerializedColorValue DragColor(ColorDrag drag, SerializedColorValue before)
+                    {
+                        Control target = drag == ColorDrag.Wheel ? wheel! : alpha!.GetVisualDescendants().OfType<Thumb>().Single();
+                        var surface = TopLevel.GetTopLevel(target)!;
+                        var start = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), surface)!.Value;
+                        var step = drag == ColorDrag.Wheel ? new Vector(12, 10) : new Vector(30, 0);
+                        surface.MouseMove(start);
+                        Dispatcher.UIThread.RunJobs();
+                        surface.MouseDown(start, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        surface.MouseMove(start + step);
+                        Dispatcher.UIThread.RunJobs();
+                        var preview = ReadNativeColor(ReadNativeComponent()[field]);
+                        Assert.True(before != preview,
+                            $"Drag did not update native color. Thumb/target bounds: {target.Bounds}, start: {start}, slider: {alpha?.Value}.");
+                        AssertValues(preview);
+                        Assert.False(commands.CanUndo);
+
+                        var end = start + step * 2;
+                        surface.MouseMove(end);
+                        Dispatcher.UIThread.RunJobs();
+                        var final = ReadNativeColor(ReadNativeComponent()[field]);
+                        Assert.NotEqual(preview, final);
+                        if (drag == ColorDrag.Wheel) Assert.Equal(before.A, final.A);
+                        else
+                        {
+                            Assert.NotEqual(before.A, final.A);
+                            Assert.Equal(before with { A = final.A }, final);
+                        }
+                        Assert.False(commands.CanUndo);
+                        var previewWrites = writes;
+                        surface.MouseUp(end, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.Equal(previewWrites, writes);
+                        return final;
+                    }
+
+                    void AssertValues(object expected)
+                    {
+                        Dispatcher.UIThread.RunJobs();
+                        var native = ReadNativeComponent()[field];
+                        switch (value)
+                        {
+                            case BooleanPropertyViewModel flag:
+                                Assert.Equal((bool)expected, toggle!.IsChecked);
+                                Assert.Equal(expected, flag.Value);
+                                Assert.Equal(expected, native);
+                                break;
+                            case EnumPropertyViewModel choice:
+                                var label = (int)expected == 0 ? "Perspective" : "Orthographic";
+                                Assert.Equal(label, combo!.SelectedItem);
+                                Assert.Equal(label, choice.SelectedValue);
+                                Assert.Equal(expected, choice.Value);
+                                Assert.Equal(choice.Value, Convert.ToInt32(native));
+                                break;
+                            case StringPropertyViewModel stringValue:
+                                Assert.Equal((string)expected, text!.Text);
+                                Assert.Equal(expected, stringValue.Value);
+                                Assert.Equal(expected, native);
+                                break;
+                            case ColorPropertyViewModel color:
+                                var expectedColor = (SerializedColorValue)expected;
+                                Assert.Equal(ColorHex(expectedColor), text!.Text);
+                                Assert.Equal(expectedColor, new SerializedColorValue(color.R, color.G, color.B, color.A));
+                                Assert.Equal(expectedColor, ReadNativeColor(native));
+                                break;
+                            case AssetPropertyViewModel asset:
+                                var picker = asset.AssetPicker!;
+                                Assert.Equal((string)expected, picker.SelectedAssetId);
+                                var expectedLabel = Equals(expected, TEXTURE_ID) ? "white" : "empty";
+                                Assert.Equal(expectedLabel, view.GetVisualDescendants().OfType<Label>().Single().Content);
+                                Assert.Equal((string)expected, JObject.FromObject(native).Value<string>("Id"));
+                                break;
+                            case ComponentRefPropertyViewModel reference:
+                                var expectedId = (int)expected;
+                                var expectedEntity = expectedId == entity.Id ? entity : image!;
+                                Assert.Equal(expectedId.ToString(CultureInfo.InvariantCulture), reference.Picker!.SelectedAssetId);
+                                Assert.Equal($"{expectedEntity.Name} ({expectedId})", view.GetVisualDescendants().OfType<Label>().Single().Content);
+                                Assert.Equal(expectedId, JObject.FromObject(native).Value<int>("SceneEntityId"));
+                                break;
+                            case Vector2PropertyViewModel vector:
+                                var expectedVector = (Vector2)expected;
+                                Assert.Equal(expectedVector, new Vector2(vector.X, vector.Y));
+                                Assert.Equal(expectedVector.X, float.Parse(textInputs[0].Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedVector.Y, float.Parse(textInputs[1].Text, CultureInfo.CurrentCulture));
+                                var nativeVector = JObject.FromObject(native);
+                                Assert.Equal(expectedVector, new Vector2(nativeVector.Value<float>("x"), nativeVector.Value<float>("y")));
+                                break;
+                            case Vector3PropertyViewModel vector:
+                                var expectedVector3 = (Vector3)expected;
+                                Assert.Equal(expectedVector3, new Vector3(vector.X, vector.Y, vector.Z));
+                                Assert.Equal(expectedVector3.X, float.Parse(textInputs[0].Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedVector3.Y, float.Parse(textInputs[1].Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedVector3.Z, float.Parse(textInputs[2].Text, CultureInfo.CurrentCulture));
+                                var nativeVector3 = JObject.FromObject(native);
+                                Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
+                                break;
+                            default:
+                                throw new InvalidOperationException("Unexpected Inspector property editor.");
+                        }
+                    }
+                }
+                finally
+                {
+                    window.Close();
+                    Application.Current.Styles.Remove(styles);
+                    Application.Current.Styles.Remove(theme);
+                }
+
+                static string ColorHex(SerializedColorValue color) => ColorConversionUtility.ToHex(color.R, color.G, color.B, color.A);
+
+                static SerializedColorValue EditHsvChannel(SerializedColorValue before, string channel, float value)
+                {
+                    ColorConversionUtility.RgbToHsv(before.R, before.G, before.B, out var h, out var s, out var v);
+                    ColorConversionUtility.HsvToRgb(channel == "H" ? value : h, channel == "S" ? value : s,
+                        channel == "V" ? value : v, out var r, out var g, out var b);
+                    return before with { R = r, G = g, B = b };
+                }
+
+                static SerializedColorValue ReadNativeColor(object value)
+                {
+                    var channels = JObject.FromObject(value);
+                    return new(channels.Value<float>("r"), channels.Value<float>("g"), channels.Value<float>("b"), channels.Value<float>("a"));
+                }
+
+                Dictionary<string, object> ReadNativeComponent() =>
+                    entities.GetEntityData(id)!.Behaviours.Single(behaviour => Equals(behaviour["REI_TYPE"], componentName));
+
+                void RefreshInspector()
+                {
+                    var behaviours = entities.GetEntityData(id)!.Behaviours
+                        .Where(behaviour => Equals(behaviour["REI_TYPE"], componentName) || selectComponent && Equals(behaviour["REI_TYPE"], "Image"))
+                        .ToList();
+                    applier.Apply(entity, new GetEntityDataResponse { Name = entity.Name, Behaviours = behaviours });
+                    Dispatcher.UIThread.RunJobs();
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
+    public Task ConfirmedNumericInspectorEditsUndoAndRedoAcrossComponents()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                const int SPOT_LIGHT = 7311;
+                const int PROBE = 7101;
+                var id = entities.CreateNewEntity("Numeric history")!.EntityId!.Value;
+                entities.AddBehaviour(id, SPOT_LIGHT);
+                entities.AddBehaviour(id, PROBE);
+                var entity = new GameEntity(id, "Numeric history");
+                var scenes = new TestSceneManagementService(entity);
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var registry = new InspectorComponentRegistry(
+                    Schema("SpotLight", SPOT_LIGHT, "_range", SerializedTypeEnum.Float, "f32"),
+                    Schema("ProbeA", PROBE, "Number", SerializedTypeEnum.Integer, "i32"));
+                var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
+                var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
+                var syncLogger = new TestLogger<EntitySyncService>();
+                var applier = new EntityStateApplier(syncLogger, registry, components, properties);
+                var importer = new TestAssetImporter();
+                using var sync = new EntitySyncService(importer, entities, runner, components,
+                    new BehaviourSyncService(importer, runner, entities, syncLogger, applier), applier);
+                using var commands = new EditorCommandService();
+                var command = new SetComponentPropertyCommand(commands, scenes, runner);
+                var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
+                RefreshFromNative();
+                using var spot = Drawer(SPOT_LIGHT);
+                using var number = Drawer(PROBE);
+                var spotValue = Assert.IsType<FloatPropertyViewModel>(Assert.Single(spot.Properties));
+                var numberValue = Assert.IsType<IntegerPropertyViewModel>(Assert.Single(number.Properties));
+                var rangeInput = new ReiTextBox { DataContext = spotValue, IsFloat = true };
+                var numberInput = new ReiTextBox { DataContext = numberValue };
+                using var rangeBinding = rangeInput.Bind(ReiTextBox.TextProperty, new Binding("Value") { Mode = BindingMode.TwoWay });
+                using var numberBinding = numberInput.Bind(ReiTextBox.TextProperty, new Binding("Value") { Mode = BindingMode.TwoWay });
+                Dispatcher.UIThread.RunJobs();
+
+                entities.SetData(new SetEntityDataRequest
+                {
+                    SceneId = id,
+                    Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = SPOT_LIGHT, ["_range"] = new { Value = 12f } }]
+                });
+                RefreshFromNative();
+                AssertValues(12f, 7);
+                Assert.False(commands.CanUndo);
+
+                rangeInput.TextInternal = 6.25f.ToString(CultureInfo.CurrentCulture);
+                numberInput.TextInternal = "23";
+                AssertValues(12f, 7);
+                Assert.False(commands.CanUndo);
+                rangeInput.LoseFocus();
+                AssertValues(6.25f, 7);
+                numberInput.LoseFocus();
+                AssertValues(6.25f, 23);
+
+                await commands.UndoAsync();
+                AssertValues(6.25f, 7);
+                await commands.UndoAsync();
+                AssertValues(12f, 7);
+                Assert.False(commands.CanUndo);
+                Assert.True(commands.CanRedo);
+                rangeInput.LoseFocus();
+                Assert.True(commands.CanRedo);
+                Assert.False(commands.CanUndo);
+
+                await commands.RedoAsync();
+                AssertValues(6.25f, 7);
+                await commands.RedoAsync();
+                AssertValues(6.25f, 23);
+                Assert.False(commands.CanRedo);
+
+                Assert.True(components.DeleteComponent(entity, number.BehaviourComponent));
+                Assert.False(commands.CanUndo);
+                Assert.Empty(syncLogger.Entries);
+
+                BehaviourComponentDrawerViewModel Drawer(int componentId) => new(entity, entity.GetBehaviour(componentId)!,
+                    registry, null!, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, command);
+
+                void RefreshFromNative()
+                {
+                    var state = entities.GetEntityData(id)!;
+                    state.Behaviours = state.Behaviours.Where(behaviour => registry.GetIdByName((string)behaviour["REI_TYPE"]) != null).ToList();
+                    applier.Apply(entity, state);
+                    Dispatcher.UIThread.RunJobs();
+                }
+
+                void AssertValues(float range, int integer)
+                {
+                    Assert.Equal(range, spotValue.Value);
+                    Assert.Equal(integer, numberValue.Value);
+                    var native = entities.GetEntityData(id)!.Behaviours;
+                    Assert.Equal(range, Convert.ToSingle(native.Single(behaviour => Equals(behaviour["REI_TYPE"], "SpotLight"))["_range"]));
+                    Assert.Equal(integer, Convert.ToInt32(native.Single(behaviour => Equals(behaviour["REI_TYPE"], "ProbeA"))["Number"]));
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
+
+        static BehaviourAssetInfo Schema(string name, int id, string field, SerializedTypeEnum type, string sourceType) =>
+            new("", name, id, new ObjectFile<string>("", ""), new()
+            {
+                [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, "0", false)
+            }, [], "");
+    }
 
     [NativeCallbackFact]
     public Task NativeCallbacksRecordTransformActionsInCommonHistoryAndReplayWithoutRecordingAgain()

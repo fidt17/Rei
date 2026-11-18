@@ -15,6 +15,8 @@
             <StackPanel Spacing="8"
                         Width="330">
                 <picker:ColorWheelPicker
+                    DragStarted="ColorDragStarted"
+                    DragCompleted="ColorDragCompleted"
                     Width="220"
                     Height="220"
                     HorizontalAlignment="Center"
@@ -28,7 +30,7 @@
                         Margin="0,0,6,0"
                         VerticalAlignment="Center"
                         Foreground="{StaticResource Gray_4}" />
-                    <Slider
+                    <Slider x:Name="AlphaSlider"
                         Grid.Column="1"
                         Minimum="0"
                         Maximum="1"
@@ -37,22 +39,22 @@
 
                 <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*">
                     <TextBlock Text="R" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding R, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="RInput" Grid.Column="1" Margin="0,0,6,0" Text="{Binding R, Mode=TwoWay}" />
                     <TextBlock Grid.Column="2" Margin="0,0,4,0" Text="G" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding G, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="GInput" Grid.Column="3" Margin="0,0,6,0" Text="{Binding G, Mode=TwoWay}" />
                     <TextBlock Grid.Column="4" Margin="0,0,4,0" Text="B" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="5" Margin="0,0,6,0" Text="{Binding B, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="BInput" Grid.Column="5" Margin="0,0,6,0" Text="{Binding B, Mode=TwoWay}" />
                     <TextBlock Grid.Column="6" Margin="0,0,4,0" Text="A" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="7" Text="{Binding A, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="AInput" Grid.Column="7" Text="{Binding AlphaInput, Mode=TwoWay}" />
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">
                     <TextBlock Text="H" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding H, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="HInput" Grid.Column="1" Margin="0,0,6,0" Text="{Binding H, Mode=TwoWay}" />
                     <TextBlock Grid.Column="2" Margin="0,0,4,0" Text="S" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding S, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="SInput" Grid.Column="3" Margin="0,0,6,0" Text="{Binding S, Mode=TwoWay}" />
                     <TextBlock Grid.Column="4" Margin="0,0,4,0" Text="V" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="5" Text="{Binding V, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="VInput" Grid.Column="5" Text="{Binding V, Mode=TwoWay}" />
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*">
@@ -60,7 +62,8 @@
                                Margin="0,0,4,0"
                                VerticalAlignment="Center"
                                Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1"
+                    <textBoxes:ReiTextBox x:Name="HexInput"
+                                          Grid.Column="1"
                                           Text="{Binding Hex, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>

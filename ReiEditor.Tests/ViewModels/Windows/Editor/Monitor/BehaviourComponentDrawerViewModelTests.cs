@@ -1,10 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Models.Services.Commands;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.ViewModels.Common;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
@@ -177,8 +180,12 @@ public sealed class BehaviourComponentDrawerViewModelTests
         TestRectTransformPropertiesProvider custom,
         TestBehaviourComponentsService requirements,
         TestEntityManagementService entities)
-        => new(
-            new GameEntity(1, "Entity"),
+    {
+        var entity = new GameEntity(1, "Entity");
+        entity.AddBehaviour(component);
+        var scenes = new TestSceneManagementService(entity);
+        return new(
+            entity,
             component,
             new TestBehaviourRegistry(info),
             entities,
@@ -192,7 +199,9 @@ public sealed class BehaviourComponentDrawerViewModelTests
             null!,
             null!,
             null!,
-            custom);
+            custom,
+            new SetComponentPropertyCommand(new EditorCommandService(), scenes, new TestEngineRunner()));
+    }
 
     private static BehaviourAssetInfo TestBehaviourInfo(bool includeMissing)
     {
