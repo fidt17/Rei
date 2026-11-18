@@ -131,7 +131,8 @@ public class HierarchyWindowViewModel : BaseViewModel
             const int DELAY = 300;
             await Task.Delay(DELAY);
 
-            node.StartRenameCommand.Execute(null);
+            if (ReferenceEquals(_nodeCollectionController.FindByEntityId(entity.Id), node))
+                node.StartRenameCommand.Execute(null);
         });
     }
 

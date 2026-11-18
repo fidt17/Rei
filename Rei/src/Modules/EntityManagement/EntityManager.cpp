@@ -35,12 +35,18 @@ namespace rei
         return ecs::NULL_ENTITY;
     }
 
-    ecs::Entity EntityManager::CreateNewEntity(const std::string& name)
+    ecs::Entity EntityManager::CreateNewEntity(const std::string& name, const i32 requestedId)
     {
+        if (requestedId < 0) return ecs::NULL_ENTITY;
         ECS_WORLD(GetInternalWorld())
-
+        if (requestedId > 0)
+        {
+            GetInternalWorld()->RefreshAll();
+            if (!IS_DEAD(GetBySceneId(requestedId))) return ecs::NULL_ENTITY;
+        }
+        const auto sceneId = requestedId == 0 ? GenerateNewSceneEntityId() : requestedId;
         const auto e = NEW_ENTITY();
-        GET(e, EntityInfo) = {.Id = GenerateNewSceneEntityId(), .Name = name};
+        GET(e, EntityInfo) = {.Id = sceneId, .Name = name};
 
         auto& transform = AddBehaviour<Transform>(e);
         transform.Reset();

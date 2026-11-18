@@ -77,6 +77,97 @@ public sealed class EngineApiActionCallbackTests
     private delegate void PrepareRectCanvasesDelegate(float sourceScale, float destinationScale, [Out] int[] canvasIds);
 
     [NativeCallbackFact]
+    public Task RootHierarchyCreationUndoRedoRestoresSameSceneId()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                var scene = new ReiEditor.Models.Services.Scenes.Scene("Create history");
+                var scenes = new TestSceneManagementService();
+                scenes.Scene.Value = scene;
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = true;
+                var registry = new TestBehaviourRegistry();
+                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, null!, entities, registry, runner,
+                    new TestEntitySyncService
+                    {
+                        OnUpdate = entity =>
+                        {
+                            var state = entities.GetEntityData(entity.Id)!;
+                            Assert.Equal(entity.Name, state.Name);
+                            if (!entity.Behaviours.Any()) entity.AddBehaviour(new BehaviourComponent(InspectorTransformFixture.TRANSFORM_ID));
+                        }
+                    },
+                    new RectTransformLayoutService(registry, scenes, null!));
+                using var commands = new EditorCommandService();
+                using var hierarchy = new HierarchyDragFixture(scene.Hierarchy, management, scenes, commands, runner);
+
+                hierarchy.ViewModel.RootContextMenu.Options.Single(option => option.Text == "New Entity").Command.Execute(null);
+
+                var created = Assert.Single(scene.Entities);
+                var id = created.Id;
+                var siblingId = id + 10;
+                Assert.True(id > 0);
+                AssertPresent();
+                Assert.False(commands.CanRedo);
+                for (var i = 0; i < 2; i++)
+                {
+                    await commands.UndoAsync();
+                    Assert.Empty(scene.Entities);
+                    Assert.Empty(hierarchy.ViewModel.Nodes);
+                    using (var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                    {
+                        while (entities.GetSceneEntities()!.Entities.Any(entity => entity.Id == id))
+                            await Task.Delay(10, timeout.Token);
+                    }
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+
+                    // Advance the next automatic ID so this test requires Redo to request the old ID.
+                    if (i == 0)
+                        Assert.Equal(siblingId, entities.CreateNewEntity("Native sibling", requestedId: siblingId)?.EntityId);
+                    await commands.RedoAsync();
+                    AssertPresent();
+                    Assert.Equal("Native sibling", entities.GetEntityData(siblingId)?.Name);
+                    Assert.True(commands.CanUndo);
+                    Assert.False(commands.CanRedo);
+                }
+
+                void AssertPresent()
+                {
+                    Assert.Same(created, scene.GetById(id));
+                    Assert.Same(created, Assert.Single(hierarchy.ViewModel.Nodes).Node.Content);
+                    var native = entities.GetEntityData(id)!;
+                    Assert.Equal("New Entity", native.Name);
+                    var transform = Assert.Single(native.Behaviours);
+                    Assert.Equal("Transform", transform["REI_TYPE"].ToString());
+                    Assert.Equal(0, Convert.ToInt32(transform["_parent"]));
+                    Assert.Null(entities.CreateNewEntity("Occupied ID", requestedId: id)?.EntityId);
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
     public Task NativeCallbacksRecordTransformActionsInCommonHistoryAndReplayWithoutRecordingAgain()
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);

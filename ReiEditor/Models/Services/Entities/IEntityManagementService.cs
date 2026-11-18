@@ -5,7 +5,7 @@ namespace ReiEditor.Models.Services.Entities;
 
 public interface IEntityManagementService
 {
-    Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null);
+    Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, GameEntity? existingEntity = null);
 
     void RenameEntity(GameEntity e, string name);
     void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex);

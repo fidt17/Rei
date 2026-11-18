@@ -109,7 +109,7 @@ public sealed class EntityManagementServiceTests
         public List<(int EntityId, int BehaviourId)> DeletedBehaviours { get; } = new();
         public List<int> DestroyedIds { get; } = new();
 
-        public InstantiateEntityResponse? CreateNewEntity(string name)
+        public InstantiateEntityResponse? CreateNewEntity(string name, int requestedId = 0)
         {
             if (CreateException != null) throw CreateException;
             return CreateResponse;

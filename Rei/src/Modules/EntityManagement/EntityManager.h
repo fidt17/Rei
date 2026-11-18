@@ -182,7 +182,7 @@ namespace rei
 
         REI_API ecs::Entity GetBySceneId(i32 id) const;
 
-        REI_API ecs::Entity CreateNewEntity(const std::string& name);
+        REI_API ecs::Entity CreateNewEntity(const std::string& name, i32 requestedId = 0);
         REI_API void Create(const SceneEntity& sceneEntity) const;
 
         REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 behaviourId) const;

@@ -44,7 +44,7 @@ public sealed class EntitySyncServiceTests
         public void ReparentEntities(IReadOnlyList<int> entityIds, int parentEntityId, int insertionIndex, bool recordHierarchyChange = false, IReadOnlyList<RectTransformLayoutData>? rectLayouts = null) => throw new NotSupportedException();
         public void SetData(SetEntityDataRequest request) => SetDataCalls++;
         public GetSceneEntitiesResponse? GetSceneEntities() => throw new NotSupportedException();
-        public InstantiateEntityResponse? CreateNewEntity(string name) => throw new NotSupportedException();
+        public InstantiateEntityResponse? CreateNewEntity(string name, int requestedId = 0) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId) => throw new NotSupportedException();
         public void Rename(int sceneEntityId, string newName) => throw new NotSupportedException();
         public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null) => throw new NotSupportedException();

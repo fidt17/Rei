@@ -1,5 +1,8 @@
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.EditorApp.Selection;
+using ReiEditor.Models.Services.Commands;
+using ReiEditor.Models.Services.Engine.Playmode;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
@@ -32,12 +35,13 @@ internal sealed class HierarchyDragFixture : IDisposable
 
     public HierarchyWindowViewModel ViewModel { get; }
 
-    public HierarchyDragFixture(Hierarchy<GameEntity> hierarchy, IEntityManagementService management)
+    public HierarchyDragFixture(Hierarchy<GameEntity> hierarchy, IEntityManagementService management,
+        ISceneManagementService? scenes = null, IEditorCommandService? commands = null, IEngineRunner? engine = null)
     {
         var selection = new SelectionService(new TestEntityApi());
         ViewModel = new(hierarchy, selection,
             new Factory<HierarchyNodeViewModel>(args => new((HierarchyNode<GameEntity>)args[0], new Rename(), new Actions(), selection)),
-            new Factory<CreateSceneEntityCommand>(_ => new(new TestSceneManagementService(), management)),
+            new Factory<CreateSceneEntityCommand>(_ => new(scenes ?? new TestSceneManagementService(), management, commands ?? new EditorCommandService(), engine ?? new TestEngineRunner())),
             new Actions(), management);
     }
 
