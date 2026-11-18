@@ -46,6 +46,8 @@ public sealed class EditorCommandServiceTests
         public bool InCall { get; private set; }
         public List<(bool Undo, ulong Id)> Calls { get; } = [];
 
+        public object? InstanceToken { get; set; } = new object();
+
         public bool TryInvoke(Action<IEngineApi> action)
         {
             if (!Available) return false;
@@ -543,6 +545,24 @@ public sealed class EditorCommandServiceTests
         await c.Commands.UndoAsync();
         Assert.Equal("Before", c.Entity.Name);
         Assert.False(c.Commands.CanUndo);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task NativeEntryRejectsReplayAfterEngineReplacement(bool undo)
+    {
+        var engine = new NativeEngine();
+        var entry = new NativeEditorHistoryEntry(7, engine);
+        Assert.True(entry.CanUndo);
+        Assert.True(entry.CanRedo);
+
+        engine.InstanceToken = new object();
+
+        Assert.False(entry.CanUndo);
+        Assert.False(entry.CanRedo);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => undo ? entry.UndoAsync() : entry.RedoAsync());
+        Assert.Empty(engine.Calls);
     }
 
     [Fact]

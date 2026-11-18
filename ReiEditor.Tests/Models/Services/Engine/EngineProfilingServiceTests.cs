@@ -32,6 +32,8 @@ public sealed class EngineProfilingServiceTests
     {
         public bool Available { get; set; } = true;
         public int Calls { get; private set; }
+        public object? InstanceToken { get; } = new object();
+
         public bool TryInvoke(Action<IEngineApi> action)
         {
             if (!Available) return false;

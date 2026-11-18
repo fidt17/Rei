@@ -29,10 +29,14 @@ public sealed class NativeEditorHistoryRecorder : IDisposable
         _api.ActionRecorded -= Record;
     }
 
-    private void Record(ulong id) => Dispatcher.UIThread.Post(() =>
+    private void Record(ulong id)
     {
-        if (_disposed) return;
-        try { _commands.RecordApplied(new NativeEditorHistoryEntry(id, _native)); }
-        catch (Exception error) { _logger.LogException(error); }
-    });
+        var entry = new NativeEditorHistoryEntry(id, _native);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed || !entry.CanUndo) return;
+            try { _commands.RecordApplied(entry); }
+            catch (Exception error) { _logger.LogException(error); }
+        });
+    }
 }

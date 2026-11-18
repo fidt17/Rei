@@ -7,9 +7,10 @@ namespace ReiEditor.Models.Services.Commands;
 
 public sealed class NativeEditorHistoryEntry(ulong actionId, IEngineNativeAccess engine) : IEditorHistoryEntry
 {
-    // Native action validity is checked by the engine when replayed.
-    public bool CanUndo => true;
-    public bool CanRedo => true;
+    private readonly object? _instanceToken = engine.InstanceToken;
+
+    public bool CanUndo => _instanceToken != null && ReferenceEquals(_instanceToken, engine.InstanceToken);
+    public bool CanRedo => CanUndo;
 
     public Task UndoAsync() => ReplayAsync(undo: true);
     public Task RedoAsync() => ReplayAsync(undo: false);
@@ -17,7 +18,12 @@ public sealed class NativeEditorHistoryEntry(ulong actionId, IEngineNativeAccess
     private Task ReplayAsync(bool undo) => Task.Run(() =>
     {
         var applied = false;
-        if (!engine.TryInvoke(api => applied = undo ? api.UndoEditorAction(actionId) : api.RedoEditorAction(actionId)))
+        if (!engine.TryInvoke(api =>
+        {
+            // Check under the same lock that protects the native call from engine replacement.
+            if (!CanUndo) throw new InvalidOperationException("The native action belongs to a previous engine instance.");
+            applied = undo ? api.UndoEditorAction(actionId) : api.RedoEditorAction(actionId);
+        }))
             throw new InvalidOperationException("The native engine is unavailable.");
         if (!applied) throw new InvalidOperationException($"Could not {(undo ? "undo" : "redo")} native Editor action {actionId}.");
     });
