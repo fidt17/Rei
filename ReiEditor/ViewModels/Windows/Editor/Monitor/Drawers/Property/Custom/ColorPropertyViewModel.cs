@@ -89,7 +89,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.ClampHue(value);
-            if (!SetField(ref _h, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetField(ref _h, clamped)) return;
             ApplyFromHsv();
         }
     }
@@ -101,7 +101,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _s, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetField(ref _s, clamped)) return;
             ApplyFromHsv();
         }
     }
@@ -113,7 +113,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (!SetField(ref _v, clamped) || _isSyncing) return;
+            if (_isSyncing || !SetField(ref _v, clamped)) return;
             ApplyFromHsv();
         }
     }
@@ -254,6 +254,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
     private void ApplyFromHsv()
     {
         ColorConversionUtility.HsvToRgb(_h, _s, _v, out var r, out var g, out var b);
+        if (_colorBeforeDrag == null && TryCommitChannel(color => color with { R = r, G = g, B = b })) return;
 
         RunSync(() =>
         {

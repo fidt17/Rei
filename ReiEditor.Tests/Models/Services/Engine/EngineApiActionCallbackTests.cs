@@ -126,6 +126,9 @@ public sealed class EngineApiActionCallbackTests
     [InlineData("G")]
     [InlineData("B")]
     [InlineData("A")]
+    [InlineData("H")]
+    [InlineData("S")]
+    [InlineData("V")]
     public Task InspectorManualColorChannelRecordsOneUndoForSpotLightColor(string channel) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: channel);
 
     private enum ColorDrag { None, Wheel, Alpha }
@@ -313,17 +316,18 @@ public sealed class EngineApiActionCallbackTests
                     }
                     else if (channelInput != null)
                     {
-                        const float EDITED_CHANNEL = 0.75f;
+                        var editedChannel = colorChannel == "H" ? 120f : 0.75f;
                         var before = (SerializedColorValue)values.External;
                         values.Edited = colorChannel switch
                         {
-                            "R" => before with { R = EDITED_CHANNEL },
-                            "G" => before with { G = EDITED_CHANNEL },
-                            "B" => before with { B = EDITED_CHANNEL },
-                            "A" => before with { A = EDITED_CHANNEL },
+                            "R" => before with { R = editedChannel },
+                            "G" => before with { G = editedChannel },
+                            "B" => before with { B = editedChannel },
+                            "A" => before with { A = editedChannel },
+                            "H" or "S" or "V" => EditHsvChannel(before, colorChannel, editedChannel),
                             _ => throw new ArgumentOutOfRangeException(nameof(colorChannel))
                         };
-                        channelInput.TextInternal = EDITED_CHANNEL.ToString(System.Globalization.CultureInfo.CurrentCulture);
+                        channelInput.TextInternal = editedChannel.ToString(CultureInfo.CurrentCulture);
                         AssertValues(values.External);
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
@@ -419,6 +423,14 @@ public sealed class EngineApiActionCallbackTests
                 }
 
                 static string ColorHex(SerializedColorValue color) => ColorConversionUtility.ToHex(color.R, color.G, color.B, color.A);
+
+                static SerializedColorValue EditHsvChannel(SerializedColorValue before, string channel, float value)
+                {
+                    ColorConversionUtility.RgbToHsv(before.R, before.G, before.B, out var h, out var s, out var v);
+                    ColorConversionUtility.HsvToRgb(channel == "H" ? value : h, channel == "S" ? value : s,
+                        channel == "V" ? value : v, out var r, out var g, out var b);
+                    return before with { R = r, G = g, B = b };
+                }
 
                 static SerializedColorValue ReadNativeColor(object value)
                 {

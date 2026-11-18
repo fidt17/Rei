@@ -50,11 +50,11 @@
 
                 <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">
                     <TextBlock Text="H" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding H, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="HInput" Grid.Column="1" Margin="0,0,6,0" Text="{Binding H, Mode=TwoWay}" />
                     <TextBlock Grid.Column="2" Margin="0,0,4,0" Text="S" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding S, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="SInput" Grid.Column="3" Margin="0,0,6,0" Text="{Binding S, Mode=TwoWay}" />
                     <TextBlock Grid.Column="4" Margin="0,0,4,0" Text="V" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="5" Text="{Binding V, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="VInput" Grid.Column="5" Text="{Binding V, Mode=TwoWay}" />
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*">
