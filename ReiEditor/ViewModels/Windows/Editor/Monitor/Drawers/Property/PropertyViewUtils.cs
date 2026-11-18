@@ -29,7 +29,8 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
-        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitProperty = null)
+        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitProperty = null,
+        Action<SerializedColorValue>? recordColorDrag = null)
     {
         if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commitProperty);
 
@@ -41,7 +42,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitProperty),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commitProperty),
             SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty, recordColorDrag),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -71,7 +72,8 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry,
-        Action<object>? commitProperty)
+        Action<object>? commitProperty,
+        Action<SerializedColorValue>? recordColorDrag)
     {
         if (property.SourceType == "Vector2")
         {
@@ -83,7 +85,7 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType == "Color")
         {
-            return new ColorPropertyViewModel(property, commitProperty);
+            return new ColorPropertyViewModel(property, commitProperty, recordColorDrag);
         }
         else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
         {

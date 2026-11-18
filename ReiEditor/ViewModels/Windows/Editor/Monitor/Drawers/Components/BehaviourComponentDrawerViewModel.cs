@@ -159,10 +159,12 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
 
         var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(BehaviourComponent.Properties.Values.Where(property => schema.ContainsKey(property.Name)), schema)
             .Where(property => !_rectTransformCustomPropertiesProvider.OwnsSerializedProperty(BehaviourComponent, property.Name));
+        var recordEdits = Name is not (EngineBehavioursConstants.TRANSFORM or EngineBehavioursConstants.RECT_TRANSFORM);
         foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
                      PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata,
-                         Name is EngineBehavioursConstants.TRANSFORM or EngineBehavioursConstants.RECT_TRANSFORM
-                             ? null : value => CommitProperty(property, value))))
+                         recordEdits ? value => CommitProperty(property, value) : null,
+                         recordEdits && property.SourceType == "Color"
+                             ? before => _setComponentProperty.RecordAppliedColor(_entity, BehaviourComponent, property, before) : null)))
         {
             Properties.Add(row);
         }

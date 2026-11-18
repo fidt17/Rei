@@ -12,6 +12,9 @@ namespace ReiEditor.Views.Controls.ColorPicker;
 
 public class ColorWheelPicker : Control
 {
+    public event EventHandler? DragStarted;
+    public event EventHandler? DragCompleted;
+
     public static readonly StyledProperty<double> HueProperty =
         AvaloniaProperty.Register<ColorWheelPicker, double>(nameof(Hue), 0d, defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
 
@@ -72,26 +75,18 @@ public class ColorWheelPicker : Control
     {
         base.OnPointerPressed(e);
 
-        if (!TryGetLayout(out var layout)) return;
+        if (_dragMode != DragMode.None || !TryGetLayout(out var layout)) return;
 
         var point = e.GetPosition(this);
+        if (layout.SvRect.Contains(point)) _dragMode = DragMode.SaturationValue;
+        else if (IsPointOnHueRing(point, layout)) _dragMode = DragMode.Hue;
+        else return;
 
-        if (layout.SvRect.Contains(point))
-        {
-            _dragMode = DragMode.SaturationValue;
-            UpdateSvFromPoint(point, layout);
-            e.Pointer.Capture(this);
-            e.Handled = true;
-            return;
-        }
-
-        if (IsPointOnHueRing(point, layout))
-        {
-            _dragMode = DragMode.Hue;
-            UpdateHueFromPoint(point, layout);
-            e.Pointer.Capture(this);
-            e.Handled = true;
-        }
+        e.Pointer.Capture(this);
+        DragStarted?.Invoke(this, EventArgs.Empty);
+        if (_dragMode == DragMode.Hue) UpdateHueFromPoint(point, layout);
+        else UpdateSvFromPoint(point, layout);
+        e.Handled = true;
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -118,14 +113,30 @@ public class ColorWheelPicker : Control
     {
         base.OnPointerReleased(e);
 
-        _dragMode = DragMode.None;
+        if (_dragMode == DragMode.None) return;
+        CompleteDrag();
         e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        CompleteDrag();
+    }
+
+    private void CompleteDrag()
+    {
+        if (_dragMode == DragMode.None) return;
+        _dragMode = DragMode.None;
+        DragCompleted?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
 
+        CompleteDrag();
         _svBitmap?.Dispose();
         _svBitmap = null;
         _svBitmapWidth = 0;

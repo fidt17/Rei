@@ -26,6 +26,7 @@ using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 using ReiEditor.Models.Services.Render;
+using ReiEditor.Views.Controls.ColorPicker;
 using Avalonia.Data;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
@@ -113,7 +114,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task ConfirmedInspectorHexRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom);
 
-    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type)
+    [NativeCallbackFact]
+    public Task InspectorColorWheelDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, dragColor: true);
+
+    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, bool dragColor = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -210,15 +214,33 @@ public sealed class EngineApiActionCallbackTests
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var text = view.GetVisualDescendants().OfType<ReiTextBox>().SingleOrDefault();
+                    ColorWheelPicker? wheel = null;
                     if (view is ColorPropertyView)
                     {
                         view.FindControl<Button>("HexButton")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                         Dispatcher.UIThread.RunJobs();
                         Assert.True(view.Resources.TryGetResource("ColorEditorFlyout", null, out var resource));
-                        text = ((Control)Assert.IsType<Flyout>(resource).Content!).GetLogicalDescendants().OfType<ReiTextBox>()
-                            .Single(input => input.Name == "HexInput");
+                        var content = (Control)Assert.IsType<Flyout>(resource).Content!;
+                        text = content.GetLogicalDescendants().OfType<ReiTextBox>().Single(input => input.Name == "HexInput");
+                        wheel = content.GetLogicalDescendants().OfType<ColorWheelPicker>().Single();
                     }
                     AssertValues(values.Initial);
+                    if (dragColor)
+                    {
+                        // With zero saturation, turning the hue ring leaves the stored RGBA unchanged.
+                        var picker = wheel!;
+                        var surface = TopLevel.GetTopLevel(picker)!;
+                        var center = new Point(picker.Bounds.Width / 2, picker.Bounds.Height / 2);
+                        var start = picker.TranslatePoint(center + new Vector(95, 0), surface)!.Value;
+                        var end = picker.TranslatePoint(center + new Vector(0, 95), surface)!.Value;
+                        surface.MouseDown(start, MouseButton.Left);
+                        surface.MouseMove(end);
+                        surface.MouseUp(end, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.True(picker.Hue > 0);
+                        AssertValues(values.Initial);
+                        Assert.False(commands.CanUndo);
+                    }
                     var external = values.External is SerializedColorValue rgba
                         ? (object)new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } }
                         : values.External;
@@ -234,7 +256,33 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Equal(0, writes);
 
-                    if (text != null)
+                    if (dragColor)
+                    {
+                        var picker = wheel!;
+                        var surface = TopLevel.GetTopLevel(picker)!;
+                        var start = picker.TranslatePoint(new Point(picker.Bounds.Width / 2, picker.Bounds.Height / 2), surface)!.Value;
+                        surface.MouseDown(start, MouseButton.Left);
+                        surface.MouseMove(start + new Vector(12, 10));
+                        Dispatcher.UIThread.RunJobs();
+                        var preview = ReadNativeColor(ReadNativeComponent()[field]);
+                        Assert.NotEqual((SerializedColorValue)values.External, preview);
+                        AssertValues(preview);
+                        Assert.False(commands.CanUndo);
+
+                        var end = start + new Vector(24, 20);
+                        surface.MouseMove(end);
+                        Dispatcher.UIThread.RunJobs();
+                        var final = ReadNativeColor(ReadNativeComponent()[field]);
+                        Assert.NotEqual(preview, final);
+                        Assert.Equal(((SerializedColorValue)values.External).A, final.A);
+                        Assert.False(commands.CanUndo);
+                        var previewWrites = writes;
+                        surface.MouseUp(end, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.Equal(previewWrites, writes);
+                        values.Edited = final;
+                    }
+                    else if (text != null)
                     {
                         if (type == SerializedTypeEnum.Custom)
                         {
@@ -265,20 +313,21 @@ public sealed class EngineApiActionCallbackTests
                     Dispatcher.UIThread.RunJobs();
                     AssertValues(values.Edited);
                     Assert.True(commands.CanUndo);
-                    Assert.Equal(1, writes);
+                    var editWrites = dragColor ? writes : 1;
+                    Assert.Equal(editWrites, writes);
 
                     await commands.UndoAsync();
                     AssertValues(values.External);
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
-                    Assert.Equal(2, writes);
+                    Assert.Equal(editWrites + 1, writes);
                     text?.LoseFocus();
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
                     await commands.RedoAsync();
                     AssertValues(values.Edited);
                     Assert.False(commands.CanRedo);
-                    Assert.Equal(3, writes);
+                    Assert.Equal(editWrites + 2, writes);
                     Assert.Empty(syncLogger.Entries);
 
                     void AssertValues(object expected)
@@ -305,12 +354,10 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expected, native);
                                 break;
                             case ColorPropertyViewModel color:
-                                var channels = JObject.FromObject(native);
                                 var expectedColor = (SerializedColorValue)expected;
                                 Assert.Equal(ColorHex(expectedColor), text!.Text);
                                 Assert.Equal(expectedColor, new SerializedColorValue(color.R, color.G, color.B, color.A));
-                                Assert.Equal(expectedColor, new SerializedColorValue(channels.Value<float>("r"), channels.Value<float>("g"),
-                                    channels.Value<float>("b"), channels.Value<float>("a")));
+                                Assert.Equal(expectedColor, ReadNativeColor(native));
                                 break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");
@@ -325,6 +372,12 @@ public sealed class EngineApiActionCallbackTests
                 }
 
                 static string ColorHex(SerializedColorValue color) => ColorConversionUtility.ToHex(color.R, color.G, color.B, color.A);
+
+                static SerializedColorValue ReadNativeColor(object value)
+                {
+                    var channels = JObject.FromObject(value);
+                    return new(channels.Value<float>("r"), channels.Value<float>("g"), channels.Value<float>("b"), channels.Value<float>("a"));
+                }
 
                 Dictionary<string, object> ReadNativeComponent() =>
                     entities.GetEntityData(id)!.Behaviours.Single(behaviour => Equals(behaviour["REI_TYPE"], componentName));

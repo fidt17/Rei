@@ -15,6 +15,8 @@
             <StackPanel Spacing="8"
                         Width="330">
                 <picker:ColorWheelPicker
+                    DragStarted="ColorDragStarted"
+                    DragCompleted="ColorDragCompleted"
                     Width="220"
                     Height="220"
                     HorizontalAlignment="Center"

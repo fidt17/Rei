@@ -41,6 +41,15 @@ public sealed class SetComponentPropertyCommand(
         return commands.ExecuteAsync(this, new Target(scene, entity, component, property, value));
     }
 
+    public void RecordAppliedColor(GameEntity entity, BehaviourComponent component, SerializedProperty property, SerializedColorValue before)
+    {
+        if (commands.IsBusy || scenes.CurrentScene.Value is not { } scene) return;
+        if (property.SourceType != "Color" || SerializedColorValue.Read(property.Value) is not { } after || before == after) return;
+
+        var target = new Target(scene, entity, component, property, after);
+        if (IsCurrent(target)) commands.RecordApplied(new HistoryEntry(this, target, before, after));
+    }
+
     Task<object?> IEditorCommand<Target, object?>.ExecuteAsync(Target target)
     {
         if (!IsCurrent(target)) return Task.FromResult<object?>(null);

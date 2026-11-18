@@ -1,5 +1,7 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
 
 namespace ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom;
 
@@ -22,5 +24,15 @@ public partial class ColorPropertyView : UserControl
         }
 
         flyout.ShowAt(control);
+    }
+
+    private void ColorDragStarted(object? sender, EventArgs e)
+    {
+        if (sender is Control { DataContext: ColorPropertyViewModel color }) color.BeginColorDrag();
+    }
+
+    private void ColorDragCompleted(object? sender, EventArgs e)
+    {
+        if (sender is Control { DataContext: ColorPropertyViewModel color }) color.EndColorDrag();
     }
 }

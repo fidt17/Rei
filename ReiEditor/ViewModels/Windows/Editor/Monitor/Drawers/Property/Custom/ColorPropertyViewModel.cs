@@ -12,6 +12,9 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
     private bool _isSyncing;
     private bool _suppressComponentValueChanged;
     private readonly Action<object>? _commitHex;
+    private readonly Action<SerializedColorValue>? _recordColorDrag;
+    private readonly SerializedProperty? _colorProperty;
+    private SerializedColorValue? _colorBeforeDrag;
 
     private float _r;
     public float R
@@ -152,9 +155,24 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     public ColorPropertyViewModel() { }
 
-    public ColorPropertyViewModel(SerializedProperty property, Action<object>? commitHex = null) : base(property)
+    public ColorPropertyViewModel(SerializedProperty property, Action<object>? commitHex = null,
+        Action<SerializedColorValue>? recordColorDrag = null) : base(property)
     {
+        _colorProperty = property;
         _commitHex = commitHex;
+        _recordColorDrag = recordColorDrag;
+    }
+
+    public void BeginColorDrag()
+    {
+        if (_recordColorDrag != null) _colorBeforeDrag = SerializedColorValue.Read(_colorProperty?.Value);
+    }
+
+    public void EndColorDrag()
+    {
+        if (_colorBeforeDrag is not { } before) return;
+        _colorBeforeDrag = null;
+        _recordColorDrag?.Invoke(before);
     }
 
     protected override void HandlePropertyValueChangedEvent(object? value)
@@ -220,6 +238,16 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
 
     private void PushRgbaToProperty()
     {
+        if (_colorBeforeDrag != null && _colorProperty != null)
+        {
+            var color = new SerializedColorValue(_r, _g, _b, _a);
+            if (SerializedColorValue.Read(_colorProperty.Value) == color) return;
+            _suppressComponentValueChanged = true;
+            try { color.Apply(_colorProperty); }
+            finally { _suppressComponentValueChanged = false; }
+            return;
+        }
+
         var rProperty = GetNestedProperty("r");
         var gProperty = GetNestedProperty("g");
         var bProperty = GetNestedProperty("b");
