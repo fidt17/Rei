@@ -39,13 +39,13 @@
 
                 <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*">
                     <TextBlock Text="R" Margin="0,0,4,0" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="1" Margin="0,0,6,0" Text="{Binding R, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="RInput" Grid.Column="1" Margin="0,0,6,0" Text="{Binding R, Mode=TwoWay}" />
                     <TextBlock Grid.Column="2" Margin="0,0,4,0" Text="G" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="3" Margin="0,0,6,0" Text="{Binding G, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="GInput" Grid.Column="3" Margin="0,0,6,0" Text="{Binding G, Mode=TwoWay}" />
                     <TextBlock Grid.Column="4" Margin="0,0,4,0" Text="B" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="5" Margin="0,0,6,0" Text="{Binding B, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="BInput" Grid.Column="5" Margin="0,0,6,0" Text="{Binding B, Mode=TwoWay}" />
                     <TextBlock Grid.Column="6" Margin="0,0,4,0" Text="A" VerticalAlignment="Center" Foreground="{StaticResource Gray_4}" />
-                    <textBoxes:ReiTextBox Grid.Column="7" Text="{Binding A, Mode=TwoWay}" />
+                    <textBoxes:ReiTextBox x:Name="AInput" Grid.Column="7" Text="{Binding AlphaInput, Mode=TwoWay}" />
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">

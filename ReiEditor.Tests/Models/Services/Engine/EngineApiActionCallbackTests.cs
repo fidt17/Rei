@@ -121,9 +121,16 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorAlphaSliderDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, ColorDrag.Alpha);
 
+    [NativeCallbackTheory]
+    [InlineData("R")]
+    [InlineData("G")]
+    [InlineData("B")]
+    [InlineData("A")]
+    public Task InspectorManualColorChannelRecordsOneUndoForSpotLightColor(string channel) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: channel);
+
     private enum ColorDrag { None, Wheel, Alpha }
 
-    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None)
+    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None, string? colorChannel = null)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -220,6 +227,7 @@ public sealed class EngineApiActionCallbackTests
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var text = view.GetVisualDescendants().OfType<ReiTextBox>().SingleOrDefault();
+                    ReiTextBox? channelInput = null;
                     ColorWheelPicker? wheel = null;
                     Slider? alpha = null;
                     if (view is ColorPropertyView)
@@ -229,6 +237,8 @@ public sealed class EngineApiActionCallbackTests
                         Assert.True(view.Resources.TryGetResource("ColorEditorFlyout", null, out var resource));
                         var content = (Control)Assert.IsType<Flyout>(resource).Content!;
                         text = content.GetLogicalDescendants().OfType<ReiTextBox>().Single(input => input.Name == "HexInput");
+                        if (colorChannel != null)
+                            channelInput = content.GetLogicalDescendants().OfType<ReiTextBox>().Single(input => input.Name == colorChannel + "Input");
                         wheel = content.GetLogicalDescendants().OfType<ColorWheelPicker>().Single();
                         alpha = content.GetLogicalDescendants().OfType<Slider>().Single(slider => slider.Name == "AlphaSlider");
                     }
@@ -301,6 +311,24 @@ public sealed class EngineApiActionCallbackTests
                         Assert.Equal(previewWrites, writes);
                         values.Edited = final;
                     }
+                    else if (channelInput != null)
+                    {
+                        const float EDITED_CHANNEL = 0.75f;
+                        var before = (SerializedColorValue)values.External;
+                        values.Edited = colorChannel switch
+                        {
+                            "R" => before with { R = EDITED_CHANNEL },
+                            "G" => before with { G = EDITED_CHANNEL },
+                            "B" => before with { B = EDITED_CHANNEL },
+                            "A" => before with { A = EDITED_CHANNEL },
+                            _ => throw new ArgumentOutOfRangeException(nameof(colorChannel))
+                        };
+                        channelInput.TextInternal = EDITED_CHANNEL.ToString(System.Globalization.CultureInfo.CurrentCulture);
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        Assert.Equal(0, writes);
+                        channelInput.LoseFocus();
+                    }
                     else if (text != null)
                     {
                         if (type == SerializedTypeEnum.Custom)
@@ -340,7 +368,7 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
                     Assert.Equal(editWrites + 1, writes);
-                    text?.LoseFocus();
+                    (channelInput ?? text)?.LoseFocus();
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
                     await commands.RedoAsync();
