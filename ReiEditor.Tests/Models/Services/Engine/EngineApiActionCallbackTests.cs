@@ -7,6 +7,7 @@ using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Assets.Search;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -134,10 +135,13 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorColorEditsUndoAndRedoInOrder() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: "H", mixedColorHistory: true);
 
+    [NativeCallbackFact]
+    public Task InspectorTextureSelectionRecordsOneUndoForImage() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, selectAsset: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
-        string? colorChannel = null, bool mixedColorHistory = false)
+        string? colorChannel = null, bool mixedColorHistory = false, bool selectAsset = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -152,13 +156,17 @@ public sealed class EngineApiActionCallbackTests
             CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
             try
             {
-                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                const string TEXTURE_ID = "REI_WHITE_FALLBACK_TEXTURE";
+                const string TEXTURE_PATH = "C:/Assets/white.png";
+                var startEngine = selectAsset ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
+                api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
                 var (componentId, componentName, field, sourceType, defaultValue) = type switch
                 {
                     SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
+                    SerializedTypeEnum.Custom when selectAsset => (7304, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -167,6 +175,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    SerializedTypeEnum.Custom when selectAsset => ("", "", TEXTURE_ID),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
                         new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -190,7 +199,14 @@ public sealed class EngineApiActionCallbackTests
                         Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
                     }]);
                 }
-                if (type == SerializedTypeEnum.Custom)
+                if (selectAsset)
+                {
+                    var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.String, "std::string",
+                        null, SerializedTypeEnum.Invalid, null, null, "", false);
+                    objects.Replace([new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", ""),
+                        new() { ["Id"] = idProperty }, "")], []);
+                }
+                else if (type == SerializedTypeEnum.Custom)
                 {
                     var channel = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
                         null, SerializedTypeEnum.Invalid, null, null, "1", false);
@@ -209,9 +225,11 @@ public sealed class EngineApiActionCallbackTests
                 using var commands = new EditorCommandService();
                 var command = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
+                var assets = new AssetRegistry(new TestLogger<AssetRegistry>());
+                if (selectAsset) assets.RegisterNewAssets([new AssetInfo(new AssetMeta(TEXTURE_ID), TEXTURE_PATH)]);
                 RefreshInspector();
                 using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(componentId)!,
-                    registry, null!, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, command);
+                    registry, null!, components, objects, null!, new AssetSearchService(null!), assets, new AssetTypeMapper(), null!, scenes, null!, null!, custom, command);
                 var value = Assert.Single(drawer.Properties);
                 var theme = new FluentTheme();
                 var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
@@ -222,6 +240,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => new BooleanPropertyView(),
                     SerializedTypeEnum.Enum => new EnumPropertyView(),
                     SerializedTypeEnum.String => new StringPropertyView(),
+                    SerializedTypeEnum.Custom when selectAsset => new AssetPropertyView(),
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -266,9 +285,12 @@ public sealed class EngineApiActionCallbackTests
                         AssertValues(values.Initial);
                         Assert.False(commands.CanUndo);
                     }
-                    var external = values.External is SerializedColorValue rgba
-                        ? (object)new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } }
-                        : values.External;
+                    var external = values.External switch
+                    {
+                        SerializedColorValue rgba => new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } },
+                        string idValue when selectAsset => new { Id = new { Value = idValue } },
+                        _ => values.External
+                    };
                     entities.SetData(new SetEntityDataRequest
                     {
                         SceneId = id,
@@ -303,6 +325,12 @@ public sealed class EngineApiActionCallbackTests
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
                         channelInput.LoseFocus();
+                    }
+                    else if (value is AssetPropertyViewModel asset)
+                    {
+                        var picker = asset.AssetPicker!;
+                        picker.RefreshSearchResultsForAll();
+                        Assert.Single(picker.SearchResults).SelectCommand.Execute(null);
                     }
                     else if (text != null)
                     {
@@ -446,6 +474,12 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(ColorHex(expectedColor), text!.Text);
                                 Assert.Equal(expectedColor, new SerializedColorValue(color.R, color.G, color.B, color.A));
                                 Assert.Equal(expectedColor, ReadNativeColor(native));
+                                break;
+                            case AssetPropertyViewModel asset:
+                                var picker = asset.AssetPicker!;
+                                Assert.Equal((string)expected, picker.SelectedAssetId);
+                                Assert.Equal(picker.AssetName, view.GetVisualDescendants().OfType<Label>().Single().Content);
+                                Assert.Equal((string)expected, JObject.FromObject(native).Value<string>("Id"));
                                 break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");

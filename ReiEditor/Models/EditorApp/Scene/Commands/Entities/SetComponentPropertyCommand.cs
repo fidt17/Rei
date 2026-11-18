@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Commands;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
@@ -82,6 +83,10 @@ public sealed class SetComponentPropertyCommand(
     private static void Write(SerializedProperty property, object value)
     {
         if (value is SerializedColorValue color) color.Apply(property);
+        else if (IsAssetReference(property))
+        {
+            if (GetAssetIdProperty(property.Value) is { } id) id.Value = value;
+        }
         else property.Value = value;
     }
 
@@ -89,6 +94,7 @@ public sealed class SetComponentPropertyCommand(
     {
         SerializedTypeEnum.Custom when property.SourceType == "Color" =>
             value is SerializedColorValue color ? color : SerializedColorValue.Read(value),
+        SerializedTypeEnum.Custom when IsAssetReference(property) => value as string ?? GetAssetIdProperty(value)?.Value as string,
         SerializedTypeEnum.String when value is string text => text,
         SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is int integer => (object)integer,
@@ -96,4 +102,10 @@ public sealed class SetComponentPropertyCommand(
         SerializedTypeEnum.Float when value is float or double or int or long && float.IsFinite(Convert.ToSingle(value)) => Convert.ToSingle(value),
         _ => null
     };
+
+    private static bool IsAssetReference(SerializedProperty property) =>
+        property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal);
+
+    private static SerializedProperty? GetAssetIdProperty(object? value) =>
+        value is Dictionary<string, SerializedProperty> children && children.TryGetValue("Id", out var id) ? id : null;
 }

@@ -89,7 +89,7 @@ public static class PropertyViewUtils
         }
         else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
         {
-            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry);
+            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry, commitProperty);
         }
         else if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal))
         {
