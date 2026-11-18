@@ -131,9 +131,13 @@ public sealed class EngineApiActionCallbackTests
     [InlineData("V")]
     public Task InspectorManualColorChannelRecordsOneUndoForSpotLightColor(string channel) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: channel);
 
+    [NativeCallbackFact]
+    public Task InspectorColorEditsUndoAndRedoInOrder() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, colorChannel: "H", mixedColorHistory: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
 
-    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None, string? colorChannel = null)
+    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
+        string? colorChannel = null, bool mixedColorHistory = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -279,40 +283,7 @@ public sealed class EngineApiActionCallbackTests
 
                     if (colorDrag != ColorDrag.None)
                     {
-                        Control target = colorDrag == ColorDrag.Wheel ? wheel! : alpha!.GetVisualDescendants().OfType<Thumb>().Single();
-                        var surface = TopLevel.GetTopLevel(target)!;
-                        var start = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), surface)!.Value;
-                        var step = colorDrag == ColorDrag.Wheel ? new Vector(12, 10) : new Vector(30, 0);
-                        surface.MouseMove(start);
-                        Dispatcher.UIThread.RunJobs();
-                        surface.MouseDown(start, MouseButton.Left);
-                        Dispatcher.UIThread.RunJobs();
-                        surface.MouseMove(start + step);
-                        Dispatcher.UIThread.RunJobs();
-                        var preview = ReadNativeColor(ReadNativeComponent()[field]);
-                        Assert.True((SerializedColorValue)values.External != preview,
-                            $"Drag did not update native color. Thumb/target bounds: {target.Bounds}, start: {start}, slider: {alpha?.Value}.");
-                        AssertValues(preview);
-                        Assert.False(commands.CanUndo);
-
-                        var end = start + step * 2;
-                        surface.MouseMove(end);
-                        Dispatcher.UIThread.RunJobs();
-                        var final = ReadNativeColor(ReadNativeComponent()[field]);
-                        Assert.NotEqual(preview, final);
-                        var before = (SerializedColorValue)values.External;
-                        if (colorDrag == ColorDrag.Wheel) Assert.Equal(before.A, final.A);
-                        else
-                        {
-                            Assert.NotEqual(before.A, final.A);
-                            Assert.Equal(before with { A = final.A }, final);
-                        }
-                        Assert.False(commands.CanUndo);
-                        var previewWrites = writes;
-                        surface.MouseUp(end, MouseButton.Left);
-                        Dispatcher.UIThread.RunJobs();
-                        Assert.Equal(previewWrites, writes);
-                        values.Edited = final;
+                        values.Edited = DragColor(colorDrag, (SerializedColorValue)values.External);
                     }
                     else if (channelInput != null)
                     {
@@ -367,6 +338,35 @@ public sealed class EngineApiActionCallbackTests
                     var editWrites = colorDrag != ColorDrag.None ? writes : 1;
                     Assert.Equal(editWrites, writes);
 
+                    if (mixedColorHistory)
+                    {
+                        var afterInput = (SerializedColorValue)values.Edited;
+                        var afterWheel = DragColor(ColorDrag.Wheel, afterInput);
+                        AssertValues(afterWheel);
+                        var afterAlpha = DragColor(ColorDrag.Alpha, afterWheel);
+                        AssertValues(afterAlpha);
+                        var writesBeforeReplay = writes;
+
+                        foreach (var expected in new[] { afterWheel, afterInput, (SerializedColorValue)values.External })
+                        {
+                            Assert.True(commands.CanUndo);
+                            await commands.UndoAsync();
+                            AssertValues(expected);
+                        }
+                        Assert.False(commands.CanUndo);
+
+                        foreach (var expected in new[] { afterInput, afterWheel, afterAlpha })
+                        {
+                            Assert.True(commands.CanRedo);
+                            await commands.RedoAsync();
+                            AssertValues(expected);
+                        }
+                        Assert.False(commands.CanRedo);
+                        Assert.Equal(writesBeforeReplay + 6, writes);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
                     await commands.UndoAsync();
                     AssertValues(values.External);
                     Assert.False(commands.CanUndo);
@@ -380,6 +380,43 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Equal(editWrites + 2, writes);
                     Assert.Empty(syncLogger.Entries);
+
+                    SerializedColorValue DragColor(ColorDrag drag, SerializedColorValue before)
+                    {
+                        Control target = drag == ColorDrag.Wheel ? wheel! : alpha!.GetVisualDescendants().OfType<Thumb>().Single();
+                        var surface = TopLevel.GetTopLevel(target)!;
+                        var start = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), surface)!.Value;
+                        var step = drag == ColorDrag.Wheel ? new Vector(12, 10) : new Vector(30, 0);
+                        surface.MouseMove(start);
+                        Dispatcher.UIThread.RunJobs();
+                        surface.MouseDown(start, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        surface.MouseMove(start + step);
+                        Dispatcher.UIThread.RunJobs();
+                        var preview = ReadNativeColor(ReadNativeComponent()[field]);
+                        Assert.True(before != preview,
+                            $"Drag did not update native color. Thumb/target bounds: {target.Bounds}, start: {start}, slider: {alpha?.Value}.");
+                        AssertValues(preview);
+                        Assert.False(commands.CanUndo);
+
+                        var end = start + step * 2;
+                        surface.MouseMove(end);
+                        Dispatcher.UIThread.RunJobs();
+                        var final = ReadNativeColor(ReadNativeComponent()[field]);
+                        Assert.NotEqual(preview, final);
+                        if (drag == ColorDrag.Wheel) Assert.Equal(before.A, final.A);
+                        else
+                        {
+                            Assert.NotEqual(before.A, final.A);
+                            Assert.Equal(before with { A = final.A }, final);
+                        }
+                        Assert.False(commands.CanUndo);
+                        var previewWrites = writes;
+                        surface.MouseUp(end, MouseButton.Left);
+                        Dispatcher.UIThread.RunJobs();
+                        Assert.Equal(previewWrites, writes);
+                        return final;
+                    }
 
                     void AssertValues(object expected)
                     {
