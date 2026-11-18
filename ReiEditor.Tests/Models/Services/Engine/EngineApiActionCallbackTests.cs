@@ -98,7 +98,12 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
-    public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable()
+    public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable() => VerifyInspectorChoiceAsync(useEnum: false);
+
+    [NativeCallbackFact]
+    public Task InspectorEnumSelectionRecordsOneUndoForCameraPerspective() => VerifyInspectorChoiceAsync(useEnum: true);
+
+    private static Task VerifyInspectorChoiceAsync(bool useEnum)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -115,19 +120,30 @@ public sealed class EngineApiActionCallbackTests
             {
                 api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
-                const int BUTTON_ID = 7310;
-                const string INTERACTABLE = "_interactable";
-                var id = entities.CreateNewEntity("Checkbox history")!.EntityId!.Value;
-                entities.AddBehaviour(id, BUTTON_ID);
-                var entity = new GameEntity(id, "Checkbox history");
+                var componentId = useEnum ? 7301 : 7310;
+                var componentName = useEnum ? "Camera" : "Button";
+                var field = useEnum ? "_perspective" : "_interactable";
+                var id = entities.CreateNewEntity("Inspector choice history")!.EntityId!.Value;
+                entities.AddBehaviour(id, componentId);
+                var entity = new GameEntity(id, "Inspector choice history");
                 var scenes = new TestSceneManagementService(entity);
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var registry = new InspectorComponentRegistry(new BehaviourAssetInfo("", "Button", BUTTON_ID, new ObjectFile<string>("", ""), new()
+                var type = useEnum ? SerializedTypeEnum.Enum : SerializedTypeEnum.Boolean;
+                var sourceType = useEnum ? "rei::render::CameraPerspectiveEnum" : "bool";
+                var registry = new InspectorComponentRegistry(new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
-                    [INTERACTABLE] = new(SerializedTypeEnum.Boolean, "bool", null, SerializedTypeEnum.Invalid, null, null, "true", false)
+                    [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, useEnum ? "0" : "true", false)
                 }, [], ""));
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                if (useEnum)
+                {
+                    objects.Replace([], [new SerializableEnum
+                    {
+                        EnumName = "CameraPerspectiveEnum",
+                        Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
+                    }]);
+                }
                 var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
                 var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
                 var syncLogger = new TestLogger<EntitySyncService>();
@@ -139,34 +155,46 @@ public sealed class EngineApiActionCallbackTests
                 var command = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
                 RefreshInspector();
-                using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(BUTTON_ID)!,
+                using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(componentId)!,
                     registry, null!, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, command);
-                var value = Assert.IsType<BooleanPropertyViewModel>(Assert.Single(drawer.Properties));
+                var value = Assert.Single(drawer.Properties);
                 var theme = new FluentTheme();
                 var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
                 Application.Current!.Styles.Add(theme);
                 Application.Current.Styles.Add(styles);
-                var view = new BooleanPropertyView { DataContext = value };
+                Control view = useEnum ? new EnumPropertyView() : new BooleanPropertyView();
+                view.DataContext = value;
                 var window = new Window { Content = view, Width = 400, Height = 140 };
                 try
                 {
                     window.Show();
                     Dispatcher.UIThread.RunJobs();
-                    var checkbox = Assert.Single(view.GetVisualDescendants().OfType<CheckBox>());
-                    AssertValues(true);
+                    var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
+                    var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
+                    AssertValues(original: true);
                     entities.SetData(new SetEntityDataRequest
                     {
                         SceneId = id,
-                        Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = BUTTON_ID, [INTERACTABLE] = new { Value = false } }]
+                        Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = componentId,
+                            [field] = new { Value = useEnum ? (object)1 : false } }]
                     });
                     RefreshInspector();
                     AssertValues(false);
                     Assert.False(commands.CanUndo);
                     Assert.False(commands.CanRedo);
 
-                    var center = checkbox.TranslatePoint(new Point(checkbox.Bounds.Width / 2, checkbox.Bounds.Height / 2), window)!.Value;
-                    window.MouseDown(center, MouseButton.Left);
-                    window.MouseUp(center, MouseButton.Left);
+                    if (combo != null)
+                    {
+                        combo.Focus();
+                        combo.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Up });
+                    }
+                    else
+                    {
+                        var checkbox = Assert.IsType<CheckBox>(toggle);
+                        var center = checkbox.TranslatePoint(new Point(checkbox.Bounds.Width / 2, checkbox.Bounds.Height / 2), window)!.Value;
+                        window.MouseDown(center, MouseButton.Left);
+                        window.MouseUp(center, MouseButton.Left);
+                    }
                     Dispatcher.UIThread.RunJobs();
                     AssertValues(true);
                     Assert.True(commands.CanUndo);
@@ -180,12 +208,25 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Empty(syncLogger.Entries);
 
-                    void AssertValues(bool expected)
+                    void AssertValues(bool original)
                     {
                         Dispatcher.UIThread.RunJobs();
-                        Assert.Equal(expected, checkbox.IsChecked);
-                        Assert.Equal(expected, value.Value);
-                        Assert.Equal(expected, ReadNativeButton()[INTERACTABLE]);
+                        var native = ReadNativeComponent()[field];
+                        if (useEnum)
+                        {
+                            var editor = Assert.IsType<EnumPropertyViewModel>(value);
+                            var label = original ? "Perspective" : "Orthographic";
+                            Assert.Equal(label, combo!.SelectedItem);
+                            Assert.Equal(label, editor.SelectedValue);
+                            Assert.Equal(original ? 0 : 1, editor.Value);
+                            Assert.Equal(editor.Value, Convert.ToInt32(native));
+                        }
+                        else
+                        {
+                            Assert.Equal(original, toggle!.IsChecked);
+                            Assert.Equal(original, Assert.IsType<BooleanPropertyViewModel>(value).Value);
+                            Assert.Equal(original, native);
+                        }
                     }
                 }
                 finally
@@ -195,12 +236,12 @@ public sealed class EngineApiActionCallbackTests
                     Application.Current.Styles.Remove(theme);
                 }
 
-                Dictionary<string, object> ReadNativeButton() =>
-                    entities.GetEntityData(id)!.Behaviours.Single(behaviour => Equals(behaviour["REI_TYPE"], "Button"));
+                Dictionary<string, object> ReadNativeComponent() =>
+                    entities.GetEntityData(id)!.Behaviours.Single(behaviour => Equals(behaviour["REI_TYPE"], componentName));
 
                 void RefreshInspector()
                 {
-                    applier.Apply(entity, new GetEntityDataResponse { Name = entity.Name, Behaviours = [ReadNativeButton()] });
+                    applier.Apply(entity, new GetEntityDataResponse { Name = entity.Name, Behaviours = [ReadNativeComponent()] });
                     Dispatcher.UIThread.RunJobs();
                 }
             }

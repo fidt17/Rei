@@ -19,11 +19,10 @@ public class EnumPropertyViewModel : BasePropertyViewModel<int>
         get => _selectedValue;
         set
         {
-            if (SetField(ref _selectedValue, value))
-            {
-                var enumIntValue = _serializableEnum.Options[value];
-                Value = enumIntValue;
-            }
+            if (_updatingSelection || value == null || !_serializableEnum.Options.TryGetValue(value, out var option)) return;
+            if (!SetField(ref _selectedValue, value)) return;
+            Value = option;
+            SyncSelectedValue();
         }
     }
 
@@ -31,17 +30,16 @@ public class EnumPropertyViewModel : BasePropertyViewModel<int>
 
     private readonly SerializableEnum _serializableEnum;
 
-    private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
+    private bool _updatingSelection;
     
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public EnumPropertyViewModel() { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    public EnumPropertyViewModel(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry) : base(property)
+    public EnumPropertyViewModel(SerializedProperty property, ISerializableObjectsRegistry serializableObjectsRegistry,
+        Action<object>? commit = null) : base(property, commit)
     {
-        _serializableObjectsRegistry = serializableObjectsRegistry;
-
-        _serializableEnum = _serializableObjectsRegistry.GetEnum(property.SourceType.Split("::").Last())!;
+        _serializableEnum = serializableObjectsRegistry.GetEnum(property.SourceType.Split("::").Last())!;
         if (_serializableEnum == null) throw new Exception($"Could not find serializable enum data for type: {property.SourceType}");
         
         foreach (var option in _serializableEnum.Options)
@@ -76,7 +74,11 @@ public class EnumPropertyViewModel : BasePropertyViewModel<int>
 
     private void HandlePropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName != nameof(Value)) return;
+        if (args.PropertyName == nameof(Value)) SyncSelectedValue();
+    }
+
+    private void SyncSelectedValue()
+    {
         if (_serializableEnum.Options.TryGetValue(_selectedValue, out var selectedValue) && selectedValue == Value) return;
 
         var matchingOption = _serializableEnum.Options.FirstOrDefault(x => x.Value == Value);
@@ -85,6 +87,8 @@ public class EnumPropertyViewModel : BasePropertyViewModel<int>
 
     private void UpdateSelectedValue(string selectedValue)
     {
-        SetField(ref _selectedValue, selectedValue, nameof(SelectedValue));
+        _updatingSelection = true;
+        try { SetField(ref _selectedValue, selectedValue, nameof(SelectedValue)); }
+        finally { _updatingSelection = false; }
     }
 }
