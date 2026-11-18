@@ -17,6 +17,7 @@ using ReiEditor.Models.Services.Hierarchies;
 using ReiEditor.Models.Services.RectTransform;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml.Styling;
@@ -115,9 +116,14 @@ public sealed class EngineApiActionCallbackTests
     public Task ConfirmedInspectorHexRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom);
 
     [NativeCallbackFact]
-    public Task InspectorColorWheelDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, dragColor: true);
+    public Task InspectorColorWheelDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, ColorDrag.Wheel);
 
-    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, bool dragColor = false)
+    [NativeCallbackFact]
+    public Task InspectorAlphaSliderDragRecordsOneUndoForSpotLightColor() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, ColorDrag.Alpha);
+
+    private enum ColorDrag { None, Wheel, Alpha }
+
+    private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -206,7 +212,7 @@ public sealed class EngineApiActionCallbackTests
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
                 view.DataContext = value;
-                var window = new Window { Content = view, Width = 400, Height = 140 };
+                var window = new Window { Content = view, Width = 400, Height = type == SerializedTypeEnum.Custom ? 480 : 140 };
                 try
                 {
                     window.Show();
@@ -215,6 +221,7 @@ public sealed class EngineApiActionCallbackTests
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var text = view.GetVisualDescendants().OfType<ReiTextBox>().SingleOrDefault();
                     ColorWheelPicker? wheel = null;
+                    Slider? alpha = null;
                     if (view is ColorPropertyView)
                     {
                         view.FindControl<Button>("HexButton")!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
@@ -223,9 +230,10 @@ public sealed class EngineApiActionCallbackTests
                         var content = (Control)Assert.IsType<Flyout>(resource).Content!;
                         text = content.GetLogicalDescendants().OfType<ReiTextBox>().Single(input => input.Name == "HexInput");
                         wheel = content.GetLogicalDescendants().OfType<ColorWheelPicker>().Single();
+                        alpha = content.GetLogicalDescendants().OfType<Slider>().Single(slider => slider.Name == "AlphaSlider");
                     }
                     AssertValues(values.Initial);
-                    if (dragColor)
+                    if (colorDrag == ColorDrag.Wheel)
                     {
                         // With zero saturation, turning the hue ring leaves the stored RGBA unchanged.
                         var picker = wheel!;
@@ -256,25 +264,36 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Equal(0, writes);
 
-                    if (dragColor)
+                    if (colorDrag != ColorDrag.None)
                     {
-                        var picker = wheel!;
-                        var surface = TopLevel.GetTopLevel(picker)!;
-                        var start = picker.TranslatePoint(new Point(picker.Bounds.Width / 2, picker.Bounds.Height / 2), surface)!.Value;
+                        Control target = colorDrag == ColorDrag.Wheel ? wheel! : alpha!.GetVisualDescendants().OfType<Thumb>().Single();
+                        var surface = TopLevel.GetTopLevel(target)!;
+                        var start = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), surface)!.Value;
+                        var step = colorDrag == ColorDrag.Wheel ? new Vector(12, 10) : new Vector(30, 0);
+                        surface.MouseMove(start);
+                        Dispatcher.UIThread.RunJobs();
                         surface.MouseDown(start, MouseButton.Left);
-                        surface.MouseMove(start + new Vector(12, 10));
+                        Dispatcher.UIThread.RunJobs();
+                        surface.MouseMove(start + step);
                         Dispatcher.UIThread.RunJobs();
                         var preview = ReadNativeColor(ReadNativeComponent()[field]);
-                        Assert.NotEqual((SerializedColorValue)values.External, preview);
+                        Assert.True((SerializedColorValue)values.External != preview,
+                            $"Drag did not update native color. Thumb/target bounds: {target.Bounds}, start: {start}, slider: {alpha?.Value}.");
                         AssertValues(preview);
                         Assert.False(commands.CanUndo);
 
-                        var end = start + new Vector(24, 20);
+                        var end = start + step * 2;
                         surface.MouseMove(end);
                         Dispatcher.UIThread.RunJobs();
                         var final = ReadNativeColor(ReadNativeComponent()[field]);
                         Assert.NotEqual(preview, final);
-                        Assert.Equal(((SerializedColorValue)values.External).A, final.A);
+                        var before = (SerializedColorValue)values.External;
+                        if (colorDrag == ColorDrag.Wheel) Assert.Equal(before.A, final.A);
+                        else
+                        {
+                            Assert.NotEqual(before.A, final.A);
+                            Assert.Equal(before with { A = final.A }, final);
+                        }
                         Assert.False(commands.CanUndo);
                         var previewWrites = writes;
                         surface.MouseUp(end, MouseButton.Left);
@@ -313,7 +332,7 @@ public sealed class EngineApiActionCallbackTests
                     Dispatcher.UIThread.RunJobs();
                     AssertValues(values.Edited);
                     Assert.True(commands.CanUndo);
-                    var editWrites = dragColor ? writes : 1;
+                    var editWrites = colorDrag != ColorDrag.None ? writes : 1;
                     Assert.Equal(editWrites, writes);
 
                     await commands.UndoAsync();
