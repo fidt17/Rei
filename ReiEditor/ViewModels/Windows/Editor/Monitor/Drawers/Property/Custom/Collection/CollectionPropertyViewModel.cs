@@ -46,6 +46,7 @@ public class CollectionPropertyViewModel : BaseViewModel
     private readonly IProjectAssetFocusService _projectAssetFocusService;
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
+    private readonly Action<object>? _commitProperty;
 
 #pragma warning disable CS8618
     public CollectionPropertyViewModel()
@@ -65,7 +66,7 @@ public class CollectionPropertyViewModel : BaseViewModel
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
-        IDataAssetTypeRegistry? dataAssetTypeRegistry)
+        IDataAssetTypeRegistry? dataAssetTypeRegistry, Action<object>? commitProperty = null)
     {
         if (property.Type != SerializedTypeEnum.Collection) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Collection}. Actual {property.Type}");
 
@@ -79,6 +80,7 @@ public class CollectionPropertyViewModel : BaseViewModel
         _projectAssetFocusService = projectAssetFocusService;
         _sceneManagementService = sceneManagementService;
         _selectionService = selectionService;
+        _commitProperty = commitProperty;
 
         PropertyName = new PropertyNameViewModel(property);
         ToggleExpandedCommand = new RelayCommand(SwitchExpandState);
@@ -102,6 +104,14 @@ public class CollectionPropertyViewModel : BaseViewModel
 
     public void AddItem()
     {
+        if (_commitProperty != null)
+        {
+            if (_property.Value is not List<SerializedProperty> currentItems) return;
+            var newItem = CreateCollectionItem($"[{currentItems.Count}]", _property);
+            _commitProperty(currentItems.Append(newItem).ToArray());
+            return;
+        }
+
         var items = EnsureItems();
         var itemProperty = CreateCollectionItem($"[{items.Count}]", _property);
         items.Add(itemProperty);

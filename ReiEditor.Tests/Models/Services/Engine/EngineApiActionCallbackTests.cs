@@ -27,6 +27,7 @@ using Avalonia.VisualTree;
 using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Collection;
 using ReiEditor.Models.Services.Render;
 using ReiEditor.Views.Controls.ColorPicker;
 using ReiEditor.Views.Controls.Assets;
@@ -158,6 +159,9 @@ public sealed class EngineApiActionCallbackTests
     [InlineData("Z")]
     public Task InspectorProbeOffsetEditsPreserveOtherCoordinates(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis, editVector3: true);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionAddRecordsOneUndoAndPreservesExistingItems() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
@@ -190,6 +194,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
+                    SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
                     SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
@@ -202,6 +207,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
                     SerializedTypeEnum.Custom when selectComponent => (0, 0, 0),
@@ -238,7 +244,9 @@ public sealed class EngineApiActionCallbackTests
                 runner.Active.Value = runner.EditorActive.Value = true;
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
-                    [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
+                    [field] = type == SerializedTypeEnum.Collection
+                        ? new(type, sourceType, "i32", SerializedTypeEnum.Integer, "i32", null, defaultValue, false)
+                        : new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
                 }, [], "");
                 var registry = selectComponent
                     ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Image", IMAGE_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
@@ -308,6 +316,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => new BooleanPropertyView(),
                     SerializedTypeEnum.Enum => new EnumPropertyView(),
                     SerializedTypeEnum.String => new StringPropertyView(),
+                    SerializedTypeEnum.Collection => new CollectionPropertyView(),
                     SerializedTypeEnum.Custom when isAssetField => new AssetPropertyView(),
                     SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
                     SerializedTypeEnum.Custom when editVector3 => new Vector3PropertyView(),
@@ -315,8 +324,9 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
+                if (value is CollectionPropertyViewModel collection) collection.SwitchExpandState();
                 view.DataContext = value;
-                var window = new Window { Content = view, Width = 400, Height = type == SerializedTypeEnum.Custom ? 480 : 140 };
+                var window = new Window { Content = view, Width = 400, Height = type is SerializedTypeEnum.Custom or SerializedTypeEnum.Collection ? 480 : 140 };
                 try
                 {
                     window.Show();
@@ -329,6 +339,7 @@ public sealed class EngineApiActionCallbackTests
                         "X" => textInputs[0],
                         "Y" => textInputs[1],
                         "Z" => textInputs[2],
+                        _ when type == SerializedTypeEnum.Collection => null,
                         _ => textInputs.SingleOrDefault()
                     };
                     ReiTextBox? channelInput = null;
@@ -436,6 +447,13 @@ public sealed class EngineApiActionCallbackTests
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
                         text.LoseFocus();
+                    }
+                    else if (type == SerializedTypeEnum.Collection)
+                    {
+                        var add = view.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Add Element"));
+                        var center = add.TranslatePoint(new Point(add.Bounds.Width / 2, add.Bounds.Height / 2), window)!.Value;
+                        window.MouseDown(center, MouseButton.Left);
+                        window.MouseUp(center, MouseButton.Left);
                     }
                     else if (text != null)
                     {
@@ -610,6 +628,13 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expectedVector3.Z, float.Parse(textInputs[2].Text, CultureInfo.CurrentCulture));
                                 var nativeVector3 = JObject.FromObject(native);
                                 Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
+                                break;
+                            case CollectionPropertyViewModel list:
+                                var expectedItems = (int[])expected;
+                                Assert.Equal(expectedItems.Length, list.Count);
+                                Assert.Equal(expectedItems, view.GetVisualDescendants().OfType<ReiTextBox>()
+                                    .Select(input => int.Parse(input.Text, CultureInfo.CurrentCulture)));
+                                Assert.Equal(expectedItems, JArray.FromObject(native).ToObject<int[]>());
                                 break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");

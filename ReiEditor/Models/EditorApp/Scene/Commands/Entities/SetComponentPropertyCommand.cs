@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Commands;
@@ -57,7 +58,7 @@ public sealed class SetComponentPropertyCommand(
         if (!IsCurrent(target)) return Task.FromResult<object?>(null);
         var before = Read(target.Property);
         var after = Normalize(GetValueProperty(target.Property), target.Value);
-        if (before == null || after == null || before.Equals(after)) return Task.FromResult<object?>(null);
+        if (before == null || after == null || SameValue(before, after)) return Task.FromResult<object?>(null);
 
         Write(target.Property, after);
         return Task.FromResult(Matches(target.Property, after) ? before : null);
@@ -79,7 +80,10 @@ public sealed class SetComponentPropertyCommand(
         && target.Component.Properties.TryGetValue(target.Property.Name, out var property)
         && ReferenceEquals(property, target.Property);
 
-    private static bool Matches(SerializedProperty property, object expected) => Equals(Read(property), expected);
+    private static bool Matches(SerializedProperty property, object expected) => SameValue(Read(property), expected);
+
+    private static bool SameValue(object? left, object? right) =>
+        left is SerializedProperty[] items && right is SerializedProperty[] other ? items.SequenceEqual(other) : Equals(left, right);
 
     private static object? Read(SerializedProperty property)
     {
@@ -101,6 +105,7 @@ public sealed class SetComponentPropertyCommand(
             if (previous3.Y != vector3.Y) coordinates3["y"].Value = vector3.Y;
             if (previous3.Z != vector3.Z) coordinates3["z"].Value = vector3.Z;
         }
+        else if (value is SerializedProperty[] items) property.Value = new List<SerializedProperty>(items);
         else GetValueProperty(property).Value = value;
     }
 
@@ -123,6 +128,7 @@ public sealed class SetComponentPropertyCommand(
             _ => null
         },
         SerializedTypeEnum.String when value is string text => text,
+        SerializedTypeEnum.Collection when value is IReadOnlyList<SerializedProperty> items => items.ToArray(),
         SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is int integer => (object)integer,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is long integer && integer is >= int.MinValue and <= int.MaxValue => (object)(int)integer,
