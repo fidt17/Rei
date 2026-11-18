@@ -30,7 +30,7 @@ public:
                     std::make_unique<rei::editor::EntityMoveAction>(rei::ecs::ComponentRef<rei::Transform>(_ecs, entity), before, transform.GetLocalPosition()));
             }
             const auto position = transform.GetLocalPosition();
-            const nlohmann::json state = {{"Step", _step}, {"ActionId", _lastActionId}, {"Position", {position.x, position.y, position.z}}};
+            const nlohmann::json state = {{"Step", _step}, {"ActionId", _lastActionId}, {"Name", GET(entity, EntityInfo).Name}, {"Position", {position.x, position.y, position.z}}};
             std::ofstream output(R"(__STATE__)");
             output << state.dump();
         });

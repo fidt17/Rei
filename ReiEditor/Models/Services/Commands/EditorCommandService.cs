@@ -8,8 +8,8 @@ namespace ReiEditor.Models.Services.Commands;
 public sealed class EditorCommandService : IEditorCommandService, IDisposable
 {
     public bool IsBusy { get { lock (_gate) return _isBusy; } }
-    public bool CanUndo { get { lock (_gate) return !_isBusy && _undo.TryPeek(out var entry) && entry.CanUndo; } }
-    public bool CanRedo { get { lock (_gate) return !_isBusy && _redo.TryPeek(out var entry) && entry.CanRedo; } }
+    public bool CanUndo { get { lock (_gate) return !_isBusy && PeekCurrentEntry(_undo)?.CanUndo == true; } }
+    public bool CanRedo { get { lock (_gate) return !_isBusy && PeekCurrentEntry(_redo)?.CanRedo == true; } }
 
     private readonly object _gate = new();
     private readonly Stack<IEditorHistoryEntry> _undo = new();
@@ -64,7 +64,7 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
         try
         {
             IEditorHistoryEntry? entry;
-            lock (_gate) source.TryPeek(out entry);
+            lock (_gate) entry = PeekCurrentEntry(source);
             if (entry == null) return;
             if (undo) await entry.UndoAsync();
             else await entry.RedoAsync();
@@ -76,6 +76,16 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
             }
         }
         finally { EndOperation(); }
+    }
+
+    private static IEditorHistoryEntry? PeekCurrentEntry(Stack<IEditorHistoryEntry> history)
+    {
+        while (history.TryPeek(out var entry))
+        {
+            if (entry is not NativeEditorHistoryEntry { IsStale: true }) return entry;
+            history.Pop();
+        }
+        return null;
     }
 
     private void AddHistoryEntry(IEditorHistoryEntry entry)

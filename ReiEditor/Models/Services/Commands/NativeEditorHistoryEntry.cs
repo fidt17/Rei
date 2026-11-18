@@ -9,7 +9,8 @@ public sealed class NativeEditorHistoryEntry(ulong actionId, IEngineNativeAccess
 {
     private readonly object? _instanceToken = engine.InstanceToken;
 
-    public bool CanUndo => _instanceToken != null && ReferenceEquals(_instanceToken, engine.InstanceToken);
+    internal bool IsStale => _instanceToken == null || !ReferenceEquals(_instanceToken, engine.InstanceToken);
+    public bool CanUndo => !IsStale;
     public bool CanRedo => CanUndo;
 
     public Task UndoAsync() => ReplayAsync(undo: true);

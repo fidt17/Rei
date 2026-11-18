@@ -566,6 +566,25 @@ public sealed class EditorCommandServiceTests
     }
 
     [Fact]
+    public async Task RedoSkipsStaleNativeEntryAndReplaysNextRename()
+    {
+        using var c = new Context();
+        var engine = new NativeEngine();
+        c.Commands.RecordApplied(new NativeEditorHistoryEntry(7, engine));
+        await c.Execute("Renamed");
+        await c.Commands.UndoAsync();
+        await c.Commands.UndoAsync();
+        engine.InstanceToken = new object();
+
+        Assert.True(c.Commands.CanRedo);
+        await c.Commands.RedoAsync();
+
+        Assert.Equal("Renamed", c.Entity.Name);
+        Assert.Equal(new[] { (true, 7UL) }, engine.Calls);
+        Assert.False(c.Commands.CanRedo);
+    }
+
+    [Fact]
     public async Task NativeEntryAndRenameTraverseOneHistoryWithoutRecordingReplay()
     {
         using var c = new Context();

@@ -21,41 +21,14 @@ public sealed class NativeHistoryLifecycleTests(ITestOutputHelper output)
     {
         await using var engine = new EngineIntegrationHarness();
         output.WriteLine($"Artifacts: {engine.RunDirectory}");
-        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
-        var appPath = Path.Combine(engine.ProjectDirectory, "Project", "Scripts", "ReiApp.cpp");
-        var source = (await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "NativeHistoryProbe.cpp")))
-            .Replace("__STATE__", Path.Combine(engine.ProjectDirectory, "history-state.json"))
-            .Replace("__COMMAND__", Path.Combine(engine.ProjectDirectory, "history-command.json"));
-        await File.WriteAllTextAsync(appPath, source);
-        await engine.StartAsync();
+        var appPath = await StartAsync(engine);
         var scenePath = Path.Combine(engine.ProjectDirectory, "Project", "Scenes", "New Scene.scene");
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
         var baseline = Position(await Command(engine));
         var oldMove = await Command(engine, "move", baseline[0] + 10);
         await AssertPosition(engine, Position(oldMove));
         await engine.WaitUntilAsync(async () => (await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean());
-        var oldSession = await Session(engine);
-        Assert.NotNull(oldSession);
-        // A restarted probe must not execute the previous move command again.
-        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "history-command.json"), "{\"Step\":0}");
-        if (reloadDll)
-        {
-            await File.AppendAllTextAsync(appPath, "\n// Force project DLL reload through the normal import pipeline.\n");
-            await engine.RunOperationAsync("rei_editor_refresh_assets");
-        }
-        else
-        {
-            await engine.RunOperationAsync("rei_editor_start_playmode");
-            await engine.RunOperationAsync("rei_editor_stop_playmode");
-        }
-        await engine.WaitUntilAsync(async () =>
-        {
-            var state = await engine.CallAsync("rei_editor_get_state");
-            var session = await Session(engine);
-            return state.GetProperty("engine").GetProperty("status").GetString() == "running" &&
-                state.GetProperty("engine").GetProperty("mode").GetString() == "EditorMode" &&
-                !state.GetProperty("automation").GetProperty("isBuilding").GetBoolean() && session != null && session != oldSession;
-        }, TimeSpan.FromMinutes(2));
+        await RestartAsync(engine, appPath, reloadDll);
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
         // Play/import may save the edited scene before restarting the engine.
         var restarted = Position(await Command(engine));
@@ -81,6 +54,75 @@ public sealed class NativeHistoryLifecycleTests(ITestOutputHelper output)
         await engine.CallAsync("rei_editor_redo");
         await AssertPosition(engine, Position(newMove));
         Assert.Equal(disk, await File.ReadAllBytesAsync(scenePath));
+    }
+
+    [EngineFact]
+    public async Task UndoReachesRenameAfterNativeMoveAndPlayStop()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        var appPath = await StartAsync(engine);
+        var before = await Command(engine);
+        var originalName = before.GetProperty("Name").GetString();
+        const string RENAMED = "Rename before native move";
+        await engine.CallAsync("rei_editor_rename_entity", new() { ["entityId"] = 2, ["newName"] = RENAMED });
+
+        var baseline = Position(before);
+        var move = await Command(engine, "move", baseline[0] + 10);
+        Assert.NotEqual(0ul, move.GetProperty("ActionId").GetUInt64());
+        await AssertPosition(engine, Position(move));
+        await engine.CallAsync("rei_editor_undo");
+        await AssertPosition(engine, baseline);
+        await engine.CallAsync("rei_editor_redo");
+        await AssertPosition(engine, Position(move));
+
+        await RestartAsync(engine, appPath, reloadDll: false);
+        Assert.Equal(RENAMED, (await Command(engine)).GetProperty("Name").GetString());
+        Assert.True((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean());
+        await engine.CallAsync("rei_editor_undo");
+        var restored = await Command(engine);
+        Assert.Equal(originalName, restored.GetProperty("Name").GetString());
+        var editor = await engine.CallAsync("rei_editor_get_entity", new() { ["entityId"] = 2 });
+        Assert.Equal(originalName, editor.GetProperty("name").GetString());
+        await AssertPosition(engine, Position(move));
+    }
+
+    private static async Task<string> StartAsync(EngineIntegrationHarness engine)
+    {
+        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
+        var appPath = Path.Combine(engine.ProjectDirectory, "Project", "Scripts", "ReiApp.cpp");
+        var source = (await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "NativeHistoryProbe.cpp")))
+            .Replace("__STATE__", Path.Combine(engine.ProjectDirectory, "history-state.json"))
+            .Replace("__COMMAND__", Path.Combine(engine.ProjectDirectory, "history-command.json"));
+        await File.WriteAllTextAsync(appPath, source);
+        await engine.StartAsync();
+        return appPath;
+    }
+
+    private static async Task RestartAsync(EngineIntegrationHarness engine, string appPath, bool reloadDll)
+    {
+        var oldSession = await Session(engine);
+        Assert.NotNull(oldSession);
+        // A restarted probe must not execute the previous move command again.
+        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "history-command.json"), "{\"Step\":0}");
+        if (reloadDll)
+        {
+            await File.AppendAllTextAsync(appPath, "\n// Force project DLL reload through the normal import pipeline.\n");
+            await engine.RunOperationAsync("rei_editor_refresh_assets");
+        }
+        else
+        {
+            await engine.RunOperationAsync("rei_editor_start_playmode");
+            await engine.RunOperationAsync("rei_editor_stop_playmode");
+        }
+        await engine.WaitUntilAsync(async () =>
+        {
+            var state = await engine.CallAsync("rei_editor_get_state");
+            var session = await Session(engine);
+            return state.GetProperty("engine").GetProperty("status").GetString() == "running" &&
+                state.GetProperty("engine").GetProperty("mode").GetString() == "EditorMode" &&
+                !state.GetProperty("automation").GetProperty("isBuilding").GetBoolean() && session != null && session != oldSession;
+        }, TimeSpan.FromMinutes(2));
     }
 
     private static async Task<string?> Session(EngineIntegrationHarness engine)
