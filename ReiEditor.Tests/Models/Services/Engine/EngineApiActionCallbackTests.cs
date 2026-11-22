@@ -140,7 +140,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorAddEditDeleteComponentUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddEditDelete);
 
-    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete }
+    [NativeCallbackFact]
+    public Task InspectorAddComponentUndoAndRedoPreservesExistingDependency() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithDependency);
+
+    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
     {
@@ -159,10 +162,11 @@ public sealed class EngineApiActionCallbackTests
                 api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
                 const int PROBE_ID = 7102;
+                const int DEPENDENT_ID = 7103;
                 const int TRANSFORM_ID = 7199;
                 var entityApi = new EntityApi(api);
                 var id = entityApi.CreateNewEntity("Inspector component history")!.EntityId!.Value;
-                if (scenario == ComponentHistory.Delete)
+                if (scenario is ComponentHistory.Delete or ComponentHistory.AddWithDependency)
                 {
                     entityApi.AddBehaviour(id, PROBE_ID);
                     entityApi.SetData(new SetEntityDataRequest
@@ -181,7 +185,8 @@ public sealed class EngineApiActionCallbackTests
                     new BehaviourAssetInfo("", "ProbeB", PROBE_ID, new ObjectFile<string>("", ""), new()
                     {
                         ["Number"] = new(SerializedTypeEnum.Integer, "i32", null, SerializedTypeEnum.Invalid, null, null, "97", false)
-                    }, [], ""));
+                    }, [], ""),
+                    new BehaviourAssetInfo("", "ProbeC", DEPENDENT_ID, new ObjectFile<string>("", ""), new(), ["ProbeB"], ""));
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
                 var coordinate = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
                     null, SerializedTypeEnum.Invalid, null, null, "1", false);
@@ -218,6 +223,29 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
+                    if (scenario == ComponentHistory.AddWithDependency)
+                    {
+                        AssertComponentNumber(42, dependentPresent: false);
+                        var dependency = entity.GetBehaviour(PROBE_ID);
+                        Assert.False(commands.CanUndo);
+                        Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
+                        AssertComponentNumber(42, dependentPresent: true);
+                        Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(42, dependentPresent: false);
+                        Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(42, dependentPresent: true);
+                        Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
                     if (scenario == ComponentHistory.Delete)
                     {
                         AssertComponentNumber(42);
@@ -304,7 +332,7 @@ public sealed class EngineApiActionCallbackTests
                     Assert.Single(probe.ContextMenu.Options, option => option.Text == "Delete Component").Command.Execute(null);
                 }
 
-                void AssertComponentNumber(int? expected)
+                void AssertComponentNumber(int? expected, bool? dependentPresent = null)
                 {
                     Dispatcher.UIThread.RunJobs();
                     var present = expected.HasValue;
@@ -314,6 +342,13 @@ public sealed class EngineApiActionCallbackTests
                     Assert.Equal(!present, inspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
                     var native = entityApi.GetEntityData(id)!.Behaviours;
                     Assert.Contains(native, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
+                    if (dependentPresent is { } hasDependent)
+                    {
+                        var dependentDrawers = view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                            .Count(d => d.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == DEPENDENT_ID);
+                        Assert.Equal(hasDependent ? 1 : 0, dependentDrawers);
+                        Assert.Equal(hasDependent ? 1 : 0, native.Count(behaviour => Equals(behaviour["REI_TYPE"], "ProbeC")));
+                    }
                     var probe = native.Where(behaviour => Equals(behaviour["REI_TYPE"], "ProbeB")).ToArray();
                     if (!present)
                     {
