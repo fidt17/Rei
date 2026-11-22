@@ -178,13 +178,16 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionTextEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemText: "");
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionCheckboxClickRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, toggleCollectionItem: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
         string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
-        bool editCollectionEnum = false, string? collectionItemText = null)
+        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -213,6 +216,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
                     SerializedTypeEnum.Collection when editCollectionEnum => (7101, "ProbeA", "Modes", "std::vector<rei::tests::ProbeMode>", null),
                     SerializedTypeEnum.Collection when collectionItemText != null => (7101, "ProbeA", "Labels", "std::vector<std::string>", null),
+                    SerializedTypeEnum.Collection when toggleCollectionItem => (7101, "ProbeA", "Flags", "std::vector<bool>", null),
                     SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
@@ -229,6 +233,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Collection when editCollectionEnum => (Array.Empty<int>(), new[] { 5, 2, 0 }, new[] { 5, 5, 0 }),
                     SerializedTypeEnum.Collection when collectionItemText != null => (Array.Empty<string>(), new[] { "Left", "Middle", "Right" },
                         new[] { "Left", collectionItemText, "Right" }),
+                    SerializedTypeEnum.Collection when toggleCollectionItem => (Array.Empty<bool>(), new[] { true, false, false }, new[] { true, true, false }),
                     SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
                     SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
                     SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
@@ -266,10 +271,11 @@ public sealed class EngineApiActionCallbackTests
                 }
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var (collectionItemType, collectionItemSource) = (editCollectionEnum, collectionItemText != null) switch
+                var (collectionItemType, collectionItemSource) = field switch
                 {
-                    (true, _) => (SerializedTypeEnum.Enum, "rei::tests::ProbeMode"),
-                    (_, true) => (SerializedTypeEnum.String, "std::string"),
+                    "Modes" => (SerializedTypeEnum.Enum, "rei::tests::ProbeMode"),
+                    "Labels" => (SerializedTypeEnum.String, "std::string"),
+                    "Flags" => (SerializedTypeEnum.Boolean, "bool"),
                     _ => (SerializedTypeEnum.Integer, "i32")
                 };
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
@@ -502,6 +508,10 @@ public sealed class EngineApiActionCallbackTests
                         mode.Focus();
                         mode.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Down });
                     }
+                    else if (toggleCollectionItem)
+                    {
+                        Click(view.GetVisualDescendants().OfType<CheckBox>().ElementAt(1));
+                    }
                     else if (value is CollectionPropertyViewModel list)
                     {
                         ClickCollectionButton(removeCollectionItem ? list.Value[1].RemoveCommand : list.AddItemCommand);
@@ -529,10 +539,7 @@ public sealed class EngineApiActionCallbackTests
                     }
                     else
                     {
-                        var checkbox = Assert.IsType<CheckBox>(toggle);
-                        var center = checkbox.TranslatePoint(new Point(checkbox.Bounds.Width / 2, checkbox.Bounds.Height / 2), window)!.Value;
-                        window.MouseDown(center, MouseButton.Left);
-                        window.MouseUp(center, MouseButton.Left);
+                        Click(Assert.IsType<CheckBox>(toggle));
                     }
                     Dispatcher.UIThread.RunJobs();
                     AssertValues(values.Edited);
@@ -609,7 +616,12 @@ public sealed class EngineApiActionCallbackTests
                     void ClickCollectionButton(System.Windows.Input.ICommand commandToClick)
                     {
                         var button = view.GetVisualDescendants().OfType<Button>().Single(button => ReferenceEquals(button.Command, commandToClick));
-                        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+                        Click(button);
+                    }
+
+                    void Click(Control control)
+                    {
+                        var center = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
                         window.MouseDown(center, MouseButton.Left);
                         window.MouseUp(center, MouseButton.Left);
                     }
@@ -719,6 +731,13 @@ public sealed class EngineApiActionCallbackTests
                                 {
                                     Assert.Equal(labels, view.GetVisualDescendants().OfType<ReiTextBox>().Select(input => input.Text));
                                     Assert.Equal(labels, JArray.FromObject(native).ToObject<string[]>());
+                                    break;
+                                }
+                                if (expected is bool[] flags)
+                                {
+                                    Assert.Equal(flags.Select(flag => (bool?)flag),
+                                        view.GetVisualDescendants().OfType<CheckBox>().Select(input => input.IsChecked));
+                                    Assert.Equal(flags, JArray.FromObject(native).ToObject<bool[]>());
                                     break;
                                 }
                                 var expectedItems = (int[])expected;

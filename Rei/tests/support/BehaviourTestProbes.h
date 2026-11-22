@@ -99,6 +99,7 @@ namespace rei::tests
         SERIALIZE std::vector<i32> Values = {1, 2};
         SERIALIZE std::vector<ProbeMode> Modes;
         SERIALIZE std::vector<std::string> Labels;
+        SERIALIZE std::vector<bool> Flags;
         SERIALIZE std::vector<ProbeNested> Items;
         SERIALIZE assets::AssetRef<ProbeDataAsset> Asset;
         SERIALIZE std::vector<assets::AssetRef<ProbeDataAsset>> Assets;
