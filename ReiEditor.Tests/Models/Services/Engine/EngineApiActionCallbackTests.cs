@@ -164,10 +164,13 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorComponentAndNumberPersistAfterUndoRedoAndReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAndReopen);
 
+    [NativeCallbackFact]
+    public Task InspectorUndoneComponentAdditionStaysAbsentAfterReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAfterUndo);
+
     private enum ComponentHistory
     {
         Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
-        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -390,10 +393,7 @@ public sealed class EngineApiActionCallbackTests
                         Assert.False(commands.CanRedo);
                         if (scenario == ComponentHistory.SaveAndReopen)
                         {
-                            var reopened = await SaveAndReopenAsync();
-                            using var reopenedInspector = CreateInspector(reopened);
-                            view.DataContext = reopenedInspector;
-                            AssertComponentNumber(42, inspectedEntity: reopened);
+                            await AssertReopenedComponentNumberAsync(42);
                         }
                         Assert.Empty(syncLogger.Entries);
                         return true;
@@ -403,6 +403,13 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(null);
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
+
+                    if (scenario == ComponentHistory.SaveAfterUndo)
+                    {
+                        await AssertReopenedComponentNumberAsync(null);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
 
                     await commands.RedoAsync();
                     AssertComponentNumber(97);
@@ -427,7 +434,7 @@ public sealed class EngineApiActionCallbackTests
                     deleteOption.Command.Execute(null);
                 }
 
-                async Task<GameEntity> SaveAndReopenAsync()
+                async Task AssertReopenedComponentNumberAsync(int? expected)
                 {
                     using var project = new TemporaryProjectFixture();
                     var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
@@ -460,7 +467,9 @@ public sealed class EngineApiActionCallbackTests
                     Assert.NotSame(entity, reopenedEntity);
                     Assert.Empty(assetLogger.Entries.Where(entry => entry.Level == ReiEditor.Models.Services.Logging.LogLevelEnum.Error));
                     scenes.Scene.Value = reopenedScene;
-                    return reopenedEntity;
+                    using var reopenedInspector = CreateInspector(reopenedEntity);
+                    view.DataContext = reopenedInspector;
+                    AssertComponentNumber(expected, inspectedEntity: reopenedEntity);
                 }
 
                 void AssertComponentNumber(int? expected, bool? dependentPresent = null, bool otherDependentPresent = false, GameEntity? inspectedEntity = null)
