@@ -168,12 +168,15 @@ public sealed class EngineApiActionCallbackTests
     public Task InspectorUndoneComponentAdditionStaysAbsentAfterReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAfterUndo);
 
     [NativeCallbackFact]
-    public Task InspectorUndoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SwitchScene);
+    public Task InspectorUndoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.UndoAfterSceneSwitch);
+
+    [NativeCallbackFact]
+    public Task InspectorRedoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.RedoAfterSceneSwitch);
 
     private enum ComponentHistory
     {
         Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
-        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, SwitchScene
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -363,9 +366,9 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
-                    if (scenario == ComponentHistory.SwitchScene)
+                    if (scenario == ComponentHistory.UndoAfterSceneSwitch)
                     {
-                        await AssertOldUndoDoesNotTouchNextSceneAsync();
+                        await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: false);
                         Assert.Empty(syncLogger.Entries);
                         return true;
                     }
@@ -417,6 +420,13 @@ public sealed class EngineApiActionCallbackTests
                     if (scenario == ComponentHistory.SaveAfterUndo)
                     {
                         await AssertReopenedComponentNumberAsync(null);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    if (scenario == ComponentHistory.RedoAfterSceneSwitch)
+                    {
+                        await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: true);
                         Assert.Empty(syncLogger.Entries);
                         return true;
                     }
@@ -482,14 +492,16 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(expected, inspectedEntity: reopenedEntity);
                 }
 
-                async Task AssertOldUndoDoesNotTouchNextSceneAsync()
+                async Task AssertOldHistoryDoesNotTouchNextSceneAsync(bool redo)
                 {
                     var serializer = new JsonSerializer();
                     var nextEntity = serializer.Deserialize<GameEntity>(serializer.Serialize(entity));
                     Assert.NotSame(entity, nextEntity);
                     Assert.Equal(id, nextEntity.Id);
                     nextEntity.SetName("Same ID in another scene");
-                    nextEntity.GetBehaviour(PROBE_ID)!.GetProperty("Number").SetValueWithoutTriggeringChangedEvent(61);
+                    int? expected = redo ? null : 61;
+                    if (expected is { } number)
+                        nextEntity.GetBehaviour(PROBE_ID)!.GetProperty("Number").SetValueWithoutTriggeringChangedEvent(number);
                     var nextScene = new Scene("Another scene");
                     nextScene.SetAssetInfo(new AssetInfo(new AssetMeta("other-component-history-scene"), ""));
                     nextScene.AddEntity(nextEntity);
@@ -505,10 +517,12 @@ public sealed class EngineApiActionCallbackTests
                     using var nextInspector = CreateInspector(nextEntity);
                     view.DataContext = nextInspector;
                     Assert.Equal(nextEntity.Name, entityApi.GetEntityData(id)!.Name);
-                    AssertComponentNumber(61, inspectedEntity: nextEntity);
+                    AssertComponentNumber(expected, inspectedEntity: nextEntity);
                     Assert.False(commands.CanUndo);
-                    await Assert.ThrowsAsync<InvalidOperationException>(commands.UndoAsync);
-                    AssertComponentNumber(61, inspectedEntity: nextEntity);
+                    Assert.False(commands.CanRedo);
+                    await Assert.ThrowsAsync<InvalidOperationException>(redo ? commands.RedoAsync : commands.UndoAsync);
+                    AssertComponentNumber(expected, inspectedEntity: nextEntity);
+                    Assert.False(commands.CanUndo);
                     Assert.False(commands.CanRedo);
                 }
 
