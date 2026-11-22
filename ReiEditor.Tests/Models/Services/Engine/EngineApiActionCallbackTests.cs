@@ -203,10 +203,14 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorNestedLabelEditRecordsOneUndoAndPreservesValue() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Label);
 
+    [NativeCallbackFact]
+    public Task InspectorNestedValueThenLabelUndoAndRedoInOrder() =>
+        VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.ValueThenLabel);
+
     private readonly record struct ProbeSettings(int Value, string Label);
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
-    private enum NestedField { None, Value, Label }
+    private enum NestedField { None, Value, Label, ValueThenLabel }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
@@ -649,6 +653,30 @@ public sealed class EngineApiActionCallbackTests
                     Assert.True(commands.CanUndo);
                     var editWrites = colorDrag != ColorDrag.None ? writes : 1;
                     Assert.Equal(editWrites, writes);
+
+                    if (nestedField == NestedField.ValueThenLabel)
+                    {
+                        var afterLabel = ((ProbeSettings)values.Edited) with { Label = "Updated label" };
+                        nestedLabelInput!.TextInternal = afterLabel.Label;
+                        nestedLabelInput.LoseFocus();
+                        AssertValues(afterLabel);
+                        Assert.Equal(2, writes);
+
+                        await commands.UndoAsync();
+                        AssertValues(values.Edited);
+                        await commands.UndoAsync();
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertValues(values.Edited);
+                        await commands.RedoAsync();
+                        AssertValues(afterLabel);
+                        Assert.False(commands.CanRedo);
+                        Assert.Equal(6, writes);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
 
                     if (removeCollectionItem && collectionItemValue.HasValue)
                     {
