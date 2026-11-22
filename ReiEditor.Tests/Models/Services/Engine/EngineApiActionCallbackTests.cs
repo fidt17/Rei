@@ -167,10 +167,13 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorUndoneComponentAdditionStaysAbsentAfterReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAfterUndo);
 
+    [NativeCallbackFact]
+    public Task InspectorUndoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SwitchScene);
+
     private enum ComponentHistory
     {
         Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
-        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, SwitchScene
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -360,6 +363,13 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
+                    if (scenario == ComponentHistory.SwitchScene)
+                    {
+                        await AssertOldUndoDoesNotTouchNextSceneAsync();
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
                     if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete or ComponentHistory.SaveAndReopen)
                     {
                         var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
@@ -470,6 +480,36 @@ public sealed class EngineApiActionCallbackTests
                     using var reopenedInspector = CreateInspector(reopenedEntity);
                     view.DataContext = reopenedInspector;
                     AssertComponentNumber(expected, inspectedEntity: reopenedEntity);
+                }
+
+                async Task AssertOldUndoDoesNotTouchNextSceneAsync()
+                {
+                    var serializer = new JsonSerializer();
+                    var nextEntity = serializer.Deserialize<GameEntity>(serializer.Serialize(entity));
+                    Assert.NotSame(entity, nextEntity);
+                    Assert.Equal(id, nextEntity.Id);
+                    nextEntity.SetName("Same ID in another scene");
+                    nextEntity.GetBehaviour(PROBE_ID)!.GetProperty("Number").SetValueWithoutTriggeringChangedEvent(61);
+                    var nextScene = new Scene("Another scene");
+                    nextScene.SetAssetInfo(new AssetInfo(new AssetMeta("other-component-history-scene"), ""));
+                    nextScene.AddEntity(nextEntity);
+
+                    using var project = new TemporaryProjectFixture();
+                    var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
+                    activeProject.OpenProject(project.Project);
+                    var loader = new EngineSceneLoader(new TestEngineNativeAccess(api), new TestLogger<EngineSceneLoader>());
+                    using var sceneManagement = new SceneManagementService(new TestLogger<SceneManagementService>(), null!, activeProject, null!,
+                        new SelectionService(entityApi), components, registry, runner, loader, new EditorProceduresService());
+                    await sceneManagement.LoadScene(nextScene);
+                    scenes.Scene.Value = sceneManagement.CurrentScene.Value;
+                    using var nextInspector = CreateInspector(nextEntity);
+                    view.DataContext = nextInspector;
+                    Assert.Equal(nextEntity.Name, entityApi.GetEntityData(id)!.Name);
+                    AssertComponentNumber(61, inspectedEntity: nextEntity);
+                    Assert.False(commands.CanUndo);
+                    await Assert.ThrowsAsync<InvalidOperationException>(commands.UndoAsync);
+                    AssertComponentNumber(61, inspectedEntity: nextEntity);
+                    Assert.False(commands.CanRedo);
                 }
 
                 void AssertComponentNumber(int? expected, bool? dependentPresent = null, bool otherDependentPresent = false, GameEntity? inspectedEntity = null)
