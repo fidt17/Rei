@@ -173,10 +173,13 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorRedoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.RedoAfterSceneSwitch);
 
+    [NativeCallbackFact]
+    public Task InspectorNumberEditInSecondSceneSupportsUndoAndRedo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.EditAfterSceneSwitch);
+
     private enum ComponentHistory
     {
         Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
-        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch, EditAfterSceneSwitch
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -366,7 +369,7 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
-                    if (scenario == ComponentHistory.UndoAfterSceneSwitch)
+                    if (scenario is ComponentHistory.UndoAfterSceneSwitch or ComponentHistory.EditAfterSceneSwitch)
                     {
                         await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: false);
                         Assert.Empty(syncLogger.Entries);
@@ -520,6 +523,24 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(expected, inspectedEntity: nextEntity);
                     Assert.False(commands.CanUndo);
                     Assert.False(commands.CanRedo);
+                    if (scenario == ComponentHistory.EditAfterSceneSwitch)
+                    {
+                        var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                        input.TextInternal = "73";
+                        input.LoseFocus();
+                        AssertComponentNumber(73, inspectedEntity: nextEntity);
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(61, inspectedEntity: nextEntity);
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(73, inspectedEntity: nextEntity);
+                        Assert.False(commands.CanRedo);
+                        return;
+                    }
                     await Assert.ThrowsAsync<InvalidOperationException>(redo ? commands.RedoAsync : commands.UndoAsync);
                     AssertComponentNumber(expected, inspectedEntity: nextEntity);
                     Assert.False(commands.CanUndo);
