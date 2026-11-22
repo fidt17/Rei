@@ -168,6 +168,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionNumberEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemValue: 42);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionEditThenRemoveSameItemUndoAndRedoInOrder() =>
+        VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, removeCollectionItem: true, collectionItemValue: 42);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
@@ -213,8 +217,8 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
-                    SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
                     SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
+                    SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
                     SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
@@ -468,11 +472,7 @@ public sealed class EngineApiActionCallbackTests
                     }
                     else if (value is CollectionPropertyViewModel list)
                     {
-                        var commandToClick = removeCollectionItem ? list.Value[1].RemoveCommand : list.AddItemCommand;
-                        var button = view.GetVisualDescendants().OfType<Button>().Single(button => ReferenceEquals(button.Command, commandToClick));
-                        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
-                        window.MouseDown(center, MouseButton.Left);
-                        window.MouseUp(center, MouseButton.Left);
+                        ClickCollectionButton(removeCollectionItem ? list.Value[1].RemoveCommand : list.AddItemCommand);
                     }
                     else if (text != null)
                     {
@@ -507,6 +507,29 @@ public sealed class EngineApiActionCallbackTests
                     Assert.True(commands.CanUndo);
                     var editWrites = colorDrag != ColorDrag.None ? writes : 1;
                     Assert.Equal(editWrites, writes);
+
+                    if (removeCollectionItem && collectionItemValue.HasValue)
+                    {
+                        var afterRemoval = new[] { 7, 11 };
+                        ClickCollectionButton(Assert.IsType<CollectionPropertyViewModel>(value).Value[1].RemoveCommand);
+                        AssertValues(afterRemoval);
+                        Assert.Equal(2, writes);
+
+                        await commands.UndoAsync();
+                        AssertValues(values.Edited);
+                        await commands.UndoAsync();
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertValues(values.Edited);
+                        await commands.RedoAsync();
+                        AssertValues(afterRemoval);
+                        Assert.False(commands.CanRedo);
+                        Assert.Equal(6, writes);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
 
                     if (mixedColorHistory)
                     {
@@ -550,6 +573,14 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Equal(editWrites + 2, writes);
                     Assert.Empty(syncLogger.Entries);
+
+                    void ClickCollectionButton(System.Windows.Input.ICommand commandToClick)
+                    {
+                        var button = view.GetVisualDescendants().OfType<Button>().Single(button => ReferenceEquals(button.Command, commandToClick));
+                        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+                        window.MouseDown(center, MouseButton.Left);
+                        window.MouseUp(center, MouseButton.Left);
+                    }
 
                     SerializedColorValue DragColor(ColorDrag drag, SerializedColorValue before)
                     {
