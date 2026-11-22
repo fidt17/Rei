@@ -25,17 +25,8 @@ public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<
 
         private GameEntity? FindTarget(string expectedName)
         {
-            var currentScene = scenes.CurrentScene.Value;
-            var target = entity;
-            if (!ReferenceEquals(scene, currentScene))
-            {
-                if (currentScene == null || string.IsNullOrEmpty(scene.AssetId) || currentScene.AssetId != scene.AssetId) return null;
-                if (!ReferenceEquals(scene.GetById(entity.Id), entity)) return null;
-                var reloaded = currentScene.GetById(entity.Id);
-                if (reloaded == null) return null;
-                target = reloaded;
-            }
-            return command.CanExecute(target) && target.Name == expectedName ? target : null;
+            var target = EntityEditContext.FindHistoryEntity(scene, entity, scenes.CurrentScene.Value);
+            return target != null && command.CanExecute(target) && target.Name == expectedName ? target : null;
         }
 
         public Task UndoAsync() => RenameAsync(_afterName, _beforeName);
@@ -71,9 +62,7 @@ public class EntityRenameCommand : IEntityRenameCommand, IUndoableEditorCommand<
         return new RenameHistoryEntry(this, _scenes, scene, target.Entity, result);
     }
 
-    private bool CanExecute(GameEntity entity) => !_engine.IsPlaymodeActive.Value && !_engine.IsEngineStarting.Value
-        && !(_engine.IsActive.Value && _engine.ActiveMode == EngineRunMode.PlayMode)
-        && ReferenceEquals(_scenes.CurrentScene.Value?.GetById(entity.Id), entity);
+    private bool CanExecute(GameEntity entity) => EntityEditContext.CanEdit(_engine, _scenes.CurrentScene.Value, entity);
 
     public Task<EntityRenameCommandResult> ExecuteAsync(EntityRenameCommandTarget target)
     {

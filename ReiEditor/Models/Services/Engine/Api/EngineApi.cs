@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using ReiEditor.Models.Services.Engine.Api.DTO;
 using ReiEditor.Models.Services.Engine.Playmode;
@@ -20,6 +21,9 @@ public class EngineApi : IEngineApi
     // Raised on the native engine thread, like the native callback itself.
     public event Action<ulong>? ActionRecorded;
     public bool IsEngineRunning { get; private set; }
+    public object? EditorActionContext => Volatile.Read(ref _editorActionContext);
+
+    private object? _editorActionContext;
 
     private readonly IEngineApi.IntCallbackDelegate _sceneLoadProgressCallback;
     private readonly ActionRecordedCallbackDelegate _actionRecordedCallback;
@@ -67,32 +71,22 @@ public class EngineApi : IEngineApi
     private delegate void StartEngineDelegate(IntPtr enginePtr, [MarshalAs(UnmanagedType.LPUTF8Str)] string? lastSceneId);
     public void Start(IntPtr enginePtr, string? lastSceneId = null)
     {
-        IsEngineRunning = false;
-        try
-        {
-            Invoke(typeof(StartEngineDelegate), "Start", enginePtr, lastSceneId);
-        }
-        catch (Exception)
-        {
-            throw;
-        }
-        finally
-        {
-            IsEngineRunning = false;
-        }
+        MarkEngineStopped();
+        try { Invoke(typeof(StartEngineDelegate), "Start", enginePtr, lastSceneId); }
+        finally { MarkEngineStopped(); }
     }
 
     private delegate int ShutdownEngineDelegate(IntPtr enginePtr, int exitCode);
     public void Shutdown(IntPtr enginePtr, int exitCode)
     {
-        IsEngineRunning = false;
+        MarkEngineStopped();
         Invoke<int>(typeof(ShutdownEngineDelegate), "Shutdown", enginePtr, exitCode);
     }
 
     private delegate void DestroyEngineDelegate(IntPtr enginePtr);
     public void DestroyEngine(IntPtr enginePtr)
     {
-        IsEngineRunning = false;
+        MarkEngineStopped();
         Invoke(typeof(DestroyEngineDelegate), "DestroyEngine", enginePtr);
     }
 
@@ -113,12 +107,21 @@ public class EngineApi : IEngineApi
     public void RequestSceneSync() => Invoke(typeof(IEngineApi.VoidCallbackDelegate), "RequestSceneSync");
 
     private delegate int LoadEditorSceneDelegate([MarshalAs(UnmanagedType.LPUTF8Str)] string requestJson);
-    public bool LoadEditorScene(string requestJson) => IsEngineRunning && Invoke<int>(typeof(LoadEditorSceneDelegate), "LoadEditorScene", requestJson) == 1;
+    public bool LoadEditorScene(string requestJson)
+    {
+        if (!IsEngineRunning) return false;
+        try { return Invoke<int>(typeof(LoadEditorSceneDelegate), "LoadEditorScene", requestJson) == 1; }
+        finally { Volatile.Write(ref _editorActionContext, new object()); }
+    }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int ReplayEditorActionDelegate(ulong actionId);
-    public bool UndoEditorAction(ulong actionId) => IsEngineRunning && Invoke<int>(typeof(ReplayEditorActionDelegate), "UndoEditorAction", actionId) == 1;
-    public bool RedoEditorAction(ulong actionId) => IsEngineRunning && Invoke<int>(typeof(ReplayEditorActionDelegate), "RedoEditorAction", actionId) == 1;
+    public EditorActionReplayResult UndoEditorAction(ulong actionId) => ReplayEditorAction("UndoEditorAction", actionId);
+    public EditorActionReplayResult RedoEditorAction(ulong actionId) => ReplayEditorAction("RedoEditorAction", actionId);
+
+    private EditorActionReplayResult ReplayEditorAction(string export, ulong actionId) => IsEngineRunning
+        ? (EditorActionReplayResult)Invoke<int>(typeof(ReplayEditorActionDelegate), export, actionId)
+        : EditorActionReplayResult.Failed;
 
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
@@ -179,11 +182,16 @@ public class EngineApi : IEngineApi
         return Invoke<int>(typeof(RequestFrameCaptureDelegate), "RequestFrameCapture", callback) == 1;
     }
 
-    public void MarkEngineStarted() => IsEngineRunning = true;
+    public void MarkEngineStarted()
+    {
+        Volatile.Write(ref _editorActionContext, new object());
+        IsEngineRunning = true;
+    }
 
     public void MarkEngineStopped()
     {
         IsEngineRunning = false;
+        Volatile.Write(ref _editorActionContext, null);
     }
 
     private delegate IntPtr GetWindowHandleDelegate(IntPtr windowPtr);

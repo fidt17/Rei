@@ -28,13 +28,13 @@ namespace rei::editor
 
         REI_API EntityReparentAction(std::vector<Change> changes, std::vector<EntityOrderAction::Change> orders);
         REI_API EntityReparentAction(ecs::ComponentRef<Transform> target, State before, State after, std::vector<EntityOrderAction::Change> orders);
-        REI_API bool Undo() override;
-        REI_API bool Redo() override;
+        REI_API EditorActionReplayResult Undo() override;
+        REI_API EditorActionReplayResult Redo() override;
 
     private:
         std::vector<Change> _changes;
         std::vector<EntityOrderAction::Change> _orders;
 
-        bool Apply(bool undo);
+        EditorActionReplayResult Apply(bool undo);
     };
 }

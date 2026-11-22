@@ -23,23 +23,23 @@ namespace rei::editor
     {
     }
 
-    bool EntityReparentAction::Undo() { return Apply(true); }
-    bool EntityReparentAction::Redo() { return Apply(false); }
+    EditorActionReplayResult EntityReparentAction::Undo() { return Apply(true); }
+    EditorActionReplayResult EntityReparentAction::Redo() { return Apply(false); }
 
-    bool EntityReparentAction::Apply(const bool undo)
+    EditorActionReplayResult EntityReparentAction::Apply(const bool undo)
     {
-        if (_changes.empty()) return false;
+        if (_changes.empty()) return EditorActionReplayResult::Failed;
         ECS_WORLD(GetInternalWorld())
         for (const auto& change : _changes)
         {
-            if (change.Target.IsNull()) return false;
+            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
             const auto& state = undo ? change.Before : change.After;
-            if (state.Rect && !HAS(change.Target.Get().GetEntity(), ui::RectTransform)) return false;
-            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return false;
+            if (state.Rect && !HAS(change.Target.Get().GetEntity(), ui::RectTransform)) return EditorActionReplayResult::Failed;
+            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return EditorActionReplayResult::Failed;
         }
         for (const auto& change : _orders)
         {
-            if (change.Target.IsNull()) return false;
+            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
         }
 
         for (const auto& change : _changes)
@@ -60,6 +60,6 @@ namespace rei::editor
         {
             change.Target.Get().SetChildOrder(undo ? change.Before : change.After);
         }
-        return true;
+        return EditorActionReplayResult::Applied;
     }
 }

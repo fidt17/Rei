@@ -30,14 +30,13 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
     public Utils.Common.IObservable<bool> IsEngineStarting => _isEngineStarting;
 
     public EngineRunMode ActiveMode { get; private set; }
-    public object? InstanceToken => Volatile.Read(ref _instanceToken);
+    public object? EditorActionContext => _engineApi.EditorActionContext;
 
     private readonly object _lifecycleLock = new();
     private readonly object _nativeCallLock = new();
     private Task _engineCompletion = Task.CompletedTask;
     private Task _startNotification = Task.CompletedTask;
     private IntPtr? _enginePtr;
-    private object? _instanceToken;
     private readonly IEngineApi.VoidCallbackDelegate _startCallbackDelegate;
     
     private readonly Observable<bool> _isActive = new(false);
@@ -130,11 +129,7 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             }
 
             enginePtr = _engineApi.CreateEngine(Path.Combine(_resourceService.GetRootPath(), ResourceConstants.BIN_DIR_NAME, ResourceConstants.RESOURCES_DIR_NAME), mode);
-            lock (_nativeCallLock)
-            {
-                _enginePtr = enginePtr;
-                Volatile.Write(ref _instanceToken, new object());
-            }
+            lock (_nativeCallLock) _enginePtr = enginePtr;
             _engineApi.AddEngineStartCallback(Marshal.GetFunctionPointerForDelegate(_startCallbackDelegate));
             _engineLogger.SubscribeToClient();
             _engineInputService.SubscribeToClient();
@@ -157,7 +152,6 @@ public class EngineRunner : IEngineRunner, IEngineNativeAccess, IAsyncDisposable
             // Keep that native call, destruction and FreeLibrary mutually exclusive.
             lock (_nativeCallLock)
             {
-                Volatile.Write(ref _instanceToken, null);
                 // Start has returned: unsubscribe before destruction and project DLL unload.
                 try { _sceneEvents?.Disconnect(); }
                 catch (Exception e) { _logger.LogException(e); }

@@ -45,20 +45,20 @@ namespace rei::editor
     }
 
     bool RectTransformChangeAction::HasChanges() const { return !_changes.empty(); }
-    bool RectTransformChangeAction::Undo() { return Apply(true); }
-    bool RectTransformChangeAction::Redo() { return Apply(false); }
+    EditorActionReplayResult RectTransformChangeAction::Undo() { return Apply(true); }
+    EditorActionReplayResult RectTransformChangeAction::Redo() { return Apply(false); }
 
-    bool RectTransformChangeAction::Apply(const bool undo)
+    EditorActionReplayResult RectTransformChangeAction::Apply(const bool undo)
     {
-        if (!HasChanges()) return false;
+        if (!HasChanges()) return EditorActionReplayResult::Failed;
         for (const auto& change : _changes)
         {
-            if (change.Target.IsNull()) return false;
+            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _changes)
         {
             (undo ? change.Before : change.After).ApplyTo(change.Target.Get(), _fields);
         }
-        return true;
+        return EditorActionReplayResult::Applied;
     }
 }

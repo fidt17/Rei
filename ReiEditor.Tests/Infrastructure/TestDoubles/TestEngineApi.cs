@@ -14,6 +14,7 @@ internal abstract class TestEngineApi : IEngineApi
     public int ActionRecordedSubscribers => ActionRecorded?.GetInvocationList().Length ?? 0;
     public void EmitActionRecorded(ulong id) => ActionRecorded?.Invoke(id);
     public void EmitSceneLoadProgress(int percent) => SceneLoadProgressChanged?.Invoke(percent);
+    public object EditorActionContext { get; } = new();
     public virtual bool IsEngineRunning => throw new NotSupportedException();
     public virtual IntPtr CreateEngine(string resourcesDir, EngineRunMode mode) => throw new NotSupportedException();
     public virtual void Start(IntPtr enginePtr, string? lastSceneId = null) => throw new NotSupportedException();
@@ -26,8 +27,8 @@ internal abstract class TestEngineApi : IEngineApi
     public virtual void SetSceneSyncCallback(IEngineApi.SceneSyncCallbackDelegate? callback) => throw new NotSupportedException();
     public virtual void RequestSceneSync() => throw new NotSupportedException();
     public virtual bool LoadEditorScene(string requestJson) => throw new NotSupportedException();
-    public virtual bool UndoEditorAction(ulong actionId) => throw new NotSupportedException();
-    public virtual bool RedoEditorAction(ulong actionId) => throw new NotSupportedException();
+    public virtual EditorActionReplayResult UndoEditorAction(ulong actionId) => throw new NotSupportedException();
+    public virtual EditorActionReplayResult RedoEditorAction(ulong actionId) => throw new NotSupportedException();
     public virtual long BuildAsset(string assetPath, string destinationFile, long offset) => throw new NotSupportedException();
     public virtual Task<IntPtr> CreateEngineWindow() => throw new NotSupportedException();
     public virtual IntPtr GetWindowHandle(IntPtr windowPtr) => throw new NotSupportedException();

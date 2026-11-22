@@ -6,7 +6,7 @@ namespace ReiEditor.Tests.Infrastructure.TestDoubles;
 // The test owns the API (and, for integration tests, its isolated native session).
 internal sealed class TestEngineNativeAccess(IEngineApi api) : IEngineNativeAccess
 {
-    public object? InstanceToken { get; } = new object();
+    public object? EditorActionContext => api.EditorActionContext;
 
     public bool TryInvoke(Action<IEngineApi> action) { action(api); return true; }
 }

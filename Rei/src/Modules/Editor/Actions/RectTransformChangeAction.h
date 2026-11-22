@@ -34,13 +34,13 @@ namespace rei::editor
         REI_API RectTransformChangeAction(Fields fields, ecs::ComponentRef<ui::RectTransform> target, State before, State after);
         REI_API RectTransformChangeAction(Fields fields, std::vector<Change> changes);
         REI_API bool HasChanges() const;
-        REI_API bool Undo() override;
-        REI_API bool Redo() override;
+        REI_API EditorActionReplayResult Undo() override;
+        REI_API EditorActionReplayResult Redo() override;
 
     private:
         Fields _fields;
         std::vector<Change> _changes;
 
-        bool Apply(bool undo);
+        EditorActionReplayResult Apply(bool undo);
     };
 }

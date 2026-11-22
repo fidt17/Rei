@@ -13,15 +13,15 @@ namespace rei::editor
         return id;
     }
 
-    bool EditorActionStore::Undo(const u64 actionId)
+    EditorActionReplayResult EditorActionStore::Undo(const u64 actionId)
     {
         const auto entry = _actions.find(actionId);
-        return entry != _actions.end() && entry->second->Undo();
+        return entry == _actions.end() ? EditorActionReplayResult::Failed : entry->second->Undo();
     }
 
-    bool EditorActionStore::Redo(const u64 actionId)
+    EditorActionReplayResult EditorActionStore::Redo(const u64 actionId)
     {
         const auto entry = _actions.find(actionId);
-        return entry != _actions.end() && entry->second->Redo();
+        return entry == _actions.end() ? EditorActionReplayResult::Failed : entry->second->Redo();
     }
 }

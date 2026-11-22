@@ -13,20 +13,20 @@ namespace rei::editor
     {
     }
 
-    bool EntityRotateAction::Undo() { return Apply(true); }
-    bool EntityRotateAction::Redo() { return Apply(false); }
+    EditorActionReplayResult EntityRotateAction::Undo() { return Apply(true); }
+    EditorActionReplayResult EntityRotateAction::Redo() { return Apply(false); }
 
-    bool EntityRotateAction::Apply(const bool undo)
+    EditorActionReplayResult EntityRotateAction::Apply(const bool undo)
     {
-        if (_changes.empty()) return false;
+        if (_changes.empty()) return EditorActionReplayResult::Failed;
         for (const auto& change : _changes)
         {
-            if (change.Target.IsNull()) return false;
+            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _changes)
         {
             change.Target.Get().SetRotation(undo ? change.Before : change.After);
         }
-        return true;
+        return EditorActionReplayResult::Applied;
     }
 }

@@ -46,7 +46,7 @@ public sealed class EditorCommandServiceTests
         public bool InCall { get; private set; }
         public List<(bool Undo, ulong Id)> Calls { get; } = [];
 
-        public object? InstanceToken { get; set; } = new object();
+        public object? EditorActionContext { get; set; } = new object();
 
         public bool TryInvoke(Action<IEngineApi> action)
         {
@@ -57,15 +57,15 @@ public sealed class EditorCommandServiceTests
             return true;
         }
 
-        public override bool UndoEditorAction(ulong actionId) => Replay(true, actionId);
-        public override bool RedoEditorAction(ulong actionId) => Replay(false, actionId);
+        public override EditorActionReplayResult UndoEditorAction(ulong actionId) => Replay(true, actionId);
+        public override EditorActionReplayResult RedoEditorAction(ulong actionId) => Replay(false, actionId);
 
-        private bool Replay(bool undo, ulong actionId)
+        private EditorActionReplayResult Replay(bool undo, ulong actionId)
         {
             Calls.Add((undo, actionId));
             OnReplay?.Invoke();
             if (Error != null) throw Error;
-            return Succeeds;
+            return Succeeds ? EditorActionReplayResult.Applied : EditorActionReplayResult.Failed;
         }
     }
 
@@ -557,7 +557,7 @@ public sealed class EditorCommandServiceTests
         Assert.True(entry.CanUndo);
         Assert.True(entry.CanRedo);
 
-        engine.InstanceToken = new object();
+        engine.EditorActionContext = new object();
 
         Assert.False(entry.CanUndo);
         Assert.False(entry.CanRedo);
@@ -574,7 +574,7 @@ public sealed class EditorCommandServiceTests
         await c.Execute("Renamed");
         await c.Commands.UndoAsync();
         await c.Commands.UndoAsync();
-        engine.InstanceToken = new object();
+        engine.EditorActionContext = new object();
 
         Assert.True(c.Commands.CanRedo);
         await c.Commands.RedoAsync();

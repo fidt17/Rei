@@ -19,12 +19,7 @@ public sealed class ViewportGizmoChecklistTests(ITestOutputHelper output)
     public async Task GizmoChecklistThroughMcpInputAndSharedHistory()
     {
         await using var engine = new EngineIntegrationHarness();
-        output.WriteLine($"Artifacts: {engine.RunDirectory}");
-        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
-        var source = (await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "ViewportGizmoProbe.cpp")))
-            .Replace("__STATE__", Path.Combine(engine.ProjectDirectory, "gizmo-state.json"))
-            .Replace("__COMMAND__", Path.Combine(engine.ProjectDirectory, "gizmo-command.json"));
-        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "Project", "Scripts", "ReiApp.cpp"), source);
+        await PrepareAsync(engine);
         await engine.StartAsync();
         var scenePath = Path.Combine(engine.ProjectDirectory, "Project", "Scenes", "New Scene.scene");
         var disk = await File.ReadAllBytesAsync(scenePath);
@@ -59,6 +54,65 @@ public sealed class ViewportGizmoChecklistTests(ITestOutputHelper output)
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
+    [EngineFact]
+    public async Task SceneSwitchDropsUndoForPreviousGizmoMove()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        await PrepareAsync(engine);
+        var scenes = Path.Combine(engine.ProjectDirectory, "Project", "Scenes");
+        File.Copy(Path.Combine(scenes, "New Scene.scene"), Path.Combine(scenes, "Other.scene"));
+        await File.WriteAllTextAsync(Path.Combine(scenes, "Other.scene.meta"), JsonSerializer.Serialize(new { AssetId = Guid.NewGuid(), Data = new { } }));
+        await engine.StartAsync();
+
+        var scenario = new Scenario("move_x", 87, 0, 1);
+        var configured = await ConfigureAsync(engine, scenario);
+        await MoveGizmoAsync();
+        Assert.True((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean());
+
+        var session = await SessionAsync();
+        await engine.RunOperationAsync("rei_editor_open_scene", new() { ["scene"] = "Scenes/Other.scene" });
+        Assert.Equal(session, await SessionAsync());
+        var other = await ConfigureAsync(engine, scenario);
+        Assert.Equal(configured.GetProperty("Entities")[0].GetProperty("Id").GetInt32(), other.GetProperty("Entities")[0].GetProperty("Id").GetInt32());
+        var history = await engine.CallAsync("rei_editor_get_command_state");
+        Assert.False(history.GetProperty("canUndo").GetBoolean());
+        Assert.False(history.GetProperty("canRedo").GetBoolean());
+        var rejected = await Assert.ThrowsAsync<InvalidOperationException>(() => engine.CallAsync("rei_editor_undo"));
+        Assert.Contains("undo_unavailable", rejected.Message);
+        await AssertState(engine, other);
+
+        await MoveGizmoAsync();
+        await engine.CallAsync("rei_editor_undo");
+        await AssertState(engine, other);
+        Assert.False((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean());
+
+        async Task MoveGizmoAsync()
+        {
+            var (before, frame) = await Pointer(engine, scenario);
+            var end = EndPoint(before, scenario);
+            await Drag(engine, before, frame, end.X, end.Y);
+            var after = await Command(engine);
+            AssertGesture(scenario, before, after);
+            await AssertEditor(engine, after);
+        }
+
+        async Task<string> SessionAsync()
+        {
+            var profile = await engine.CallAsync("rei_editor_get_profiling_snapshot", new() { ["source"] = "runtime", ["view"] = "recent", ["limit"] = 1 });
+            return Assert.IsType<string>(profile.GetProperty("sessionId").GetString());
+        }
+    }
+
+    private async Task PrepareAsync(EngineIntegrationHarness engine)
+    {
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
+        var source = (await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "ViewportGizmoProbe.cpp")))
+            .Replace("__STATE__", Path.Combine(engine.ProjectDirectory, "gizmo-state.json"))
+            .Replace("__COMMAND__", Path.Combine(engine.ProjectDirectory, "gizmo-command.json"));
+        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "Project", "Scripts", "ReiApp.cpp"), source);
+    }
+
     private static IEnumerable<Scenario> Scenarios()
     {
         foreach (var count in new[] { 1, 2 })
@@ -74,9 +128,8 @@ public sealed class ViewportGizmoChecklistTests(ITestOutputHelper output)
         }
     }
 
-    private async Task Check(EngineIntegrationHarness engine, Scenario scenario)
+    private async Task<JsonElement> ConfigureAsync(EngineIntegrationHarness engine, Scenario scenario)
     {
-        Assert.False((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean());
         var configured = await Command(engine, "configure", new() { ["Count"] = scenario.Count, ["Rect"] = scenario.Rect, ["Stretch"] = scenario.Stretch, ["Part"] = scenario.Part });
         var ids = configured.GetProperty("Entities").EnumerateArray().Select(entity => entity.GetProperty("Id").GetInt32()).ToArray();
         await engine.WaitUntilAsync(async () =>
@@ -86,6 +139,13 @@ public sealed class ViewportGizmoChecklistTests(ITestOutputHelper output)
         });
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = ids });
         await AssertEditor(engine, configured);
+        return configured;
+    }
+
+    private async Task Check(EngineIntegrationHarness engine, Scenario scenario)
+    {
+        Assert.False((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean());
+        await ConfigureAsync(engine, scenario);
         var (before, frame) = await Pointer(engine, scenario);
         var end = EndPoint(before, scenario);
         await Drag(engine, before, frame, end.X, end.Y);

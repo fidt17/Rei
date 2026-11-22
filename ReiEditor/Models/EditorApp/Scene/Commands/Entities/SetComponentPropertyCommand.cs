@@ -75,26 +75,35 @@ public sealed class SetComponentPropertyCommand(
 
     private SerializedProperty? FindHistoryProperty(Target target)
     {
-        if (!target.Entity.HasBehaviour(target.Component) && target.Property.ParentProperty == null
-            && target.Property.Type != SerializedTypeEnum.Collection
-            && target.Entity.GetBehaviour(target.Component.Id) is { } restored
-            && ReferenceEquals(target.Component.HistoryIdentity, restored.HistoryIdentity)
-            && restored.Properties.TryGetValue(target.Property.Name, out var property)
-            && property.Type == target.Property.Type && property.SourceType == target.Property.SourceType)
+        if (IsCurrent(target)) return target.Property;
+        if (target.Property.ParentProperty != null || target.Property.Type == SerializedTypeEnum.Collection) return null;
+
+        var scene = scenes.CurrentScene.Value;
+        if (scene == null || EntityEditContext.FindHistoryEntity(target.Scene, target.Entity, scene) is not { } entity) return null;
+        var component = entity.GetBehaviour(target.Component.Id);
+        if (component == null || ReferenceEquals(component, target.Component)) return null;
+
+        if (ReferenceEquals(scene, target.Scene))
         {
-            target = target with { Component = restored, Property = property };
+            if (!ReferenceEquals(component.HistoryIdentity, target.Component.HistoryIdentity)) return null;
+        }
+        else if (target.Property.Type is not (SerializedTypeEnum.Integer or SerializedTypeEnum.Float))
+        {
+            return null;
         }
 
-        return IsCurrent(target) ? target.Property : null;
+        if (!component.Properties.TryGetValue(target.Property.Name, out var property)
+            || property.Type != target.Property.Type || property.SourceType != target.Property.SourceType) return null;
+
+        var restored = target with { Scene = scene, Entity = entity, Component = component, Property = property };
+        return IsCurrent(restored) ? property : null;
     }
 
     private bool IsCurrent(Target target)
     {
         var root = target.Property.ParentProperty ?? target.Property;
-        return !engine.IsEngineStarting.Value && !engine.IsPlaymodeActive.Value
-            && !(engine.IsActive.Value && engine.ActiveMode == EngineRunMode.PlayMode)
-            && ReferenceEquals(target.Scene, scenes.CurrentScene.Value)
-            && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
+        return ReferenceEquals(target.Scene, scenes.CurrentScene.Value)
+            && EntityEditContext.CanEdit(engine, target.Scene, target.Entity)
             && target.Entity.HasBehaviour(target.Component)
             && target.Component.Properties.TryGetValue(root.Name, out var property)
             && ReferenceEquals(property, root)

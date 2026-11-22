@@ -15,7 +15,7 @@ public sealed class EngineViewportInputServiceTests
         public int Result = 1;
         public int Calls;
         public bool HasExport(string name) => Supported;
-        public object? InstanceToken { get; } = new object();
+        public object? EditorActionContext { get; } = new object();
 
         public bool TryInvoke(Action<IEngineApi> action) { if (!Available) return false; action(this); return true; }
         public override T Invoke<T>(Type delegateType, string methodName, params object?[]? args) { Calls++; return (T)(object)Result; }
