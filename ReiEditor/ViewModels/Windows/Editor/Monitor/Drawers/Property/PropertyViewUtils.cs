@@ -29,20 +29,21 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
-        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitProperty = null,
+        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<SerializedProperty, object>? commitProperty = null,
         Action<SerializedColorValue>? recordColorDrag = null)
     {
-        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commitProperty);
+        Action<object>? commit = commitProperty == null ? null : value => commitProperty(property, value);
+        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commit);
 
         return property.Type switch
         {
-            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.String => new StringPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commitProperty),
+            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commit),
+            SerializedTypeEnum.String => new StringPropertyViewModel(property, commit),
+            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property, commit),
+            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commit),
+            SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commit),
             SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty, recordColorDrag),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commit, recordColorDrag),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };

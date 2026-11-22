@@ -162,12 +162,18 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionAddRecordsOneUndoAndPreservesExistingItems() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionRemoveFromMiddleRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, removeCollectionItem: true);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionNumberEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemValue: 42);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
-        string? vectorAxis = null, bool editVector3 = false)
+        string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -207,6 +213,8 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
+                    SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
                     SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
@@ -448,10 +456,21 @@ public sealed class EngineApiActionCallbackTests
                         Assert.Equal(0, writes);
                         text.LoseFocus();
                     }
-                    else if (type == SerializedTypeEnum.Collection)
+                    else if (collectionItemValue is { } newNumber)
                     {
-                        var add = view.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Add Element"));
-                        var center = add.TranslatePoint(new Point(add.Bounds.Width / 2, add.Bounds.Height / 2), window)!.Value;
+                        components.RefreshComponents(entity);
+                        text = view.GetVisualDescendants().OfType<ReiTextBox>().ElementAt(1);
+                        text.TextInternal = newNumber.ToString(CultureInfo.CurrentCulture);
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        Assert.Equal(0, writes);
+                        text.LoseFocus();
+                    }
+                    else if (value is CollectionPropertyViewModel list)
+                    {
+                        var commandToClick = removeCollectionItem ? list.Value[1].RemoveCommand : list.AddItemCommand;
+                        var button = view.GetVisualDescendants().OfType<Button>().Single(button => ReferenceEquals(button.Command, commandToClick));
+                        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
                         window.MouseDown(center, MouseButton.Left);
                         window.MouseUp(center, MouseButton.Left);
                     }
@@ -629,9 +648,10 @@ public sealed class EngineApiActionCallbackTests
                                 var nativeVector3 = JObject.FromObject(native);
                                 Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
                                 break;
-                            case CollectionPropertyViewModel list:
+                            case CollectionPropertyViewModel collectionViewModel:
                                 var expectedItems = (int[])expected;
-                                Assert.Equal(expectedItems.Length, list.Count);
+                                Assert.Equal(expectedItems.Length, collectionViewModel.Count);
+                                Assert.Equal(expectedItems.Select((_, index) => $"[{index}]"), collectionViewModel.Value.Select(item => item.Property.Name));
                                 Assert.Equal(expectedItems, view.GetVisualDescendants().OfType<ReiTextBox>()
                                     .Select(input => int.Parse(input.Text, CultureInfo.CurrentCulture)));
                                 Assert.Equal(expectedItems, JArray.FromObject(native).ToObject<int[]>());

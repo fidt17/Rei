@@ -46,7 +46,7 @@ public class CollectionPropertyViewModel : BaseViewModel
     private readonly IProjectAssetFocusService _projectAssetFocusService;
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
-    private readonly Action<object>? _commitProperty;
+    private readonly Action<SerializedProperty, object>? _commitProperty;
 
 #pragma warning disable CS8618
     public CollectionPropertyViewModel()
@@ -66,7 +66,7 @@ public class CollectionPropertyViewModel : BaseViewModel
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
-        IDataAssetTypeRegistry? dataAssetTypeRegistry, Action<object>? commitProperty = null)
+        IDataAssetTypeRegistry? dataAssetTypeRegistry, Action<SerializedProperty, object>? commitProperty = null)
     {
         if (property.Type != SerializedTypeEnum.Collection) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Collection}. Actual {property.Type}");
 
@@ -108,14 +108,14 @@ public class CollectionPropertyViewModel : BaseViewModel
         {
             if (_property.Value is not List<SerializedProperty> currentItems) return;
             var newItem = CreateCollectionItem($"[{currentItems.Count}]", _property);
-            _commitProperty(currentItems.Append(newItem).ToArray());
+            _commitProperty(_property, currentItems.Append(newItem).ToArray());
             return;
         }
 
         var items = EnsureItems();
         var itemProperty = CreateCollectionItem($"[{items.Count}]", _property);
         items.Add(itemProperty);
-        ReindexItems(items);
+        SerializedProperty.ReindexCollectionItems(items);
         _property.NotifyStructureChanged();
     }
 
@@ -160,7 +160,8 @@ public class CollectionPropertyViewModel : BaseViewModel
                 _projectAssetFocusService,
                 _sceneManagementService,
                 _selectionService,
-                _dataAssetTypeRegistry);
+                _dataAssetTypeRegistry,
+                commitProperty: item.Type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float ? _commitProperty : null);
 
             Value.Add(new CollectionItemViewModel(item, itemViewModel, () => RemoveItem(item)));
         }
@@ -189,9 +190,16 @@ public class CollectionPropertyViewModel : BaseViewModel
     private void RemoveItem(SerializedProperty item)
     {
         if (_property.Value is not List<SerializedProperty> items) return;
-        if (!items.Remove(item)) return;
+        var updatedItems = _commitProperty == null ? items : new List<SerializedProperty>(items);
+        if (!updatedItems.Remove(item)) return;
 
-        ReindexItems(items);
+        if (_commitProperty != null)
+        {
+            _commitProperty(_property, updatedItems);
+            return;
+        }
+
+        SerializedProperty.ReindexCollectionItems(items);
         _property.NotifyStructureChanged();
     }
 
@@ -202,14 +210,6 @@ public class CollectionPropertyViewModel : BaseViewModel
         items = new List<SerializedProperty>();
         _property.Value = items;
         return items;
-    }
-
-    private void ReindexItems(List<SerializedProperty> items)
-    {
-        for (var index = 0; index < items.Count; index++)
-        {
-            items[index].SetName($"[{index}]");
-        }
     }
 
     private SerializedProperty CreateCollectionItem(string name, SerializedProperty parentProperty)

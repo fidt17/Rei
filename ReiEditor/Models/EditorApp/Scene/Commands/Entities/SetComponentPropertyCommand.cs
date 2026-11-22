@@ -70,15 +70,22 @@ public sealed class SetComponentPropertyCommand(
         return before != null && after != null ? new HistoryEntry(this, target, before, after) : null;
     }
 
-    private bool IsCurrent(Target target) =>
-        !engine.IsEngineStarting.Value && !engine.IsPlaymodeActive.Value
-        && !(engine.IsActive.Value && engine.ActiveMode == EngineRunMode.PlayMode)
-        && ReferenceEquals(target.Scene, scenes.CurrentScene.Value)
-        && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
-        && target.Entity.HasBehaviour(target.Component)
-        && target.Property.ParentProperty == null
-        && target.Component.Properties.TryGetValue(target.Property.Name, out var property)
-        && ReferenceEquals(property, target.Property);
+    private bool IsCurrent(Target target)
+    {
+        var root = target.Property.ParentProperty ?? target.Property;
+        return !engine.IsEngineStarting.Value && !engine.IsPlaymodeActive.Value
+            && !(engine.IsActive.Value && engine.ActiveMode == EngineRunMode.PlayMode)
+            && ReferenceEquals(target.Scene, scenes.CurrentScene.Value)
+            && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
+            && target.Entity.HasBehaviour(target.Component)
+            && target.Component.Properties.TryGetValue(root.Name, out var property)
+            && ReferenceEquals(property, root)
+            && (ReferenceEquals(root, target.Property) || IsCurrentNumericItem(root, target.Property));
+    }
+
+    private static bool IsCurrentNumericItem(SerializedProperty collection, SerializedProperty item) =>
+        collection.Type == SerializedTypeEnum.Collection && item.Type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float
+        && collection.Value is List<SerializedProperty> items && items.Contains(item);
 
     private static bool Matches(SerializedProperty property, object expected) => SameValue(Read(property), expected);
 
@@ -105,7 +112,11 @@ public sealed class SetComponentPropertyCommand(
             if (previous3.Y != vector3.Y) coordinates3["y"].Value = vector3.Y;
             if (previous3.Z != vector3.Z) coordinates3["z"].Value = vector3.Z;
         }
-        else if (value is SerializedProperty[] items) property.Value = new List<SerializedProperty>(items);
+        else if (value is SerializedProperty[] items)
+        {
+            SerializedProperty.ReindexCollectionItems(items);
+            property.Value = new List<SerializedProperty>(items);
+        }
         else GetValueProperty(property).Value = value;
     }
 
