@@ -154,7 +154,7 @@ public sealed class SetComponentPropertyCommand(
     {
         if (property.Type != SerializedTypeEnum.Custom || property.Value is not Dictionary<string, SerializedProperty> children) return property;
         if (property.SourceType.IsAssetReference()) return children.GetValueOrDefault("Id") ?? property;
-        if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("SceneEntityId") ?? property;
+        if (property.SourceType.IsComponentReference()) return children.GetValueOrDefault("SceneEntityId") ?? property;
         return property;
     }
 }

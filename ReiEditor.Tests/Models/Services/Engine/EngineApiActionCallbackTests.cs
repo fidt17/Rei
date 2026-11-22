@@ -194,13 +194,17 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionAssetSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionAsset: true);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionComponentSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionComponent: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
         string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
-        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false)
+        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false,
+        bool selectCollectionComponent = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -218,6 +222,7 @@ public sealed class EngineApiActionCallbackTests
                 const string TEXTURE_ID = "REI_WHITE_FALLBACK_TEXTURE";
                 const string TEXTURE_PATH = "C:/Assets/white.png";
                 const int IMAGE_COMPONENT_ID = 7304;
+                const int TRANSFORM_COMPONENT_ID = 7199;
                 const int PROBE_ASSET_TYPE_ID = 7201;
                 const string FIRST_ASSET_ID = "probe-first";
                 const string SECOND_ASSET_ID = "probe-second";
@@ -234,6 +239,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Collection when collectionItemText != null => (7101, "ProbeA", "Labels", "std::vector<std::string>", null),
                     SerializedTypeEnum.Collection when toggleCollectionItem => (7101, "ProbeA", "Flags", "std::vector<bool>", null),
                     SerializedTypeEnum.Collection when selectCollectionAsset => (7101, "ProbeA", "Assets", "std::vector<AssetRef<ProbeDataAsset>>", null),
+                    SerializedTypeEnum.Collection when selectCollectionComponent => (7101, "ProbeA", "Targets", "std::vector<ComponentRef<Transform>>", null),
                     SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
@@ -253,6 +259,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Collection when toggleCollectionItem => (Array.Empty<bool>(), new[] { true, false, false }, new[] { true, true, false }),
                     SerializedTypeEnum.Collection when selectCollectionAsset => (Array.Empty<string>(), new[] { FIRST_ASSET_ID, SECOND_ASSET_ID, SECOND_ASSET_ID },
                         new[] { FIRST_ASSET_ID, FIRST_ASSET_ID, SECOND_ASSET_ID }),
+                    SerializedTypeEnum.Collection when selectCollectionComponent => (Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>()),
                     SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
                     SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
                     SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
@@ -288,6 +295,23 @@ public sealed class EngineApiActionCallbackTests
                     values.Initial = values.External = id;
                     values.Edited = imageId;
                 }
+                if (selectCollectionComponent)
+                {
+                    var firstId = AddTransformTarget("First Target");
+                    var secondId = AddTransformTarget("Second Target");
+                    values.External = new[] { firstId, secondId, secondId };
+                    values.Edited = new[] { firstId, firstId, secondId };
+                }
+
+                int AddTransformTarget(string name)
+                {
+                    var targetId = entities.CreateNewEntity(name)!.EntityId!.Value;
+                    Assert.Contains(entities.GetEntityData(targetId)!.Behaviours, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
+                    var target = new GameEntity(targetId, name);
+                    target.AddBehaviour(new BehaviourComponent(TRANSFORM_COMPONENT_ID));
+                    scenes.Scene.Value!.AddEntity(target);
+                    return targetId;
+                }
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
                 var (collectionItemType, collectionItemSource) = field switch
@@ -296,6 +320,7 @@ public sealed class EngineApiActionCallbackTests
                     "Labels" => (SerializedTypeEnum.String, "std::string"),
                     "Flags" => (SerializedTypeEnum.Boolean, "bool"),
                     "Assets" => (SerializedTypeEnum.Custom, "AssetRef<ProbeDataAsset>"),
+                    "Targets" => (SerializedTypeEnum.Custom, "ComponentRef<Transform>"),
                     _ => (SerializedTypeEnum.Integer, "i32")
                 };
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
@@ -306,6 +331,8 @@ public sealed class EngineApiActionCallbackTests
                 }, [], "");
                 var registry = selectComponent
                     ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Image", IMAGE_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
+                    : selectCollectionComponent
+                    ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Transform", TRANSFORM_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
                     : new InspectorComponentRegistry(component);
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
                 if (editCollectionEnum)
@@ -331,7 +358,7 @@ public sealed class EngineApiActionCallbackTests
                     objects.Replace([new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", ""),
                         new() { ["Id"] = idProperty }, "")], []);
                 }
-                else if (selectComponent)
+                else if (selectComponent || selectCollectionComponent)
                 {
                     var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Integer, "i32",
                         null, SerializedTypeEnum.Invalid, null, null, "0", false);
@@ -453,6 +480,7 @@ public sealed class EngineApiActionCallbackTests
                         string idValue when isAssetField => new { Id = new { Value = idValue } },
                         string[] assetIds when selectCollectionAsset => assetIds.Select(assetId => new { Id = new { Value = assetId } }).ToArray(),
                         int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
+                        int[] targetIds when selectCollectionComponent => targetIds.Select(targetId => new { SceneEntityId = new { Value = targetId } }).ToArray(),
                         Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
                         Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
                         _ => values.External
@@ -548,6 +576,14 @@ public sealed class EngineApiActionCallbackTests
                         var picker = Assert.IsType<AssetPropertyViewModel>(Assert.Single(assetList.Value[1].Value)).AssetPicker!;
                         picker.RefreshSearchResultsForAll();
                         Assert.Single(picker.SearchResults, item => item.AssetId == FIRST_ASSET_ID).SelectCommand.Execute(null);
+                    }
+                    else if (selectCollectionComponent)
+                    {
+                        var refs = Assert.IsType<CollectionPropertyViewModel>(value);
+                        var picker = Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(refs.Value[1].Value)).Picker!;
+                        var targetId = ((int[])values.Edited)[1].ToString(CultureInfo.InvariantCulture);
+                        picker.RefreshSearchResultsForAll();
+                        Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
                     }
                     else if (value is CollectionPropertyViewModel list)
                     {
@@ -789,6 +825,16 @@ public sealed class EngineApiActionCallbackTests
                                     break;
                                 }
                                 var expectedItems = (int[])expected;
+                                if (selectCollectionComponent)
+                                {
+                                    Assert.Equal(expectedItems.Select(targetId => targetId.ToString(CultureInfo.InvariantCulture)),
+                                        collectionViewModel.Value.Select(row => Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(row.Value)).Picker!.SelectedAssetId));
+                                    Assert.Equal(expectedItems.Select(targetId => $"{scenes.Scene.Value!.GetById(targetId)!.Name} ({targetId})"),
+                                        view.GetVisualDescendants().OfType<AssetPickerView>().Select(picker =>
+                                            Assert.IsType<string>(picker.GetVisualDescendants().OfType<Label>().Single().Content)));
+                                    Assert.Equal(expectedItems, JArray.FromObject(native).Select(item => item.Value<int>("SceneEntityId")));
+                                    break;
+                                }
                                 if (editCollectionEnum)
                                 {
                                     var modes = objects.GetEnum("ProbeMode")!.Options;
