@@ -152,9 +152,13 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCannotDeleteSharedDependencyOrChangeHistory() => VerifyInspectorComponentHistoryAsync(ComponentHistory.BlockSharedDependencyDeletion);
 
+    [NativeCallbackFact]
+    public Task InspectorCanDeleteDependencyAfterRemovingBothDependents() => VerifyInspectorComponentHistoryAsync(ComponentHistory.DeleteAfterDependents);
+
     private enum ComponentHistory
     {
-        Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency, BlockSharedDependencyDeletion
+        Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
+        BlockSharedDependencyDeletion, DeleteAfterDependents
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -237,7 +241,8 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
-                    var sharedDependency = scenario is ComponentHistory.AddWithSharedDependency or ComponentHistory.BlockSharedDependencyDeletion;
+                    var sharedDependency = scenario is ComponentHistory.AddWithSharedDependency or ComponentHistory.BlockSharedDependencyDeletion
+                        or ComponentHistory.DeleteAfterDependents;
                     if (scenario == ComponentHistory.AddWithMissingDependency || sharedDependency)
                     {
                         AssertComponentNumber(null, dependentPresent: false);
@@ -250,9 +255,26 @@ public sealed class EngineApiActionCallbackTests
                         {
                             Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == OTHER_DEPENDENT_ID).SelectCommand.Execute(null);
                             AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                            if (scenario == ComponentHistory.DeleteAfterDependents)
+                            {
+                                DeleteComponent(expectedEnabled: false);
+                                AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+
+                                DeleteComponent(DEPENDENT_ID);
+                                AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
+                                DeleteComponent(expectedEnabled: false);
+                                AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
+
+                                DeleteComponent(OTHER_DEPENDENT_ID);
+                                AssertComponentNumber(97, dependentPresent: false);
+                                DeleteComponent();
+                                AssertComponentNumber(null, dependentPresent: false);
+                                Assert.Empty(syncLogger.Entries);
+                                return true;
+                            }
                             if (scenario == ComponentHistory.BlockSharedDependencyDeletion)
                             {
-                                DeleteProbe(expectedEnabled: false);
+                                DeleteComponent(expectedEnabled: false);
                                 AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
                                 Assert.True(commands.CanUndo);
                                 Assert.False(commands.CanRedo);
@@ -304,7 +326,7 @@ public sealed class EngineApiActionCallbackTests
                     {
                         AssertComponentNumber(42);
                         Assert.False(commands.CanUndo);
-                        DeleteProbe();
+                        DeleteComponent();
                         AssertComponentNumber(null);
                         Assert.True(commands.CanUndo);
 
@@ -327,14 +349,14 @@ public sealed class EngineApiActionCallbackTests
 
                     if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete)
                     {
-                        var input = FindProbeDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                        var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
                         input.TextInternal = "42";
                         input.LoseFocus();
                         AssertComponentNumber(42);
 
                         if (scenario == ComponentHistory.AddEditDelete)
                         {
-                            DeleteProbe();
+                            DeleteComponent();
                             AssertComponentNumber(null);
                             await commands.UndoAsync();
                             AssertComponentNumber(42);
@@ -377,13 +399,13 @@ public sealed class EngineApiActionCallbackTests
                     Application.Current.Styles.Remove(theme);
                 }
 
-                BehaviourComponentDrawer? FindProbeDrawer() => view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
-                    .SingleOrDefault(drawer => drawer.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == PROBE_ID);
+                BehaviourComponentDrawer? FindComponentDrawer(int behaviourId = PROBE_ID) => view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                    .SingleOrDefault(drawer => drawer.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == behaviourId);
 
-                void DeleteProbe(bool expectedEnabled = true)
+                void DeleteComponent(int behaviourId = PROBE_ID, bool expectedEnabled = true)
                 {
-                    var probe = Assert.IsType<BehaviourComponentDrawerViewModel>(FindProbeDrawer()!.DataContext);
-                    var deleteOption = Assert.Single(probe.ContextMenu.Options, option => option.Text == "Delete Component");
+                    var drawer = Assert.IsType<BehaviourComponentDrawerViewModel>(FindComponentDrawer(behaviourId)!.DataContext);
+                    var deleteOption = Assert.Single(drawer.ContextMenu.Options, option => option.Text == "Delete Component");
                     Assert.Equal(expectedEnabled, deleteOption.Command.CanExecute(null));
                     deleteOption.Command.Execute(null);
                 }
@@ -392,7 +414,7 @@ public sealed class EngineApiActionCallbackTests
                 {
                     Dispatcher.UIThread.RunJobs();
                     var present = expected.HasValue;
-                    var drawer = FindProbeDrawer();
+                    var drawer = FindComponentDrawer();
                     Assert.Equal(present, drawer != null);
                     Assert.Equal(present, entity.HasComponent(PROBE_ID));
                     Assert.Equal(!present, inspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
