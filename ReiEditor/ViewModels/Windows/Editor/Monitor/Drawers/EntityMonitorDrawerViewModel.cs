@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using DynamicData;
 using Avalonia.Threading;
+using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Entities;
@@ -42,7 +43,7 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
     private bool _disposed;
     private readonly GameEntity _entity;
     private readonly IFactory<BehaviourComponentDrawerViewModel> _behaviourComponentDrawerFactory;
-    private readonly IEntityManagementService _entityManagementService;
+    private readonly AddComponentCommand _addComponentCommand;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly List<BehaviourSelectionData> _allBehaviourSelection = new();
 
@@ -55,11 +56,11 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         IFactory<EntityInfoComponentDrawerViewModel> entityInfoComponentDrawerFactory,
         IFactory<BehaviourComponentDrawerViewModel> behaviourComponentDrawerFactory,
         IBehaviourRegistry behaviourRegistry,
-        IEntityManagementService entityManagementService)
+        AddComponentCommand addComponentCommand)
     {
         _entity = entity;
         _behaviourComponentDrawerFactory = behaviourComponentDrawerFactory;
-        _entityManagementService = entityManagementService;
+        _addComponentCommand = addComponentCommand;
         _behaviourRegistry = behaviourRegistry;
 
         _entity.BehaviourAddedEvent += HandleEntityBehaviourAddedEvent;
@@ -92,9 +93,9 @@ public class EntityMonitorDrawerViewModel : BaseMonitorDrawer
         SearchField.Dispose();
     }
 
-    public void AddBehaviour(BehaviourSelectionData data)
+    public async void AddBehaviour(BehaviourSelectionData data)
     {
-        _entityManagementService.AddBehaviour(_entity, data.BehaviourId);
+        await _addComponentCommand.AddAsync(_entity, data.BehaviourId);
         BehaviourSelectedEvent?.Invoke();
     }
 

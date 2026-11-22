@@ -3,6 +3,10 @@ using System.Globalization;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component;
+using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 using ReiEditor.Models.Services.Entities;
@@ -116,6 +120,127 @@ public sealed class EngineApiActionCallbackTests
         public DataAssetTypeInfo? GetDataAssetType(string name) => name == type.ObjectName ? type : null;
         public int AllocateDataAssetTypeId() => throw new NotSupportedException();
         public Task RefreshAsync(IEnumerable<SerializableObjectInfo> declarations) => throw new NotSupportedException();
+    }
+
+    private sealed class InspectorFactory<T>(Func<object[], T> create) : IFactory<T> where T : class
+    {
+        public T CreateInstance() => create([]);
+        public T CreateInstance(params object[] parameters) => create(parameters);
+    }
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentRecordsOneUndo()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                const int PROBE_ID = 7102;
+                const int TRANSFORM_ID = 7199;
+                var entityApi = new EntityApi(api);
+                var id = entityApi.CreateNewEntity("Inspector component history")!.EntityId!.Value;
+                var entity = new GameEntity(id, "Inspector component history");
+                var scenes = new TestSceneManagementService(entity);
+                var registry = new InspectorComponentRegistry(
+                    new BehaviourAssetInfo("", "Transform", TRANSFORM_ID, new ObjectFile<string>("", ""), new()
+                    {
+                        ["_scale"] = new(SerializedTypeEnum.Custom, "Vector3", null, SerializedTypeEnum.Invalid, null, null, null, false)
+                    }, [], ""),
+                    new BehaviourAssetInfo("", "ProbeB", PROBE_ID, new ObjectFile<string>("", ""), new()
+                    {
+                        ["Number"] = new(SerializedTypeEnum.Integer, "i32", null, SerializedTypeEnum.Invalid, null, null, "97", false)
+                    }, [], ""));
+                var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                var coordinate = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
+                    null, SerializedTypeEnum.Invalid, null, null, "1", false);
+                objects.Replace([new SerializableObjectInfo("rei::math", "Vector3", false, new ObjectFile<string>("", ""),
+                    new() { ["x"] = coordinate, ["y"] = coordinate, ["z"] = coordinate }, "")], []);
+                var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
+                var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var syncLogger = new TestLogger<EntitySyncService>();
+                var applier = new EntityStateApplier(syncLogger, registry, components, properties);
+                var importer = new TestAssetImporter();
+                using var sync = new EntitySyncService(importer, entityApi, runner, components,
+                    new BehaviourSyncService(importer, runner, entityApi, syncLogger, applier), applier);
+                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, components,
+                    entityApi, registry, runner, sync, null!);
+                sync.UpdateEntityState(entity);
+                using var commands = new EditorCommandService();
+                var add = new AddComponentCommand(commands, scenes, management, registry, components, runner);
+                var setProperty = new SetComponentPropertyCommand(commands, scenes, runner);
+                var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entityApi, null!);
+                using var inspector = new EntityMonitorDrawerViewModel(entity,
+                    new InspectorFactory<EntityInfoComponentDrawerViewModel>(args => new((GameEntity)args[0], null!, null!)),
+                    new InspectorFactory<BehaviourComponentDrawerViewModel>(args => new((GameEntity)args[0], (BehaviourComponent)args[1],
+                        registry, management, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, setProperty)),
+                    registry, add);
+                var theme = new FluentTheme();
+                var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
+                Application.Current!.Styles.Add(theme);
+                Application.Current.Styles.Add(styles);
+                var view = new EntityMonitorDrawer { DataContext = inspector };
+                var window = new Window { Content = view, Width = 400, Height = 480 };
+                try
+                {
+                    window.Show();
+                    AssertComponentPresent(false);
+                    Assert.False(commands.CanUndo);
+                    Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == PROBE_ID).SelectCommand.Execute(null);
+                    AssertComponentPresent(true);
+                    Assert.True(commands.CanUndo);
+
+                    await commands.UndoAsync();
+                    AssertComponentPresent(false);
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+
+                    await commands.RedoAsync();
+                    AssertComponentPresent(true);
+                    Assert.False(commands.CanRedo);
+                    Assert.Empty(syncLogger.Entries);
+                }
+                finally
+                {
+                    window.Close();
+                    Application.Current.Styles.Remove(styles);
+                    Application.Current.Styles.Remove(theme);
+                }
+
+                void AssertComponentPresent(bool present)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    var inspectorDrawers = view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                        .Select(drawer => Assert.IsType<BehaviourComponentDrawerViewModel>(drawer.DataContext));
+                    Assert.Equal(present ? 1 : 0, inspectorDrawers.Count(drawer => drawer.BehaviourComponent.Id == PROBE_ID));
+                    Assert.Equal(present, entity.HasComponent(PROBE_ID));
+                    Assert.Equal(!present, inspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
+                    var native = entityApi.GetEntityData(id)!.Behaviours;
+                    Assert.Contains(native, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
+                    var probe = native.Where(behaviour => Equals(behaviour["REI_TYPE"], "ProbeB")).ToArray();
+                    if (present) Assert.Equal(97, Convert.ToInt32(Assert.Single(probe)["Number"]));
+                    else Assert.Empty(probe);
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
     }
 
     [NativeCallbackFact]
