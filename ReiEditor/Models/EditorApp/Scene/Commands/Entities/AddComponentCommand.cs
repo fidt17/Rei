@@ -38,7 +38,9 @@ public sealed class AddComponentCommand(
         public Task RedoAsync()
         {
             if (!CanRedo) throw new InvalidOperationException("The component cannot be restored.");
-            _component = command.Add(target) ?? throw new InvalidOperationException("The component was not restored.");
+            var restored = command.Add(target) ?? throw new InvalidOperationException("The component was not restored.");
+            restored.HistoryIdentity = _component.HistoryIdentity;
+            _component = restored;
             return Task.CompletedTask;
         }
     }

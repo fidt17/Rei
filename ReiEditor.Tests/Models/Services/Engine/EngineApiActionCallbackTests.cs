@@ -129,7 +129,12 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
-    public Task InspectorAddComponentRecordsOneUndo()
+    public Task InspectorAddComponentRecordsOneUndo() => VerifyInspectorAddComponentAsync(editNumber: false);
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentThenEditNumberUndoAndRedoInOrder() => VerifyInspectorAddComponentAsync(editNumber: true);
+
+    private static Task VerifyInspectorAddComponentAsync(bool editNumber)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -195,19 +200,41 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
-                    AssertComponentPresent(false);
+                    AssertComponentNumber(null);
                     Assert.False(commands.CanUndo);
                     Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == PROBE_ID).SelectCommand.Execute(null);
-                    AssertComponentPresent(true);
+                    AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
+                    if (editNumber)
+                    {
+                        var input = FindProbeDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                        input.TextInternal = "42";
+                        input.LoseFocus();
+                        AssertComponentNumber(42);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(97);
+                        await commands.UndoAsync();
+                        AssertComponentNumber(null);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(97);
+                        await commands.RedoAsync();
+                        AssertComponentNumber(42);
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
                     await commands.UndoAsync();
-                    AssertComponentPresent(false);
+                    AssertComponentNumber(null);
                     Assert.False(commands.CanUndo);
                     Assert.True(commands.CanRedo);
 
                     await commands.RedoAsync();
-                    AssertComponentPresent(true);
+                    AssertComponentNumber(97);
                     Assert.False(commands.CanRedo);
                     Assert.Empty(syncLogger.Entries);
                 }
@@ -218,19 +245,29 @@ public sealed class EngineApiActionCallbackTests
                     Application.Current.Styles.Remove(theme);
                 }
 
-                void AssertComponentPresent(bool present)
+                BehaviourComponentDrawer? FindProbeDrawer() => view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                    .SingleOrDefault(drawer => drawer.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == PROBE_ID);
+
+                void AssertComponentNumber(int? expected)
                 {
                     Dispatcher.UIThread.RunJobs();
-                    var inspectorDrawers = view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
-                        .Select(drawer => Assert.IsType<BehaviourComponentDrawerViewModel>(drawer.DataContext));
-                    Assert.Equal(present ? 1 : 0, inspectorDrawers.Count(drawer => drawer.BehaviourComponent.Id == PROBE_ID));
+                    var present = expected.HasValue;
+                    var drawer = FindProbeDrawer();
+                    Assert.Equal(present, drawer != null);
                     Assert.Equal(present, entity.HasComponent(PROBE_ID));
                     Assert.Equal(!present, inspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
                     var native = entityApi.GetEntityData(id)!.Behaviours;
                     Assert.Contains(native, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
                     var probe = native.Where(behaviour => Equals(behaviour["REI_TYPE"], "ProbeB")).ToArray();
-                    if (present) Assert.Equal(97, Convert.ToInt32(Assert.Single(probe)["Number"]));
-                    else Assert.Empty(probe);
+                    if (!present)
+                    {
+                        Assert.Empty(probe);
+                        return;
+                    }
+                    var input = drawer!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                    var inspectorNumber = int.Parse(input.Text, CultureInfo.CurrentCulture);
+                    var nativeNumber = Convert.ToInt32(Assert.Single(probe)["Number"]);
+                    Assert.Equal((expected.Value, expected.Value), (inspectorNumber, nativeNumber));
                 }
             }
             finally
