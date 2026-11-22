@@ -79,6 +79,8 @@ public sealed class EntityManagementServiceTests
             return true;
         }
 
+        public void RestoreComponent(GameEntity entity, BehaviourComponent component) => throw new NotSupportedException();
+
         public bool DeleteComponent(GameEntity entity, BehaviourComponent component)
         {
             DeletedIds.Add(component.Id);

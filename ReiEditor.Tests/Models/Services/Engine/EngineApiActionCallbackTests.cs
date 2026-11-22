@@ -129,12 +129,17 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
-    public Task InspectorAddComponentRecordsOneUndo() => VerifyInspectorAddComponentAsync(editNumber: false);
+    public Task InspectorAddComponentRecordsOneUndo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.Add);
 
     [NativeCallbackFact]
-    public Task InspectorAddComponentThenEditNumberUndoAndRedoInOrder() => VerifyInspectorAddComponentAsync(editNumber: true);
+    public Task InspectorAddComponentThenEditNumberUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddThenEdit);
 
-    private static Task VerifyInspectorAddComponentAsync(bool editNumber)
+    [NativeCallbackFact]
+    public Task InspectorDeleteComponentRestoresEditedNumberOnUndo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.Delete);
+
+    private enum ComponentHistory { Add, AddThenEdit, Delete }
+
+    private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -154,6 +159,15 @@ public sealed class EngineApiActionCallbackTests
                 const int TRANSFORM_ID = 7199;
                 var entityApi = new EntityApi(api);
                 var id = entityApi.CreateNewEntity("Inspector component history")!.EntityId!.Value;
+                if (scenario == ComponentHistory.Delete)
+                {
+                    entityApi.AddBehaviour(id, PROBE_ID);
+                    entityApi.SetData(new SetEntityDataRequest
+                    {
+                        SceneId = id,
+                        Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = PROBE_ID, ["Number"] = new { Value = 42 } }]
+                    });
+                }
                 var entity = new GameEntity(id, "Inspector component history");
                 var scenes = new TestSceneManagementService(entity);
                 var registry = new InspectorComponentRegistry(
@@ -184,12 +198,13 @@ public sealed class EngineApiActionCallbackTests
                 sync.UpdateEntityState(entity);
                 using var commands = new EditorCommandService();
                 var add = new AddComponentCommand(commands, scenes, management, registry, components, runner);
+                var delete = new DeleteComponentCommand(commands, scenes, management, registry, components, runner, entityApi, sync);
                 var setProperty = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entityApi, null!);
                 using var inspector = new EntityMonitorDrawerViewModel(entity,
                     new InspectorFactory<EntityInfoComponentDrawerViewModel>(args => new((GameEntity)args[0], null!, null!)),
                     new InspectorFactory<BehaviourComponentDrawerViewModel>(args => new((GameEntity)args[0], (BehaviourComponent)args[1],
-                        registry, management, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, setProperty)),
+                        registry, delete, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, setProperty)),
                     registry, add);
                 var theme = new FluentTheme();
                 var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
@@ -200,13 +215,33 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
+                    if (scenario == ComponentHistory.Delete)
+                    {
+                        AssertComponentNumber(42);
+                        Assert.False(commands.CanUndo);
+                        var probe = Assert.IsType<BehaviourComponentDrawerViewModel>(FindProbeDrawer()!.DataContext);
+                        Assert.Single(probe.ContextMenu.Options, option => option.Text == "Delete Component").Command.Execute(null);
+                        AssertComponentNumber(null);
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(42);
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(null);
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
                     AssertComponentNumber(null);
                     Assert.False(commands.CanUndo);
                     Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == PROBE_ID).SelectCommand.Execute(null);
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
-                    if (editNumber)
+                    if (scenario == ComponentHistory.AddThenEdit)
                     {
                         var input = FindProbeDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
                         input.TextInternal = "42";

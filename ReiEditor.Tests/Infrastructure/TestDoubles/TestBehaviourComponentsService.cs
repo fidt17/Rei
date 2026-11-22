@@ -14,6 +14,8 @@ internal sealed class TestBehaviourComponentsService : IBehaviourComponentsServi
     public Action<SerializedProperty, object?>? OnApply { get; set; }
     public void Publish(EntityBehaviourPropertyChangeEventArgs args) => BehaviourPropertyChangedEvent?.Invoke(args);
     public bool AddComponent(GameEntity e, int behaviourId) => (OnAdd ?? throw new NotSupportedException())(e, behaviourId);
+    public void RestoreComponent(GameEntity entity, BehaviourComponent component) => throw new NotSupportedException();
+
     public bool DeleteComponent(GameEntity e, BehaviourComponent component) => (OnDelete ?? throw new NotSupportedException())(e, component);
     public void ApplySerializedValue(SerializedProperty property, object? value) => (OnApply ?? throw new NotSupportedException())(property, value);
     public void RefreshComponents(GameEntity e) => (OnRefresh ?? throw new NotSupportedException())(e);

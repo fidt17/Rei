@@ -32,7 +32,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
     private readonly GameEntity _entity;
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IBehaviourComponentsService _behaviourComponentsService;
-    private readonly IEntityManagementService _entityManagementService;
+    private readonly DeleteComponentCommand _deleteComponent;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
     private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
     private readonly IAssetSearchService _assetSearchService;
@@ -53,7 +53,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         GameEntity entity,
         BehaviourComponent behaviourComponent,
         IBehaviourRegistry behaviourRegistry,
-        IEntityManagementService entityManagementService,
+        DeleteComponentCommand deleteComponent,
         IBehaviourComponentsService behaviourComponentsService,
         ISerializableObjectsRegistry serializableObjectsRegistry,
         IDataAssetTypeRegistry dataAssetTypeRegistry,
@@ -71,7 +71,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
         BehaviourComponent = behaviourComponent;
         _behaviourRegistry = behaviourRegistry;
         _behaviourComponentsService = behaviourComponentsService;
-        _entityManagementService = entityManagementService;
+        _deleteComponent = deleteComponent;
         _serializableObjectsRegistry = serializableObjectsRegistry;
         _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _assetSearchService = assetSearchService;
@@ -104,7 +104,7 @@ public class BehaviourComponentDrawerViewModel : BaseViewModel
 
     public void SwitchExpandState() => Expanded.Value = !Expanded.Value;
 
-    private void DeleteComponent() => _entityManagementService.DeleteBehaviour(_entity, BehaviourComponent.Id);
+    private async void DeleteComponent() => await _deleteComponent.DeleteAsync(_entity, BehaviourComponent);
 
     private ContextMenuViewModel SetupContextMenu(BehaviourAssetInfo behaviourInfo)
     {
