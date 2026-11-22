@@ -143,7 +143,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorAddComponentUndoAndRedoPreservesExistingDependency() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithDependency);
 
-    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency }
+    [NativeCallbackFact]
+    public Task InspectorAddComponentRecordsIntroducedDependencyInSameEntry() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithMissingDependency);
+
+    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
     {
@@ -205,7 +208,7 @@ public sealed class EngineApiActionCallbackTests
                     entityApi, registry, runner, sync, null!);
                 sync.UpdateEntityState(entity);
                 using var commands = new EditorCommandService();
-                var add = new AddComponentCommand(commands, scenes, management, registry, components, runner);
+                var add = new AddComponentCommand(commands, scenes, management, registry, runner);
                 var delete = new DeleteComponentCommand(commands, scenes, management, registry, components, runner, entityApi, sync);
                 var setProperty = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entityApi, null!);
@@ -223,6 +226,25 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
+                    if (scenario == ComponentHistory.AddWithMissingDependency)
+                    {
+                        AssertComponentNumber(null, dependentPresent: false);
+                        Assert.False(commands.CanUndo);
+                        Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
+                        AssertComponentNumber(97, dependentPresent: true);
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(null, dependentPresent: false);
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(97, dependentPresent: true);
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
                     if (scenario == ComponentHistory.AddWithDependency)
                     {
                         AssertComponentNumber(42, dependentPresent: false);

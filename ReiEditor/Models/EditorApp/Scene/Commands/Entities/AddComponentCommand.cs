@@ -17,30 +17,29 @@ public sealed class AddComponentCommand(
     ISceneManagementService scenes,
     IEntityManagementService entities,
     IBehaviourRegistry registry,
-    IBehaviourComponentsService components,
-    IEngineRunner engine) : IUndoableEditorCommand<AddComponentCommand.Target, BehaviourComponent?>
+    IEngineRunner engine) : IUndoableEditorCommand<AddComponentCommand.Target, BehaviourComponent[]?>
 {
-    private sealed class HistoryEntry(AddComponentCommand command, Target target, BehaviourComponent component) : IEditorHistoryEntry
+    private sealed class HistoryEntry(AddComponentCommand command, Target target, BehaviourComponent[] added) : IEditorHistoryEntry
     {
-        private BehaviourComponent _component = component;
-
-        public bool CanUndo => command.CanRemove(target, _component);
-        public bool CanRedo => command.IsCurrent(target) && !target.Entity.HasComponent(target.ComponentId) && command.HasRequirements(target);
+        public bool CanUndo => command.CanRemove(target, added);
+        public bool CanRedo => command.CanRestore(target, added);
 
         public Task UndoAsync()
         {
             if (!CanUndo) throw new InvalidOperationException("The added component cannot be removed.");
-            command.Remove(target);
-            if (target.Entity.HasComponent(target.ComponentId)) throw new InvalidOperationException("The component was not removed.");
+            for (var i = added.Length - 1; i >= 0; i--) command.Remove(target.Entity, added[i].Id);
             return Task.CompletedTask;
         }
 
         public Task RedoAsync()
         {
             if (!CanRedo) throw new InvalidOperationException("The component cannot be restored.");
-            var restored = command.Add(target) ?? throw new InvalidOperationException("The component was not restored.");
-            restored.HistoryIdentity = _component.HistoryIdentity;
-            _component = restored;
+            for (var i = 0; i < added.Length; i++)
+            {
+                var restored = command.Add(target.Entity, added[i].Id) ?? throw new InvalidOperationException("The component was not restored.");
+                restored.HistoryIdentity = added[i].HistoryIdentity;
+                added[i] = restored;
+            }
             return Task.CompletedTask;
         }
     }
@@ -53,30 +52,51 @@ public sealed class AddComponentCommand(
         return commands.ExecuteAsync(this, new Target(scene, entity, componentId));
     }
 
-    Task<BehaviourComponent?> IEditorCommand<Target, BehaviourComponent?>.ExecuteAsync(Target target)
+    Task<BehaviourComponent[]?> IEditorCommand<Target, BehaviourComponent[]?>.ExecuteAsync(Target target)
     {
-        if (!IsCurrent(target) || target.Entity.HasComponent(target.ComponentId)) return Task.FromResult<BehaviourComponent?>(null);
-        var before = target.Entity.Behaviours.Count();
-        var component = Add(target);
-        return Task.FromResult(target.Entity.Behaviours.Count() == before + 1 ? component : null);
+        if (!IsCurrent(target) || target.Entity.HasComponent(target.ComponentId)) return Task.FromResult<BehaviourComponent[]?>(null);
+        var before = target.Entity.Behaviours.Select(component => component.Id).ToHashSet();
+        if (Add(target.Entity, target.ComponentId) == null) return Task.FromResult<BehaviourComponent[]?>(null);
+        // Editor sync inserts required components before the components that use them.
+        return Task.FromResult<BehaviourComponent[]?>(target.Entity.Behaviours.Where(component => !before.Contains(component.Id)).ToArray());
     }
 
-    IEditorHistoryEntry? IUndoableEditorCommand<Target, BehaviourComponent?>.CreateHistoryEntry(Target target, BehaviourComponent? component) =>
-        component == null ? null : new HistoryEntry(this, target, component);
+    IEditorHistoryEntry? IUndoableEditorCommand<Target, BehaviourComponent[]?>.CreateHistoryEntry(Target target, BehaviourComponent[]? added) =>
+        added is { Length: > 0 } ? new HistoryEntry(this, target, added) : null;
 
-    private BehaviourComponent? Add(Target target)
+    private BehaviourComponent? Add(GameEntity entity, int componentId)
     {
-        entities.AddBehaviour(target.Entity, target.ComponentId);
-        return target.Entity.GetBehaviour(target.ComponentId);
+        entities.AddBehaviour(entity, componentId);
+        return entity.GetBehaviour(componentId);
     }
 
-    private void Remove(Target target) => entities.DeleteBehaviour(target.Entity, target.ComponentId);
+    private void Remove(GameEntity entity, int componentId)
+    {
+        entities.DeleteBehaviour(entity, componentId);
+        if (entity.HasComponent(componentId)) throw new InvalidOperationException("The component was not removed.");
+    }
 
-    private bool CanRemove(Target target, BehaviourComponent component) => IsCurrent(target) && target.Entity.HasBehaviour(component)
-        && !components.TryGetRequiringComponent(target.Entity, target.ComponentId, out _);
+    private bool CanRemove(Target target, BehaviourComponent[] added)
+    {
+        if (!IsCurrent(target) || !added.All(target.Entity.HasBehaviour)) return false;
+        var addedIds = added.Select(component => component.Id).ToHashSet();
+        return !target.Entity.Behaviours.Any(component => !addedIds.Contains(component.Id)
+            && registry.TryGetById(component.Id, out var info)
+            && info.RequiredComponentNames.Any(name => registry.GetIdByName(name) is { } id && addedIds.Contains(id)));
+    }
 
-    private bool HasRequirements(Target target) => registry.TryGetById(target.ComponentId, out var info)
-        && info.RequiredComponentNames.All(name => registry.GetIdByName(name) is { } id && target.Entity.HasComponent(id));
+    private bool CanRestore(Target target, BehaviourComponent[] added)
+    {
+        if (!IsCurrent(target)) return false;
+        var available = target.Entity.Behaviours.Select(component => component.Id).ToHashSet();
+        foreach (var component in added)
+        {
+            if (!registry.TryGetById(component.Id, out var info)
+                || !info.RequiredComponentNames.All(name => registry.GetIdByName(name) is { } id && available.Contains(id))
+                || !available.Add(component.Id)) return false;
+        }
+        return true;
+    }
 
     private bool IsCurrent(Target target) => ReferenceEquals(scenes.CurrentScene.Value, target.Scene)
         && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
