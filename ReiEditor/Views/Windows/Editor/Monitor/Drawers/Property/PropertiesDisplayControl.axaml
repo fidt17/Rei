@@ -34,6 +34,9 @@
             <DataTemplate DataType="property:FloatPropertyViewModel">
                 <property1:FloatPropertyView Margin="1" />
             </DataTemplate>
+            <DataTemplate DataType="property:EnumPropertyViewModel">
+                <property1:EnumPropertyView Margin="1" />
+            </DataTemplate>
 
             <DataTemplate DataType="custom:CustomPropertyViewModel">
                 <custom1:CustomPropertyView Margin="1" />

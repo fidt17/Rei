@@ -161,7 +161,7 @@ public class CollectionPropertyViewModel : BaseViewModel
                 _sceneManagementService,
                 _selectionService,
                 _dataAssetTypeRegistry,
-                commitProperty: item.Type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float ? _commitProperty : null);
+                commitProperty: item.Type.SupportsCollectionItemHistory() ? _commitProperty : null);
 
             Value.Add(new CollectionItemViewModel(item, itemViewModel, () => RemoveItem(item)));
         }

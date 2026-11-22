@@ -80,11 +80,11 @@ public sealed class SetComponentPropertyCommand(
             && target.Entity.HasBehaviour(target.Component)
             && target.Component.Properties.TryGetValue(root.Name, out var property)
             && ReferenceEquals(property, root)
-            && (ReferenceEquals(root, target.Property) || IsCurrentNumericItem(root, target.Property));
+            && (ReferenceEquals(root, target.Property) || IsCurrentCollectionItem(root, target.Property));
     }
 
-    private static bool IsCurrentNumericItem(SerializedProperty collection, SerializedProperty item) =>
-        collection.Type == SerializedTypeEnum.Collection && item.Type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float
+    private static bool IsCurrentCollectionItem(SerializedProperty collection, SerializedProperty item) =>
+        collection.Type == SerializedTypeEnum.Collection && item.Type.SupportsCollectionItemHistory()
         && collection.Value is List<SerializedProperty> items && items.Contains(item);
 
     private static bool Matches(SerializedProperty property, object expected) => SameValue(Read(property), expected);
