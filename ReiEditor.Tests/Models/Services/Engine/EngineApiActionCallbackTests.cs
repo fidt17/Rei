@@ -1,6 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ReiEditor.Models.Resources;
+using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Services.Assets.Migrations;
+using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Serialization;
+using ReiEditor.ViewModels.Windows.Editor.Commands;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
@@ -155,10 +161,13 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCanDeleteDependencyAfterRemovingBothDependents() => VerifyInspectorComponentHistoryAsync(ComponentHistory.DeleteAfterDependents);
 
+    [NativeCallbackFact]
+    public Task InspectorComponentAndNumberPersistAfterUndoRedoAndReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAndReopen);
+
     private enum ComponentHistory
     {
         Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
-        BlockSharedDependencyDeletion, DeleteAfterDependents
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -227,7 +236,8 @@ public sealed class EngineApiActionCallbackTests
                 var delete = new DeleteComponentCommand(commands, scenes, management, registry, components, runner, entityApi, sync);
                 var setProperty = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entityApi, null!);
-                using var inspector = new EntityMonitorDrawerViewModel(entity,
+                using var inspector = CreateInspector(entity);
+                EntityMonitorDrawerViewModel CreateInspector(GameEntity inspectedEntity) => new(inspectedEntity,
                     new InspectorFactory<EntityInfoComponentDrawerViewModel>(args => new((GameEntity)args[0], null!, null!)),
                     new InspectorFactory<BehaviourComponentDrawerViewModel>(args => new((GameEntity)args[0], (BehaviourComponent)args[1],
                         registry, delete, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, setProperty)),
@@ -347,7 +357,7 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
-                    if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete)
+                    if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete or ComponentHistory.SaveAndReopen)
                     {
                         var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
                         input.TextInternal = "42";
@@ -378,6 +388,13 @@ public sealed class EngineApiActionCallbackTests
                             AssertComponentNumber(null);
                         }
                         Assert.False(commands.CanRedo);
+                        if (scenario == ComponentHistory.SaveAndReopen)
+                        {
+                            var reopened = await SaveAndReopenAsync();
+                            using var reopenedInspector = CreateInspector(reopened);
+                            view.DataContext = reopenedInspector;
+                            AssertComponentNumber(42, inspectedEntity: reopened);
+                        }
                         Assert.Empty(syncLogger.Entries);
                         return true;
                     }
@@ -410,14 +427,51 @@ public sealed class EngineApiActionCallbackTests
                     deleteOption.Command.Execute(null);
                 }
 
-                void AssertComponentNumber(int? expected, bool? dependentPresent = null, bool otherDependentPresent = false)
+                async Task<GameEntity> SaveAndReopenAsync()
+                {
+                    using var project = new TemporaryProjectFixture();
+                    var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
+                    activeProject.OpenProject(project.Project);
+                    var assetRegistry = new AssetRegistry(new TestLogger<AssetRegistry>());
+                    var assetLogger = new TestLogger<AssetsService>();
+                    var procedures = new EditorProceduresService();
+                    var migrations = new AssetSerializerMigrationService(new TestLogger<AssetSerializerMigrationService>(), [new MigrateScene_0_1()]);
+                    var assets = new AssetsService(assetLogger, project.Resources, new JsonSerializer(), migrations, activeProject, procedures, assetRegistry, []);
+                    var scene = scenes.Scene.Value!;
+                    var info = new AssetInfo(new AssetMeta("component-history-scene"), project.Directory.GetPath("history.scene"));
+                    assetRegistry.AddToLoadedAssets(info, scene);
+                    using var save = new SaveProjectCommand(assets, new TestBuildService(), runner, new SceneStateSynchronizer(scenes, sync));
+                    await save.SaveProject();
+                    Assert.True(File.Exists(info.FullPath));
+
+                    var loader = new EngineSceneLoader(new TestEngineNativeAccess(api), new TestLogger<EngineSceneLoader>());
+                    using var sceneManagement = new SceneManagementService(new TestLogger<SceneManagementService>(), assets, activeProject, null!,
+                        new SelectionService(entityApi), components, registry, runner, loader, procedures);
+                    var emptyScene = new Scene("Empty scene");
+                    emptyScene.SetAssetInfo(new AssetInfo(new AssetMeta("component-history-empty"), ""));
+                    await sceneManagement.LoadScene(emptyScene);
+                    Assert.Null(entityApi.GetEntityData(id));
+                    assets.Unload(info.Meta.AssetId);
+                    await sceneManagement.OpenScene(info.Meta.AssetId);
+
+                    var reopenedScene = Assert.IsType<Scene>(sceneManagement.CurrentScene.Value);
+                    Assert.NotSame(scene, reopenedScene);
+                    var reopenedEntity = Assert.IsType<GameEntity>(reopenedScene.GetById(id));
+                    Assert.NotSame(entity, reopenedEntity);
+                    Assert.Empty(assetLogger.Entries.Where(entry => entry.Level == ReiEditor.Models.Services.Logging.LogLevelEnum.Error));
+                    scenes.Scene.Value = reopenedScene;
+                    return reopenedEntity;
+                }
+
+                void AssertComponentNumber(int? expected, bool? dependentPresent = null, bool otherDependentPresent = false, GameEntity? inspectedEntity = null)
                 {
                     Dispatcher.UIThread.RunJobs();
                     var present = expected.HasValue;
                     var drawer = FindComponentDrawer();
                     Assert.Equal(present, drawer != null);
-                    Assert.Equal(present, entity.HasComponent(PROBE_ID));
-                    Assert.Equal(!present, inspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
+                    Assert.Equal(present, (inspectedEntity ?? entity).HasComponent(PROBE_ID));
+                    var currentInspector = Assert.IsType<EntityMonitorDrawerViewModel>(view.DataContext);
+                    Assert.Equal(!present, currentInspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
                     var native = entityApi.GetEntityData(id)!.Behaviours;
                     Assert.Contains(native, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
                     if (dependentPresent is { } hasDependent)
