@@ -6,9 +6,12 @@ namespace ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 public static class SerializedTypeExtensions
 {
-    internal static bool SupportsCollectionItemHistory(this SerializedTypeEnum type) =>
+    internal static bool SupportsCollectionItemHistory(this SerializedTypeEnum type, string sourceType) =>
         type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float or SerializedTypeEnum.Enum
-            or SerializedTypeEnum.String or SerializedTypeEnum.Boolean;
+            or SerializedTypeEnum.String or SerializedTypeEnum.Boolean
+        || type == SerializedTypeEnum.Custom && sourceType.IsAssetReference();
+
+    internal static bool IsAssetReference(this string sourceType) => sourceType.StartsWith("AssetRef<", StringComparison.Ordinal);
 
     public static bool IsValidValue(this SerializedTypeEnum type, object? value)
     {

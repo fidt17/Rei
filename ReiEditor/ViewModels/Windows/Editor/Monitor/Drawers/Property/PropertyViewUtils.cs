@@ -88,7 +88,7 @@ public static class PropertyViewUtils
         {
             return new ColorPropertyViewModel(property, commitProperty, recordColorDrag);
         }
-        else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
+        else if (property.SourceType.IsAssetReference())
         {
             return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry, commitProperty);
         }

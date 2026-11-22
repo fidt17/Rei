@@ -84,7 +84,7 @@ public sealed class SetComponentPropertyCommand(
     }
 
     private static bool IsCurrentCollectionItem(SerializedProperty collection, SerializedProperty item) =>
-        collection.Type == SerializedTypeEnum.Collection && item.Type.SupportsCollectionItemHistory()
+        collection.Type == SerializedTypeEnum.Collection && item.Type.SupportsCollectionItemHistory(item.SourceType)
         && collection.Value is List<SerializedProperty> items && items.Contains(item);
 
     private static bool Matches(SerializedProperty property, object expected) => SameValue(Read(property), expected);
@@ -153,7 +153,7 @@ public sealed class SetComponentPropertyCommand(
     private static SerializedProperty GetValueProperty(SerializedProperty property)
     {
         if (property.Type != SerializedTypeEnum.Custom || property.Value is not Dictionary<string, SerializedProperty> children) return property;
-        if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("Id") ?? property;
+        if (property.SourceType.IsAssetReference()) return children.GetValueOrDefault("Id") ?? property;
         if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("SceneEntityId") ?? property;
         return property;
     }

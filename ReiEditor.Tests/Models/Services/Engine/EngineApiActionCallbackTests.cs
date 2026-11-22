@@ -8,6 +8,7 @@ using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTr
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -108,6 +109,15 @@ public sealed class EngineApiActionCallbackTests
         public Task RefreshBehaviours() => throw new NotSupportedException();
     }
 
+    private sealed class InspectorDataAssetTypeRegistry(DataAssetTypeInfo type) : IDataAssetTypeRegistry
+    {
+        public IEnumerable<DataAssetTypeInfo> GetDataAssetTypes() => [type];
+        public DataAssetTypeInfo? GetDataAssetType(int id) => id == type.TypeId ? type : null;
+        public DataAssetTypeInfo? GetDataAssetType(string name) => name == type.ObjectName ? type : null;
+        public int AllocateDataAssetTypeId() => throw new NotSupportedException();
+        public Task RefreshAsync(IEnumerable<SerializableObjectInfo> declarations) => throw new NotSupportedException();
+    }
+
     [NativeCallbackFact]
     public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable() => VerifyInspectorFieldAsync(SerializedTypeEnum.Boolean);
 
@@ -181,13 +191,16 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionCheckboxClickRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, toggleCollectionItem: true);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionAssetSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionAsset: true);
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
         string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
-        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false)
+        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -205,6 +218,9 @@ public sealed class EngineApiActionCallbackTests
                 const string TEXTURE_ID = "REI_WHITE_FALLBACK_TEXTURE";
                 const string TEXTURE_PATH = "C:/Assets/white.png";
                 const int IMAGE_COMPONENT_ID = 7304;
+                const int PROBE_ASSET_TYPE_ID = 7201;
+                const string FIRST_ASSET_ID = "probe-first";
+                const string SECOND_ASSET_ID = "probe-second";
                 var isAssetField = assetEdit != AssetEdit.None;
                 var startEngine = isAssetField || selectComponent ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
                 api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
@@ -217,6 +233,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Collection when editCollectionEnum => (7101, "ProbeA", "Modes", "std::vector<rei::tests::ProbeMode>", null),
                     SerializedTypeEnum.Collection when collectionItemText != null => (7101, "ProbeA", "Labels", "std::vector<std::string>", null),
                     SerializedTypeEnum.Collection when toggleCollectionItem => (7101, "ProbeA", "Flags", "std::vector<bool>", null),
+                    SerializedTypeEnum.Collection when selectCollectionAsset => (7101, "ProbeA", "Assets", "std::vector<AssetRef<ProbeDataAsset>>", null),
                     SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
@@ -234,6 +251,8 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Collection when collectionItemText != null => (Array.Empty<string>(), new[] { "Left", "Middle", "Right" },
                         new[] { "Left", collectionItemText, "Right" }),
                     SerializedTypeEnum.Collection when toggleCollectionItem => (Array.Empty<bool>(), new[] { true, false, false }, new[] { true, true, false }),
+                    SerializedTypeEnum.Collection when selectCollectionAsset => (Array.Empty<string>(), new[] { FIRST_ASSET_ID, SECOND_ASSET_ID, SECOND_ASSET_ID },
+                        new[] { FIRST_ASSET_ID, FIRST_ASSET_ID, SECOND_ASSET_ID }),
                     SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
                     SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
                     SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
@@ -276,6 +295,7 @@ public sealed class EngineApiActionCallbackTests
                     "Modes" => (SerializedTypeEnum.Enum, "rei::tests::ProbeMode"),
                     "Labels" => (SerializedTypeEnum.String, "std::string"),
                     "Flags" => (SerializedTypeEnum.Boolean, "bool"),
+                    "Assets" => (SerializedTypeEnum.Custom, "AssetRef<ProbeDataAsset>"),
                     _ => (SerializedTypeEnum.Integer, "i32")
                 };
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
@@ -304,7 +324,7 @@ public sealed class EngineApiActionCallbackTests
                         Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
                     }]);
                 }
-                if (isAssetField)
+                if (isAssetField || selectCollectionAsset)
                 {
                     var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.String, "std::string",
                         null, SerializedTypeEnum.Invalid, null, null, "", false);
@@ -346,10 +366,19 @@ public sealed class EngineApiActionCallbackTests
                 var command = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
                 var assets = new AssetRegistry(new TestLogger<AssetRegistry>());
+                IDataAssetTypeRegistry? dataAssetTypes = null;
                 if (isAssetField) assets.RegisterNewAssets([new AssetInfo(new AssetMeta(TEXTURE_ID), TEXTURE_PATH)]);
+                if (selectCollectionAsset)
+                {
+                    var probeAsset = new SerializableObjectInfo("rei::tests", "ProbeDataAsset", false, new ObjectFile<string>("", ""), new(), "");
+                    dataAssetTypes = new InspectorDataAssetTypeRegistry(new DataAssetTypeInfo(PROBE_ASSET_TYPE_ID, probeAsset));
+                    assets.RegisterNewAssets([
+                        new DataAssetInfo(new AssetMeta(FIRST_ASSET_ID), "C:/Assets/first.dataasset", PROBE_ASSET_TYPE_ID),
+                        new DataAssetInfo(new AssetMeta(SECOND_ASSET_ID), "C:/Assets/second.dataasset", PROBE_ASSET_TYPE_ID)]);
+                }
                 RefreshInspector();
                 using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(componentId)!,
-                    registry, null!, components, objects, null!, new AssetSearchService(null!), assets, new AssetTypeMapper(), null!, scenes, null!, null!, custom, command);
+                    registry, null!, components, objects, dataAssetTypes!, new AssetSearchService(null!), assets, new AssetTypeMapper(), null!, scenes, null!, null!, custom, command);
                 var value = Assert.Single(drawer.Properties);
                 var theme = new FluentTheme();
                 var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
@@ -422,6 +451,7 @@ public sealed class EngineApiActionCallbackTests
                     {
                         SerializedColorValue rgba => new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } },
                         string idValue when isAssetField => new { Id = new { Value = idValue } },
+                        string[] assetIds when selectCollectionAsset => assetIds.Select(assetId => new { Id = new { Value = assetId } }).ToArray(),
                         int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
                         Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
                         Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
@@ -511,6 +541,13 @@ public sealed class EngineApiActionCallbackTests
                     else if (toggleCollectionItem)
                     {
                         Click(view.GetVisualDescendants().OfType<CheckBox>().ElementAt(1));
+                    }
+                    else if (selectCollectionAsset)
+                    {
+                        var assetList = Assert.IsType<CollectionPropertyViewModel>(value);
+                        var picker = Assert.IsType<AssetPropertyViewModel>(Assert.Single(assetList.Value[1].Value)).AssetPicker!;
+                        picker.RefreshSearchResultsForAll();
+                        Assert.Single(picker.SearchResults, item => item.AssetId == FIRST_ASSET_ID).SelectCommand.Execute(null);
                     }
                     else if (value is CollectionPropertyViewModel list)
                     {
@@ -727,6 +764,17 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(((Array)expected).Length, collectionViewModel.Count);
                                 Assert.Equal(Enumerable.Range(0, collectionViewModel.Count).Select(index => $"[{index}]"),
                                     collectionViewModel.Value.Select(item => item.Property.Name));
+                                if (selectCollectionAsset)
+                                {
+                                    var assetIds = (string[])expected;
+                                    Assert.Equal(assetIds, collectionViewModel.Value.Select(row =>
+                                        Assert.IsType<AssetPropertyViewModel>(Assert.Single(row.Value)).AssetPicker!.SelectedAssetId));
+                                    Assert.Equal(assetIds.Select(assetId => assetId == FIRST_ASSET_ID ? "first" : "second"),
+                                        view.GetVisualDescendants().OfType<AssetPickerView>().Select(picker =>
+                                            Assert.IsType<string>(picker.GetVisualDescendants().OfType<Label>().Single().Content)));
+                                    Assert.Equal(assetIds, JArray.FromObject(native).Select(item => item.Value<string>("Id")));
+                                    break;
+                                }
                                 if (expected is string[] labels)
                                 {
                                     Assert.Equal(labels, view.GetVisualDescendants().OfType<ReiTextBox>().Select(input => input.Text));
