@@ -65,6 +65,14 @@ public class SerializedProperty
         Name = name;
     }
 
+    public static void ReindexCollectionItems(IReadOnlyList<SerializedProperty> items)
+    {
+        for (var index = 0; index < items.Count; index++)
+        {
+            items[index].SetName($"[{index}]");
+        }
+    }
+
     public void FillPropertyHierarchy(List<SerializedProperty> hierarchy)
     {
         hierarchy.Insert(0, this);

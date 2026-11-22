@@ -8,6 +8,7 @@ using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTr
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
+using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 using ReiEditor.Models.Services.Assets.Meta;
@@ -27,6 +28,7 @@ using Avalonia.VisualTree;
 using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Property.Custom;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.Collection;
 using ReiEditor.Models.Services.Render;
 using ReiEditor.Views.Controls.ColorPicker;
 using ReiEditor.Views.Controls.Assets;
@@ -107,6 +109,15 @@ public sealed class EngineApiActionCallbackTests
         public Task RefreshBehaviours() => throw new NotSupportedException();
     }
 
+    private sealed class InspectorDataAssetTypeRegistry(DataAssetTypeInfo type) : IDataAssetTypeRegistry
+    {
+        public IEnumerable<DataAssetTypeInfo> GetDataAssetTypes() => [type];
+        public DataAssetTypeInfo? GetDataAssetType(int id) => id == type.TypeId ? type : null;
+        public DataAssetTypeInfo? GetDataAssetType(string name) => name == type.ObjectName ? type : null;
+        public int AllocateDataAssetTypeId() => throw new NotSupportedException();
+        public Task RefreshAsync(IEnumerable<SerializableObjectInfo> declarations) => throw new NotSupportedException();
+    }
+
     [NativeCallbackFact]
     public Task InspectorCheckboxClickRecordsOneUndoForButtonInteractable() => VerifyInspectorFieldAsync(SerializedTypeEnum.Boolean);
 
@@ -158,12 +169,54 @@ public sealed class EngineApiActionCallbackTests
     [InlineData("Z")]
     public Task InspectorProbeOffsetEditsPreserveOtherCoordinates(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis, editVector3: true);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionAddRecordsOneUndoAndPreservesExistingItems() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionRemoveFromMiddleRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, removeCollectionItem: true);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionNumberEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemValue: 42);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionEditThenRemoveSameItemUndoAndRedoInOrder() =>
+        VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, removeCollectionItem: true, collectionItemValue: 42);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionEnumSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, editCollectionEnum: true);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionTextEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemText: "");
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionCheckboxClickRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, toggleCollectionItem: true);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionAssetSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionAsset: true);
+
+    [NativeCallbackFact]
+    public Task InspectorCollectionComponentSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionComponent: true);
+
+    [NativeCallbackFact]
+    public Task InspectorNestedValueEditRecordsOneUndoAndPreservesLabel() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Value);
+
+    [NativeCallbackFact]
+    public Task InspectorNestedLabelEditRecordsOneUndoAndPreservesValue() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Label);
+
+    [NativeCallbackFact]
+    public Task InspectorNestedValueThenLabelUndoAndRedoInOrder() =>
+        VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.ValueThenLabel);
+
+    private readonly record struct ProbeSettings(int Value, string Label);
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
+    private enum NestedField { None, Value, Label, ValueThenLabel }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
-        string? vectorAxis = null, bool editVector3 = false)
+        string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
+        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false,
+        bool selectCollectionComponent = false, NestedField nestedField = NestedField.None)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -181,7 +234,12 @@ public sealed class EngineApiActionCallbackTests
                 const string TEXTURE_ID = "REI_WHITE_FALLBACK_TEXTURE";
                 const string TEXTURE_PATH = "C:/Assets/white.png";
                 const int IMAGE_COMPONENT_ID = 7304;
+                const int TRANSFORM_COMPONENT_ID = 7199;
+                const int PROBE_ASSET_TYPE_ID = 7201;
+                const string FIRST_ASSET_ID = "probe-first";
+                const string SECOND_ASSET_ID = "probe-second";
                 var isAssetField = assetEdit != AssetEdit.None;
+                var editNestedSettings = nestedField != NestedField.None;
                 var startEngine = isAssetField || selectComponent ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
                 api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
@@ -190,10 +248,17 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
+                    SerializedTypeEnum.Collection when editCollectionEnum => (7101, "ProbeA", "Modes", "std::vector<rei::tests::ProbeMode>", null),
+                    SerializedTypeEnum.Collection when collectionItemText != null => (7101, "ProbeA", "Labels", "std::vector<std::string>", null),
+                    SerializedTypeEnum.Collection when toggleCollectionItem => (7101, "ProbeA", "Flags", "std::vector<bool>", null),
+                    SerializedTypeEnum.Collection when selectCollectionAsset => (7101, "ProbeA", "Assets", "std::vector<AssetRef<ProbeDataAsset>>", null),
+                    SerializedTypeEnum.Collection when selectCollectionComponent => (7101, "ProbeA", "Targets", "std::vector<ComponentRef<Transform>>", null),
+                    SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
                     SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
                     SerializedTypeEnum.Custom when vectorAxis != null => (7302, "Canvas", "_referenceResolution", "Vector2", null),
+                    SerializedTypeEnum.Custom when editNestedSettings => (7101, "ProbeA", "Settings", "ProbeNested", null),
                     SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -202,6 +267,16 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
+                    SerializedTypeEnum.Collection when editCollectionEnum => (Array.Empty<int>(), new[] { 5, 2, 0 }, new[] { 5, 5, 0 }),
+                    SerializedTypeEnum.Collection when collectionItemText != null => (Array.Empty<string>(), new[] { "Left", "Middle", "Right" },
+                        new[] { "Left", collectionItemText, "Right" }),
+                    SerializedTypeEnum.Collection when toggleCollectionItem => (Array.Empty<bool>(), new[] { true, false, false }, new[] { true, true, false }),
+                    SerializedTypeEnum.Collection when selectCollectionAsset => (Array.Empty<string>(), new[] { FIRST_ASSET_ID, SECOND_ASSET_ID, SECOND_ASSET_ID },
+                        new[] { FIRST_ASSET_ID, FIRST_ASSET_ID, SECOND_ASSET_ID }),
+                    SerializedTypeEnum.Collection when selectCollectionComponent => (Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>()),
+                    SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
+                    SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
+                    SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
                     SerializedTypeEnum.Custom when selectComponent => (0, 0, 0),
@@ -215,6 +290,8 @@ public sealed class EngineApiActionCallbackTests
                         }),
                     SerializedTypeEnum.Custom when vectorAxis != null => (new Vector2(1920, 1080), new Vector2(1600.25f, 900.5f),
                         vectorAxis == "X" ? new Vector2(1200.75f, 900.5f) : new Vector2(1600.25f, 1200.75f)),
+                    SerializedTypeEnum.Custom when editNestedSettings => (new ProbeSettings(11, "nested"), new ProbeSettings(23, "Original label"),
+                        nestedField == NestedField.Label ? new ProbeSettings(23, "Updated label") : new ProbeSettings(42, "Original label")),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
                         new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -234,16 +311,54 @@ public sealed class EngineApiActionCallbackTests
                     values.Initial = values.External = id;
                     values.Edited = imageId;
                 }
+                if (selectCollectionComponent)
+                {
+                    var firstId = AddTransformTarget("First Target");
+                    var secondId = AddTransformTarget("Second Target");
+                    values.External = new[] { firstId, secondId, secondId };
+                    values.Edited = new[] { firstId, firstId, secondId };
+                }
+
+                int AddTransformTarget(string name)
+                {
+                    var targetId = entities.CreateNewEntity(name)!.EntityId!.Value;
+                    Assert.Contains(entities.GetEntityData(targetId)!.Behaviours, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
+                    var target = new GameEntity(targetId, name);
+                    target.AddBehaviour(new BehaviourComponent(TRANSFORM_COMPONENT_ID));
+                    scenes.Scene.Value!.AddEntity(target);
+                    return targetId;
+                }
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
+                var (collectionItemType, collectionItemSource) = field switch
+                {
+                    "Modes" => (SerializedTypeEnum.Enum, "rei::tests::ProbeMode"),
+                    "Labels" => (SerializedTypeEnum.String, "std::string"),
+                    "Flags" => (SerializedTypeEnum.Boolean, "bool"),
+                    "Assets" => (SerializedTypeEnum.Custom, "AssetRef<ProbeDataAsset>"),
+                    "Targets" => (SerializedTypeEnum.Custom, "ComponentRef<Transform>"),
+                    _ => (SerializedTypeEnum.Integer, "i32")
+                };
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
-                    [field] = new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
+                    [field] = type == SerializedTypeEnum.Collection
+                        ? new(type, sourceType, collectionItemSource, collectionItemType, collectionItemSource, null, defaultValue, false)
+                        : new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
                 }, [], "");
                 var registry = selectComponent
                     ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Image", IMAGE_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
+                    : selectCollectionComponent
+                    ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Transform", TRANSFORM_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
                     : new InspectorComponentRegistry(component);
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                if (editCollectionEnum)
+                {
+                    objects.Replace([], [new SerializableEnum
+                    {
+                        EnumName = "ProbeMode",
+                        Options = new() { ["Cold"] = 0, ["Warm"] = 2, ["Hot"] = 5 }
+                    }]);
+                }
                 if (type == SerializedTypeEnum.Enum)
                 {
                     objects.Replace([], [new SerializableEnum
@@ -252,14 +367,14 @@ public sealed class EngineApiActionCallbackTests
                         Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
                     }]);
                 }
-                if (isAssetField)
+                if (isAssetField || selectCollectionAsset)
                 {
                     var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.String, "std::string",
                         null, SerializedTypeEnum.Invalid, null, null, "", false);
                     objects.Replace([new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", ""),
                         new() { ["Id"] = idProperty }, "")], []);
                 }
-                else if (selectComponent)
+                else if (selectComponent || selectCollectionComponent)
                 {
                     var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Integer, "i32",
                         null, SerializedTypeEnum.Invalid, null, null, "0", false);
@@ -273,6 +388,14 @@ public sealed class EngineApiActionCallbackTests
                     var coordinates = new Dictionary<string, SerializableObjectInfo.SerializedPropertyData> { ["x"] = coordinate, ["y"] = coordinate };
                     if (editVector3) coordinates.Add("z", coordinate);
                     objects.Replace([new SerializableObjectInfo("rei::math", sourceType, false, new ObjectFile<string>("", ""), coordinates, "")], []);
+                }
+                else if (editNestedSettings)
+                {
+                    objects.Replace([new SerializableObjectInfo("rei::tests", "ProbeNested", false, new ObjectFile<string>("", ""), new()
+                    {
+                        ["Value"] = new(SerializedTypeEnum.Integer, "i32", null, SerializedTypeEnum.Invalid, null, null, "11", false),
+                        ["Label"] = new(SerializedTypeEnum.String, "std::string", null, SerializedTypeEnum.Invalid, null, null, "nested", false)
+                    }, "")], []);
                 }
                 else if (type == SerializedTypeEnum.Custom)
                 {
@@ -294,10 +417,19 @@ public sealed class EngineApiActionCallbackTests
                 var command = new SetComponentPropertyCommand(commands, scenes, runner);
                 var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entities, null!);
                 var assets = new AssetRegistry(new TestLogger<AssetRegistry>());
+                IDataAssetTypeRegistry? dataAssetTypes = null;
                 if (isAssetField) assets.RegisterNewAssets([new AssetInfo(new AssetMeta(TEXTURE_ID), TEXTURE_PATH)]);
+                if (selectCollectionAsset)
+                {
+                    var probeAsset = new SerializableObjectInfo("rei::tests", "ProbeDataAsset", false, new ObjectFile<string>("", ""), new(), "");
+                    dataAssetTypes = new InspectorDataAssetTypeRegistry(new DataAssetTypeInfo(PROBE_ASSET_TYPE_ID, probeAsset));
+                    assets.RegisterNewAssets([
+                        new DataAssetInfo(new AssetMeta(FIRST_ASSET_ID), "C:/Assets/first.dataasset", PROBE_ASSET_TYPE_ID),
+                        new DataAssetInfo(new AssetMeta(SECOND_ASSET_ID), "C:/Assets/second.dataasset", PROBE_ASSET_TYPE_ID)]);
+                }
                 RefreshInspector();
                 using var drawer = new BehaviourComponentDrawerViewModel(entity, entity.GetBehaviour(componentId)!,
-                    registry, null!, components, objects, null!, new AssetSearchService(null!), assets, new AssetTypeMapper(), null!, scenes, null!, null!, custom, command);
+                    registry, null!, components, objects, dataAssetTypes!, new AssetSearchService(null!), assets, new AssetTypeMapper(), null!, scenes, null!, null!, custom, command);
                 var value = Assert.Single(drawer.Properties);
                 var theme = new FluentTheme();
                 var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
@@ -308,15 +440,19 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => new BooleanPropertyView(),
                     SerializedTypeEnum.Enum => new EnumPropertyView(),
                     SerializedTypeEnum.String => new StringPropertyView(),
+                    SerializedTypeEnum.Collection => new CollectionPropertyView(),
                     SerializedTypeEnum.Custom when isAssetField => new AssetPropertyView(),
                     SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
                     SerializedTypeEnum.Custom when editVector3 => new Vector3PropertyView(),
                     SerializedTypeEnum.Custom when vectorAxis != null => new Vector2PropertyView(),
+                    SerializedTypeEnum.Custom when editNestedSettings => new CustomPropertyView(),
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
+                if (value is CollectionPropertyViewModel collection) collection.SwitchExpandState();
+                if (value is CustomPropertyViewModel nested) nested.SwitchExpandState();
                 view.DataContext = value;
-                var window = new Window { Content = view, Width = 400, Height = type == SerializedTypeEnum.Custom ? 480 : 140 };
+                var window = new Window { Content = view, Width = 400, Height = type is SerializedTypeEnum.Custom or SerializedTypeEnum.Collection ? 480 : 140 };
                 try
                 {
                     window.Show();
@@ -324,11 +460,17 @@ public sealed class EngineApiActionCallbackTests
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var textInputs = view.GetVisualDescendants().OfType<ReiTextBox>().ToArray();
+                    var nestedValueInput = editNestedSettings ? view.GetVisualDescendants().OfType<IntegerPropertyView>().Single()
+                        .GetVisualDescendants().OfType<ReiTextBox>().Single() : null;
+                    var nestedLabelInput = editNestedSettings ? view.GetVisualDescendants().OfType<StringPropertyView>().Single()
+                        .GetVisualDescendants().OfType<ReiTextBox>().Single() : null;
                     var text = vectorAxis switch
                     {
                         "X" => textInputs[0],
                         "Y" => textInputs[1],
                         "Z" => textInputs[2],
+                        _ when editNestedSettings => nestedField == NestedField.Label ? nestedLabelInput : nestedValueInput,
+                        _ when type == SerializedTypeEnum.Collection => null,
                         _ => textInputs.SingleOrDefault()
                     };
                     ReiTextBox? channelInput = null;
@@ -367,9 +509,12 @@ public sealed class EngineApiActionCallbackTests
                     {
                         SerializedColorValue rgba => new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } },
                         string idValue when isAssetField => new { Id = new { Value = idValue } },
+                        string[] assetIds when selectCollectionAsset => assetIds.Select(assetId => new { Id = new { Value = assetId } }).ToArray(),
                         int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
+                        int[] targetIds when selectCollectionComponent => targetIds.Select(targetId => new { SceneEntityId = new { Value = targetId } }).ToArray(),
                         Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
                         Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
+                        ProbeSettings settings => new { Value = new { Value = settings.Value }, Label = new { Value = settings.Label } },
                         _ => values.External
                     };
                     entities.SetData(new SetEntityDataRequest
@@ -429,13 +574,54 @@ public sealed class EngineApiActionCallbackTests
                         var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
                         Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
                     }
-                    else if (vectorAxis != null)
+                    else if (editNestedSettings || vectorAxis != null)
                     {
-                        text!.TextInternal = 1200.75f.ToString(CultureInfo.CurrentCulture);
+                        text!.TextInternal = values.Edited is ProbeSettings settings
+                            ? nestedField == NestedField.Label ? settings.Label : settings.Value.ToString(CultureInfo.CurrentCulture)
+                            : 1200.75f.ToString(CultureInfo.CurrentCulture);
                         AssertValues(values.External);
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
                         text.LoseFocus();
+                    }
+                    else if (collectionItemText != null || collectionItemValue.HasValue)
+                    {
+                        components.RefreshComponents(entity);
+                        text = view.GetVisualDescendants().OfType<ReiTextBox>().ElementAt(1);
+                        text.TextInternal = collectionItemText ?? collectionItemValue.GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        Assert.Equal(0, writes);
+                        text.LoseFocus();
+                    }
+                    else if (editCollectionEnum)
+                    {
+                        var mode = view.GetVisualDescendants().OfType<ComboBox>().ElementAt(1);
+                        mode.Focus();
+                        mode.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Down });
+                    }
+                    else if (toggleCollectionItem)
+                    {
+                        Click(view.GetVisualDescendants().OfType<CheckBox>().ElementAt(1));
+                    }
+                    else if (selectCollectionAsset)
+                    {
+                        var assetList = Assert.IsType<CollectionPropertyViewModel>(value);
+                        var picker = Assert.IsType<AssetPropertyViewModel>(Assert.Single(assetList.Value[1].Value)).AssetPicker!;
+                        picker.RefreshSearchResultsForAll();
+                        Assert.Single(picker.SearchResults, item => item.AssetId == FIRST_ASSET_ID).SelectCommand.Execute(null);
+                    }
+                    else if (selectCollectionComponent)
+                    {
+                        var refs = Assert.IsType<CollectionPropertyViewModel>(value);
+                        var picker = Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(refs.Value[1].Value)).Picker!;
+                        var targetId = ((int[])values.Edited)[1].ToString(CultureInfo.InvariantCulture);
+                        picker.RefreshSearchResultsForAll();
+                        Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
+                    }
+                    else if (value is CollectionPropertyViewModel list)
+                    {
+                        ClickCollectionButton(removeCollectionItem ? list.Value[1].RemoveCommand : list.AddItemCommand);
                     }
                     else if (text != null)
                     {
@@ -460,16 +646,60 @@ public sealed class EngineApiActionCallbackTests
                     }
                     else
                     {
-                        var checkbox = Assert.IsType<CheckBox>(toggle);
-                        var center = checkbox.TranslatePoint(new Point(checkbox.Bounds.Width / 2, checkbox.Bounds.Height / 2), window)!.Value;
-                        window.MouseDown(center, MouseButton.Left);
-                        window.MouseUp(center, MouseButton.Left);
+                        Click(Assert.IsType<CheckBox>(toggle));
                     }
                     Dispatcher.UIThread.RunJobs();
                     AssertValues(values.Edited);
                     Assert.True(commands.CanUndo);
                     var editWrites = colorDrag != ColorDrag.None ? writes : 1;
                     Assert.Equal(editWrites, writes);
+
+                    if (nestedField == NestedField.ValueThenLabel)
+                    {
+                        var afterLabel = ((ProbeSettings)values.Edited) with { Label = "Updated label" };
+                        nestedLabelInput!.TextInternal = afterLabel.Label;
+                        nestedLabelInput.LoseFocus();
+                        AssertValues(afterLabel);
+                        Assert.Equal(2, writes);
+
+                        await commands.UndoAsync();
+                        AssertValues(values.Edited);
+                        await commands.UndoAsync();
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertValues(values.Edited);
+                        await commands.RedoAsync();
+                        AssertValues(afterLabel);
+                        Assert.False(commands.CanRedo);
+                        Assert.Equal(6, writes);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    if (removeCollectionItem && collectionItemValue.HasValue)
+                    {
+                        var afterRemoval = new[] { 7, 11 };
+                        ClickCollectionButton(Assert.IsType<CollectionPropertyViewModel>(value).Value[1].RemoveCommand);
+                        AssertValues(afterRemoval);
+                        Assert.Equal(2, writes);
+
+                        await commands.UndoAsync();
+                        AssertValues(values.Edited);
+                        await commands.UndoAsync();
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertValues(values.Edited);
+                        await commands.RedoAsync();
+                        AssertValues(afterRemoval);
+                        Assert.False(commands.CanRedo);
+                        Assert.Equal(6, writes);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
 
                     if (mixedColorHistory)
                     {
@@ -513,6 +743,19 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Equal(editWrites + 2, writes);
                     Assert.Empty(syncLogger.Entries);
+
+                    void ClickCollectionButton(System.Windows.Input.ICommand commandToClick)
+                    {
+                        var button = view.GetVisualDescendants().OfType<Button>().Single(button => ReferenceEquals(button.Command, commandToClick));
+                        Click(button);
+                    }
+
+                    void Click(Control control)
+                    {
+                        var center = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+                        window.MouseDown(center, MouseButton.Left);
+                        window.MouseUp(center, MouseButton.Left);
+                    }
 
                     SerializedColorValue DragColor(ColorDrag drag, SerializedColorValue before)
                     {
@@ -610,6 +853,65 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expectedVector3.Z, float.Parse(textInputs[2].Text, CultureInfo.CurrentCulture));
                                 var nativeVector3 = JObject.FromObject(native);
                                 Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
+                                break;
+                            case CustomPropertyViewModel:
+                                var expectedSettings = (ProbeSettings)expected;
+                                Assert.Equal(expectedSettings.Value, int.Parse(nestedValueInput!.Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedSettings.Label, nestedLabelInput!.Text);
+                                var nativeSettings = JObject.FromObject(native);
+                                Assert.Equal(expectedSettings, new ProbeSettings(nativeSettings.Value<int>("Value"), nativeSettings.Value<string>("Label")!));
+                                break;
+                            case CollectionPropertyViewModel collectionViewModel:
+                                Assert.Equal(((Array)expected).Length, collectionViewModel.Count);
+                                Assert.Equal(Enumerable.Range(0, collectionViewModel.Count).Select(index => $"[{index}]"),
+                                    collectionViewModel.Value.Select(item => item.Property.Name));
+                                if (selectCollectionAsset)
+                                {
+                                    var assetIds = (string[])expected;
+                                    Assert.Equal(assetIds, collectionViewModel.Value.Select(row =>
+                                        Assert.IsType<AssetPropertyViewModel>(Assert.Single(row.Value)).AssetPicker!.SelectedAssetId));
+                                    Assert.Equal(assetIds.Select(assetId => assetId == FIRST_ASSET_ID ? "first" : "second"),
+                                        view.GetVisualDescendants().OfType<AssetPickerView>().Select(picker =>
+                                            Assert.IsType<string>(picker.GetVisualDescendants().OfType<Label>().Single().Content)));
+                                    Assert.Equal(assetIds, JArray.FromObject(native).Select(item => item.Value<string>("Id")));
+                                    break;
+                                }
+                                if (expected is string[] labels)
+                                {
+                                    Assert.Equal(labels, view.GetVisualDescendants().OfType<ReiTextBox>().Select(input => input.Text));
+                                    Assert.Equal(labels, JArray.FromObject(native).ToObject<string[]>());
+                                    break;
+                                }
+                                if (expected is bool[] flags)
+                                {
+                                    Assert.Equal(flags.Select(flag => (bool?)flag),
+                                        view.GetVisualDescendants().OfType<CheckBox>().Select(input => input.IsChecked));
+                                    Assert.Equal(flags, JArray.FromObject(native).ToObject<bool[]>());
+                                    break;
+                                }
+                                var expectedItems = (int[])expected;
+                                if (selectCollectionComponent)
+                                {
+                                    Assert.Equal(expectedItems.Select(targetId => targetId.ToString(CultureInfo.InvariantCulture)),
+                                        collectionViewModel.Value.Select(row => Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(row.Value)).Picker!.SelectedAssetId));
+                                    Assert.Equal(expectedItems.Select(targetId => $"{scenes.Scene.Value!.GetById(targetId)!.Name} ({targetId})"),
+                                        view.GetVisualDescendants().OfType<AssetPickerView>().Select(picker =>
+                                            Assert.IsType<string>(picker.GetVisualDescendants().OfType<Label>().Single().Content)));
+                                    Assert.Equal(expectedItems, JArray.FromObject(native).Select(item => item.Value<int>("SceneEntityId")));
+                                    break;
+                                }
+                                if (editCollectionEnum)
+                                {
+                                    var modes = objects.GetEnum("ProbeMode")!.Options;
+                                    Assert.Equal(expectedItems.Select(item => modes.Single(mode => mode.Value == item).Key),
+                                        view.GetVisualDescendants().OfType<ComboBox>().Select(input => (string?)input.SelectedItem));
+                                }
+                                else
+                                {
+                                    Assert.Equal(expectedItems, view.GetVisualDescendants().OfType<ReiTextBox>()
+                                        .Select(input => int.Parse(input.Text, CultureInfo.CurrentCulture)));
+                                }
+                                Assert.Equal(expectedItems, JArray.FromObject(native).ToObject<int[]>());
                                 break;
                             default:
                                 throw new InvalidOperationException("Unexpected Inspector property editor.");

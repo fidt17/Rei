@@ -200,7 +200,15 @@ namespace
 {
     void StartActionEngine(CreateEngineCallback createEngine, const bool rectMove = false)
     {
-        ActionEngine = std::make_unique<rei::tests::NativeEngineFixture>(rei::internal::engine::EditorMode, "action-replay", rectMove ? rei::tests::PrepareRenderResources : nullptr, true);
+        const auto prepareActionResources = [](rei::tests::TemporaryDirectory& files)
+        {
+            rei::tests::PrepareEngineResources(files, "action-replay", nlohmann::json::array(), {
+                {"probe-first", "first", rei::tests::JsonAsset({{"DataAssetTypeId", 7201}, {"SerializedData", {{"Number", {{"Value", 11}}}}}})},
+                {"probe-second", "second", rei::tests::JsonAsset({{"DataAssetTypeId", 7201}, {"SerializedData", {{"Number", {{"Value", 29}}}}}})}
+            });
+        };
+        ActionEngine = std::make_unique<rei::tests::NativeEngineFixture>(rei::internal::engine::EditorMode, "action-replay",
+            rectMove ? rei::tests::PrepareRenderResources : +prepareActionResources, true);
         if (rectMove) ActionEngine->WindowSettings = {"Rei RectTransform integration", 640, 480, true, false, false};
         ActionEngine->EngineFactory = [createEngine]
         {

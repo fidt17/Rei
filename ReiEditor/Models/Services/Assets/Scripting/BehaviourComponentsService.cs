@@ -173,7 +173,7 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         }
         if (subscriptions.ContainsKey(property)) return;
 
-        // Color commits all channels before raising one change on the parent property.
+        // Collections forward item changes to their root. Color also commits through its root.
         if (property.SourceType != "Color" && property.Value is Dictionary<string, SerializedProperty> children)
         {
             foreach (var nested in children.Values)
@@ -182,14 +182,6 @@ public class BehaviourComponentsService : IBehaviourComponentsService
             }
             if (property.Type != SerializedTypeEnum.Collection) return;
         }
-        else if (property.Value is List<SerializedProperty> items)
-        {
-            foreach (var nested in items)
-            {
-                SubscribeToPropertyChange(entity, component, nested);
-            }
-        }
-
         Action<object?> handler = _ => BehaviourPropertyChangedEvent?.Invoke(new EntityBehaviourPropertyChangeEventArgs(entity, component, property));
         subscriptions.Add(property, handler);
         property.ValueChangedEvent += handler;

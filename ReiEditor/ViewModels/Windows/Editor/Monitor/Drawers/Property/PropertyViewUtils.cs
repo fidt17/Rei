@@ -29,19 +29,20 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
-        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<object>? commitProperty = null,
+        SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<SerializedProperty, object>? commitProperty = null,
         Action<SerializedColorValue>? recordColorDrag = null)
     {
-        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commitProperty);
+        Action<object>? commit = commitProperty == null ? null : value => commitProperty(property, value);
+        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commit);
 
         return property.Type switch
         {
-            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.String => new StringPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commitProperty),
-            SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commitProperty),
-            SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry),
+            SerializedTypeEnum.Integer => new IntegerPropertyViewModel(property, commit),
+            SerializedTypeEnum.String => new StringPropertyViewModel(property, commit),
+            SerializedTypeEnum.Boolean => new BooleanPropertyViewModel(property, commit),
+            SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commit),
+            SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commit),
+            SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty),
             SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty, recordColorDrag),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
@@ -72,30 +73,31 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry,
-        Action<object>? commitProperty,
+        Action<SerializedProperty, object>? commitProperty,
         Action<SerializedColorValue>? recordColorDrag)
     {
+        Action<object>? commit = commitProperty == null ? null : value => commitProperty(property, value);
         if (property.SourceType == "Vector2")
         {
-            return new Vector2PropertyViewModel(property, commitProperty);
+            return new Vector2PropertyViewModel(property, commit);
         }
         else if (property.SourceType == "Vector3")
         {
-            return new Vector3PropertyViewModel(property, commitProperty);
+            return new Vector3PropertyViewModel(property, commit);
         }
         else if (property.SourceType == "Color")
         {
-            return new ColorPropertyViewModel(property, commitProperty, recordColorDrag);
+            return new ColorPropertyViewModel(property, commit, recordColorDrag);
         }
-        else if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal))
+        else if (property.SourceType.IsAssetReference())
         {
-            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry, commitProperty);
+            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry, commit);
         }
-        else if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal))
+        else if (property.SourceType.IsComponentReference())
         {
-            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService, commitProperty);
+            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService, commit);
         }
 
-        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty);
     }
 }

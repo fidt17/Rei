@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Commands;
@@ -57,7 +58,7 @@ public sealed class SetComponentPropertyCommand(
         if (!IsCurrent(target)) return Task.FromResult<object?>(null);
         var before = Read(target.Property);
         var after = Normalize(GetValueProperty(target.Property), target.Value);
-        if (before == null || after == null || before.Equals(after)) return Task.FromResult<object?>(null);
+        if (before == null || after == null || SameValue(before, after)) return Task.FromResult<object?>(null);
 
         Write(target.Property, after);
         return Task.FromResult(Matches(target.Property, after) ? before : null);
@@ -69,17 +70,32 @@ public sealed class SetComponentPropertyCommand(
         return before != null && after != null ? new HistoryEntry(this, target, before, after) : null;
     }
 
-    private bool IsCurrent(Target target) =>
-        !engine.IsEngineStarting.Value && !engine.IsPlaymodeActive.Value
-        && !(engine.IsActive.Value && engine.ActiveMode == EngineRunMode.PlayMode)
-        && ReferenceEquals(target.Scene, scenes.CurrentScene.Value)
-        && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
-        && target.Entity.HasBehaviour(target.Component)
-        && target.Property.ParentProperty == null
-        && target.Component.Properties.TryGetValue(target.Property.Name, out var property)
-        && ReferenceEquals(property, target.Property);
+    private bool IsCurrent(Target target)
+    {
+        var root = target.Property.ParentProperty ?? target.Property;
+        return !engine.IsEngineStarting.Value && !engine.IsPlaymodeActive.Value
+            && !(engine.IsActive.Value && engine.ActiveMode == EngineRunMode.PlayMode)
+            && ReferenceEquals(target.Scene, scenes.CurrentScene.Value)
+            && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
+            && target.Entity.HasBehaviour(target.Component)
+            && target.Component.Properties.TryGetValue(root.Name, out var property)
+            && ReferenceEquals(property, root)
+            && (ReferenceEquals(root, target.Property) || IsCurrentChild(root, target.Property));
+    }
 
-    private static bool Matches(SerializedProperty property, object expected) => Equals(Read(property), expected);
+    private static bool IsCurrentChild(SerializedProperty parent, SerializedProperty child) => parent.Type switch
+    {
+        SerializedTypeEnum.Collection => child.Type.SupportsCollectionItemHistory(child.SourceType)
+            && parent.Value is List<SerializedProperty> items && items.Contains(child),
+        SerializedTypeEnum.Custom => child.Type.SupportsNestedFieldHistory() && parent.Value is Dictionary<string, SerializedProperty> fields
+            && fields.TryGetValue(child.Name, out var current) && ReferenceEquals(current, child),
+        _ => false
+    };
+
+    private static bool Matches(SerializedProperty property, object expected) => SameValue(Read(property), expected);
+
+    private static bool SameValue(object? left, object? right) =>
+        left is SerializedProperty[] items && right is SerializedProperty[] other ? items.SequenceEqual(other) : Equals(left, right);
 
     private static object? Read(SerializedProperty property)
     {
@@ -100,6 +116,11 @@ public sealed class SetComponentPropertyCommand(
             if (previous3.X != vector3.X) coordinates3["x"].Value = vector3.X;
             if (previous3.Y != vector3.Y) coordinates3["y"].Value = vector3.Y;
             if (previous3.Z != vector3.Z) coordinates3["z"].Value = vector3.Z;
+        }
+        else if (value is SerializedProperty[] items)
+        {
+            SerializedProperty.ReindexCollectionItems(items);
+            property.Value = new List<SerializedProperty>(items);
         }
         else GetValueProperty(property).Value = value;
     }
@@ -123,6 +144,7 @@ public sealed class SetComponentPropertyCommand(
             _ => null
         },
         SerializedTypeEnum.String when value is string text => text,
+        SerializedTypeEnum.Collection when value is IReadOnlyList<SerializedProperty> items => items.ToArray(),
         SerializedTypeEnum.Boolean when value is bool flag => (object)flag,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is int integer => (object)integer,
         SerializedTypeEnum.Integer or SerializedTypeEnum.Enum when value is long integer && integer is >= int.MinValue and <= int.MaxValue => (object)(int)integer,
@@ -136,8 +158,8 @@ public sealed class SetComponentPropertyCommand(
     private static SerializedProperty GetValueProperty(SerializedProperty property)
     {
         if (property.Type != SerializedTypeEnum.Custom || property.Value is not Dictionary<string, SerializedProperty> children) return property;
-        if (property.SourceType.StartsWith("AssetRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("Id") ?? property;
-        if (property.SourceType.StartsWith("ComponentRef<", StringComparison.Ordinal)) return children.GetValueOrDefault("SceneEntityId") ?? property;
+        if (property.SourceType.IsAssetReference()) return children.GetValueOrDefault("Id") ?? property;
+        if (property.SourceType.IsComponentReference()) return children.GetValueOrDefault("SceneEntityId") ?? property;
         return property;
     }
 }
