@@ -146,7 +146,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorAddComponentRecordsIntroducedDependencyInSameEntry() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithMissingDependency);
 
-    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency }
+    [NativeCallbackFact]
+    public Task InspectorAddComponentsWithSharedDependencyUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithSharedDependency);
+
+    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
     {
@@ -166,6 +169,7 @@ public sealed class EngineApiActionCallbackTests
                 api.MarkEngineStarted();
                 const int PROBE_ID = 7102;
                 const int DEPENDENT_ID = 7103;
+                const int OTHER_DEPENDENT_ID = 7104;
                 const int TRANSFORM_ID = 7199;
                 var entityApi = new EntityApi(api);
                 var id = entityApi.CreateNewEntity("Inspector component history")!.EntityId!.Value;
@@ -189,7 +193,8 @@ public sealed class EngineApiActionCallbackTests
                     {
                         ["Number"] = new(SerializedTypeEnum.Integer, "i32", null, SerializedTypeEnum.Invalid, null, null, "97", false)
                     }, [], ""),
-                    new BehaviourAssetInfo("", "ProbeC", DEPENDENT_ID, new ObjectFile<string>("", ""), new(), ["ProbeB"], ""));
+                    new BehaviourAssetInfo("", "ProbeC", DEPENDENT_ID, new ObjectFile<string>("", ""), new(), ["ProbeB"], ""),
+                    new BehaviourAssetInfo("", "ProbeD", OTHER_DEPENDENT_ID, new ObjectFile<string>("", ""), new(), ["ProbeB"], ""));
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
                 var coordinate = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
                     null, SerializedTypeEnum.Invalid, null, null, "1", false);
@@ -226,13 +231,21 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
-                    if (scenario == ComponentHistory.AddWithMissingDependency)
+                    if (scenario is ComponentHistory.AddWithMissingDependency or ComponentHistory.AddWithSharedDependency)
                     {
                         AssertComponentNumber(null, dependentPresent: false);
                         Assert.False(commands.CanUndo);
                         Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
                         AssertComponentNumber(97, dependentPresent: true);
                         Assert.True(commands.CanUndo);
+
+                        if (scenario == ComponentHistory.AddWithSharedDependency)
+                        {
+                            Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == OTHER_DEPENDENT_ID).SelectCommand.Execute(null);
+                            AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                            await commands.UndoAsync();
+                            AssertComponentNumber(97, dependentPresent: true);
+                        }
 
                         await commands.UndoAsync();
                         AssertComponentNumber(null, dependentPresent: false);
@@ -241,6 +254,11 @@ public sealed class EngineApiActionCallbackTests
 
                         await commands.RedoAsync();
                         AssertComponentNumber(97, dependentPresent: true);
+                        if (scenario == ComponentHistory.AddWithSharedDependency)
+                        {
+                            await commands.RedoAsync();
+                            AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                        }
                         Assert.False(commands.CanRedo);
                         Assert.Empty(syncLogger.Entries);
                         return true;
@@ -354,7 +372,7 @@ public sealed class EngineApiActionCallbackTests
                     Assert.Single(probe.ContextMenu.Options, option => option.Text == "Delete Component").Command.Execute(null);
                 }
 
-                void AssertComponentNumber(int? expected, bool? dependentPresent = null)
+                void AssertComponentNumber(int? expected, bool? dependentPresent = null, bool otherDependentPresent = false)
                 {
                     Dispatcher.UIThread.RunJobs();
                     var present = expected.HasValue;
@@ -366,10 +384,8 @@ public sealed class EngineApiActionCallbackTests
                     Assert.Contains(native, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
                     if (dependentPresent is { } hasDependent)
                     {
-                        var dependentDrawers = view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
-                            .Count(d => d.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == DEPENDENT_ID);
-                        Assert.Equal(hasDependent ? 1 : 0, dependentDrawers);
-                        Assert.Equal(hasDependent ? 1 : 0, native.Count(behaviour => Equals(behaviour["REI_TYPE"], "ProbeC")));
+                        AssertDependent(DEPENDENT_ID, "ProbeC", hasDependent);
+                        AssertDependent(OTHER_DEPENDENT_ID, "ProbeD", otherDependentPresent);
                     }
                     var probe = native.Where(behaviour => Equals(behaviour["REI_TYPE"], "ProbeB")).ToArray();
                     if (!present)
@@ -381,6 +397,14 @@ public sealed class EngineApiActionCallbackTests
                     var inspectorNumber = int.Parse(input.Text, CultureInfo.CurrentCulture);
                     var nativeNumber = Convert.ToInt32(Assert.Single(probe)["Number"]);
                     Assert.Equal((expected.Value, expected.Value), (inspectorNumber, nativeNumber));
+
+                    void AssertDependent(int behaviourId, string name, bool isPresent)
+                    {
+                        var count = isPresent ? 1 : 0;
+                        Assert.Equal(count, view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                            .Count(d => d.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == behaviourId));
+                        Assert.Equal(count, native.Count(behaviour => Equals(behaviour["REI_TYPE"], name)));
+                    }
                 }
             }
             finally
