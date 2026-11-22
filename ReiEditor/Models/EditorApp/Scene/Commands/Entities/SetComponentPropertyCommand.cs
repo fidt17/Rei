@@ -87,7 +87,7 @@ public sealed class SetComponentPropertyCommand(
     {
         SerializedTypeEnum.Collection => child.Type.SupportsCollectionItemHistory(child.SourceType)
             && parent.Value is List<SerializedProperty> items && items.Contains(child),
-        SerializedTypeEnum.Custom => child.Type.IsNumeric() && parent.Value is Dictionary<string, SerializedProperty> fields
+        SerializedTypeEnum.Custom => child.Type.SupportsNestedFieldHistory() && parent.Value is Dictionary<string, SerializedProperty> fields
             && fields.TryGetValue(child.Name, out var current) && ReferenceEquals(current, child),
         _ => false
     };

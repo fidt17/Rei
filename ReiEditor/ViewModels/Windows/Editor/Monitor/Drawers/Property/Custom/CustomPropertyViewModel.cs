@@ -116,7 +116,7 @@ public class CustomPropertyViewModel : BaseViewModel
             _displayedProperties.AddRange(visibleProperties);
             foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
                          PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata,
-                             property.Type.IsNumeric() ? _commitProperty : null)))
+                             property.Type.SupportsNestedFieldHistory() ? _commitProperty : null)))
             {
                 Value.Add(row);
             }

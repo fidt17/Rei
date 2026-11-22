@@ -198,17 +198,21 @@ public sealed class EngineApiActionCallbackTests
     public Task InspectorCollectionComponentSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionComponent: true);
 
     [NativeCallbackFact]
-    public Task InspectorNestedValueEditRecordsOneUndoAndPreservesLabel() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, editNestedValue: true);
+    public Task InspectorNestedValueEditRecordsOneUndoAndPreservesLabel() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Value);
+
+    [NativeCallbackFact]
+    public Task InspectorNestedLabelEditRecordsOneUndoAndPreservesValue() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Label);
 
     private readonly record struct ProbeSettings(int Value, string Label);
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
+    private enum NestedField { None, Value, Label }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
         string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
         bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false,
-        bool selectCollectionComponent = false, bool editNestedValue = false)
+        bool selectCollectionComponent = false, NestedField nestedField = NestedField.None)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -231,6 +235,7 @@ public sealed class EngineApiActionCallbackTests
                 const string FIRST_ASSET_ID = "probe-first";
                 const string SECOND_ASSET_ID = "probe-second";
                 var isAssetField = assetEdit != AssetEdit.None;
+                var editNestedSettings = nestedField != NestedField.None;
                 var startEngine = isAssetField || selectComponent ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
                 api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
@@ -249,7 +254,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
                     SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
                     SerializedTypeEnum.Custom when vectorAxis != null => (7302, "Canvas", "_referenceResolution", "Vector2", null),
-                    SerializedTypeEnum.Custom when editNestedValue => (7101, "ProbeA", "Settings", "ProbeNested", null),
+                    SerializedTypeEnum.Custom when editNestedSettings => (7101, "ProbeA", "Settings", "ProbeNested", null),
                     SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -281,8 +286,8 @@ public sealed class EngineApiActionCallbackTests
                         }),
                     SerializedTypeEnum.Custom when vectorAxis != null => (new Vector2(1920, 1080), new Vector2(1600.25f, 900.5f),
                         vectorAxis == "X" ? new Vector2(1200.75f, 900.5f) : new Vector2(1600.25f, 1200.75f)),
-                    SerializedTypeEnum.Custom when editNestedValue => (new ProbeSettings(11, "nested"), new ProbeSettings(23, "Keep this label"),
-                        new ProbeSettings(42, "Keep this label")),
+                    SerializedTypeEnum.Custom when editNestedSettings => (new ProbeSettings(11, "nested"), new ProbeSettings(23, "Original label"),
+                        nestedField == NestedField.Label ? new ProbeSettings(23, "Updated label") : new ProbeSettings(42, "Original label")),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
                         new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -380,7 +385,7 @@ public sealed class EngineApiActionCallbackTests
                     if (editVector3) coordinates.Add("z", coordinate);
                     objects.Replace([new SerializableObjectInfo("rei::math", sourceType, false, new ObjectFile<string>("", ""), coordinates, "")], []);
                 }
-                else if (editNestedValue)
+                else if (editNestedSettings)
                 {
                     objects.Replace([new SerializableObjectInfo("rei::tests", "ProbeNested", false, new ObjectFile<string>("", ""), new()
                     {
@@ -436,7 +441,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
                     SerializedTypeEnum.Custom when editVector3 => new Vector3PropertyView(),
                     SerializedTypeEnum.Custom when vectorAxis != null => new Vector2PropertyView(),
-                    SerializedTypeEnum.Custom when editNestedValue => new CustomPropertyView(),
+                    SerializedTypeEnum.Custom when editNestedSettings => new CustomPropertyView(),
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -451,13 +456,16 @@ public sealed class EngineApiActionCallbackTests
                     var toggle = view.GetVisualDescendants().OfType<CheckBox>().SingleOrDefault();
                     var combo = view.GetVisualDescendants().OfType<ComboBox>().SingleOrDefault();
                     var textInputs = view.GetVisualDescendants().OfType<ReiTextBox>().ToArray();
+                    var nestedValueInput = editNestedSettings ? view.GetVisualDescendants().OfType<IntegerPropertyView>().Single()
+                        .GetVisualDescendants().OfType<ReiTextBox>().Single() : null;
+                    var nestedLabelInput = editNestedSettings ? view.GetVisualDescendants().OfType<StringPropertyView>().Single()
+                        .GetVisualDescendants().OfType<ReiTextBox>().Single() : null;
                     var text = vectorAxis switch
                     {
                         "X" => textInputs[0],
                         "Y" => textInputs[1],
                         "Z" => textInputs[2],
-                        _ when editNestedValue => view.GetVisualDescendants().OfType<IntegerPropertyView>().Single()
-                            .GetVisualDescendants().OfType<ReiTextBox>().Single(),
+                        _ when editNestedSettings => nestedField == NestedField.Label ? nestedLabelInput : nestedValueInput,
                         _ when type == SerializedTypeEnum.Collection => null,
                         _ => textInputs.SingleOrDefault()
                     };
@@ -562,10 +570,11 @@ public sealed class EngineApiActionCallbackTests
                         var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
                         Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
                     }
-                    else if (editNestedValue || vectorAxis != null)
+                    else if (editNestedSettings || vectorAxis != null)
                     {
                         text!.TextInternal = values.Edited is ProbeSettings settings
-                            ? settings.Value.ToString(CultureInfo.CurrentCulture) : 1200.75f.ToString(CultureInfo.CurrentCulture);
+                            ? nestedField == NestedField.Label ? settings.Label : settings.Value.ToString(CultureInfo.CurrentCulture)
+                            : 1200.75f.ToString(CultureInfo.CurrentCulture);
                         AssertValues(values.External);
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
@@ -819,10 +828,8 @@ public sealed class EngineApiActionCallbackTests
                                 break;
                             case CustomPropertyViewModel:
                                 var expectedSettings = (ProbeSettings)expected;
-                                var labelInput = view.GetVisualDescendants().OfType<StringPropertyView>().Single()
-                                    .GetVisualDescendants().OfType<ReiTextBox>().Single();
-                                Assert.Equal(expectedSettings.Value, int.Parse(text!.Text, CultureInfo.CurrentCulture));
-                                Assert.Equal(expectedSettings.Label, labelInput.Text);
+                                Assert.Equal(expectedSettings.Value, int.Parse(nestedValueInput!.Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedSettings.Label, nestedLabelInput!.Text);
                                 var nativeSettings = JObject.FromObject(native);
                                 Assert.Equal(expectedSettings, new ProbeSettings(nativeSettings.Value<int>("Value"), nativeSettings.Value<string>("Label")!));
                                 break;
