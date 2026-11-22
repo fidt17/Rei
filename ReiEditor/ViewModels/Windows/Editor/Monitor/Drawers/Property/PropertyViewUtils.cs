@@ -43,7 +43,7 @@ public static class PropertyViewUtils
             SerializedTypeEnum.Float => new FloatPropertyViewModel(property, commit),
             SerializedTypeEnum.Enum => new EnumPropertyViewModel(property, serializableObjectsRegistry, commit),
             SerializedTypeEnum.Collection => new CollectionPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty),
-            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commit, recordColorDrag),
+            SerializedTypeEnum.Custom => GetPropertyViewModelForCustomType(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty, recordColorDrag),
             SerializedTypeEnum.Invalid => throw new ArgumentOutOfRangeException(),
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -73,30 +73,31 @@ public static class PropertyViewUtils
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry,
-        Action<object>? commitProperty,
+        Action<SerializedProperty, object>? commitProperty,
         Action<SerializedColorValue>? recordColorDrag)
     {
+        Action<object>? commit = commitProperty == null ? null : value => commitProperty(property, value);
         if (property.SourceType == "Vector2")
         {
-            return new Vector2PropertyViewModel(property, commitProperty);
+            return new Vector2PropertyViewModel(property, commit);
         }
         else if (property.SourceType == "Vector3")
         {
-            return new Vector3PropertyViewModel(property, commitProperty);
+            return new Vector3PropertyViewModel(property, commit);
         }
         else if (property.SourceType == "Color")
         {
-            return new ColorPropertyViewModel(property, commitProperty, recordColorDrag);
+            return new ColorPropertyViewModel(property, commit, recordColorDrag);
         }
         else if (property.SourceType.IsAssetReference())
         {
-            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry, commitProperty);
+            return new AssetPropertyViewModel(property, assetSearchService, assetRegistry, assetTypeMapper, projectAssetFocusService, dataAssetTypeRegistry, commit);
         }
         else if (property.SourceType.IsComponentReference())
         {
-            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService, commitProperty);
+            return new ComponentRefPropertyViewModel(property, assetRegistry, behaviourRegistry, sceneManagementService, selectionService, commit);
         }
 
-        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry);
+        return new CustomPropertyViewModel(property, serializableObjectsRegistry, assetSearchService, assetRegistry, assetTypeMapper, behaviourRegistry, projectAssetFocusService, sceneManagementService, selectionService, dataAssetTypeRegistry, commitProperty);
     }
 }

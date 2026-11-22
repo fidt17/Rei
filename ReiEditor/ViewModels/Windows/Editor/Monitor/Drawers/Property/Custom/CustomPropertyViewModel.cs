@@ -38,6 +38,7 @@ public class CustomPropertyViewModel : BaseViewModel
     private readonly IProjectAssetFocusService _projectAssetFocusService;
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
+    private readonly Action<SerializedProperty, object>? _commitProperty;
 
 #pragma warning disable CS8618
     public CustomPropertyViewModel() { }
@@ -53,7 +54,7 @@ public class CustomPropertyViewModel : BaseViewModel
         IProjectAssetFocusService projectAssetFocusService,
         ISceneManagementService sceneManagementService,
         ISelectionService selectionService,
-        IDataAssetTypeRegistry? dataAssetTypeRegistry)
+        IDataAssetTypeRegistry? dataAssetTypeRegistry, Action<SerializedProperty, object>? commitProperty = null)
     {
         if (property.Type != SerializedTypeEnum.Custom) throw new Exception($"Invalid property type. Expected {SerializedTypeEnum.Custom}. Actual {property.Type}");
         
@@ -67,6 +68,7 @@ public class CustomPropertyViewModel : BaseViewModel
         _projectAssetFocusService = projectAssetFocusService;
         _sceneManagementService = sceneManagementService;
         _selectionService = selectionService;
+        _commitProperty = commitProperty;
 
         PropertyName = new(property);
         _property.ValueChangedEvent += HandlePropertyValueChangedEvent;
@@ -113,7 +115,8 @@ public class CustomPropertyViewModel : BaseViewModel
             
             _displayedProperties.AddRange(visibleProperties);
             foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, schema, (property, metadata) =>
-                         PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata)))
+                         PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata,
+                             property.Type.IsNumeric() ? _commitProperty : null)))
             {
                 Value.Add(row);
             }

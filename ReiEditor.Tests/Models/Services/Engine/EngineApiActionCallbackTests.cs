@@ -197,6 +197,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionComponentSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionComponent: true);
 
+    [NativeCallbackFact]
+    public Task InspectorNestedValueEditRecordsOneUndoAndPreservesLabel() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, editNestedValue: true);
+
+    private readonly record struct ProbeSettings(int Value, string Label);
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
@@ -204,7 +208,7 @@ public sealed class EngineApiActionCallbackTests
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
         string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
         bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false,
-        bool selectCollectionComponent = false)
+        bool selectCollectionComponent = false, bool editNestedValue = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -245,6 +249,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
                     SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
                     SerializedTypeEnum.Custom when vectorAxis != null => (7302, "Canvas", "_referenceResolution", "Vector2", null),
+                    SerializedTypeEnum.Custom when editNestedValue => (7101, "ProbeA", "Settings", "ProbeNested", null),
                     SerializedTypeEnum.Custom => (7311, "SpotLight", "_color", "Color", (string?)null),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
@@ -276,6 +281,8 @@ public sealed class EngineApiActionCallbackTests
                         }),
                     SerializedTypeEnum.Custom when vectorAxis != null => (new Vector2(1920, 1080), new Vector2(1600.25f, 900.5f),
                         vectorAxis == "X" ? new Vector2(1200.75f, 900.5f) : new Vector2(1600.25f, 1200.75f)),
+                    SerializedTypeEnum.Custom when editNestedValue => (new ProbeSettings(11, "nested"), new ProbeSettings(23, "Keep this label"),
+                        new ProbeSettings(42, "Keep this label")),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
                         new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -373,6 +380,14 @@ public sealed class EngineApiActionCallbackTests
                     if (editVector3) coordinates.Add("z", coordinate);
                     objects.Replace([new SerializableObjectInfo("rei::math", sourceType, false, new ObjectFile<string>("", ""), coordinates, "")], []);
                 }
+                else if (editNestedValue)
+                {
+                    objects.Replace([new SerializableObjectInfo("rei::tests", "ProbeNested", false, new ObjectFile<string>("", ""), new()
+                    {
+                        ["Value"] = new(SerializedTypeEnum.Integer, "i32", null, SerializedTypeEnum.Invalid, null, null, "11", false),
+                        ["Label"] = new(SerializedTypeEnum.String, "std::string", null, SerializedTypeEnum.Invalid, null, null, "nested", false)
+                    }, "")], []);
+                }
                 else if (type == SerializedTypeEnum.Custom)
                 {
                     var channel = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
@@ -421,10 +436,12 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom when selectComponent => new ComponentRefPropertyView(),
                     SerializedTypeEnum.Custom when editVector3 => new Vector3PropertyView(),
                     SerializedTypeEnum.Custom when vectorAxis != null => new Vector2PropertyView(),
+                    SerializedTypeEnum.Custom when editNestedValue => new CustomPropertyView(),
                     SerializedTypeEnum.Custom => new ColorPropertyView(),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
                 };
                 if (value is CollectionPropertyViewModel collection) collection.SwitchExpandState();
+                if (value is CustomPropertyViewModel nested) nested.SwitchExpandState();
                 view.DataContext = value;
                 var window = new Window { Content = view, Width = 400, Height = type is SerializedTypeEnum.Custom or SerializedTypeEnum.Collection ? 480 : 140 };
                 try
@@ -439,6 +456,8 @@ public sealed class EngineApiActionCallbackTests
                         "X" => textInputs[0],
                         "Y" => textInputs[1],
                         "Z" => textInputs[2],
+                        _ when editNestedValue => view.GetVisualDescendants().OfType<IntegerPropertyView>().Single()
+                            .GetVisualDescendants().OfType<ReiTextBox>().Single(),
                         _ when type == SerializedTypeEnum.Collection => null,
                         _ => textInputs.SingleOrDefault()
                     };
@@ -483,6 +502,7 @@ public sealed class EngineApiActionCallbackTests
                         int[] targetIds when selectCollectionComponent => targetIds.Select(targetId => new { SceneEntityId = new { Value = targetId } }).ToArray(),
                         Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
                         Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
+                        ProbeSettings settings => new { Value = new { Value = settings.Value }, Label = new { Value = settings.Label } },
                         _ => values.External
                     };
                     entities.SetData(new SetEntityDataRequest
@@ -542,9 +562,10 @@ public sealed class EngineApiActionCallbackTests
                         var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
                         Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
                     }
-                    else if (vectorAxis != null)
+                    else if (editNestedValue || vectorAxis != null)
                     {
-                        text!.TextInternal = 1200.75f.ToString(CultureInfo.CurrentCulture);
+                        text!.TextInternal = values.Edited is ProbeSettings settings
+                            ? settings.Value.ToString(CultureInfo.CurrentCulture) : 1200.75f.ToString(CultureInfo.CurrentCulture);
                         AssertValues(values.External);
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
@@ -795,6 +816,15 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expectedVector3.Z, float.Parse(textInputs[2].Text, CultureInfo.CurrentCulture));
                                 var nativeVector3 = JObject.FromObject(native);
                                 Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
+                                break;
+                            case CustomPropertyViewModel:
+                                var expectedSettings = (ProbeSettings)expected;
+                                var labelInput = view.GetVisualDescendants().OfType<StringPropertyView>().Single()
+                                    .GetVisualDescendants().OfType<ReiTextBox>().Single();
+                                Assert.Equal(expectedSettings.Value, int.Parse(text!.Text, CultureInfo.CurrentCulture));
+                                Assert.Equal(expectedSettings.Label, labelInput.Text);
+                                var nativeSettings = JObject.FromObject(native);
+                                Assert.Equal(expectedSettings, new ProbeSettings(nativeSettings.Value<int>("Value"), nativeSettings.Value<string>("Label")!));
                                 break;
                             case CollectionPropertyViewModel collectionViewModel:
                                 Assert.Equal(((Array)expected).Length, collectionViewModel.Count);

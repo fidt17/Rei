@@ -80,12 +80,17 @@ public sealed class SetComponentPropertyCommand(
             && target.Entity.HasBehaviour(target.Component)
             && target.Component.Properties.TryGetValue(root.Name, out var property)
             && ReferenceEquals(property, root)
-            && (ReferenceEquals(root, target.Property) || IsCurrentCollectionItem(root, target.Property));
+            && (ReferenceEquals(root, target.Property) || IsCurrentChild(root, target.Property));
     }
 
-    private static bool IsCurrentCollectionItem(SerializedProperty collection, SerializedProperty item) =>
-        collection.Type == SerializedTypeEnum.Collection && item.Type.SupportsCollectionItemHistory(item.SourceType)
-        && collection.Value is List<SerializedProperty> items && items.Contains(item);
+    private static bool IsCurrentChild(SerializedProperty parent, SerializedProperty child) => parent.Type switch
+    {
+        SerializedTypeEnum.Collection => child.Type.SupportsCollectionItemHistory(child.SourceType)
+            && parent.Value is List<SerializedProperty> items && items.Contains(child),
+        SerializedTypeEnum.Custom => child.Type.IsNumeric() && parent.Value is Dictionary<string, SerializedProperty> fields
+            && fields.TryGetValue(child.Name, out var current) && ReferenceEquals(current, child),
+        _ => false
+    };
 
     private static bool Matches(SerializedProperty property, object expected) => SameValue(Read(property), expected);
 

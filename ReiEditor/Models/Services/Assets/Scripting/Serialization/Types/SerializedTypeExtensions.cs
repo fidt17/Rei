@@ -6,6 +6,8 @@ namespace ReiEditor.Models.Services.Assets.Scripting.Serialization.Types;
 
 public static class SerializedTypeExtensions
 {
+    internal static bool IsNumeric(this SerializedTypeEnum type) => type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float;
+
     internal static bool SupportsCollectionItemHistory(this SerializedTypeEnum type, string sourceType) =>
         type is SerializedTypeEnum.Integer or SerializedTypeEnum.Float or SerializedTypeEnum.Enum
             or SerializedTypeEnum.String or SerializedTypeEnum.Boolean
