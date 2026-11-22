@@ -175,13 +175,16 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorCollectionEnumSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, editCollectionEnum: true);
 
+    [NativeCallbackFact]
+    public Task InspectorCollectionTextEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemText: "");
+
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
         string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
-        bool editCollectionEnum = false)
+        bool editCollectionEnum = false, string? collectionItemText = null)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -209,6 +212,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
                     SerializedTypeEnum.Collection when editCollectionEnum => (7101, "ProbeA", "Modes", "std::vector<rei::tests::ProbeMode>", null),
+                    SerializedTypeEnum.Collection when collectionItemText != null => (7101, "ProbeA", "Labels", "std::vector<std::string>", null),
                     SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
@@ -223,6 +227,8 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
                     SerializedTypeEnum.Collection when editCollectionEnum => (Array.Empty<int>(), new[] { 5, 2, 0 }, new[] { 5, 5, 0 }),
+                    SerializedTypeEnum.Collection when collectionItemText != null => (Array.Empty<string>(), new[] { "Left", "Middle", "Right" },
+                        new[] { "Left", collectionItemText, "Right" }),
                     SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
                     SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
                     SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
@@ -260,8 +266,12 @@ public sealed class EngineApiActionCallbackTests
                 }
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var collectionItemType = editCollectionEnum ? SerializedTypeEnum.Enum : SerializedTypeEnum.Integer;
-                var collectionItemSource = editCollectionEnum ? "rei::tests::ProbeMode" : "i32";
+                var (collectionItemType, collectionItemSource) = (editCollectionEnum, collectionItemText != null) switch
+                {
+                    (true, _) => (SerializedTypeEnum.Enum, "rei::tests::ProbeMode"),
+                    (_, true) => (SerializedTypeEnum.String, "std::string"),
+                    _ => (SerializedTypeEnum.Integer, "i32")
+                };
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
                     [field] = type == SerializedTypeEnum.Collection
@@ -476,11 +486,11 @@ public sealed class EngineApiActionCallbackTests
                         Assert.Equal(0, writes);
                         text.LoseFocus();
                     }
-                    else if (collectionItemValue is { } newNumber)
+                    else if (collectionItemText != null || collectionItemValue.HasValue)
                     {
                         components.RefreshComponents(entity);
                         text = view.GetVisualDescendants().OfType<ReiTextBox>().ElementAt(1);
-                        text.TextInternal = newNumber.ToString(CultureInfo.CurrentCulture);
+                        text.TextInternal = collectionItemText ?? collectionItemValue.GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
                         AssertValues(values.External);
                         Assert.False(commands.CanUndo);
                         Assert.Equal(0, writes);
@@ -702,9 +712,16 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(expectedVector3, new Vector3(nativeVector3.Value<float>("x"), nativeVector3.Value<float>("y"), nativeVector3.Value<float>("z")));
                                 break;
                             case CollectionPropertyViewModel collectionViewModel:
+                                Assert.Equal(((Array)expected).Length, collectionViewModel.Count);
+                                Assert.Equal(Enumerable.Range(0, collectionViewModel.Count).Select(index => $"[{index}]"),
+                                    collectionViewModel.Value.Select(item => item.Property.Name));
+                                if (expected is string[] labels)
+                                {
+                                    Assert.Equal(labels, view.GetVisualDescendants().OfType<ReiTextBox>().Select(input => input.Text));
+                                    Assert.Equal(labels, JArray.FromObject(native).ToObject<string[]>());
+                                    break;
+                                }
                                 var expectedItems = (int[])expected;
-                                Assert.Equal(expectedItems.Length, collectionViewModel.Count);
-                                Assert.Equal(expectedItems.Select((_, index) => $"[{index}]"), collectionViewModel.Value.Select(item => item.Property.Name));
                                 if (editCollectionEnum)
                                 {
                                     var modes = objects.GetEnum("ProbeMode")!.Options;

@@ -37,6 +37,7 @@ var behaviours = new Dictionary<int, BehaviourAssetInfo>
         ["Flag"] = Scalar(SerializedTypeEnum.Boolean, "bool"), ["Text"] = Scalar(SerializedTypeEnum.String, "std::string"),
         ["Mode"] = Scalar(SerializedTypeEnum.Enum, "rei::tests::ProbeMode"), ["Settings"] = Custom("rei::tests::ProbeNested"),
         ["Values"] = Collection("i32", SerializedTypeEnum.Integer), ["Modes"] = Collection("rei::tests::ProbeMode", SerializedTypeEnum.Enum),
+        ["Labels"] = Collection("std::string", SerializedTypeEnum.String),
         ["Items"] = Collection("rei::tests::ProbeNested", SerializedTypeEnum.Custom),
         ["Asset"] = Custom("rei::assets::AssetRef<rei::tests::ProbeDataAsset>"), ["Assets"] = Collection("rei::assets::AssetRef<rei::tests::ProbeDataAsset>", SerializedTypeEnum.Custom),
         ["Target"] = Custom("rei::ecs::ComponentRef<rei::Transform>"), ["Targets"] = Collection("rei::ecs::ComponentRef<rei::Transform>", SerializedTypeEnum.Custom)
