@@ -20,6 +20,7 @@ public interface IEngineApi
     event Action<ulong>? ActionRecorded;
 
     bool IsEngineRunning { get; }
+    object? EditorActionContext { get; }
     bool HasExport(string name) => false;
 
     IntPtr CreateEngine(string resourcesDir, EngineRunMode mode);
@@ -34,8 +35,8 @@ public interface IEngineApi
     void SetSceneSyncCallback(SceneSyncCallbackDelegate? callback);
     void RequestSceneSync();
     bool LoadEditorScene(string requestJson);
-    bool UndoEditorAction(ulong actionId);
-    bool RedoEditorAction(ulong actionId);
+    EditorActionReplayResult UndoEditorAction(ulong actionId);
+    EditorActionReplayResult RedoEditorAction(ulong actionId);
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 

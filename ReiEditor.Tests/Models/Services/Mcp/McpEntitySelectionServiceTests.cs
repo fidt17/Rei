@@ -18,7 +18,7 @@ public sealed class McpEntitySelectionServiceTests
     {
         public bool Available { get; set; } = true;
         public int Calls { get; private set; }
-        public object? InstanceToken { get; } = new object();
+        public object? EditorActionContext { get; } = new object();
 
         public bool TryInvoke(Action<IEngineApi> action)
         {

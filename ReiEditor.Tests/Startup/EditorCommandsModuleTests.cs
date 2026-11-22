@@ -25,8 +25,8 @@ public sealed class EditorCommandsModuleTests
     private sealed class NativeApi : TestEngineApi
     {
         public List<(bool Undo, ulong Id)> Calls { get; } = [];
-        public override bool UndoEditorAction(ulong id) { Calls.Add((true, id)); return true; }
-        public override bool RedoEditorAction(ulong id) { Calls.Add((false, id)); return true; }
+        public override EditorActionReplayResult UndoEditorAction(ulong id) { Calls.Add((true, id)); return EditorActionReplayResult.Applied; }
+        public override EditorActionReplayResult RedoEditorAction(ulong id) { Calls.Add((false, id)); return EditorActionReplayResult.Applied; }
     }
 
     private sealed class Context : IDisposable

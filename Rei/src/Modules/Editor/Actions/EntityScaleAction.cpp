@@ -13,20 +13,20 @@ namespace rei::editor
     {
     }
 
-    bool EntityScaleAction::Undo() { return Apply(true); }
-    bool EntityScaleAction::Redo() { return Apply(false); }
+    EditorActionReplayResult EntityScaleAction::Undo() { return Apply(true); }
+    EditorActionReplayResult EntityScaleAction::Redo() { return Apply(false); }
 
-    bool EntityScaleAction::Apply(const bool undo)
+    EditorActionReplayResult EntityScaleAction::Apply(const bool undo)
     {
-        if (_changes.empty()) return false;
+        if (_changes.empty()) return EditorActionReplayResult::Failed;
         for (const auto& change : _changes)
         {
-            if (change.Target.IsNull()) return false;
+            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _changes)
         {
             change.Target.Get().GetLocalScale() = undo ? change.Before : change.After;
         }
-        return true;
+        return EditorActionReplayResult::Applied;
     }
 }

@@ -63,16 +63,24 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
         BeginOperation();
         try
         {
-            IEditorHistoryEntry? entry;
-            lock (_gate) entry = PeekCurrentEntry(source);
-            if (entry == null) return;
-            if (undo) await entry.UndoAsync();
-            else await entry.RedoAsync();
-            lock (_gate)
+            while (true)
             {
-                if (_disposed) return;
-                source.Pop();
-                destination.Push(entry);
+                IEditorHistoryEntry? entry;
+                lock (_gate) entry = PeekCurrentEntry(source);
+                if (entry == null) return;
+
+                var applied = true;
+                if (entry is NativeEditorHistoryEntry native) applied = await native.TryReplayAsync(undo);
+                else if (undo) await entry.UndoAsync();
+                else await entry.RedoAsync();
+
+                lock (_gate)
+                {
+                    if (_disposed) return;
+                    source.Pop();
+                    if (applied) destination.Push(entry);
+                }
+                if (applied) return;
             }
         }
         finally { EndOperation(); }

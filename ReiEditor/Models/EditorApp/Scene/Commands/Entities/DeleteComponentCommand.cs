@@ -103,7 +103,5 @@ public sealed class DeleteComponentCommand(
         && info.RequiredComponentNames.All(name => registry.GetIdByName(name) is { } id && target.Entity.HasComponent(id));
 
     private bool IsCurrent(Target target) => ReferenceEquals(scenes.CurrentScene.Value, target.Scene)
-        && ReferenceEquals(target.Scene.GetById(target.Entity.Id), target.Entity)
-        && !engine.IsEngineStarting.Value && !engine.IsPlaymodeActive.Value
-        && !(engine.IsActive.Value && engine.ActiveMode == EngineRunMode.PlayMode);
+        && EntityEditContext.CanEdit(engine, target.Scene, target.Entity);
 }

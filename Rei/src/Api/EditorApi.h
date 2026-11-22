@@ -95,14 +95,14 @@ namespace rei::api
         auto result = completion->get_future();
         engine.ExecuteOnMainThread([actionId, undo, completion]
         {
-            i32 applied = 0;
+            auto replay = editor::EditorActionReplayResult::Failed;
             try
             {
                 auto& actions = GetEngine().GetEditorActions();
-                applied = (undo ? actions.Undo(actionId) : actions.Redo(actionId)) ? 1 : 0;
+                replay = undo ? actions.Undo(actionId) : actions.Redo(actionId);
             }
             catch (...) { LOG_ERROR("Failed to replay Editor action {}", actionId) }
-            completion->set_value(applied);
+            completion->set_value(static_cast<i32>(replay));
         });
         while (result.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
         {

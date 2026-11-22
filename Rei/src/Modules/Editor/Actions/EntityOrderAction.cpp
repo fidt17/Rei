@@ -33,20 +33,20 @@ namespace rei::editor
     {
     }
 
-    bool EntityOrderAction::Undo() { return Apply(true); }
-    bool EntityOrderAction::Redo() { return Apply(false); }
+    EditorActionReplayResult EntityOrderAction::Undo() { return Apply(true); }
+    EditorActionReplayResult EntityOrderAction::Redo() { return Apply(false); }
 
-    bool EntityOrderAction::Apply(const bool undo)
+    EditorActionReplayResult EntityOrderAction::Apply(const bool undo)
     {
-        if (_changes.empty()) return false;
+        if (_changes.empty()) return EditorActionReplayResult::Failed;
         for (const auto& change : _changes)
         {
-            if (change.Target.IsNull()) return false;
+            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _changes)
         {
             change.Target.Get().SetChildOrder(undo ? change.Before : change.After);
         }
-        return true;
+        return EditorActionReplayResult::Applied;
     }
 }

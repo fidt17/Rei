@@ -135,9 +135,6 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
-    public Task InspectorAddComponentRecordsOneUndo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.Add);
-
-    [NativeCallbackFact]
     public Task InspectorAddComponentThenEditNumberUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddThenEdit);
 
     [NativeCallbackFact]
@@ -151,9 +148,6 @@ public sealed class EngineApiActionCallbackTests
 
     [NativeCallbackFact]
     public Task InspectorAddComponentRecordsIntroducedDependencyInSameEntry() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithMissingDependency);
-
-    [NativeCallbackFact]
-    public Task InspectorAddComponentsWithSharedDependencyUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithSharedDependency);
 
     [NativeCallbackFact]
     public Task InspectorCannotDeleteSharedDependencyOrChangeHistory() => VerifyInspectorComponentHistoryAsync(ComponentHistory.BlockSharedDependencyDeletion);
@@ -176,10 +170,14 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorNumberEditInSecondSceneSupportsUndoAndRedo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.EditAfterSceneSwitch);
 
+    [NativeCallbackFact]
+    public Task InspectorNumberEditSupportsUndoAndRedoAfterPlayStop() => VerifyInspectorComponentHistoryAsync(ComponentHistory.PlayStop);
+
     private enum ComponentHistory
     {
-        Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
-        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch, EditAfterSceneSwitch
+        AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency,
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch,
+        EditAfterSceneSwitch, PlayStop
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -193,7 +191,8 @@ public sealed class EngineApiActionCallbackTests
             var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
             using var session = factory.CreateIsolatedSession(path!);
             var api = session.EngineApi;
-            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            var nativeMode = EngineRunMode.EditorMode;
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, nativeMode);
             try
             {
                 api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
@@ -263,70 +262,29 @@ public sealed class EngineApiActionCallbackTests
                 try
                 {
                     window.Show();
-                    var sharedDependency = scenario is ComponentHistory.AddWithSharedDependency or ComponentHistory.BlockSharedDependencyDeletion
-                        or ComponentHistory.DeleteAfterDependents;
-                    if (scenario == ComponentHistory.AddWithMissingDependency || sharedDependency)
+                    await VerifyHistoryAsync();
+                    Assert.Empty(syncLogger.Entries);
+                }
+                finally
+                {
+                    window.Close();
+                    Application.Current.Styles.Remove(styles);
+                    Application.Current.Styles.Remove(theme);
+                }
+
+                async Task VerifyHistoryAsync()
+                {
+                    if (scenario is ComponentHistory.AddWithMissingDependency or ComponentHistory.BlockSharedDependencyDeletion or ComponentHistory.DeleteAfterDependents)
                     {
-                        AssertComponentNumber(null, dependentPresent: false);
-                        Assert.False(commands.CanUndo);
-                        Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
-                        AssertComponentNumber(97, dependentPresent: true);
-                        Assert.True(commands.CanUndo);
-
-                        if (sharedDependency)
-                        {
-                            Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == OTHER_DEPENDENT_ID).SelectCommand.Execute(null);
-                            AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
-                            if (scenario == ComponentHistory.DeleteAfterDependents)
-                            {
-                                DeleteComponent(expectedEnabled: false);
-                                AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
-
-                                DeleteComponent(DEPENDENT_ID);
-                                AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
-                                DeleteComponent(expectedEnabled: false);
-                                AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
-
-                                DeleteComponent(OTHER_DEPENDENT_ID);
-                                AssertComponentNumber(97, dependentPresent: false);
-                                DeleteComponent();
-                                AssertComponentNumber(null, dependentPresent: false);
-                                Assert.Empty(syncLogger.Entries);
-                                return true;
-                            }
-                            if (scenario == ComponentHistory.BlockSharedDependencyDeletion)
-                            {
-                                DeleteComponent(expectedEnabled: false);
-                                AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
-                                Assert.True(commands.CanUndo);
-                                Assert.False(commands.CanRedo);
-                            }
-                            await commands.UndoAsync();
-                            AssertComponentNumber(97, dependentPresent: true);
-                        }
-
-                        await commands.UndoAsync();
-                        AssertComponentNumber(null, dependentPresent: false);
-                        Assert.False(commands.CanUndo);
-                        Assert.True(commands.CanRedo);
-
-                        await commands.RedoAsync();
-                        AssertComponentNumber(97, dependentPresent: true);
-                        if (sharedDependency)
-                        {
-                            await commands.RedoAsync();
-                            AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
-                        }
-                        Assert.False(commands.CanRedo);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        await VerifyIntroducedDependencyAsync();
+                        return;
                     }
                     if (scenario == ComponentHistory.AddWithDependency)
                     {
                         AssertComponentNumber(42, dependentPresent: false);
                         var dependency = entity.GetBehaviour(PROBE_ID);
                         Assert.False(commands.CanUndo);
-                        Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
+                        AddComponent(DEPENDENT_ID);
                         AssertComponentNumber(42, dependentPresent: true);
                         Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
                         Assert.True(commands.CanUndo);
@@ -341,8 +299,7 @@ public sealed class EngineApiActionCallbackTests
                         AssertComponentNumber(42, dependentPresent: true);
                         Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
                         Assert.False(commands.CanRedo);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        return;
                     }
                     if (scenario == ComponentHistory.Delete)
                     {
@@ -360,28 +317,37 @@ public sealed class EngineApiActionCallbackTests
                         await commands.RedoAsync();
                         AssertComponentNumber(null);
                         Assert.False(commands.CanRedo);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        return;
                     }
                     AssertComponentNumber(null);
                     Assert.False(commands.CanUndo);
-                    Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == PROBE_ID).SelectCommand.Execute(null);
+                    AddComponent(PROBE_ID);
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
                     if (scenario is ComponentHistory.UndoAfterSceneSwitch or ComponentHistory.EditAfterSceneSwitch)
                     {
+                        if (scenario == ComponentHistory.UndoAfterSceneSwitch)
+                        {
+                            scenes.Scene.Value!.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
+                            EditNumber(42);
+                            AssertComponentNumber(42);
+                            Assert.True(commands.CanUndo);
+                        }
                         await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: false);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        return;
                     }
 
-                    if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete or ComponentHistory.SaveAndReopen)
+                    if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete or ComponentHistory.SaveAndReopen or ComponentHistory.PlayStop)
                     {
-                        var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
-                        input.TextInternal = "42";
-                        input.LoseFocus();
+                        EditNumber(42);
                         AssertComponentNumber(42);
+
+                        if (scenario == ComponentHistory.PlayStop)
+                        {
+                            await AssertReopenedComponentNumberAsync(42);
+                            return;
+                        }
 
                         if (scenario == ComponentHistory.AddEditDelete)
                         {
@@ -411,8 +377,7 @@ public sealed class EngineApiActionCallbackTests
                         {
                             await AssertReopenedComponentNumberAsync(42);
                         }
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        return;
                     }
 
                     await commands.UndoAsync();
@@ -423,27 +388,70 @@ public sealed class EngineApiActionCallbackTests
                     if (scenario == ComponentHistory.SaveAfterUndo)
                     {
                         await AssertReopenedComponentNumberAsync(null);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
                     }
-
-                    if (scenario == ComponentHistory.RedoAfterSceneSwitch)
-                    {
-                        await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: true);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
-                    }
-
-                    await commands.RedoAsync();
-                    AssertComponentNumber(97);
-                    Assert.False(commands.CanRedo);
-                    Assert.Empty(syncLogger.Entries);
+                    else await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: true);
                 }
-                finally
+
+                async Task VerifyIntroducedDependencyAsync()
                 {
-                    window.Close();
-                    Application.Current.Styles.Remove(styles);
-                    Application.Current.Styles.Remove(theme);
+                    AssertComponentNumber(null, dependentPresent: false);
+                    Assert.False(commands.CanUndo);
+                    AddComponent(DEPENDENT_ID);
+                    AssertComponentNumber(97, dependentPresent: true);
+                    Assert.True(commands.CanUndo);
+
+                    var shared = scenario != ComponentHistory.AddWithMissingDependency;
+                    if (shared)
+                    {
+                        AddComponent(OTHER_DEPENDENT_ID);
+                        AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                    }
+
+                    if (scenario == ComponentHistory.DeleteAfterDependents)
+                    {
+                        DeleteComponent(DEPENDENT_ID);
+                        AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
+                        DeleteComponent(expectedEnabled: false);
+                        AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
+                        DeleteComponent(OTHER_DEPENDENT_ID);
+                        AssertComponentNumber(97, dependentPresent: false);
+                        DeleteComponent();
+                        AssertComponentNumber(null, dependentPresent: false);
+                        return;
+                    }
+
+                    if (shared)
+                    {
+                        DeleteComponent(expectedEnabled: false);
+                        AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                        Assert.True(commands.CanUndo);
+                        Assert.False(commands.CanRedo);
+                        await commands.UndoAsync();
+                        AssertComponentNumber(97, dependentPresent: true);
+                    }
+
+                    await commands.UndoAsync();
+                    AssertComponentNumber(null, dependentPresent: false);
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+                    await commands.RedoAsync();
+                    AssertComponentNumber(97, dependentPresent: true);
+                    if (shared)
+                    {
+                        await commands.RedoAsync();
+                        AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                    }
+                    Assert.False(commands.CanRedo);
+                }
+
+                void AddComponent(int behaviourId) => Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == behaviourId)
+                    .SelectCommand.Execute(null);
+
+                void EditNumber(int number)
+                {
+                    var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                    input.TextInternal = number.ToString(CultureInfo.CurrentCulture);
+                    input.LoseFocus();
                 }
 
                 BehaviourComponentDrawer? FindComponentDrawer(int behaviourId = PROBE_ID) => view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
@@ -477,12 +485,46 @@ public sealed class EngineApiActionCallbackTests
                     var loader = new EngineSceneLoader(new TestEngineNativeAccess(api), new TestLogger<EngineSceneLoader>());
                     using var sceneManagement = new SceneManagementService(new TestLogger<SceneManagementService>(), assets, activeProject, null!,
                         new SelectionService(entityApi), components, registry, runner, loader, procedures);
-                    var emptyScene = new Scene("Empty scene");
-                    emptyScene.SetAssetInfo(new AssetInfo(new AssetMeta("component-history-empty"), ""));
-                    await sceneManagement.LoadScene(emptyScene);
-                    Assert.Null(entityApi.GetEntityData(id));
-                    assets.Unload(info.Meta.AssetId);
-                    await sceneManagement.OpenScene(info.Meta.AssetId);
+                    if (scenario == ComponentHistory.PlayStop)
+                    {
+                        activeProject.GetActiveProject().SetLastScene(info.Meta.AssetId);
+                        assets.Unload(info.Meta.AssetId);
+                        var playScene = Assert.IsType<Scene>(await assets.Load<Scene>(info.Meta.AssetId));
+                        StopNativeEngine();
+                        StartNativeEngine(EngineRunMode.PlayMode);
+                        Assert.True(await loader.LoadSceneAsync(playScene));
+                        AssertComponentNumber(expected);
+                        Assert.False(commands.CanUndo);
+
+                        var restored = new TaskCompletionSource<Scene>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        void SceneRestored(Scene? current)
+                        {
+                            if (current != null) restored.TrySetResult(current);
+                        }
+
+                        sceneManagement.CurrentScene.Subscribe(SceneRestored, invoke: false);
+                        try
+                        {
+                            StopNativeEngine();
+                            var restoredScene = await restored.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                            Assert.NotSame(playScene, restoredScene);
+                            StartNativeEngine(EngineRunMode.EditorMode);
+                            Assert.True(await loader.LoadSceneAsync(restoredScene));
+                        }
+                        finally
+                        {
+                            sceneManagement.CurrentScene.Unsubscribe(SceneRestored);
+                        }
+                    }
+                    else
+                    {
+                        var emptyScene = new Scene("Empty scene");
+                        emptyScene.SetAssetInfo(new AssetInfo(new AssetMeta("component-history-empty"), ""));
+                        await sceneManagement.LoadScene(emptyScene);
+                        Assert.Null(entityApi.GetEntityData(id));
+                        assets.Unload(info.Meta.AssetId);
+                        await sceneManagement.OpenScene(info.Meta.AssetId);
+                    }
 
                     var reopenedScene = Assert.IsType<Scene>(sceneManagement.CurrentScene.Value);
                     Assert.NotSame(scene, reopenedScene);
@@ -493,6 +535,32 @@ public sealed class EngineApiActionCallbackTests
                     using var reopenedInspector = CreateInspector(reopenedEntity);
                     view.DataContext = reopenedInspector;
                     AssertComponentNumber(expected, inspectedEntity: reopenedEntity);
+                    if (scenario == ComponentHistory.PlayStop)
+                    {
+                        Assert.True(commands.CanUndo);
+                        await commands.UndoAsync();
+                        AssertComponentNumber(97, inspectedEntity: reopenedEntity);
+                        await commands.RedoAsync();
+                        AssertComponentNumber(42, inspectedEntity: reopenedEntity);
+                    }
+
+                    void StopNativeEngine()
+                    {
+                        api.MarkEngineStopped();
+                        api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                        runner.Active.Value = runner.EditorActive.Value = runner.PlaymodeActive.Value = false;
+                    }
+
+                    void StartNativeEngine(EngineRunMode mode)
+                    {
+                        nativeMode = mode;
+                        api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                        api.MarkEngineStarted();
+                        runner.ActiveMode = mode;
+                        runner.Active.Value = true;
+                        runner.EditorActive.Value = mode == EngineRunMode.EditorMode;
+                        runner.PlaymodeActive.Value = mode == EngineRunMode.PlayMode;
+                    }
                 }
 
                 async Task AssertOldHistoryDoesNotTouchNextSceneAsync(bool redo)
@@ -502,7 +570,7 @@ public sealed class EngineApiActionCallbackTests
                     Assert.NotSame(entity, nextEntity);
                     Assert.Equal(id, nextEntity.Id);
                     nextEntity.SetName("Same ID in another scene");
-                    int? expected = redo ? null : 61;
+                    int? expected = redo ? null : scenario == ComponentHistory.UndoAfterSceneSwitch ? 42 : 61;
                     if (expected is { } number)
                         nextEntity.GetBehaviour(PROBE_ID)!.GetProperty("Number").SetValueWithoutTriggeringChangedEvent(number);
                     var nextScene = new Scene("Another scene");
@@ -525,9 +593,7 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     if (scenario == ComponentHistory.EditAfterSceneSwitch)
                     {
-                        var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
-                        input.TextInternal = "73";
-                        input.LoseFocus();
+                        EditNumber(73);
                         AssertComponentNumber(73, inspectedEntity: nextEntity);
                         Assert.True(commands.CanUndo);
 
@@ -645,53 +711,41 @@ public sealed class EngineApiActionCallbackTests
     public Task InspectorProbeOffsetEditsPreserveOtherCoordinates(string axis) => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, vectorAxis: axis, editVector3: true);
 
     [NativeCallbackFact]
-    public Task InspectorCollectionAddRecordsOneUndoAndPreservesExistingItems() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection);
-
-    [NativeCallbackFact]
-    public Task InspectorCollectionRemoveFromMiddleRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, removeCollectionItem: true);
-
-    [NativeCallbackFact]
-    public Task InspectorCollectionNumberEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemValue: 42);
+    public Task InspectorCollectionAddRecordsOneUndoAndPreservesExistingItems() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.Add);
 
     [NativeCallbackFact]
     public Task InspectorCollectionEditThenRemoveSameItemUndoAndRedoInOrder() =>
-        VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, removeCollectionItem: true, collectionItemValue: 42);
+        VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.EditThenRemove);
 
     [NativeCallbackFact]
-    public Task InspectorCollectionEnumSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, editCollectionEnum: true);
+    public Task InspectorCollectionEnumSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.Enum);
 
     [NativeCallbackFact]
-    public Task InspectorCollectionTextEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionItemText: "");
+    public Task InspectorCollectionTextEditRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.Text);
 
     [NativeCallbackFact]
-    public Task InspectorCollectionCheckboxClickRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, toggleCollectionItem: true);
+    public Task InspectorCollectionCheckboxClickRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.Checkbox);
 
     [NativeCallbackFact]
-    public Task InspectorCollectionAssetSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionAsset: true);
+    public Task InspectorCollectionAssetSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.Asset);
 
     [NativeCallbackFact]
-    public Task InspectorCollectionComponentSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, selectCollectionComponent: true);
-
-    [NativeCallbackFact]
-    public Task InspectorNestedValueEditRecordsOneUndoAndPreservesLabel() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Value);
-
-    [NativeCallbackFact]
-    public Task InspectorNestedLabelEditRecordsOneUndoAndPreservesValue() => VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.Label);
+    public Task InspectorCollectionComponentSelectionRecordsOneUndo() => VerifyInspectorFieldAsync(SerializedTypeEnum.Collection, collectionEdit: CollectionEdit.Reference);
 
     [NativeCallbackFact]
     public Task InspectorNestedValueThenLabelUndoAndRedoInOrder() =>
-        VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, nestedField: NestedField.ValueThenLabel);
+        VerifyInspectorFieldAsync(SerializedTypeEnum.Custom, editNestedSettings: true);
 
     private readonly record struct ProbeSettings(int Value, string Label);
     private enum ColorDrag { None, Wheel, Alpha }
     private enum AssetEdit { None, Select, Clear }
-    private enum NestedField { None, Value, Label, ValueThenLabel }
+    private enum CollectionEdit { None, Add, EditThenRemove, Enum, Text, Checkbox, Asset, Reference }
+
+    private sealed record InspectorCollectionField(string Name, SerializedTypeEnum ItemType, string ItemSourceType, Array Initial, Array External, Array Edited);
 
     private static Task VerifyInspectorFieldAsync(SerializedTypeEnum type, ColorDrag colorDrag = ColorDrag.None,
         string? colorChannel = null, bool mixedColorHistory = false, AssetEdit assetEdit = AssetEdit.None, bool selectComponent = false,
-        string? vectorAxis = null, bool editVector3 = false, bool removeCollectionItem = false, int? collectionItemValue = null,
-        bool editCollectionEnum = false, string? collectionItemText = null, bool toggleCollectionItem = false, bool selectCollectionAsset = false,
-        bool selectCollectionComponent = false, NestedField nestedField = NestedField.None)
+        string? vectorAxis = null, bool editVector3 = false, CollectionEdit collectionEdit = CollectionEdit.None, bool editNestedSettings = false)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
@@ -713,8 +767,20 @@ public sealed class EngineApiActionCallbackTests
                 const int PROBE_ASSET_TYPE_ID = 7201;
                 const string FIRST_ASSET_ID = "probe-first";
                 const string SECOND_ASSET_ID = "probe-second";
+                InspectorCollectionField? collectionField = collectionEdit switch
+                {
+                    CollectionEdit.Add => new("Values", SerializedTypeEnum.Integer, "i32", new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
+                    CollectionEdit.EditThenRemove => new("Values", SerializedTypeEnum.Integer, "i32", new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 42, 11, 5 }),
+                    CollectionEdit.Enum => new("Modes", SerializedTypeEnum.Enum, "rei::tests::ProbeMode", Array.Empty<int>(), new[] { 5, 2, 0 }, new[] { 5, 5, 0 }),
+                    CollectionEdit.Text => new("Labels", SerializedTypeEnum.String, "std::string", Array.Empty<string>(),
+                        new[] { "Left", "Middle", "Right" }, new[] { "Left", "", "Right" }),
+                    CollectionEdit.Checkbox => new("Flags", SerializedTypeEnum.Boolean, "bool", Array.Empty<bool>(), new[] { true, false, false }, new[] { true, true, false }),
+                    CollectionEdit.Asset => new("Assets", SerializedTypeEnum.Custom, "AssetRef<ProbeDataAsset>", Array.Empty<string>(),
+                        new[] { FIRST_ASSET_ID, SECOND_ASSET_ID, SECOND_ASSET_ID }, new[] { FIRST_ASSET_ID, FIRST_ASSET_ID, SECOND_ASSET_ID }),
+                    CollectionEdit.Reference => new("Targets", SerializedTypeEnum.Custom, "ComponentRef<Transform>", Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>()),
+                    _ => null
+                };
                 var isAssetField = assetEdit != AssetEdit.None;
-                var editNestedSettings = nestedField != NestedField.None;
                 var startEngine = isAssetField || selectComponent ? "NativeProjectStartRectMoveEngine" : "NativeProjectStartActionEngine";
                 api.Invoke(typeof(StartActionEngineDelegate), startEngine, Marshal.GetFunctionPointerForDelegate(createEngine));
                 api.MarkEngineStarted();
@@ -723,12 +789,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (7310, "Button", "_interactable", "bool", "true"),
                     SerializedTypeEnum.Enum => (7301, "Camera", "_perspective", "rei::render::CameraPerspectiveEnum", "0"),
                     SerializedTypeEnum.String => (7305, "Text", "_value", "std::string", "Text"),
-                    SerializedTypeEnum.Collection when editCollectionEnum => (7101, "ProbeA", "Modes", "std::vector<rei::tests::ProbeMode>", null),
-                    SerializedTypeEnum.Collection when collectionItemText != null => (7101, "ProbeA", "Labels", "std::vector<std::string>", null),
-                    SerializedTypeEnum.Collection when toggleCollectionItem => (7101, "ProbeA", "Flags", "std::vector<bool>", null),
-                    SerializedTypeEnum.Collection when selectCollectionAsset => (7101, "ProbeA", "Assets", "std::vector<AssetRef<ProbeDataAsset>>", null),
-                    SerializedTypeEnum.Collection when selectCollectionComponent => (7101, "ProbeA", "Targets", "std::vector<ComponentRef<Transform>>", null),
-                    SerializedTypeEnum.Collection => (7101, "ProbeA", "Values", "std::vector<i32>", null),
+                    SerializedTypeEnum.Collection when collectionField != null => (7101, "ProbeA", collectionField.Name, $"std::vector<{collectionField.ItemSourceType}>", null),
                     SerializedTypeEnum.Custom when isAssetField => (IMAGE_COMPONENT_ID, "Image", "_texture", "AssetRef<Texture>", null),
                     SerializedTypeEnum.Custom when selectComponent => (7310, "Button", "_targetImage", "ComponentRef<Image>", null),
                     SerializedTypeEnum.Custom when editVector3 => (7101, "ProbeA", "Offset", "Vector3", null),
@@ -742,16 +803,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Boolean => (true, false, true),
                     SerializedTypeEnum.Enum => (0, 1, 0),
                     SerializedTypeEnum.String => ("Text", "From engine", ""),
-                    SerializedTypeEnum.Collection when editCollectionEnum => (Array.Empty<int>(), new[] { 5, 2, 0 }, new[] { 5, 5, 0 }),
-                    SerializedTypeEnum.Collection when collectionItemText != null => (Array.Empty<string>(), new[] { "Left", "Middle", "Right" },
-                        new[] { "Left", collectionItemText, "Right" }),
-                    SerializedTypeEnum.Collection when toggleCollectionItem => (Array.Empty<bool>(), new[] { true, false, false }, new[] { true, true, false }),
-                    SerializedTypeEnum.Collection when selectCollectionAsset => (Array.Empty<string>(), new[] { FIRST_ASSET_ID, SECOND_ASSET_ID, SECOND_ASSET_ID },
-                        new[] { FIRST_ASSET_ID, FIRST_ASSET_ID, SECOND_ASSET_ID }),
-                    SerializedTypeEnum.Collection when selectCollectionComponent => (Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>()),
-                    SerializedTypeEnum.Collection when collectionItemValue is { } number => (new[] { 1, 2 }, new[] { 7, -3, 11 }, new[] { 7, number, 11 }),
-                    SerializedTypeEnum.Collection when removeCollectionItem => (new[] { 1, 2 }, new[] { 7, -3, 11, 5 }, new[] { 7, 11, 5 }),
-                    SerializedTypeEnum.Collection => (new[] { 1, 2 }, new[] { 7, -3, 7 }, new[] { 7, -3, 7, 0 }),
+                    SerializedTypeEnum.Collection when collectionField != null => (collectionField.Initial, collectionField.External, collectionField.Edited),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Clear => ("", TEXTURE_ID, ""),
                     SerializedTypeEnum.Custom when assetEdit == AssetEdit.Select => ("", "", TEXTURE_ID),
                     SerializedTypeEnum.Custom when selectComponent => (0, 0, 0),
@@ -766,7 +818,7 @@ public sealed class EngineApiActionCallbackTests
                     SerializedTypeEnum.Custom when vectorAxis != null => (new Vector2(1920, 1080), new Vector2(1600.25f, 900.5f),
                         vectorAxis == "X" ? new Vector2(1200.75f, 900.5f) : new Vector2(1600.25f, 1200.75f)),
                     SerializedTypeEnum.Custom when editNestedSettings => (new ProbeSettings(11, "nested"), new ProbeSettings(23, "Original label"),
-                        nestedField == NestedField.Label ? new ProbeSettings(23, "Updated label") : new ProbeSettings(42, "Original label")),
+                        new ProbeSettings(42, "Original label")),
                     SerializedTypeEnum.Custom => (new SerializedColorValue(1f, 1f, 1f, 1f),
                         new SerializedColorValue(0.123f, 0.234f, 0.345f, 0.456f), new SerializedColorValue(0.2f, 0.4f, 0.6f, 0.8f)),
                     _ => throw new ArgumentOutOfRangeException(nameof(type))
@@ -786,7 +838,7 @@ public sealed class EngineApiActionCallbackTests
                     values.Initial = values.External = id;
                     values.Edited = imageId;
                 }
-                if (selectCollectionComponent)
+                if (collectionEdit == CollectionEdit.Reference)
                 {
                     var firstId = AddTransformTarget("First Target");
                     var secondId = AddTransformTarget("Second Target");
@@ -805,28 +857,19 @@ public sealed class EngineApiActionCallbackTests
                 }
                 var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
                 runner.Active.Value = runner.EditorActive.Value = true;
-                var (collectionItemType, collectionItemSource) = field switch
-                {
-                    "Modes" => (SerializedTypeEnum.Enum, "rei::tests::ProbeMode"),
-                    "Labels" => (SerializedTypeEnum.String, "std::string"),
-                    "Flags" => (SerializedTypeEnum.Boolean, "bool"),
-                    "Assets" => (SerializedTypeEnum.Custom, "AssetRef<ProbeDataAsset>"),
-                    "Targets" => (SerializedTypeEnum.Custom, "ComponentRef<Transform>"),
-                    _ => (SerializedTypeEnum.Integer, "i32")
-                };
                 var component = new BehaviourAssetInfo("", componentName, componentId, new ObjectFile<string>("", ""), new()
                 {
-                    [field] = type == SerializedTypeEnum.Collection
-                        ? new(type, sourceType, collectionItemSource, collectionItemType, collectionItemSource, null, defaultValue, false)
+                    [field] = collectionField != null
+                        ? new(type, sourceType, collectionField.ItemSourceType, collectionField.ItemType, collectionField.ItemSourceType, null, defaultValue, false)
                         : new(type, sourceType, null, SerializedTypeEnum.Invalid, null, null, defaultValue, false)
                 }, [], "");
                 var registry = selectComponent
                     ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Image", IMAGE_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
-                    : selectCollectionComponent
+                    : collectionEdit == CollectionEdit.Reference
                     ? new InspectorComponentRegistry(component, new BehaviourAssetInfo("", "Transform", TRANSFORM_COMPONENT_ID, new ObjectFile<string>("", ""), new(), [], ""))
                     : new InspectorComponentRegistry(component);
                 var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
-                if (editCollectionEnum)
+                if (collectionEdit == CollectionEdit.Enum)
                 {
                     objects.Replace([], [new SerializableEnum
                     {
@@ -842,14 +885,14 @@ public sealed class EngineApiActionCallbackTests
                         Options = new() { ["Perspective"] = 0, ["Orthographic"] = 1 }
                     }]);
                 }
-                if (isAssetField || selectCollectionAsset)
+                if (isAssetField || collectionEdit == CollectionEdit.Asset)
                 {
                     var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.String, "std::string",
                         null, SerializedTypeEnum.Invalid, null, null, "", false);
                     objects.Replace([new SerializableObjectInfo("rei::assets", "AssetRef", true, new ObjectFile<string>("", ""),
                         new() { ["Id"] = idProperty }, "")], []);
                 }
-                else if (selectComponent || selectCollectionComponent)
+                else if (selectComponent || collectionEdit == CollectionEdit.Reference)
                 {
                     var idProperty = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Integer, "i32",
                         null, SerializedTypeEnum.Invalid, null, null, "0", false);
@@ -894,7 +937,7 @@ public sealed class EngineApiActionCallbackTests
                 var assets = new AssetRegistry(new TestLogger<AssetRegistry>());
                 IDataAssetTypeRegistry? dataAssetTypes = null;
                 if (isAssetField) assets.RegisterNewAssets([new AssetInfo(new AssetMeta(TEXTURE_ID), TEXTURE_PATH)]);
-                if (selectCollectionAsset)
+                if (collectionEdit == CollectionEdit.Asset)
                 {
                     var probeAsset = new SerializableObjectInfo("rei::tests", "ProbeDataAsset", false, new ObjectFile<string>("", ""), new(), "");
                     dataAssetTypes = new InspectorDataAssetTypeRegistry(new DataAssetTypeInfo(PROBE_ASSET_TYPE_ID, probeAsset));
@@ -944,7 +987,7 @@ public sealed class EngineApiActionCallbackTests
                         "X" => textInputs[0],
                         "Y" => textInputs[1],
                         "Z" => textInputs[2],
-                        _ when editNestedSettings => nestedField == NestedField.Label ? nestedLabelInput : nestedValueInput,
+                        _ when editNestedSettings => nestedValueInput,
                         _ when type == SerializedTypeEnum.Collection => null,
                         _ => textInputs.SingleOrDefault()
                     };
@@ -984,9 +1027,9 @@ public sealed class EngineApiActionCallbackTests
                     {
                         SerializedColorValue rgba => new { r = new { Value = rgba.R }, g = new { Value = rgba.G }, b = new { Value = rgba.B }, a = new { Value = rgba.A } },
                         string idValue when isAssetField => new { Id = new { Value = idValue } },
-                        string[] assetIds when selectCollectionAsset => assetIds.Select(assetId => new { Id = new { Value = assetId } }).ToArray(),
+                        string[] assetIds when collectionEdit == CollectionEdit.Asset => assetIds.Select(assetId => new { Id = new { Value = assetId } }).ToArray(),
                         int sceneEntityId when selectComponent => new { SceneEntityId = new { Value = sceneEntityId } },
-                        int[] targetIds when selectCollectionComponent => targetIds.Select(targetId => new { SceneEntityId = new { Value = targetId } }).ToArray(),
+                        int[] targetIds when collectionEdit == CollectionEdit.Reference => targetIds.Select(targetId => new { SceneEntityId = new { Value = targetId } }).ToArray(),
                         Vector2 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y } },
                         Vector3 vector => new { x = new { Value = vector.X }, y = new { Value = vector.Y }, z = new { Value = vector.Z } },
                         ProbeSettings settings => new { Value = new { Value = settings.Value }, Label = new { Value = settings.Label } },
@@ -1004,220 +1047,200 @@ public sealed class EngineApiActionCallbackTests
                     Assert.False(commands.CanRedo);
                     Assert.Equal(0, writes);
 
-                    if (colorDrag != ColorDrag.None)
-                    {
-                        values.Edited = DragColor(colorDrag, (SerializedColorValue)values.External);
-                    }
-                    else if (channelInput != null)
-                    {
-                        var editedChannel = colorChannel == "H" ? 120f : 0.75f;
-                        var before = (SerializedColorValue)values.External;
-                        values.Edited = colorChannel switch
-                        {
-                            "R" => before with { R = editedChannel },
-                            "G" => before with { G = editedChannel },
-                            "B" => before with { B = editedChannel },
-                            "A" => before with { A = editedChannel },
-                            "H" or "S" or "V" => EditHsvChannel(before, colorChannel, editedChannel),
-                            _ => throw new ArgumentOutOfRangeException(nameof(colorChannel))
-                        };
-                        channelInput.TextInternal = editedChannel.ToString(CultureInfo.CurrentCulture);
-                        AssertValues(values.External);
-                        Assert.False(commands.CanUndo);
-                        Assert.Equal(0, writes);
-                        channelInput.LoseFocus();
-                    }
-                    else if (assetEdit == AssetEdit.Clear)
-                    {
-                        var pickerView = view.GetVisualDescendants().OfType<AssetPickerView>().Single();
-                        pickerView.FindControl<Border>("LabelBorder")!.RaiseEvent(new KeyEventArgs
-                        {
-                            RoutedEvent = InputElement.KeyDownEvent,
-                            Key = Key.Delete
-                        });
-                    }
-                    else if (value is AssetPropertyViewModel asset)
-                    {
-                        var picker = asset.AssetPicker!;
-                        picker.RefreshSearchResultsForAll();
-                        Assert.Single(picker.SearchResults).SelectCommand.Execute(null);
-                    }
-                    else if (value is ComponentRefPropertyViewModel reference)
-                    {
-                        var picker = reference.Picker!;
-                        picker.RefreshSearchResultsForAll();
-                        var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
-                        Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
-                    }
-                    else if (editNestedSettings || vectorAxis != null)
-                    {
-                        text!.TextInternal = values.Edited is ProbeSettings settings
-                            ? nestedField == NestedField.Label ? settings.Label : settings.Value.ToString(CultureInfo.CurrentCulture)
-                            : 1200.75f.ToString(CultureInfo.CurrentCulture);
-                        AssertValues(values.External);
-                        Assert.False(commands.CanUndo);
-                        Assert.Equal(0, writes);
-                        text.LoseFocus();
-                    }
-                    else if (collectionItemText != null || collectionItemValue.HasValue)
-                    {
-                        components.RefreshComponents(entity);
-                        text = view.GetVisualDescendants().OfType<ReiTextBox>().ElementAt(1);
-                        text.TextInternal = collectionItemText ?? collectionItemValue.GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-                        AssertValues(values.External);
-                        Assert.False(commands.CanUndo);
-                        Assert.Equal(0, writes);
-                        text.LoseFocus();
-                    }
-                    else if (editCollectionEnum)
-                    {
-                        var mode = view.GetVisualDescendants().OfType<ComboBox>().ElementAt(1);
-                        mode.Focus();
-                        mode.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Down });
-                    }
-                    else if (toggleCollectionItem)
-                    {
-                        Click(view.GetVisualDescendants().OfType<CheckBox>().ElementAt(1));
-                    }
-                    else if (selectCollectionAsset)
-                    {
-                        var assetList = Assert.IsType<CollectionPropertyViewModel>(value);
-                        var picker = Assert.IsType<AssetPropertyViewModel>(Assert.Single(assetList.Value[1].Value)).AssetPicker!;
-                        picker.RefreshSearchResultsForAll();
-                        Assert.Single(picker.SearchResults, item => item.AssetId == FIRST_ASSET_ID).SelectCommand.Execute(null);
-                    }
-                    else if (selectCollectionComponent)
-                    {
-                        var refs = Assert.IsType<CollectionPropertyViewModel>(value);
-                        var picker = Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(refs.Value[1].Value)).Picker!;
-                        var targetId = ((int[])values.Edited)[1].ToString(CultureInfo.InvariantCulture);
-                        picker.RefreshSearchResultsForAll();
-                        Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
-                    }
-                    else if (value is CollectionPropertyViewModel list)
-                    {
-                        ClickCollectionButton(removeCollectionItem ? list.Value[1].RemoveCommand : list.AddItemCommand);
-                    }
-                    else if (text != null)
-                    {
-                        if (type == SerializedTypeEnum.Custom)
-                        {
-                            text.TextInternal = "invalid";
-                            text.LoseFocus();
-                            AssertValues(values.External);
-                            Assert.False(commands.CanUndo);
-                            Assert.Equal(0, writes);
-                        }
-                        text.TextInternal = values.Edited is SerializedColorValue color ? ColorHex(color) : (string)values.Edited;
-                        Dispatcher.UIThread.RunJobs();
-                        AssertValues(values.External);
-                        Assert.False(commands.CanUndo);
-                        text.LoseFocus();
-                    }
-                    else if (combo != null)
-                    {
-                        combo.Focus();
-                        combo.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Up });
-                    }
-                    else
-                    {
-                        Click(Assert.IsType<CheckBox>(toggle));
-                    }
-                    Dispatcher.UIThread.RunJobs();
-                    AssertValues(values.Edited);
-                    Assert.True(commands.CanUndo);
-                    var editWrites = colorDrag != ColorDrag.None ? writes : 1;
-                    Assert.Equal(editWrites, writes);
+                    if (view is ColorPropertyView) await VerifyColorAsync();
+                    else if (value is CollectionPropertyViewModel list) await VerifyCollectionAsync(list);
+                    else await VerifyOtherFieldAsync();
+                    Assert.Empty(syncLogger.Entries);
 
-                    if (nestedField == NestedField.ValueThenLabel)
+                    async Task VerifyOtherFieldAsync()
                     {
+                        if (assetEdit == AssetEdit.Clear)
+                        {
+                            var pickerView = view.GetVisualDescendants().OfType<AssetPickerView>().Single();
+                            pickerView.FindControl<Border>("LabelBorder")!.RaiseEvent(new KeyEventArgs
+                            {
+                                RoutedEvent = InputElement.KeyDownEvent,
+                                Key = Key.Delete
+                            });
+                        }
+                        else if (value is AssetPropertyViewModel asset)
+                        {
+                            var picker = asset.AssetPicker!;
+                            picker.RefreshSearchResultsForAll();
+                            Assert.Single(picker.SearchResults).SelectCommand.Execute(null);
+                        }
+                        else if (value is ComponentRefPropertyViewModel reference)
+                        {
+                            var picker = reference.Picker!;
+                            picker.RefreshSearchResultsForAll();
+                            var targetId = image!.Id.ToString(CultureInfo.InvariantCulture);
+                            Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
+                        }
+                        else if (editNestedSettings || vectorAxis != null)
+                        {
+                            var input = values.Edited is ProbeSettings settings
+                                ? settings.Value.ToString(CultureInfo.CurrentCulture)
+                                : 1200.75f.ToString(CultureInfo.CurrentCulture);
+                            ConfirmText(text!, input);
+                        }
+                        else if (text != null)
+                        {
+                            ConfirmText(text, (string)values.Edited);
+                        }
+                        else if (combo != null)
+                        {
+                            combo.Focus();
+                            combo.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Up });
+                        }
+                        else
+                        {
+                            Click(Assert.IsType<CheckBox>(toggle));
+                        }
+
+                        AssertValues(values.Edited);
+                        Assert.Equal(1, writes);
+                        if (!editNestedSettings)
+                        {
+                            await AssertReplayAsync(values.Edited);
+                            return;
+                        }
+
                         var afterLabel = ((ProbeSettings)values.Edited) with { Label = "Updated label" };
                         nestedLabelInput!.TextInternal = afterLabel.Label;
                         nestedLabelInput.LoseFocus();
                         AssertValues(afterLabel);
                         Assert.Equal(2, writes);
-
-                        await commands.UndoAsync();
-                        AssertValues(values.Edited);
-                        await commands.UndoAsync();
-                        AssertValues(values.External);
-                        Assert.False(commands.CanUndo);
-
-                        await commands.RedoAsync();
-                        AssertValues(values.Edited);
-                        await commands.RedoAsync();
-                        AssertValues(afterLabel);
-                        Assert.False(commands.CanRedo);
-                        Assert.Equal(6, writes);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        await AssertReplayAsync(values.Edited, afterLabel);
                     }
 
-                    if (removeCollectionItem && collectionItemValue.HasValue)
+                    async Task VerifyCollectionAsync(CollectionPropertyViewModel list)
                     {
-                        var afterRemoval = new[] { 7, 11 };
-                        ClickCollectionButton(Assert.IsType<CollectionPropertyViewModel>(value).Value[1].RemoveCommand);
+                        if (collectionEdit is CollectionEdit.Text or CollectionEdit.EditThenRemove)
+                        {
+                            components.RefreshComponents(entity);
+                            var input = view.GetVisualDescendants().OfType<ReiTextBox>().ElementAt(1);
+                            ConfirmText(input, collectionEdit == CollectionEdit.Text ? "" : 42.ToString(CultureInfo.CurrentCulture));
+                        }
+                        else if (collectionEdit == CollectionEdit.Enum)
+                        {
+                            var mode = view.GetVisualDescendants().OfType<ComboBox>().ElementAt(1);
+                            mode.Focus();
+                            mode.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Down });
+                        }
+                        else if (collectionEdit == CollectionEdit.Checkbox)
+                        {
+                            Click(view.GetVisualDescendants().OfType<CheckBox>().ElementAt(1));
+                        }
+                        else if (collectionEdit == CollectionEdit.Asset)
+                        {
+                            var picker = Assert.IsType<AssetPropertyViewModel>(Assert.Single(list.Value[1].Value)).AssetPicker!;
+                            picker.RefreshSearchResultsForAll();
+                            Assert.Single(picker.SearchResults, item => item.AssetId == FIRST_ASSET_ID).SelectCommand.Execute(null);
+                        }
+                        else if (collectionEdit == CollectionEdit.Reference)
+                        {
+                            var picker = Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(list.Value[1].Value)).Picker!;
+                            var targetId = ((int[])values.Edited)[1].ToString(CultureInfo.InvariantCulture);
+                            picker.RefreshSearchResultsForAll();
+                            Assert.Single(picker.SearchResults, item => item.AssetId == targetId).SelectCommand.Execute(null);
+                        }
+                        else
+                        {
+                            ClickCollectionButton(list.AddItemCommand);
+                        }
+
+                        AssertValues(values.Edited);
+                        Assert.Equal(1, writes);
+                        if (collectionEdit != CollectionEdit.EditThenRemove)
+                        {
+                            await AssertReplayAsync(values.Edited);
+                            return;
+                        }
+
+                        var afterRemoval = new[] { 7, 11, 5 };
+                        ClickCollectionButton(list.Value[1].RemoveCommand);
                         AssertValues(afterRemoval);
                         Assert.Equal(2, writes);
-
-                        await commands.UndoAsync();
-                        AssertValues(values.Edited);
-                        await commands.UndoAsync();
-                        AssertValues(values.External);
-                        Assert.False(commands.CanUndo);
-
-                        await commands.RedoAsync();
-                        AssertValues(values.Edited);
-                        await commands.RedoAsync();
-                        AssertValues(afterRemoval);
-                        Assert.False(commands.CanRedo);
-                        Assert.Equal(6, writes);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        await AssertReplayAsync(values.Edited, afterRemoval);
                     }
 
-                    if (mixedColorHistory)
+                    async Task VerifyColorAsync()
                     {
-                        var afterInput = (SerializedColorValue)values.Edited;
-                        var afterWheel = DragColor(ColorDrag.Wheel, afterInput);
+                        if (colorDrag != ColorDrag.None)
+                        {
+                            values.Edited = DragColor(colorDrag, (SerializedColorValue)values.External);
+                        }
+                        else if (channelInput != null)
+                        {
+                            var editedChannel = colorChannel == "H" ? 120f : 0.75f;
+                            var before = (SerializedColorValue)values.External;
+                            values.Edited = colorChannel switch
+                            {
+                                "R" => before with { R = editedChannel },
+                                "G" => before with { G = editedChannel },
+                                "B" => before with { B = editedChannel },
+                                "A" => before with { A = editedChannel },
+                                "H" or "S" or "V" => EditHsvChannel(before, colorChannel, editedChannel),
+                                _ => throw new ArgumentOutOfRangeException(nameof(colorChannel))
+                            };
+                            ConfirmText(channelInput, editedChannel.ToString(CultureInfo.CurrentCulture));
+                        }
+                        else
+                        {
+                            text!.TextInternal = "invalid";
+                            text.LoseFocus();
+                            AssertValues(values.External);
+                            Assert.False(commands.CanUndo);
+                            Assert.Equal(0, writes);
+                            ConfirmText(text, ColorHex((SerializedColorValue)values.Edited));
+                        }
+
+                        AssertValues(values.Edited);
+                        if (colorDrag == ColorDrag.None) Assert.Equal(1, writes);
+                        if (!mixedColorHistory)
+                        {
+                            await AssertReplayAsync(values.Edited);
+                            return;
+                        }
+
+                        var afterWheel = DragColor(ColorDrag.Wheel, (SerializedColorValue)values.Edited);
                         AssertValues(afterWheel);
                         var afterAlpha = DragColor(ColorDrag.Alpha, afterWheel);
                         AssertValues(afterAlpha);
-                        var writesBeforeReplay = writes;
+                        await AssertReplayAsync(values.Edited, afterWheel, afterAlpha);
+                    }
 
-                        foreach (var expected in new[] { afterWheel, afterInput, (SerializedColorValue)values.External })
+                    void ConfirmText(ReiTextBox input, string edited)
+                    {
+                        input.TextInternal = edited;
+                        AssertValues(values.External);
+                        Assert.False(commands.CanUndo);
+                        Assert.Equal(0, writes);
+                        input.LoseFocus();
+                    }
+
+                    async Task AssertReplayAsync(params object[] edits)
+                    {
+                        var beforeReplay = writes;
+                        for (var i = edits.Length - 1; i >= 0; i--)
                         {
                             Assert.True(commands.CanUndo);
                             await commands.UndoAsync();
-                            AssertValues(expected);
+                            AssertValues(i == 0 ? values.External : edits[i - 1]);
                         }
                         Assert.False(commands.CanUndo);
+                        (channelInput ?? text)?.LoseFocus();
+                        Assert.False(commands.CanUndo);
 
-                        foreach (var expected in new[] { afterInput, afterWheel, afterAlpha })
+                        foreach (var edited in edits)
                         {
                             Assert.True(commands.CanRedo);
                             await commands.RedoAsync();
-                            AssertValues(expected);
+                            AssertValues(edited);
                         }
                         Assert.False(commands.CanRedo);
-                        Assert.Equal(writesBeforeReplay + 6, writes);
-                        Assert.Empty(syncLogger.Entries);
-                        return true;
+                        Assert.Equal(beforeReplay + edits.Length * 2, writes);
                     }
-
-                    await commands.UndoAsync();
-                    AssertValues(values.External);
-                    Assert.False(commands.CanUndo);
-                    Assert.True(commands.CanRedo);
-                    Assert.Equal(editWrites + 1, writes);
-                    (channelInput ?? text)?.LoseFocus();
-                    Assert.False(commands.CanUndo);
-                    Assert.True(commands.CanRedo);
-                    await commands.RedoAsync();
-                    AssertValues(values.Edited);
-                    Assert.False(commands.CanRedo);
-                    Assert.Equal(editWrites + 2, writes);
-                    Assert.Empty(syncLogger.Entries);
 
                     void ClickCollectionButton(System.Windows.Input.ICommand commandToClick)
                     {
@@ -1340,7 +1363,7 @@ public sealed class EngineApiActionCallbackTests
                                 Assert.Equal(((Array)expected).Length, collectionViewModel.Count);
                                 Assert.Equal(Enumerable.Range(0, collectionViewModel.Count).Select(index => $"[{index}]"),
                                     collectionViewModel.Value.Select(item => item.Property.Name));
-                                if (selectCollectionAsset)
+                                if (collectionEdit == CollectionEdit.Asset)
                                 {
                                     var assetIds = (string[])expected;
                                     Assert.Equal(assetIds, collectionViewModel.Value.Select(row =>
@@ -1365,7 +1388,7 @@ public sealed class EngineApiActionCallbackTests
                                     break;
                                 }
                                 var expectedItems = (int[])expected;
-                                if (selectCollectionComponent)
+                                if (collectionEdit == CollectionEdit.Reference)
                                 {
                                     Assert.Equal(expectedItems.Select(targetId => targetId.ToString(CultureInfo.InvariantCulture)),
                                         collectionViewModel.Value.Select(row => Assert.IsType<ComponentRefPropertyViewModel>(Assert.Single(row.Value)).Picker!.SelectedAssetId));
@@ -1375,7 +1398,7 @@ public sealed class EngineApiActionCallbackTests
                                     Assert.Equal(expectedItems, JArray.FromObject(native).Select(item => item.Value<int>("SceneEntityId")));
                                     break;
                                 }
-                                if (editCollectionEnum)
+                                if (collectionEdit == CollectionEdit.Enum)
                                 {
                                     var modes = objects.GetEnum("ProbeMode")!.Options;
                                     Assert.Equal(expectedItems.Select(item => modes.Single(mode => mode.Value == item).Key),
@@ -1614,8 +1637,8 @@ public sealed class EngineApiActionCallbackTests
             Assert.False(commands.CanRedo);
             foreach (var missing in new[] { 0UL, ulong.MaxValue })
             {
-                Assert.False(api.UndoEditorAction(missing));
-                Assert.False(api.RedoEditorAction(missing));
+                Assert.Equal(EditorActionReplayResult.Failed, api.UndoEditorAction(missing));
+                Assert.Equal(EditorActionReplayResult.Failed, api.RedoEditorAction(missing));
             }
             AssertTransforms(applied: true);
             Assert.Equal(new[] { id }, received);
@@ -1627,8 +1650,8 @@ public sealed class EngineApiActionCallbackTests
             api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
             GC.KeepAlive(createEngine);
         }
-        Assert.False(api.UndoEditorAction(1));
-        Assert.False(api.RedoEditorAction(1));
+        Assert.Equal(EditorActionReplayResult.Failed, api.UndoEditorAction(1));
+        Assert.Equal(EditorActionReplayResult.Failed, api.RedoEditorAction(1));
 
         void AssertTransforms(bool applied)
         {
@@ -2200,6 +2223,86 @@ public sealed class EngineApiActionCallbackTests
                         Assert.InRange(MathF.Abs(state[name]![axis]!.Value<float>() - actual[id][name]![axis]!.Value<float>()), 0f, 0.0001f);
             }
         }
+    }
+
+    [NativeCallbackFact]
+    public Task UndoSkipsDeletedGizmoTargetAndReplaysRename()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            using var commands = new EditorCommandService();
+            var log = new TestLogger<NativeEditorHistoryRecorder>();
+            using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, log);
+            var actions = new List<ulong>();
+            api.ActionRecorded += actions.Add;
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartRectMoveEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                var ids = new int[1];
+                api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 2, 1, ids);
+                var target = new GameEntity(ids[0], "Gizmo target");
+                var renamed = new GameEntity(entities.CreateNewEntity("Before")!.EntityId!.Value, "Before");
+                var scenes = new TestSceneManagementService(target, renamed);
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var sync = new TestEntitySyncService { OnUpdate = entity => entity.SetName(entities.GetEntityData(entity.Id)!.Name) };
+                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, null!, entities,
+                    new TestBehaviourRegistry(), runner, sync, null!);
+                IEntityRenameCommand rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes, runner);
+                await commands.ExecuteAsync(rename, new(renamed, "After"));
+                AssertName("After");
+
+                api.Invoke(typeof(EntityIdDelegate), "NativeProjectBeginRectMove", 2);
+                api.Invoke(typeof(MoveRectPointerDelegate), "NativeProjectMoveRectPointer", 24, -16);
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectEndRectMove");
+                var rect = new float[20];
+                api.Invoke(typeof(ReadRectMoveDelegate), "NativeProjectReadRectMove", 0, rect);
+                Assert.Equal(44f, rect[0], 4);
+                Assert.Equal(46f, rect[1], 4);
+                Assert.Single(actions);
+                Dispatcher.UIThread.RunJobs();
+
+                new SelectedEntityDeleteCommand(management, new TestLogger<SelectedEntityDeleteCommand>()).Execute(new(target, [target]));
+                Assert.Null(scenes.Scene.Value!.GetById(target.Id));
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (entities.GetEntityData(target.Id) != null && DateTime.UtcNow < deadline) await Task.Delay(10);
+                Assert.Null(entities.GetEntityData(target.Id));
+
+                await commands.UndoAsync();
+                AssertName("Before");
+                Assert.False(commands.CanUndo);
+                Assert.True(commands.CanRedo);
+                await commands.RedoAsync();
+                AssertName("After");
+                Assert.False(commands.CanRedo);
+                Assert.Null(entities.GetEntityData(target.Id));
+                Assert.Single(actions);
+                Assert.Empty(log.Entries);
+
+                void AssertName(string expected)
+                {
+                    Assert.Equal(expected, renamed.Name);
+                    Assert.Equal(expected, entities.GetEntityData(renamed.Id)!.Name);
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
     }
 
     [NativeCallbackFact]
@@ -2970,114 +3073,47 @@ public sealed class EngineApiActionCallbackTests
         }, CancellationToken.None);
     }
 
-    [NativeCallbackFact]
-    public Task RectTransformReparentSharesHistoryWithInspectorAndHandles()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var stretch in new[] { false, true })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas);
-            return true;
-        }, CancellationToken.None);
-    }
-
-    [NativeCallbackFact]
-    public Task RectTransformGroupReparentKeepsHierarchyOrderAndSharesOneHistoryEntry()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var stretch in new[] { false, true })
-                foreach (var toCanvas in new[] { false, true })
-                    foreach (var disjoint in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, disjoint: disjoint);
-            return true;
-        }, CancellationToken.None);
-    }
-
-    [NativeCallbackFact]
-    public Task RectTransformMixedParentDragKeepsHierarchyOrderAndSharesOneHistoryEntry()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var stretch in new[] { false, true })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, mixedParents: true);
-            return true;
-        }, CancellationToken.None);
-    }
-
-    [NativeCallbackFact]
-    public Task RectTransformCrossCanvasReparentPreservesScreenBoundsAndSharesHistory()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var scale in new[] { 1f, 2f })
-                foreach (var stretch in new[] { false, true })
-                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, canvasScales: (scale, scale));
-            return true;
-        }, CancellationToken.None);
-    }
-
-    [NativeCallbackFact]
-    public Task RectTransformCrossCanvasGroupReparentPreservesScreenBoundsAndSharesOneEntry()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var scale in new[] { 1f, 2f })
-                foreach (var stretch in new[] { false, true })
-                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, canvasScales: (scale, scale));
-            return true;
-        }, CancellationToken.None);
-    }
-
-    [NativeCallbackFact]
-    public Task RectTransformCrossCanvasMixedParentDragPreservesScreenBoundsAndHierarchyOrder()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var scale in new[] { 1f, 2f })
-                foreach (var stretch in new[] { false, true })
-                    foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(stretch ? "Stretch Both" : null, toCanvas, grouped: true, mixedParents: true, canvasScales: (scale, scale));
-            return true;
-        }, CancellationToken.None);
-    }
-
-    [NativeCallbackFact]
-    public Task RectTransformFixedAnchorsReparentAcrossDifferentCanvasScalesPreservesPixelsAndHistory()
-    {
-        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
-        return ui.Dispatch(async () =>
-        {
-            foreach (var scales in new[] { (1f, 2f), (2f, 1f) })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(null, toCanvas, canvasScales: scales);
-            return true;
-        }, CancellationToken.None);
-    }
+    public enum RectReparentDestination { Parent, Canvas }
+    public enum RectReparentSelection { Single, Siblings, DisjointSiblings, MixedParents }
 
     [NativeCallbackTheory]
-    [InlineData("Middle Stretch X", false, false)]
-    [InlineData("Center Stretch Y", false, false)]
-    [InlineData("Stretch Both", false, false)]
-    [InlineData(null, true, false)]
-    [InlineData("Stretch Both", true, false)]
-    [InlineData("Stretch Both", true, true)]
-    public Task RectTransformReparentAcrossAllCanvasScales(string? preset, bool grouped, bool mixedParents)
+    // One canvas.
+    [InlineData(null, RectReparentDestination.Parent, RectReparentSelection.Single, 1f, null)]
+    [InlineData("Stretch Both", RectReparentDestination.Canvas, RectReparentSelection.Single, 1f, null)]
+    [InlineData(null, RectReparentDestination.Canvas, RectReparentSelection.Siblings, 1f, null)]
+    [InlineData("Stretch Both", RectReparentDestination.Parent, RectReparentSelection.DisjointSiblings, 1f, null)]
+    [InlineData("Stretch Both", RectReparentDestination.Parent, RectReparentSelection.MixedParents, 1f, null)]
+    // Equal scales across canvases.
+    [InlineData(null, RectReparentDestination.Parent, RectReparentSelection.Single, 1f, 1f)]
+    [InlineData("Stretch Both", RectReparentDestination.Canvas, RectReparentSelection.Single, 2f, 2f)]
+    [InlineData(null, RectReparentDestination.Parent, RectReparentSelection.Siblings, 2f, 2f)]
+    [InlineData("Stretch Both", RectReparentDestination.Canvas, RectReparentSelection.MixedParents, 1f, 1f)]
+    // Different scales, including a fixed rectangle in both directions and one stretched axis at a time.
+    [InlineData(null, RectReparentDestination.Canvas, RectReparentSelection.Single, 1f, 2f)]
+    [InlineData(null, RectReparentDestination.Parent, RectReparentSelection.Single, 2f, 1f)]
+    [InlineData("Middle Stretch X", RectReparentDestination.Parent, RectReparentSelection.Single, 1f, 2f)]
+    [InlineData("Center Stretch Y", RectReparentDestination.Canvas, RectReparentSelection.Single, 2f, 1f)]
+    [InlineData("Stretch Both", RectReparentDestination.Parent, RectReparentSelection.Single, 2f, 1f)]
+    [InlineData(null, RectReparentDestination.Canvas, RectReparentSelection.Siblings, 2f, 1f)]
+    [InlineData("Stretch Both", RectReparentDestination.Parent, RectReparentSelection.Siblings, 1f, 2f)]
+    [InlineData("Stretch Both", RectReparentDestination.Canvas, RectReparentSelection.MixedParents, 2f, 1f)]
+    public Task RectTransformReparentPreservesScreenBoundsAndSharesHistory(
+        string? preset, RectReparentDestination destination, RectReparentSelection selection, float sourceScale, float? destinationScale)
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
         return ui.Dispatch(async () =>
         {
-            foreach (var scales in new[] { (1f, 2f), (2f, 1f) })
-                foreach (var toCanvas in new[] { false, true }) await VerifyRectReparentAsync(preset, toCanvas, grouped: grouped, mixedParents: mixedParents, canvasScales: scales);
+            await VerifyRectReparentAsync(preset, destination, selection, sourceScale, destinationScale);
             return true;
         }, CancellationToken.None);
     }
 
-    private static async Task VerifyRectReparentAsync(string? preset, bool toCanvas, bool grouped = false, bool disjoint = false, bool mixedParents = false, (float Source, float Destination)? canvasScales = null)
+    private static async Task VerifyRectReparentAsync(
+        string? preset, RectReparentDestination destinationKind, RectReparentSelection selection, float sourceScale, float? otherCanvasScale)
     {
+        var grouped = selection != RectReparentSelection.Single;
+        var crossCanvas = otherCanvasScale.HasValue;
+        var destinationScale = otherCanvasScale ?? sourceScale;
         Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
         Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
@@ -3100,9 +3136,7 @@ public sealed class EngineApiActionCallbackTests
             var ids = new int[grouped ? 6 : 5];
             api.Invoke(typeof(PrepareRectMoveDelegate), "NativeProjectPrepareRectMove", 3, ids.Length, ids);
             var canvasIds = new int[2];
-            var sourceScale = canvasScales?.Source ?? 1f;
-            var destinationScale = canvasScales?.Destination ?? 1f;
-            if (canvasScales.HasValue)
+            if (crossCanvas)
             {
                 api.Invoke(typeof(PrepareRectCanvasesDelegate), "NativeProjectPrepareRectCanvases", sourceScale, destinationScale, canvasIds);
                 entities.SetEntityParent(ids[2], canvasIds[1], 0);
@@ -3116,14 +3150,14 @@ public sealed class EngineApiActionCallbackTests
             var target = editors[0];
             var canvasId = Convert.ToInt32(target.Transform.GetProperty("_parent").Value);
             var canvas = CreateCanvasBounds(canvasId, "Source Canvas", sourceScale);
-            var destinationCanvas = canvasScales.HasValue ? CreateCanvasBounds(canvasIds[1], "Destination Canvas", destinationScale) : canvas;
+            var destinationCanvas = crossCanvas ? CreateCanvasBounds(canvasIds[1], "Destination Canvas", destinationScale) : canvas;
             var sceneEntities = editors.Select(e => e.Entity).Prepend(canvas);
             if (destinationCanvas != canvas) sceneEntities = sceneEntities.Append(destinationCanvas);
             var scenes = new TestSceneManagementService(sceneEntities.ToArray());
             var scene = scenes.Scene.Value!;
             scene.SetAssetInfo(new AssetInfo(new AssetMeta("render-empty-scene"), ""));
             foreach (var editor in editors) Assert.True(scene.MoveEntity(editor.Entity, canvas, int.MaxValue));
-            if (canvasScales.HasValue) Assert.True(scene.MoveEntity(editors[2].Entity, destinationCanvas, 0));
+            if (crossCanvas) Assert.True(scene.MoveEntity(editors[2].Entity, destinationCanvas, 0));
             var registry = new TestBehaviourRegistry();
             registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
             registry.Ids[EngineBehavioursConstants.CANVAS] = 7302;
@@ -3144,19 +3178,22 @@ public sealed class EngineApiActionCallbackTests
             management.SetParent(editors[3].Entity, editors[1].Entity, 0);
             management.SetParent(editors[4].Entity, editors[2].Entity, 0);
             management.SetParent(target.Entity, editors[1].Entity, 0);
-            if (grouped) management.SetParent(editors[5].Entity, editors[mixedParents ? 2 : 1].Entity, mixedParents ? 0 : disjoint ? 2 : 1);
+            if (selection == RectReparentSelection.MixedParents)
+                management.SetParent(editors[5].Entity, editors[2].Entity, 0);
+            else if (grouped)
+                management.SetParent(editors[5].Entity, editors[1].Entity, selection == RectReparentSelection.DisjointSiblings ? 2 : 1);
             entities.SelectEntity(target.Entity.Id);
             var before = await ReadAsync();
             var initialCount = received.Count;
-            var destination = toCanvas ? destinationCanvas : editors[2].Entity;
+            var destination = destinationKind == RectReparentDestination.Canvas ? destinationCanvas : editors[2].Entity;
             var bounds = PixelBounds(before, 0);
             var expectedPixels = sourceScale == 1f ? new[] { 240f, 190f, 440f, 350f } : new[] { 160f, 140f, 560f, 460f };
             CheckFloats(expectedPixels, bounds);
-            var screenBefore = canvasScales.HasValue ? ReadScreenBounds() : null;
+            var screenBefore = crossCanvas ? ReadScreenBounds() : null;
             if (screenBefore != null) CheckFloats(expectedPixels, screenBefore);
-            var secondScreenBefore = canvasScales.HasValue && grouped ? ReadScreenBounds(5) : null;
+            var secondScreenBefore = crossCanvas && grouped ? ReadScreenBounds(5) : null;
             int[] movedIds = grouped ? [ids[5], ids[0]] : [ids[0]];
-            if (grouped)
+            if (selection == RectReparentSelection.Siblings && !crossCanvas)
             {
                 Assert.True(layout.TryPreserveRectForParent(target.Entity, destination, out var preserved));
                 Assert.Throws<ArgumentException>(() => entities.ReparentEntities(movedIds, destination.Id, 1, true, [preserved]));
@@ -3203,7 +3240,7 @@ public sealed class EngineApiActionCallbackTests
             Check(after, await ReadAsync());
             await commands.UndoAsync();
             Check(before, await ReadAsync());
-            var groupNoOp = grouped && !disjoint && !mixedParents;
+            var groupNoOp = selection == RectReparentSelection.Siblings;
             drag.ViewModel.MoveEntities(groupNoOp ? movedIds : [ids[0]], editors[1].Entity.Id, groupNoOp ? 2 : 1);
             Check(before, await ReadAsync());
             Assert.Equal(initialCount + 3, received.Count);
@@ -3253,7 +3290,7 @@ public sealed class EngineApiActionCallbackTests
                         value.AnchorMin.X, value.AnchorMin.Y, value.AnchorMax.X, value.AnchorMax.Y, value.Pivot.X, value.Pivot.Y]);
                     Assert.Empty(editors[i].Logger.Entries);
                 }
-                if (canvasScales.HasValue)
+                if (crossCanvas)
                 {
                     for (var i = 0; i < ids.Length; i++)
                         CheckFloats(PixelBounds((rects, parents, orders), i), ReadScreenBounds(i));
@@ -3266,7 +3303,7 @@ public sealed class EngineApiActionCallbackTests
                 var result = new GameEntity(id, name);
                 result.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
                     new(new(0, 0), new(0, 0), new(0, 0), new(0, 0), new(640 / scale, 480 / scale))));
-                if (canvasScales.HasValue)
+                if (crossCanvas)
                 {
                     var data = JObject.FromObject(entities.GetEntityData(id)!.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Canvas"));
                     var settings = new BehaviourComponent(7302);

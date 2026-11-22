@@ -19,12 +19,12 @@ namespace rei::editor
 
         REI_API EntityMoveAction(ecs::ComponentRef<Transform> transform, math::Vector3 before, math::Vector3 after);
         REI_API explicit EntityMoveAction(std::vector<Change> changes);
-        REI_API bool Undo() override;
-        REI_API bool Redo() override;
+        REI_API EditorActionReplayResult Undo() override;
+        REI_API EditorActionReplayResult Redo() override;
 
     private:
         std::vector<Change> _changes;
 
-        bool Apply(bool undo);
+        EditorActionReplayResult Apply(bool undo);
     };
 }

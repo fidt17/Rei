@@ -226,11 +226,11 @@ TEST_CASE("Editor action store records a completed move and restores its positio
         transform.Get().GetLocalScale() = {2, 3, 4};
         transform.Get().SetRotation(math::Vector3(10, 20, 30));
         const auto rotation = transform.Get().GetLocalRotation();
-        REQUIRE(actions.Undo(id));
+        REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
         CheckVector(transform.Get().GetLocalPosition(), before);
         CheckVector(transform.Get().GetLocalScale(), {2, 3, 4});
         CheckRotation(transform.Get().GetLocalRotation(), rotation);
-        REQUIRE(actions.Redo(id));
+        REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
         CheckVector(transform.Get().GetLocalPosition(), after);
         CheckVector(transform.Get().GetLocalScale(), {2, 3, 4});
         CheckRotation(transform.Get().GetLocalRotation(), rotation);
@@ -252,11 +252,11 @@ TEST_CASE("Editor action store restores scale without changing position or rotat
         transform.Get().GetLocalPosition() = {7, 8, 9};
         transform.Get().SetRotation(math::Vector3(10, 20, 30));
         const auto rotation = transform.Get().GetLocalRotation();
-        REQUIRE(actions.Undo(id));
+        REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
         CheckVector(transform.Get().GetLocalScale(), before);
         CheckVector(transform.Get().GetLocalPosition(), {7, 8, 9});
         CheckRotation(transform.Get().GetLocalRotation(), rotation);
-        REQUIRE(actions.Redo(id));
+        REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
         CheckVector(transform.Get().GetLocalScale(), after);
         CheckVector(transform.Get().GetLocalPosition(), {7, 8, 9});
         CheckRotation(transform.Get().GetLocalRotation(), rotation);
@@ -277,11 +277,11 @@ TEST_CASE("Editor action store restores rotation without changing position or sc
         const auto id = actions.RecordApplied(std::make_unique<EntityRotateAction>(transform, before, after));
         transform.Get().GetLocalPosition() = {7, 8, 9};
         transform.Get().GetLocalScale() = {2, 3, 4};
-        REQUIRE(actions.Undo(id));
+        REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
         CheckRotation(transform.Get().GetLocalRotation(), before);
         CheckVector(transform.Get().GetLocalPosition(), {7, 8, 9});
         CheckVector(transform.Get().GetLocalScale(), {2, 3, 4});
-        REQUIRE(actions.Redo(id));
+        REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
         CheckRotation(transform.Get().GetLocalRotation(), after);
         CheckVector(transform.Get().GetLocalPosition(), {7, 8, 9});
         CheckVector(transform.Get().GetLocalScale(), {2, 3, 4});
@@ -302,11 +302,11 @@ TEST_CASE("Editor action store addresses independent edits by ID", "[native][edi
         const auto secondId = actions.RecordApplied(std::make_unique<EntityMoveAction>(second, math::Vector3{}, math::Vector3(2, 0, 0)));
         REQUIRE(firstId != secondId);
 
-        REQUIRE(actions.Undo(firstId));
+        REQUIRE(actions.Undo(firstId) == EditorActionReplayResult::Applied);
         CheckVector(first.Get().GetLocalPosition(), {});
         CheckVector(second.Get().GetLocalPosition(), {2, 0, 0});
-        REQUIRE(actions.Redo(firstId));
-        REQUIRE(actions.Undo(secondId));
+        REQUIRE(actions.Redo(firstId) == EditorActionReplayResult::Applied);
+        REQUIRE(actions.Undo(secondId) == EditorActionReplayResult::Applied);
         CheckVector(first.Get().GetLocalPosition(), {1, 0, 0});
         CheckVector(second.Get().GetLocalPosition(), {});
     });
@@ -316,19 +316,19 @@ TEST_CASE("Editor action store rejects missing actions and propagates failed rep
 {
     EditorActionStore actions;
     CHECK(actions.RecordApplied(nullptr) == 0);
-    CHECK_FALSE(actions.Undo(0));
-    CHECK_FALSE(actions.Redo(123));
+    CHECK(actions.Undo(0) == EditorActionReplayResult::Failed);
+    CHECK(actions.Redo(123) == EditorActionReplayResult::Failed);
 
     const auto id = actions.RecordApplied(std::make_unique<EntityMoveAction>(ecs::ComponentRef<Transform>{}, math::Vector3{}, math::Vector3(1, 2, 3)));
     REQUIRE(id != 0);
-    CHECK_FALSE(actions.Undo(id));
-    CHECK_FALSE(actions.Redo(id));
+    CHECK(actions.Undo(id) == EditorActionReplayResult::TargetMissing);
+    CHECK(actions.Redo(id) == EditorActionReplayResult::TargetMissing);
     const auto scaleId = actions.RecordApplied(std::make_unique<EntityScaleAction>(ecs::ComponentRef<Transform>{}, math::Vector3(1, 1, 1), math::Vector3(2, 3, 4)));
-    CHECK_FALSE(actions.Undo(scaleId));
-    CHECK_FALSE(actions.Redo(scaleId));
+    CHECK(actions.Undo(scaleId) != EditorActionReplayResult::Applied);
+    CHECK(actions.Redo(scaleId) != EditorActionReplayResult::Applied);
     const auto rotateId = actions.RecordApplied(std::make_unique<EntityRotateAction>(ecs::ComponentRef<Transform>{}, glm::quat(1, 0, 0, 0), glm::quat(0, 0, 0, 1)));
-    CHECK_FALSE(actions.Undo(rotateId));
-    CHECK_FALSE(actions.Redo(rotateId));
+    CHECK(actions.Undo(rotateId) != EditorActionReplayResult::Applied);
+    CHECK(actions.Redo(rotateId) != EditorActionReplayResult::Applied);
 }
 
 TEST_CASE("Editor action store records gizmo Move once on release and replays it", "[native][editor-actions][isolated]")
@@ -351,9 +351,9 @@ TEST_CASE("Editor action store records gizmo Move once on release and replays it
             CHECK(fixture.Control().DragStartTargetStates.empty());
             fixture.Finish.OnUpdate();
             REQUIRE(fixture.Recorded.size() == 1);
-            REQUIRE(fixture.Actions->Undo(id));
+            REQUIRE(fixture.Actions->Undo(id) == EditorActionReplayResult::Applied);
             CheckVector(fixture.TargetTransform().GetLocalPosition(), {1, 2, 3});
-            REQUIRE(fixture.Actions->Redo(id));
+            REQUIRE(fixture.Actions->Redo(id) == EditorActionReplayResult::Applied);
             CheckVector(fixture.TargetTransform().GetLocalPosition(), {4, 5, 6});
             CHECK(fixture.Recorded.size() == 1);
         }
@@ -408,11 +408,11 @@ TEST_CASE("Editor action store records Scale and Rotation handles once on releas
                 CHECK(fixture.Control().DragStartTargetStates.empty());
                 fixture.Finish.OnUpdate();
                 REQUIRE(fixture.Recorded.size() == 1);
-                REQUIRE(fixture.Actions->Undo(id));
+                REQUIRE(fixture.Actions->Undo(id) == EditorActionReplayResult::Applied);
                 CheckVector(fixture.TargetTransform().GetLocalPosition(), before.LocalPosition);
                 CheckVector(fixture.TargetTransform().GetLocalScale(), before.LocalScale);
                 CheckRotation(fixture.TargetTransform().GetLocalRotation(), before.LocalRotation);
-                REQUIRE(fixture.Actions->Redo(id));
+                REQUIRE(fixture.Actions->Redo(id) == EditorActionReplayResult::Applied);
                 CheckVector(fixture.TargetTransform().GetLocalPosition(), before.LocalPosition);
                 CheckVector(fixture.TargetTransform().GetLocalScale(), afterScale);
                 CheckRotation(fixture.TargetTransform().GetLocalRotation(), afterRotation);
@@ -494,12 +494,12 @@ TEST_CASE("Editor action store records one gizmo action for all changed entities
             // An unchanged selection member must not be captured by this action.
             ChangeValue(fixture.Native.Registry->Get<Transform>(unchanged), mode, {20, 30, 40});
             const auto external = ReadState(fixture.Native.Registry->Get<Transform>(unchanged));
-            REQUIRE(fixture.Actions->Undo(id));
+            REQUIRE(fixture.Actions->Undo(id) == EditorActionReplayResult::Applied);
             CheckState(fixture.TargetTransform(), beforeFirst);
             CheckState(fixture.Native.Registry->Get<Transform>(child), beforeChild);
             CheckVector(fixture.Native.Registry->Get<Transform>(child).GetWorldPosition(), beforeChildWorldPosition);
             CheckState(fixture.Native.Registry->Get<Transform>(unchanged), external);
-            REQUIRE(fixture.Actions->Redo(id));
+            REQUIRE(fixture.Actions->Redo(id) == EditorActionReplayResult::Applied);
             CheckState(fixture.TargetTransform(), afterFirst);
             CheckState(fixture.Native.Registry->Get<Transform>(child), afterChild);
             CheckVector(fixture.Native.Registry->Get<Transform>(child).GetWorldPosition(), afterChildWorldPosition);
@@ -527,11 +527,11 @@ TEST_CASE("Editor action store rejects invalid group replay before changing any 
                 fixture.Release();
                 REQUIRE(fixture.Recorded.size() == 1);
                 const auto id = fixture.Recorded.front();
-                if (!undo) REQUIRE(fixture.Actions->Undo(id));
+                if (!undo) REQUIRE(fixture.Actions->Undo(id) == EditorActionReplayResult::Applied);
                 const auto firstBeforeReplay = ReadState(fixture.TargetTransform());
                 fixture.Native.Registry->Del<Transform>(second);
-                const bool applied = undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id);
-                CHECK_FALSE(applied);
+                const auto result = undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id);
+                CHECK(result == EditorActionReplayResult::TargetMissing);
                 CheckState(fixture.TargetTransform(), firstBeforeReplay);
                 CHECK(fixture.Recorded.size() == 1);
             }
@@ -569,12 +569,12 @@ TEST_CASE("Editor action store cannot replay an empty transform action", "[nativ
     EntityMoveAction move(std::vector<EntityMoveAction::Change>{});
     EntityScaleAction scale(std::vector<EntityScaleAction::Change>{});
     EntityRotateAction rotate(std::vector<EntityRotateAction::Change>{});
-    CHECK_FALSE(move.Undo());
-    CHECK_FALSE(move.Redo());
-    CHECK_FALSE(scale.Undo());
-    CHECK_FALSE(scale.Redo());
-    CHECK_FALSE(rotate.Undo());
-    CHECK_FALSE(rotate.Redo());
+    CHECK(move.Undo() != EditorActionReplayResult::Applied);
+    CHECK(move.Redo() != EditorActionReplayResult::Applied);
+    CHECK(scale.Undo() != EditorActionReplayResult::Applied);
+    CHECK(scale.Redo() != EditorActionReplayResult::Applied);
+    CHECK(rotate.Undo() != EditorActionReplayResult::Applied);
+    CHECK(rotate.Redo() != EditorActionReplayResult::Applied);
 }
 
 TEST_CASE("Editor action store restores sibling orders after moving first and last entities", "[native][editor-actions][isolated]")
@@ -604,9 +604,9 @@ TEST_CASE("Editor action store restores sibling orders after moving first and la
                 i32 records = 0;
                 actions.ActionRecorded.append([&](u64) { records++; });
                 const auto id = actions.RecordApplied(std::make_unique<EntityOrderAction>(changes));
-                REQUIRE(actions.Undo(id));
+                REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
                 for (const auto& change : changes) CHECK(change.Target.Get().GetChildOrder() == change.Before);
-                REQUIRE(actions.Redo(id));
+                REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
                 for (const auto& change : changes)
                 {
                     CHECK(change.Target.Get().GetChildOrder() == change.After);
@@ -633,11 +633,11 @@ TEST_CASE("Editor action store rejects missing order targets without partially a
         ecs::ComponentRef<Transform> target(fixture.Registry, fixture.Entity());
         target.Get().SetChildOrder(2);
         EntityOrderAction action({{target, 0, 2}, {{}, 1, 0}});
-        CHECK_FALSE(action.Undo());
+        CHECK(action.Undo() != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetChildOrder() == 2);
-        CHECK_FALSE(action.Redo());
+        CHECK(action.Redo() != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetChildOrder() == 2);
-        CHECK_FALSE(EntityOrderAction({}).Undo());
+        CHECK(EntityOrderAction({}).Undo() != EditorActionReplayResult::Applied);
     });
 }
 
@@ -707,7 +707,7 @@ TEST_CASE("Editor action store restores reparented entity and both sibling group
             i32 records = 0;
             actions.ActionRecorded.append([&](u64) { records++; });
             const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(target, before, after, orders));
-            REQUIRE(actions.Undo(id));
+            REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
             CHECK(target.Get().GetParent() == oldParent);
             CHECK(target.Get().GetChildOrder() == beforeOrder);
             CheckVector(target.Get().GetLocalPosition(), before.Position);
@@ -715,7 +715,7 @@ TEST_CASE("Editor action store restores reparented entity and both sibling group
             CheckRotation(target.Get().GetLocalRotation(), before.Rotation);
             CheckVector(target.Get().GetWorldPosition(), worldPosition);
             for (const auto& change : orders) CHECK(change.Target.Get().GetChildOrder() == change.Before);
-            REQUIRE(actions.Redo(id));
+            REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
             CHECK(target.Get().GetParent() == newParent);
             CheckVector(target.Get().GetLocalPosition(), after.Position);
             CheckVector(target.Get().GetLocalScale(), after.Scale);
@@ -740,18 +740,18 @@ TEST_CASE("Editor action store rejects missing reparent targets before making ch
         target.Get().GetLocalPosition() = {7, 8, 9};
         const EntityReparentAction::State after(target.Get());
         EntityReparentAction missingSibling(target, before, after, {{{}, 0, 1}});
-        CHECK_FALSE(missingSibling.Undo());
+        CHECK(missingSibling.Undo() != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == ecs::NULL_ENTITY);
         CheckVector(target.Get().GetLocalPosition(), after.Position);
         EntityReparentAction missingParent(target, before, after, {});
         fixture.Registry->DestroyEntity(parent);
         fixture.World->Refresh();
-        CHECK_FALSE(missingParent.Undo());
+        CHECK(missingParent.Undo() != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == ecs::NULL_ENTITY);
         CheckVector(target.Get().GetLocalPosition(), after.Position);
         EntityReparentAction missingTarget({}, before, after, {});
-        CHECK_FALSE(missingTarget.Undo());
-        CHECK_FALSE(missingTarget.Redo());
+        CHECK(missingTarget.Undo() != EditorActionReplayResult::Applied);
+        CHECK(missingTarget.Redo() != EditorActionReplayResult::Applied);
     });
 }
 
@@ -810,9 +810,9 @@ TEST_CASE("Editor action store restores grouped sibling moves with stable select
                 i32 records = 0;
                 actions.ActionRecorded.append([&](u64) { records++; });
                 const auto id = actions.RecordApplied(std::make_unique<EntityOrderAction>(orders));
-                REQUIRE(actions.Undo(id));
+                REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
                 for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.Before);
-                REQUIRE(actions.Redo(id));
+                REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
                 for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.After);
                 CHECK(records == 1);
             }
@@ -922,7 +922,7 @@ TEST_CASE("Editor action store restores grouped reparent local transforms and bo
                     i32 records = 0;
                     actions.ActionRecorded.append([&](u64) { records++; });
                     const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(changes, orders));
-                    REQUIRE(actions.Undo(id));
+                    REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
                     for (const auto& change : changes)
                     {
                         CHECK(change.Target.Get().GetParent() == oldParent);
@@ -931,7 +931,7 @@ TEST_CASE("Editor action store restores grouped reparent local transforms and bo
                         CheckRotation(change.Target.Get().GetLocalRotation(), change.Before.Rotation);
                     }
                     for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.Before);
-                    REQUIRE(actions.Redo(id));
+                    REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
                     for (const auto& change : changes)
                     {
                         CHECK(change.Target.Get().GetParent() == newParent);
@@ -978,15 +978,15 @@ TEST_CASE("Editor action store grouped reparent rejects invalid input and never 
         target.Get().GetLocalPosition() = {7, 8, 9};
         const EntityReparentAction::State after(target.Get());
         EntityReparentAction missingTarget(std::vector<EntityReparentAction::Change>{{target, before, after}, {{}, before, after}}, {});
-        CHECK_FALSE(missingTarget.Undo());
-        CHECK_FALSE(missingTarget.Redo());
+        CHECK(missingTarget.Undo() != EditorActionReplayResult::Applied);
+        CHECK(missingTarget.Redo() != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == parent);
         CheckVector(target.Get().GetLocalPosition(), after.Position);
         EntityReparentAction missingOrder(std::vector<EntityReparentAction::Change>{{target, before, after}}, {{{}, 0, 1}});
-        CHECK_FALSE(missingOrder.Undo());
+        CHECK(missingOrder.Undo() != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == parent);
         CheckVector(target.Get().GetLocalPosition(), after.Position);
-        CHECK_FALSE(EntityReparentAction(std::vector<EntityReparentAction::Change>{}, {}).Undo());
+        CHECK(EntityReparentAction(std::vector<EntityReparentAction::Change>{}, {}).Undo() != EditorActionReplayResult::Applied);
     });
 }
 
@@ -1077,7 +1077,7 @@ TEST_CASE("Editor action store mixed parent move preserves input order and resto
             i32 records = 0;
             actions.ActionRecorded.append([&](u64) { records++; });
             const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(changes, orders));
-            REQUIRE(actions.Undo(id));
+            REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
             for (const auto& change : changes)
             {
                 CHECK(change.Target.Get().GetParent() == change.Before.Parent);
@@ -1086,7 +1086,7 @@ TEST_CASE("Editor action store mixed parent move preserves input order and resto
                 CheckRotation(change.Target.Get().GetLocalRotation(), change.Before.Rotation);
             }
             for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.Before);
-            REQUIRE(actions.Redo(id));
+            REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
             for (i32 i = 0; i < 2; i++)
             {
                 const auto& target = changes[i].Target.Get();
@@ -1118,7 +1118,7 @@ TEST_CASE("Editor action store RectTransform move restores only anchored positio
         const auto transform = ReadState(fixture.TargetTransform());
         for (const bool undo : {true, false})
         {
-            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)));
+            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(target.Get().GetAnchoredPosition()) == glm::vec2(undo ? math::Vector2(10, 20) : math::Vector2(34, 36)));
             CHECK(glm::vec2(target.Get().GetSizeDelta()) == glm::vec2(250, 190));
             CHECK(glm::vec2(target.Get().GetAnchorMin()) == glm::vec2(0.25f, 0.75f));
@@ -1128,8 +1128,8 @@ TEST_CASE("Editor action store RectTransform move restores only anchored positio
         }
         CHECK(fixture.Recorded.size() == 1);
         fixture.Native.Registry->Del<ui::RectTransform>(fixture.Target);
-        CHECK_FALSE(fixture.Actions->Undo(id));
-        CHECK_FALSE(fixture.Actions->Redo(id));
+        CHECK(fixture.Actions->Undo(id) != EditorActionReplayResult::Applied);
+        CHECK(fixture.Actions->Redo(id) != EditorActionReplayResult::Applied);
     });
 }
 
@@ -1155,9 +1155,9 @@ TEST_CASE("Editor action store records one RectTransform move for arrows plane a
             CHECK(fixture.Recorded.size() == 1);
             CHECK(fixture.Control().DragStartTargetStates.empty());
             CHECK_FALSE(fixture.Control().RectTransformBodyDragActive);
-            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
-            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(after));
             CHECK(fixture.Recorded.size() == 1);
         }
@@ -1217,7 +1217,7 @@ TEST_CASE("Editor action store RectTransform resize restores position and size w
         const auto transform = ReadState(fixture.TargetTransform());
         for (const bool undo : {true, false})
         {
-            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)));
+            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)) == EditorActionReplayResult::Applied);
             const auto& expected = undo ? before : after;
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(expected.AnchoredPosition));
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(expected.SizeDelta));
@@ -1229,8 +1229,8 @@ TEST_CASE("Editor action store RectTransform resize restores position and size w
         CHECK(fixture.Recorded.size() == 1);
         fixture.Native.Registry->DestroyEntity(fixture.Target);
         fixture.Native.World->Refresh();
-        CHECK_FALSE(fixture.Actions->Undo(id));
-        CHECK_FALSE(fixture.Actions->Redo(id));
+        CHECK(fixture.Actions->Undo(id) != EditorActionReplayResult::Applied);
+        CHECK(fixture.Actions->Redo(id) != EditorActionReplayResult::Applied);
     });
 }
 
@@ -1277,9 +1277,9 @@ TEST_CASE("Editor action store records one RectTransform resize for single targe
                 CHECK(fixture.Recorded.size() == 1);
                 CHECK_FALSE(fixture.ResizeHandle(index).DragActive);
                 CHECK(fixture.Control().DragStartTargetStates.empty());
-                REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+                REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
                 check(false);
-                REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+                REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
                 check(true);
                 CHECK(fixture.Recorded.size() == 1);
             }
@@ -1340,9 +1340,9 @@ TEST_CASE("Editor action store RectTransform resize records size-only and clampe
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(size));
             fixture.Release();
             REQUIRE(fixture.Recorded.size() == 1);
-            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(200, 160));
-            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(size));
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
         }
@@ -1373,10 +1373,10 @@ TEST_CASE("Editor action store records one RectTransform group move for arrows p
             REQUIRE(fixture.Recorded.size() == 1);
             fixture.Finish.OnUpdate();
             CHECK(fixture.Recorded.size() == 1);
-            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             for (i32 i = 0; i < 3; i++)
                 CHECK(glm::vec2(fixture.Native.Registry->Get<ui::RectTransform>(targets[i]).GetAnchoredPosition()) == glm::vec2(before[i]));
-            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             for (i32 i = 0; i < 3; i++)
             {
                 auto& rect = fixture.Native.Registry->Get<ui::RectTransform>(targets[i]);
@@ -1399,14 +1399,14 @@ TEST_CASE("Editor action store RectTransform group move rejects missing targets 
         RectTransformChangeAction action(RectFields::Position, std::vector<RectTransformChangeAction::Change>{{first, {{10, 20}}, {{34, 36}}}, {other, {{40, 50}}, {{64, 66}}}});
         first.Get().GetAnchoredPosition() = {34, 36};
         fixture.Native.Registry->Del<ui::RectTransform>(second);
-        CHECK_FALSE(action.Undo());
+        CHECK(action.Undo() != EditorActionReplayResult::Applied);
         CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(34, 36));
         first.Get().GetAnchoredPosition() = {10, 20};
-        CHECK_FALSE(action.Redo());
+        CHECK(action.Redo() != EditorActionReplayResult::Applied);
         CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(10, 20));
         RectTransformChangeAction empty(RectFields::Position, std::vector<RectTransformChangeAction::Change>{});
-        CHECK_FALSE(empty.Undo());
-        CHECK_FALSE(empty.Redo());
+        CHECK(empty.Undo() == EditorActionReplayResult::Failed);
+        CHECK(empty.Redo() == EditorActionReplayResult::Failed);
     });
 }
 
@@ -1445,9 +1445,9 @@ TEST_CASE("Editor action store RectTransform group move ignores unchanged target
             }
             REQUIRE(fixture.Recorded.size() == 1);
             fixture.Native.Registry->Del<ui::RectTransform>(second);
-            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
-            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(34, 36));
         }
     });
@@ -1493,10 +1493,10 @@ TEST_CASE("Editor action store RectTransform group resize ignores unchanged targ
             }
             REQUIRE(fixture.Recorded.size() == 1);
             fixture.Native.Registry->Del<ui::RectTransform>(second);
-            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(200, 160));
-            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+            REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
             CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(22, 28));
             CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(224, 176));
             CHECK(fixture.Recorded.size() == 1);
@@ -1519,17 +1519,17 @@ TEST_CASE("Editor action store RectTransform group resize checks all targets bef
         first.Get().GetAnchoredPosition() = after.AnchoredPosition;
         first.Get().GetSizeDelta() = after.SizeDelta;
         fixture.Native.Registry->Del<ui::RectTransform>(second);
-        CHECK_FALSE(action.Undo());
+        CHECK(action.Undo() != EditorActionReplayResult::Applied);
         CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(after.AnchoredPosition));
         CHECK(glm::vec2(first.Get().GetSizeDelta()) == glm::vec2(after.SizeDelta));
         first.Get().GetAnchoredPosition() = before.AnchoredPosition;
         first.Get().GetSizeDelta() = before.SizeDelta;
-        CHECK_FALSE(action.Redo());
+        CHECK(action.Redo() != EditorActionReplayResult::Applied);
         CHECK(glm::vec2(first.Get().GetAnchoredPosition()) == glm::vec2(before.AnchoredPosition));
         CHECK(glm::vec2(first.Get().GetSizeDelta()) == glm::vec2(before.SizeDelta));
         RectTransformChangeAction empty(RectFields::Rectangle, std::vector<RectTransformChangeAction::Change>{});
-        CHECK_FALSE(empty.Undo());
-        CHECK_FALSE(empty.Redo());
+        CHECK(empty.Undo() == EditorActionReplayResult::Failed);
+        CHECK(empty.Redo() == EditorActionReplayResult::Failed);
     });
 }
 
@@ -1550,12 +1550,12 @@ TEST_CASE("Editor action store RectTransform group resize restores individually 
         CHECK(glm::vec2(rect.GetAnchoredPosition()) == glm::vec2(40, 50));
         fixture.Release();
         REQUIRE(fixture.Recorded.size() == 1);
-        REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]));
+        REQUIRE(fixture.Actions->Undo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
         CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(200, 160));
         CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(10, 20));
         CHECK(glm::vec2(rect.GetSizeDelta()) == glm::vec2(100, 80));
         CHECK(glm::vec2(rect.GetAnchoredPosition()) == glm::vec2(40, 50));
-        REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]));
+        REQUIRE(fixture.Actions->Redo(fixture.Recorded[0]) == EditorActionReplayResult::Applied);
         CHECK(glm::vec2(fixture.Rect().GetSizeDelta()) == glm::vec2(4, 4));
         CHECK(glm::vec2(rect.GetSizeDelta()) == glm::vec2(4, 4));
         CHECK(glm::vec2(fixture.Rect().GetAnchoredPosition()) == glm::vec2(-88, -58));
@@ -1585,7 +1585,7 @@ TEST_CASE("Editor action store RectTransform pivot restores pivot position and s
         const auto transform = ReadState(fixture.TargetTransform());
         for (const bool undo : {true, false})
         {
-            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)));
+            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)) == EditorActionReplayResult::Applied);
             const auto& expected = undo ? before : after;
             CHECK(glm::vec2(target.Get().GetPivot()) == glm::vec2(expected.Pivot));
             CHECK(glm::vec2(target.Get().GetAnchoredPosition()) == glm::vec2(expected.AnchoredPosition));
@@ -1596,8 +1596,8 @@ TEST_CASE("Editor action store RectTransform pivot restores pivot position and s
         }
         CHECK(fixture.Recorded.size() == 1);
         fixture.Native.Registry->Del<ui::RectTransform>(fixture.Target);
-        CHECK_FALSE(fixture.Actions->Undo(id));
-        CHECK_FALSE(fixture.Actions->Redo(id));
+        CHECK(fixture.Actions->Undo(id) != EditorActionReplayResult::Applied);
+        CHECK(fixture.Actions->Redo(id) != EditorActionReplayResult::Applied);
         CHECK(fixture.Recorded.size() == 1);
     });
 }
@@ -1621,7 +1621,7 @@ TEST_CASE("Editor action store RectTransform anchors restore anchors position an
         const auto transform = ReadState(fixture.TargetTransform());
         for (const bool undo : {true, false})
         {
-            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)));
+            REQUIRE((undo ? fixture.Actions->Undo(id) : fixture.Actions->Redo(id)) == EditorActionReplayResult::Applied);
             const auto& expected = undo ? before : after;
             CHECK(glm::vec2(target.Get().GetAnchorMin()) == glm::vec2(expected.AnchorMin));
             CHECK(glm::vec2(target.Get().GetAnchorMax()) == glm::vec2(expected.AnchorMax));
@@ -1632,8 +1632,8 @@ TEST_CASE("Editor action store RectTransform anchors restore anchors position an
         }
         CHECK(fixture.Recorded.size() == 1);
         fixture.Native.Registry->Del<ui::RectTransform>(fixture.Target);
-        CHECK_FALSE(fixture.Actions->Undo(id));
-        CHECK_FALSE(fixture.Actions->Redo(id));
+        CHECK(fixture.Actions->Undo(id) != EditorActionReplayResult::Applied);
+        CHECK(fixture.Actions->Redo(id) != EditorActionReplayResult::Applied);
         CHECK(fixture.Recorded.size() == 1);
     });
 }
@@ -1661,14 +1661,14 @@ TEST_CASE("Editor action store restores RectTransform layout with parent and sib
         actions.ActionRecorded.append([&](u64) { records++; });
         const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(target, before, after,
             std::vector<EntityOrderAction::Change>{{target, 2, 0}}));
-        REQUIRE(actions.Undo(id));
+        REQUIRE(actions.Undo(id) == EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == oldParent);
         CHECK(target.Get().GetChildOrder() == 2);
         CHECK(rect.GetAnchoredPosition().x == 20);
         CHECK(rect.GetAnchoredPosition().y == 30);
         CHECK(rect.GetSizeDelta().x == 200);
         CHECK(rect.GetSizeDelta().y == 160);
-        REQUIRE(actions.Redo(id));
+        REQUIRE(actions.Redo(id) == EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == newParent);
         CHECK(target.Get().GetChildOrder() == 0);
         CHECK(rect.GetAnchoredPosition().x == -40);
@@ -1677,7 +1677,7 @@ TEST_CASE("Editor action store restores RectTransform layout with parent and sib
         CHECK(rect.GetSizeDelta().y == 60);
         CHECK(records == 1);
         fixture.Registry->Del<ui::RectTransform>(entity);
-        CHECK_FALSE(actions.Undo(id));
+        CHECK(actions.Undo(id) != EditorActionReplayResult::Applied);
         CHECK(target.Get().GetParent() == newParent);
         CHECK(target.Get().GetChildOrder() == 0);
     });
@@ -1739,7 +1739,7 @@ TEST_CASE("Editor action store restores grouped RectTransform parent layouts ato
         const auto id = actions.RecordApplied(std::make_unique<EntityReparentAction>(changes, orders));
         for (const bool undo : {true, false})
         {
-            REQUIRE((undo ? actions.Undo(id) : actions.Redo(id)));
+            REQUIRE((undo ? actions.Undo(id) : actions.Redo(id)) == EditorActionReplayResult::Applied);
             for (const auto& change : changes)
             {
                 const auto& state = undo ? change.Before : change.After;
@@ -1754,7 +1754,7 @@ TEST_CASE("Editor action store restores grouped RectTransform parent layouts ato
         }
         CHECK(records == 1);
         fixture.Registry->Del<ui::RectTransform>(second);
-        CHECK_FALSE(actions.Undo(id));
+        CHECK(actions.Undo(id) != EditorActionReplayResult::Applied);
         CHECK(changes[0].Target.Get().GetParent() == newParent);
         CHECK(fixture.Registry->Get<ui::RectTransform>(first).GetAnchoredPosition().x == -40);
         for (const auto& order : orders) CHECK(order.Target.Get().GetChildOrder() == order.After);
@@ -1777,17 +1777,17 @@ TEST_CASE("Editor action store RectTransform changes ignore unrelated fields and
             else after.Pivot.x += 0.1f;
             RectTransformChangeAction empty(fields, target, before, after);
             CHECK_FALSE(empty.HasChanges());
-            CHECK_FALSE(empty.Undo());
-            CHECK_FALSE(empty.Redo());
+            CHECK(empty.Undo() == EditorActionReplayResult::Failed);
+            CHECK(empty.Redo() == EditorActionReplayResult::Failed);
             if (fields == RectFields::Position) after.AnchoredPosition.x += 10;
             else if (fields == RectFields::Rectangle) after.SizeDelta.x += 10;
             else if (fields == RectFields::Pivot) after.Pivot.x += 0.1f;
             else after.AnchorMax.x += 0.1f;
             RectTransformChangeAction changed(fields, target, before, after);
             CHECK(changed.HasChanges());
-            REQUIRE(changed.Redo());
+            REQUIRE(changed.Redo() == EditorActionReplayResult::Applied);
             CHECK(RectTransformChangeAction::State::Capture(target.Get()).Matches(after, fields));
-            REQUIRE(changed.Undo());
+            REQUIRE(changed.Undo() == EditorActionReplayResult::Applied);
             CHECK(RectTransformChangeAction::State::Capture(target.Get()).Matches(before, fields));
         }
     });

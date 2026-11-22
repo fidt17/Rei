@@ -16,7 +16,7 @@ public sealed class EngineSceneLoaderTests
     private sealed class NativeApi : TestEngineApi, IEngineNativeAccess
     {
         public Func<bool> Load { get; set; } = () => true;
-        public object? InstanceToken { get; } = new object();
+        public object? EditorActionContext { get; } = new object();
 
         public bool TryInvoke(Action<IEngineApi> action) { action(this); return true; }
         public override bool LoadEditorScene(string json) => Load();

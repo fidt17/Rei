@@ -18,12 +18,12 @@ namespace rei::editor
 
         REI_API EntityRotateAction(ecs::ComponentRef<Transform> transform, glm::quat before, glm::quat after);
         REI_API explicit EntityRotateAction(std::vector<Change> changes);
-        REI_API bool Undo() override;
-        REI_API bool Redo() override;
+        REI_API EditorActionReplayResult Undo() override;
+        REI_API EditorActionReplayResult Redo() override;
 
     private:
         std::vector<Change> _changes;
 
-        bool Apply(bool undo);
+        EditorActionReplayResult Apply(bool undo);
     };
 }
