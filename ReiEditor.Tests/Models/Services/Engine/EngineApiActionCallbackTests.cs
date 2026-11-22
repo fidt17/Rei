@@ -1,8 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using ReiEditor.Models.Resources;
+using ReiEditor.Models.EditorApp.EditorProcedures;
+using ReiEditor.Models.ProjectManagement.Active;
+using ReiEditor.Models.Services.Assets.Migrations;
+using ReiEditor.Models.Services.Scenes;
+using ReiEditor.Models.Services.Serialization;
+using ReiEditor.ViewModels.Windows.Editor.Commands;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
+using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers;
+using ReiEditor.Views.Windows.Editor.Monitor.Drawers.Component;
+using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom.RectTransform;
 using ReiEditor.Models.Services.Entities;
@@ -116,6 +126,471 @@ public sealed class EngineApiActionCallbackTests
         public DataAssetTypeInfo? GetDataAssetType(string name) => name == type.ObjectName ? type : null;
         public int AllocateDataAssetTypeId() => throw new NotSupportedException();
         public Task RefreshAsync(IEnumerable<SerializableObjectInfo> declarations) => throw new NotSupportedException();
+    }
+
+    private sealed class InspectorFactory<T>(Func<object[], T> create) : IFactory<T> where T : class
+    {
+        public T CreateInstance() => create([]);
+        public T CreateInstance(params object[] parameters) => create(parameters);
+    }
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentRecordsOneUndo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.Add);
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentThenEditNumberUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddThenEdit);
+
+    [NativeCallbackFact]
+    public Task InspectorDeleteComponentRestoresEditedNumberOnUndo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.Delete);
+
+    [NativeCallbackFact]
+    public Task InspectorAddEditDeleteComponentUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddEditDelete);
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentUndoAndRedoPreservesExistingDependency() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithDependency);
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentRecordsIntroducedDependencyInSameEntry() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithMissingDependency);
+
+    [NativeCallbackFact]
+    public Task InspectorAddComponentsWithSharedDependencyUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddWithSharedDependency);
+
+    [NativeCallbackFact]
+    public Task InspectorCannotDeleteSharedDependencyOrChangeHistory() => VerifyInspectorComponentHistoryAsync(ComponentHistory.BlockSharedDependencyDeletion);
+
+    [NativeCallbackFact]
+    public Task InspectorCanDeleteDependencyAfterRemovingBothDependents() => VerifyInspectorComponentHistoryAsync(ComponentHistory.DeleteAfterDependents);
+
+    [NativeCallbackFact]
+    public Task InspectorComponentAndNumberPersistAfterUndoRedoAndReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAndReopen);
+
+    [NativeCallbackFact]
+    public Task InspectorUndoneComponentAdditionStaysAbsentAfterReopeningScene() => VerifyInspectorComponentHistoryAsync(ComponentHistory.SaveAfterUndo);
+
+    [NativeCallbackFact]
+    public Task InspectorUndoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.UndoAfterSceneSwitch);
+
+    [NativeCallbackFact]
+    public Task InspectorRedoAfterSceneSwitchLeavesEntityWithSameIdUntouched() => VerifyInspectorComponentHistoryAsync(ComponentHistory.RedoAfterSceneSwitch);
+
+    [NativeCallbackFact]
+    public Task InspectorNumberEditInSecondSceneSupportsUndoAndRedo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.EditAfterSceneSwitch);
+
+    private enum ComponentHistory
+    {
+        Add, AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency, AddWithSharedDependency,
+        BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch, EditAfterSceneSwitch
+    }
+
+    private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                const int PROBE_ID = 7102;
+                const int DEPENDENT_ID = 7103;
+                const int OTHER_DEPENDENT_ID = 7104;
+                const int TRANSFORM_ID = 7199;
+                var entityApi = new EntityApi(api);
+                var id = entityApi.CreateNewEntity("Inspector component history")!.EntityId!.Value;
+                if (scenario is ComponentHistory.Delete or ComponentHistory.AddWithDependency)
+                {
+                    entityApi.AddBehaviour(id, PROBE_ID);
+                    entityApi.SetData(new SetEntityDataRequest
+                    {
+                        SceneId = id,
+                        Behaviours = [new() { [SetEntityDataRequest.REI_BEHAVIOUR_ID] = PROBE_ID, ["Number"] = new { Value = 42 } }]
+                    });
+                }
+                var entity = new GameEntity(id, "Inspector component history");
+                var scenes = new TestSceneManagementService(entity);
+                var registry = new InspectorComponentRegistry(
+                    new BehaviourAssetInfo("", "Transform", TRANSFORM_ID, new ObjectFile<string>("", ""), new()
+                    {
+                        ["_scale"] = new(SerializedTypeEnum.Custom, "Vector3", null, SerializedTypeEnum.Invalid, null, null, null, false)
+                    }, [], ""),
+                    new BehaviourAssetInfo("", "ProbeB", PROBE_ID, new ObjectFile<string>("", ""), new()
+                    {
+                        ["Number"] = new(SerializedTypeEnum.Integer, "i32", null, SerializedTypeEnum.Invalid, null, null, "97", false)
+                    }, [], ""),
+                    new BehaviourAssetInfo("", "ProbeC", DEPENDENT_ID, new ObjectFile<string>("", ""), new(), ["ProbeB"], ""),
+                    new BehaviourAssetInfo("", "ProbeD", OTHER_DEPENDENT_ID, new ObjectFile<string>("", ""), new(), ["ProbeB"], ""));
+                var objects = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+                var coordinate = new SerializableObjectInfo.SerializedPropertyData(SerializedTypeEnum.Float, "f32",
+                    null, SerializedTypeEnum.Invalid, null, null, "1", false);
+                objects.Replace([new SerializableObjectInfo("rei::math", "Vector3", false, new ObjectFile<string>("", ""),
+                    new() { ["x"] = coordinate, ["y"] = coordinate, ["z"] = coordinate }, "")], []);
+                var properties = new SerializedPropertiesService(objects, new TestLogger<SerializedPropertiesService>());
+                var components = new BehaviourComponentsService(new TestLogger<BehaviourComponentsService>(), registry, properties);
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var syncLogger = new TestLogger<EntitySyncService>();
+                var applier = new EntityStateApplier(syncLogger, registry, components, properties);
+                var importer = new TestAssetImporter();
+                using var sync = new EntitySyncService(importer, entityApi, runner, components,
+                    new BehaviourSyncService(importer, runner, entityApi, syncLogger, applier), applier);
+                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, components,
+                    entityApi, registry, runner, sync, null!);
+                sync.UpdateEntityState(entity);
+                using var commands = new EditorCommandService();
+                var add = new AddComponentCommand(commands, scenes, management, registry, runner);
+                var delete = new DeleteComponentCommand(commands, scenes, management, registry, components, runner, entityApi, sync);
+                var setProperty = new SetComponentPropertyCommand(commands, scenes, runner);
+                var custom = new RectTransformCustomPropertiesProvider(registry, objects, null!, null!, null!, null!, scenes, null!, runner, entityApi, null!);
+                using var inspector = CreateInspector(entity);
+                EntityMonitorDrawerViewModel CreateInspector(GameEntity inspectedEntity) => new(inspectedEntity,
+                    new InspectorFactory<EntityInfoComponentDrawerViewModel>(args => new((GameEntity)args[0], null!, null!)),
+                    new InspectorFactory<BehaviourComponentDrawerViewModel>(args => new((GameEntity)args[0], (BehaviourComponent)args[1],
+                        registry, delete, components, objects, null!, null!, null!, null!, null!, scenes, null!, null!, custom, setProperty)),
+                    registry, add);
+                var theme = new FluentTheme();
+                var styles = new StyleInclude(new Uri("avares://ReiEditor/")) { Source = new Uri("avares://ReiEditor/Views/Resources/Styles.axaml") };
+                Application.Current!.Styles.Add(theme);
+                Application.Current.Styles.Add(styles);
+                var view = new EntityMonitorDrawer { DataContext = inspector };
+                var window = new Window { Content = view, Width = 400, Height = 480 };
+                try
+                {
+                    window.Show();
+                    var sharedDependency = scenario is ComponentHistory.AddWithSharedDependency or ComponentHistory.BlockSharedDependencyDeletion
+                        or ComponentHistory.DeleteAfterDependents;
+                    if (scenario == ComponentHistory.AddWithMissingDependency || sharedDependency)
+                    {
+                        AssertComponentNumber(null, dependentPresent: false);
+                        Assert.False(commands.CanUndo);
+                        Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
+                        AssertComponentNumber(97, dependentPresent: true);
+                        Assert.True(commands.CanUndo);
+
+                        if (sharedDependency)
+                        {
+                            Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == OTHER_DEPENDENT_ID).SelectCommand.Execute(null);
+                            AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                            if (scenario == ComponentHistory.DeleteAfterDependents)
+                            {
+                                DeleteComponent(expectedEnabled: false);
+                                AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+
+                                DeleteComponent(DEPENDENT_ID);
+                                AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
+                                DeleteComponent(expectedEnabled: false);
+                                AssertComponentNumber(97, dependentPresent: false, otherDependentPresent: true);
+
+                                DeleteComponent(OTHER_DEPENDENT_ID);
+                                AssertComponentNumber(97, dependentPresent: false);
+                                DeleteComponent();
+                                AssertComponentNumber(null, dependentPresent: false);
+                                Assert.Empty(syncLogger.Entries);
+                                return true;
+                            }
+                            if (scenario == ComponentHistory.BlockSharedDependencyDeletion)
+                            {
+                                DeleteComponent(expectedEnabled: false);
+                                AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                                Assert.True(commands.CanUndo);
+                                Assert.False(commands.CanRedo);
+                            }
+                            await commands.UndoAsync();
+                            AssertComponentNumber(97, dependentPresent: true);
+                        }
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(null, dependentPresent: false);
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(97, dependentPresent: true);
+                        if (sharedDependency)
+                        {
+                            await commands.RedoAsync();
+                            AssertComponentNumber(97, dependentPresent: true, otherDependentPresent: true);
+                        }
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+                    if (scenario == ComponentHistory.AddWithDependency)
+                    {
+                        AssertComponentNumber(42, dependentPresent: false);
+                        var dependency = entity.GetBehaviour(PROBE_ID);
+                        Assert.False(commands.CanUndo);
+                        Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == DEPENDENT_ID).SelectCommand.Execute(null);
+                        AssertComponentNumber(42, dependentPresent: true);
+                        Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(42, dependentPresent: false);
+                        Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(42, dependentPresent: true);
+                        Assert.Same(dependency, entity.GetBehaviour(PROBE_ID));
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+                    if (scenario == ComponentHistory.Delete)
+                    {
+                        AssertComponentNumber(42);
+                        Assert.False(commands.CanUndo);
+                        DeleteComponent();
+                        AssertComponentNumber(null);
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(42);
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(null);
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+                    AssertComponentNumber(null);
+                    Assert.False(commands.CanUndo);
+                    Assert.Single(inspector.BehaviourSelection, item => item.BehaviourId == PROBE_ID).SelectCommand.Execute(null);
+                    AssertComponentNumber(97);
+                    Assert.True(commands.CanUndo);
+
+                    if (scenario is ComponentHistory.UndoAfterSceneSwitch or ComponentHistory.EditAfterSceneSwitch)
+                    {
+                        await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: false);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete or ComponentHistory.SaveAndReopen)
+                    {
+                        var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                        input.TextInternal = "42";
+                        input.LoseFocus();
+                        AssertComponentNumber(42);
+
+                        if (scenario == ComponentHistory.AddEditDelete)
+                        {
+                            DeleteComponent();
+                            AssertComponentNumber(null);
+                            await commands.UndoAsync();
+                            AssertComponentNumber(42);
+                        }
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(97);
+                        await commands.UndoAsync();
+                        AssertComponentNumber(null);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(97);
+                        await commands.RedoAsync();
+                        AssertComponentNumber(42);
+                        if (scenario == ComponentHistory.AddEditDelete)
+                        {
+                            await commands.RedoAsync();
+                            AssertComponentNumber(null);
+                        }
+                        Assert.False(commands.CanRedo);
+                        if (scenario == ComponentHistory.SaveAndReopen)
+                        {
+                            await AssertReopenedComponentNumberAsync(42);
+                        }
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    await commands.UndoAsync();
+                    AssertComponentNumber(null);
+                    Assert.False(commands.CanUndo);
+                    Assert.True(commands.CanRedo);
+
+                    if (scenario == ComponentHistory.SaveAfterUndo)
+                    {
+                        await AssertReopenedComponentNumberAsync(null);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    if (scenario == ComponentHistory.RedoAfterSceneSwitch)
+                    {
+                        await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: true);
+                        Assert.Empty(syncLogger.Entries);
+                        return true;
+                    }
+
+                    await commands.RedoAsync();
+                    AssertComponentNumber(97);
+                    Assert.False(commands.CanRedo);
+                    Assert.Empty(syncLogger.Entries);
+                }
+                finally
+                {
+                    window.Close();
+                    Application.Current.Styles.Remove(styles);
+                    Application.Current.Styles.Remove(theme);
+                }
+
+                BehaviourComponentDrawer? FindComponentDrawer(int behaviourId = PROBE_ID) => view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                    .SingleOrDefault(drawer => drawer.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == behaviourId);
+
+                void DeleteComponent(int behaviourId = PROBE_ID, bool expectedEnabled = true)
+                {
+                    var drawer = Assert.IsType<BehaviourComponentDrawerViewModel>(FindComponentDrawer(behaviourId)!.DataContext);
+                    var deleteOption = Assert.Single(drawer.ContextMenu.Options, option => option.Text == "Delete Component");
+                    Assert.Equal(expectedEnabled, deleteOption.Command.CanExecute(null));
+                    deleteOption.Command.Execute(null);
+                }
+
+                async Task AssertReopenedComponentNumberAsync(int? expected)
+                {
+                    using var project = new TemporaryProjectFixture();
+                    var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
+                    activeProject.OpenProject(project.Project);
+                    var assetRegistry = new AssetRegistry(new TestLogger<AssetRegistry>());
+                    var assetLogger = new TestLogger<AssetsService>();
+                    var procedures = new EditorProceduresService();
+                    var migrations = new AssetSerializerMigrationService(new TestLogger<AssetSerializerMigrationService>(), [new MigrateScene_0_1()]);
+                    var assets = new AssetsService(assetLogger, project.Resources, new JsonSerializer(), migrations, activeProject, procedures, assetRegistry, []);
+                    var scene = scenes.Scene.Value!;
+                    var info = new AssetInfo(new AssetMeta("component-history-scene"), project.Directory.GetPath("history.scene"));
+                    assetRegistry.AddToLoadedAssets(info, scene);
+                    using var save = new SaveProjectCommand(assets, new TestBuildService(), runner, new SceneStateSynchronizer(scenes, sync));
+                    await save.SaveProject();
+                    Assert.True(File.Exists(info.FullPath));
+
+                    var loader = new EngineSceneLoader(new TestEngineNativeAccess(api), new TestLogger<EngineSceneLoader>());
+                    using var sceneManagement = new SceneManagementService(new TestLogger<SceneManagementService>(), assets, activeProject, null!,
+                        new SelectionService(entityApi), components, registry, runner, loader, procedures);
+                    var emptyScene = new Scene("Empty scene");
+                    emptyScene.SetAssetInfo(new AssetInfo(new AssetMeta("component-history-empty"), ""));
+                    await sceneManagement.LoadScene(emptyScene);
+                    Assert.Null(entityApi.GetEntityData(id));
+                    assets.Unload(info.Meta.AssetId);
+                    await sceneManagement.OpenScene(info.Meta.AssetId);
+
+                    var reopenedScene = Assert.IsType<Scene>(sceneManagement.CurrentScene.Value);
+                    Assert.NotSame(scene, reopenedScene);
+                    var reopenedEntity = Assert.IsType<GameEntity>(reopenedScene.GetById(id));
+                    Assert.NotSame(entity, reopenedEntity);
+                    Assert.Empty(assetLogger.Entries.Where(entry => entry.Level == ReiEditor.Models.Services.Logging.LogLevelEnum.Error));
+                    scenes.Scene.Value = reopenedScene;
+                    using var reopenedInspector = CreateInspector(reopenedEntity);
+                    view.DataContext = reopenedInspector;
+                    AssertComponentNumber(expected, inspectedEntity: reopenedEntity);
+                }
+
+                async Task AssertOldHistoryDoesNotTouchNextSceneAsync(bool redo)
+                {
+                    var serializer = new JsonSerializer();
+                    var nextEntity = serializer.Deserialize<GameEntity>(serializer.Serialize(entity));
+                    Assert.NotSame(entity, nextEntity);
+                    Assert.Equal(id, nextEntity.Id);
+                    nextEntity.SetName("Same ID in another scene");
+                    int? expected = redo ? null : 61;
+                    if (expected is { } number)
+                        nextEntity.GetBehaviour(PROBE_ID)!.GetProperty("Number").SetValueWithoutTriggeringChangedEvent(number);
+                    var nextScene = new Scene("Another scene");
+                    nextScene.SetAssetInfo(new AssetInfo(new AssetMeta("other-component-history-scene"), ""));
+                    nextScene.AddEntity(nextEntity);
+
+                    using var project = new TemporaryProjectFixture();
+                    var activeProject = new ActiveProjectService(new TestLogger<ActiveProjectService>());
+                    activeProject.OpenProject(project.Project);
+                    var loader = new EngineSceneLoader(new TestEngineNativeAccess(api), new TestLogger<EngineSceneLoader>());
+                    using var sceneManagement = new SceneManagementService(new TestLogger<SceneManagementService>(), null!, activeProject, null!,
+                        new SelectionService(entityApi), components, registry, runner, loader, new EditorProceduresService());
+                    await sceneManagement.LoadScene(nextScene);
+                    scenes.Scene.Value = sceneManagement.CurrentScene.Value;
+                    using var nextInspector = CreateInspector(nextEntity);
+                    view.DataContext = nextInspector;
+                    Assert.Equal(nextEntity.Name, entityApi.GetEntityData(id)!.Name);
+                    AssertComponentNumber(expected, inspectedEntity: nextEntity);
+                    Assert.False(commands.CanUndo);
+                    Assert.False(commands.CanRedo);
+                    if (scenario == ComponentHistory.EditAfterSceneSwitch)
+                    {
+                        var input = FindComponentDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                        input.TextInternal = "73";
+                        input.LoseFocus();
+                        AssertComponentNumber(73, inspectedEntity: nextEntity);
+                        Assert.True(commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        AssertComponentNumber(61, inspectedEntity: nextEntity);
+                        Assert.False(commands.CanUndo);
+                        Assert.True(commands.CanRedo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(73, inspectedEntity: nextEntity);
+                        Assert.False(commands.CanRedo);
+                        return;
+                    }
+                    await Assert.ThrowsAsync<InvalidOperationException>(redo ? commands.RedoAsync : commands.UndoAsync);
+                    AssertComponentNumber(expected, inspectedEntity: nextEntity);
+                    Assert.False(commands.CanUndo);
+                    Assert.False(commands.CanRedo);
+                }
+
+                void AssertComponentNumber(int? expected, bool? dependentPresent = null, bool otherDependentPresent = false, GameEntity? inspectedEntity = null)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    var present = expected.HasValue;
+                    var drawer = FindComponentDrawer();
+                    Assert.Equal(present, drawer != null);
+                    Assert.Equal(present, (inspectedEntity ?? entity).HasComponent(PROBE_ID));
+                    var currentInspector = Assert.IsType<EntityMonitorDrawerViewModel>(view.DataContext);
+                    Assert.Equal(!present, currentInspector.BehaviourSelection.Any(item => item.BehaviourId == PROBE_ID));
+                    var native = entityApi.GetEntityData(id)!.Behaviours;
+                    Assert.Contains(native, behaviour => Equals(behaviour["REI_TYPE"], "Transform"));
+                    if (dependentPresent is { } hasDependent)
+                    {
+                        AssertDependent(DEPENDENT_ID, "ProbeC", hasDependent);
+                        AssertDependent(OTHER_DEPENDENT_ID, "ProbeD", otherDependentPresent);
+                    }
+                    var probe = native.Where(behaviour => Equals(behaviour["REI_TYPE"], "ProbeB")).ToArray();
+                    if (!present)
+                    {
+                        Assert.Empty(probe);
+                        return;
+                    }
+                    var input = drawer!.GetVisualDescendants().OfType<ReiTextBox>().Single();
+                    var inspectorNumber = int.Parse(input.Text, CultureInfo.CurrentCulture);
+                    var nativeNumber = Convert.ToInt32(Assert.Single(probe)["Number"]);
+                    Assert.Equal((expected.Value, expected.Value), (inspectorNumber, nativeNumber));
+
+                    void AssertDependent(int behaviourId, string name, bool isPresent)
+                    {
+                        var count = isPresent ? 1 : 0;
+                        Assert.Equal(count, view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
+                            .Count(d => d.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == behaviourId));
+                        Assert.Equal(count, native.Count(behaviour => Equals(behaviour["REI_TYPE"], name)));
+                    }
+                }
+            }
+            finally
+            {
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
     }
 
     [NativeCallbackFact]

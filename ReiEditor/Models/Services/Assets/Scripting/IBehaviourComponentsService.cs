@@ -23,6 +23,7 @@ public interface IBehaviourComponentsService
     event Action<EntityBehaviourPropertyChangeEventArgs>? BehaviourPropertyChangedEvent;
     
     bool AddComponent(GameEntity e, int behaviourId);
+    void RestoreComponent(GameEntity entity, BehaviourComponent component);
     bool DeleteComponent(GameEntity e, BehaviourComponent component);
     bool TryGetRequiringComponent(GameEntity e, int requiredBehaviourId, out string requiringComponentName);
 

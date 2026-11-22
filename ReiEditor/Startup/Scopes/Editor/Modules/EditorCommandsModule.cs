@@ -16,6 +16,8 @@ public sealed class EditorCommandsModule : Module
         builder.RegisterSingleton<NativeEditorHistoryRecorder>().AsSelf().AutoActivate();
         builder.RegisterType<EntityRenameCommand>().As<IEntityRenameCommand>();
         builder.RegisterType<SetComponentPropertyCommand>();
+        builder.RegisterType<AddComponentCommand>();
+        builder.RegisterType<DeleteComponentCommand>();
         builder.RegisterDecorator<EntityRenameCommandDecorator, IEntityRenameCommand>();
         builder.RegisterType<SelectedEntityDeleteCommand>().As<ISelectedEntityDeleteCommand>();
         builder.RegisterType<SelectedEntityDuplicateCommand>().As<ISelectedEntityDuplicateCommand>();

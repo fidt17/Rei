@@ -45,6 +45,7 @@ public sealed class BehaviourComponentDrawerViewModelTests
         public string RequiringName { get; set; } = "Dependent";
 
         public bool AddComponent(GameEntity e, int behaviourId) => throw new NotSupportedException();
+        public void RestoreComponent(GameEntity entity, BehaviourComponent component) => throw new NotSupportedException();
         public bool DeleteComponent(GameEntity e, BehaviourComponent component) => throw new NotSupportedException();
 
         public bool TryGetRequiringComponent(GameEntity e, int requiredBehaviourId, out string requiringComponentName)
@@ -184,11 +185,14 @@ public sealed class BehaviourComponentDrawerViewModelTests
         var entity = new GameEntity(1, "Entity");
         entity.AddBehaviour(component);
         var scenes = new TestSceneManagementService(entity);
+        var registry = new TestBehaviourRegistry(info);
+        var commands = new EditorCommandService();
+        var runner = new TestEngineRunner();
         return new(
             entity,
             component,
-            new TestBehaviourRegistry(info),
-            entities,
+            registry,
+            new DeleteComponentCommand(commands, scenes, entities, registry, requirements, runner, null!, null!),
             requirements,
             null!,
             null!,
@@ -200,7 +204,7 @@ public sealed class BehaviourComponentDrawerViewModelTests
             null!,
             null!,
             custom,
-            new SetComponentPropertyCommand(new EditorCommandService(), scenes, new TestEngineRunner()));
+            new SetComponentPropertyCommand(commands, scenes, runner));
     }
 
     private static BehaviourAssetInfo TestBehaviourInfo(bool includeMissing)

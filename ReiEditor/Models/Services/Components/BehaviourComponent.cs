@@ -11,6 +11,9 @@ public class BehaviourComponent
     
     [JsonIgnore]
     public int Id => _id;
+
+    [JsonIgnore]
+    internal object HistoryIdentity { get; set; } = new();
     
     [JsonProperty("Id")]
     private readonly int _id;

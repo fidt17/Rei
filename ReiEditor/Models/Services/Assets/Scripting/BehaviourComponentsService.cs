@@ -71,6 +71,12 @@ public class BehaviourComponentsService : IBehaviourComponentsService
         return true;
     }
 
+    public void RestoreComponent(GameEntity entity, BehaviourComponent component)
+    {
+        foreach (var property in component.Properties.Values) SubscribeToPropertyChange(entity, component, property);
+        entity.AddBehaviour(component);
+    }
+
     public bool DeleteComponent(GameEntity e, BehaviourComponent component)
     {
         if (!e.HasBehaviour(component))

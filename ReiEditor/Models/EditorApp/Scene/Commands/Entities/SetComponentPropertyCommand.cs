@@ -21,17 +21,20 @@ public sealed class SetComponentPropertyCommand(
 {
     private sealed class HistoryEntry(SetComponentPropertyCommand command, Target target, object before, object after) : IEditorHistoryEntry
     {
-        public bool CanUndo => command.IsCurrent(target) && Matches(target.Property, after);
-        public bool CanRedo => command.IsCurrent(target) && Matches(target.Property, before);
+        public bool CanUndo => CanApply(after);
+        public bool CanRedo => CanApply(before);
 
-        public Task UndoAsync() => Apply(CanUndo, before);
-        public Task RedoAsync() => Apply(CanRedo, after);
+        public Task UndoAsync() => Apply(after, before);
+        public Task RedoAsync() => Apply(before, after);
 
-        private Task Apply(bool allowed, object value)
+        private bool CanApply(object expected) => command.FindHistoryProperty(target) is { } property && Matches(property, expected);
+
+        private Task Apply(object expected, object value)
         {
-            if (!allowed) throw new InvalidOperationException("The component property has changed or is unavailable.");
-            Write(target.Property, value);
-            if (!Matches(target.Property, value)) throw new InvalidOperationException("The component property could not be updated.");
+            var property = command.FindHistoryProperty(target);
+            if (property == null || !Matches(property, expected)) throw new InvalidOperationException("The component property has changed or is unavailable.");
+            Write(property, value);
+            if (!Matches(property, value)) throw new InvalidOperationException("The component property could not be updated.");
             return Task.CompletedTask;
         }
     }
@@ -68,6 +71,21 @@ public sealed class SetComponentPropertyCommand(
     {
         var after = Normalize(GetValueProperty(target.Property), target.Value);
         return before != null && after != null ? new HistoryEntry(this, target, before, after) : null;
+    }
+
+    private SerializedProperty? FindHistoryProperty(Target target)
+    {
+        if (!target.Entity.HasBehaviour(target.Component) && target.Property.ParentProperty == null
+            && target.Property.Type != SerializedTypeEnum.Collection
+            && target.Entity.GetBehaviour(target.Component.Id) is { } restored
+            && ReferenceEquals(target.Component.HistoryIdentity, restored.HistoryIdentity)
+            && restored.Properties.TryGetValue(target.Property.Name, out var property)
+            && property.Type == target.Property.Type && property.SourceType == target.Property.SourceType)
+        {
+            target = target with { Component = restored, Property = property };
+        }
+
+        return IsCurrent(target) ? target.Property : null;
     }
 
     private bool IsCurrent(Target target)
