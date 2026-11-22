@@ -27,18 +27,22 @@ public sealed class DeleteComponentCommand(
 {
     private sealed class HistoryEntry(DeleteComponentCommand command, Target target) : IEditorHistoryEntry
     {
-        public bool CanUndo => command.CanRestore(target);
-        public bool CanRedo => command.CanDelete(target);
+        private Target _deletedTarget = target;
+
+        public bool CanUndo => command.CanRestore(_deletedTarget);
+        public bool CanRedo => command.FindRedoTarget(_deletedTarget) != null;
 
         public Task UndoAsync()
         {
-            if (!CanUndo || !command.Restore(target)) throw new InvalidOperationException("The component was not restored.");
+            if (!CanUndo || !command.Restore(_deletedTarget)) throw new InvalidOperationException("The component was not restored.");
             return Task.CompletedTask;
         }
 
         public Task RedoAsync()
         {
-            if (!CanRedo || !command.Delete(target)) throw new InvalidOperationException("The component was not removed.");
+            var current = command.FindRedoTarget(_deletedTarget);
+            if (current == null || !command.Delete(current)) throw new InvalidOperationException("The component was not removed.");
+            _deletedTarget = current;
             return Task.CompletedTask;
         }
     }
@@ -84,6 +88,15 @@ public sealed class DeleteComponentCommand(
 
     private bool CanDelete(Target target) => IsCurrent(target) && target.Entity.HasBehaviour(target.Component)
         && !components.TryGetRequiringComponent(target.Entity, target.Component.Id, out _);
+
+    private Target? FindRedoTarget(Target target)
+    {
+        var component = target.Entity.GetBehaviour(target.Component.Id);
+        if (component == null || !ReferenceEquals(component.HistoryIdentity, target.Component.HistoryIdentity)) return null;
+
+        var current = target with { Component = component };
+        return CanDelete(current) ? current : null;
+    }
 
     private bool CanRestore(Target target) => IsCurrent(target) && !target.Entity.HasComponent(target.Component.Id)
         && registry.TryGetById(target.Component.Id, out var info)

@@ -137,7 +137,10 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorDeleteComponentRestoresEditedNumberOnUndo() => VerifyInspectorComponentHistoryAsync(ComponentHistory.Delete);
 
-    private enum ComponentHistory { Add, AddThenEdit, Delete }
+    [NativeCallbackFact]
+    public Task InspectorAddEditDeleteComponentUndoAndRedoInOrder() => VerifyInspectorComponentHistoryAsync(ComponentHistory.AddEditDelete);
+
+    private enum ComponentHistory { Add, AddThenEdit, Delete, AddEditDelete }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
     {
@@ -219,8 +222,7 @@ public sealed class EngineApiActionCallbackTests
                     {
                         AssertComponentNumber(42);
                         Assert.False(commands.CanUndo);
-                        var probe = Assert.IsType<BehaviourComponentDrawerViewModel>(FindProbeDrawer()!.DataContext);
-                        Assert.Single(probe.ContextMenu.Options, option => option.Text == "Delete Component").Command.Execute(null);
+                        DeleteProbe();
                         AssertComponentNumber(null);
                         Assert.True(commands.CanUndo);
 
@@ -241,12 +243,20 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
-                    if (scenario == ComponentHistory.AddThenEdit)
+                    if (scenario is ComponentHistory.AddThenEdit or ComponentHistory.AddEditDelete)
                     {
                         var input = FindProbeDrawer()!.GetVisualDescendants().OfType<ReiTextBox>().Single();
                         input.TextInternal = "42";
                         input.LoseFocus();
                         AssertComponentNumber(42);
+
+                        if (scenario == ComponentHistory.AddEditDelete)
+                        {
+                            DeleteProbe();
+                            AssertComponentNumber(null);
+                            await commands.UndoAsync();
+                            AssertComponentNumber(42);
+                        }
 
                         await commands.UndoAsync();
                         AssertComponentNumber(97);
@@ -258,6 +268,11 @@ public sealed class EngineApiActionCallbackTests
                         AssertComponentNumber(97);
                         await commands.RedoAsync();
                         AssertComponentNumber(42);
+                        if (scenario == ComponentHistory.AddEditDelete)
+                        {
+                            await commands.RedoAsync();
+                            AssertComponentNumber(null);
+                        }
                         Assert.False(commands.CanRedo);
                         Assert.Empty(syncLogger.Entries);
                         return true;
@@ -282,6 +297,12 @@ public sealed class EngineApiActionCallbackTests
 
                 BehaviourComponentDrawer? FindProbeDrawer() => view.GetVisualDescendants().OfType<BehaviourComponentDrawer>()
                     .SingleOrDefault(drawer => drawer.DataContext is BehaviourComponentDrawerViewModel vm && vm.BehaviourComponent.Id == PROBE_ID);
+
+                void DeleteProbe()
+                {
+                    var probe = Assert.IsType<BehaviourComponentDrawerViewModel>(FindProbeDrawer()!.DataContext);
+                    Assert.Single(probe.ContextMenu.Options, option => option.Text == "Delete Component").Command.Execute(null);
+                }
 
                 void AssertComponentNumber(int? expected)
                 {
