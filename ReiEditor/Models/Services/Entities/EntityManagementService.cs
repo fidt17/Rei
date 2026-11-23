@@ -334,14 +334,15 @@ public class EntityManagementService : IEntityManagementService
         scene.SynchronizeHierarchy();
     }
 
-    public void DestroyEntity(GameEntity e)
+    public void DestroyEntity(GameEntity e, bool recordHistory = false)
     {
         try
         {
             if (_engineRunner.IsActive.Value)
             {
-                _entityApi.DestroyEntity(e.Id);
-                _sceneManagement.CurrentScene.Value?.DeleteEntity(e);
+                var record = recordHistory && _engineRunner.IsEditorActive.Value;
+                _entityApi.DestroyEntity(e.Id, record);
+                if (!record) _sceneManagement.CurrentScene.Value?.DeleteEntity(e);
             }
             else
             {

@@ -72,21 +72,21 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
         var scenePath = await PrepareAsync(engine, includeChild: true);
         await engine.StartAsync();
         var disk = await File.ReadAllBytesAsync(scenePath);
-        var original = await ListEntitiesAsync();
+        var original = await ListEntitiesAsync(engine);
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
         await Chord(engine, 68);
 
         JsonElement[] copies = [];
         await engine.WaitUntilAsync(async () =>
         {
-            copies = (await ListEntitiesAsync()).Where(entity => !original.Any(existing => Id(existing) == Id(entity))).ToArray();
+            copies = (await ListEntitiesAsync(engine)).Where(entity => !original.Any(existing => EntityId(existing) == EntityId(entity))).ToArray();
             return copies.Length == 2;
         });
-        var copy = Id(copies[0]);
-        var child = Id(copies[1]);
+        var copy = EntityId(copies[0]);
+        var child = EntityId(copies[1]);
         Assert.Equal(copy, copies[1].GetProperty("parentId").GetInt32());
         Assert.Equal(copy, (await Read(engine, child)).GetProperty("Parent").GetInt32());
-        Assert.True(await CanUndoAsync());
+        Assert.True(await CanUndoAsync(engine));
 
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { copy } });
         var (before, frame) = await ReadPointerAsync(engine, copy);
@@ -101,13 +101,13 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
         await Chord(engine, 90);
         await WaitPosition(engine, initialPosition, copy);
         await Chord(engine, 90);
-        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync()).Select(Id).SequenceEqual(original.Select(Id)));
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Select(EntityId).SequenceEqual(original.Select(EntityId)));
         Assert.Equal(JsonValueKind.Null, (await Read(engine, copy)).GetProperty("Position").ValueKind);
         Assert.Equal(JsonValueKind.Null, (await Read(engine, child)).GetProperty("Position").ValueKind);
-        Assert.False(await CanUndoAsync());
+        Assert.False(await CanUndoAsync(engine));
 
         await Chord(engine, 89);
-        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync()).Any(entity => Id(entity) == child && entity.GetProperty("parentId").GetInt32() == copy));
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Any(entity => EntityId(entity) == child && entity.GetProperty("parentId").GetInt32() == copy));
         Assert.Equal(copy, (await Read(engine, child)).GetProperty("Parent").GetInt32());
         await WaitPosition(engine, initialPosition, copy);
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { copy } });
@@ -115,12 +115,62 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
         await WaitPosition(engine, movedPosition, copy);
         Assert.False((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canRedo").GetBoolean());
         Assert.Equal(disk, await File.ReadAllBytesAsync(scenePath));
-
-        async Task<JsonElement[]> ListEntitiesAsync() =>
-            (await engine.CallAsync("rei_editor_list_entities")).GetProperty("entities").EnumerateArray().ToArray();
-        async Task<bool> CanUndoAsync() => (await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean();
-        static int Id(JsonElement entity) => entity.GetProperty("id").GetInt32();
     }
+
+    [EngineFact]
+    public async Task DeleteSubtreeRestoresIdsOrderAndValuesWithOneUndo()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        var scenePath = await PrepareAsync(engine, includeChild: true);
+        await engine.StartAsync();
+        var disk = await File.ReadAllBytesAsync(scenePath);
+        var before = await ListEntitiesAsync(engine);
+        var child = EntityId(Assert.Single(before, entity => entity.GetProperty("parentId").GetInt32() == 2));
+        var childState = await Read(engine, child);
+        var expectedPosition = Position(childState);
+        Assert.Equal(1.25, expectedPosition[0]);
+
+        await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
+        await engine.CallAsync("rei_editor_send_input", new()
+        {
+            ["events"] = new[] { new { type = "key_down", code = 261 }, new { type = "key_up", code = 261 } }
+        });
+        await AssertRemovedAsync();
+        await engine.WaitUntilAsync(() => CanUndoAsync(engine));
+
+        await Chord(engine, 90);
+        var expectedHierarchy = before.Select(HierarchyRow).ToArray();
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Select(HierarchyRow).SequenceEqual(expectedHierarchy));
+        var restoredChild = await Read(engine, child);
+        Assert.Equal(2, restoredChild.GetProperty("Parent").GetInt32());
+        Assert.Equal(childState.GetProperty("Order").GetInt32(), restoredChild.GetProperty("Order").GetInt32());
+        await WaitPosition(engine, expectedPosition, child);
+        Assert.False(await CanUndoAsync(engine));
+
+        await Chord(engine, 89);
+        await AssertRemovedAsync();
+        Assert.False((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canRedo").GetBoolean());
+        Assert.Equal(disk, await File.ReadAllBytesAsync(scenePath));
+
+        async Task AssertRemovedAsync()
+        {
+            await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Select(EntityId).SequenceEqual(new[] { 1 }));
+            Assert.Equal(JsonValueKind.Null, (await Read(engine, 2)).GetProperty("Position").ValueKind);
+            Assert.Equal(JsonValueKind.Null, (await Read(engine, child)).GetProperty("Position").ValueKind);
+        }
+
+        static (int Id, int Parent, int Order, string? Name) HierarchyRow(JsonElement entity) =>
+            (EntityId(entity), entity.GetProperty("parentId").GetInt32(), entity.GetProperty("order").GetInt32(), entity.GetProperty("name").GetString());
+    }
+
+    private static async Task<JsonElement[]> ListEntitiesAsync(EngineIntegrationHarness engine) =>
+        (await engine.CallAsync("rei_editor_list_entities")).GetProperty("entities").EnumerateArray().ToArray();
+
+    private static async Task<bool> CanUndoAsync(EngineIntegrationHarness engine) =>
+        (await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean();
+
+    private static int EntityId(JsonElement entity) => entity.GetProperty("id").GetInt32();
 
     private async Task<(JsonElement State, JsonElement Frame)> ReadPointerAsync(EngineIntegrationHarness engine, int entityId)
     {
@@ -155,6 +205,7 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
             child["Name"] = "Source Child";
             child["Behaviours"]![0]!["SerializedData"]!["_parent"]!["Value"] = 2;
             child["Behaviours"]![0]!["SerializedData"]!["_order"]!["Value"] = 0;
+            child["Behaviours"]![0]!["SerializedData"]!["_position"]!["Value"]!["x"]!["Value"] = 1.25;
             entities.Add(child);
         }
         await File.WriteAllTextAsync(scenePath, scene.ToJsonString());
@@ -232,11 +283,13 @@ public:
             const auto target = rei::GetEntityManager().GetBySceneId(entityId);
             nlohmann::json position = nullptr;
             i32 parentId = 0;
+            i32 order = 0;
             if (!IS_DEAD(target))
             {
                 const auto& transform = GET(target, rei::Transform);
                 const auto p = transform.GetLocalPosition();
                 position = {p.x, p.y, p.z};
+                order = transform.GetChildOrder();
                 const auto parent = transform.GetParent();
                 if (!IS_DEAD(parent)) parentId = GET(parent, EntityInfo).Id;
             }
@@ -264,7 +317,7 @@ public:
                 }
             }
             const nlohmann::json state = {{"Mouse", {rei::Input::GetMouseX(), rei::Input::GetMouseY()}}, {"ScrollTotal", _scrollTotal},
-                {"Width", rei::Input::GetMouseState().Width}, {"Height", rei::Input::GetMouseState().Height}, {"Step", step}, {"Position", position}, {"Parent", parentId}, {"Hit", hit},
+                {"Width", rei::Input::GetMouseState().Width}, {"Height", rei::Input::GetMouseState().Height}, {"Step", step}, {"Position", position}, {"Parent", parentId}, {"Order", order}, {"Hit", hit},
                 {"KeyDown", rei::Input::IsKeyDown(GLFW_KEY_W)}, {"ButtonDown", rei::Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)}};
             std::ofstream output(R"(__STATE__)");
             output << state.dump();

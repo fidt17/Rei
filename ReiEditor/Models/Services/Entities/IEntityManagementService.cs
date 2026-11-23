@@ -18,5 +18,5 @@ public interface IEntityManagementService
 
     int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false);
 	
-    void DestroyEntity(GameEntity e);
+    void DestroyEntity(GameEntity e, bool recordHistory = false);
 }

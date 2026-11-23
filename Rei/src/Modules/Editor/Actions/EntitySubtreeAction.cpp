@@ -6,7 +6,7 @@
 
 namespace rei::editor
 {
-    EntitySubtreeAction::EntitySubtreeAction(const ecs::Entity root)
+    EntitySubtreeAction::EntitySubtreeAction(const Kind kind, const ecs::Entity root) : _kind(kind)
     {
         GetInternalWorld()->Refresh();
         ECS_WORLD(GetInternalWorld())
@@ -24,8 +24,15 @@ namespace rei::editor
         for (const auto child : GET(entity, Transform).GetChildren()) Capture(child);
     }
 
-    EditorActionReplayResult EntitySubtreeAction::Undo() { return Remove(); }
-    EditorActionReplayResult EntitySubtreeAction::Redo() { return Restore(); }
+    EditorActionReplayResult EntitySubtreeAction::Undo()
+    {
+        return _kind == Kind::Duplicate ? Remove() : Restore();
+    }
+
+    EditorActionReplayResult EntitySubtreeAction::Redo()
+    {
+        return _kind == Kind::Duplicate ? Restore() : Remove();
+    }
 
     EditorActionReplayResult EntitySubtreeAction::Remove()
     {

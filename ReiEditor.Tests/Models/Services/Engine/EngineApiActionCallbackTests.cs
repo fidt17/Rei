@@ -2312,7 +2312,7 @@ public sealed class EngineApiActionCallbackTests
                 Assert.Single(recorded);
                 Assert.Equal(destination.Id, NativeParent());
 
-                new SelectedEntityDeleteCommand(management, new TestLogger<SelectedEntityDeleteCommand>()).Execute(new(formerParent, [formerParent]));
+                management.DestroyEntity(formerParent);
                 await WaitForHistoryStateAsync(() => entities.GetEntityData(formerParent.Id) == null);
                 Assert.Null(scene.GetById(formerParent.Id));
 
@@ -2399,7 +2399,7 @@ public sealed class EngineApiActionCallbackTests
                 Assert.Single(actions);
                 Dispatcher.UIThread.RunJobs();
 
-                new SelectedEntityDeleteCommand(management, new TestLogger<SelectedEntityDeleteCommand>()).Execute(new(target, [target]));
+                management.DestroyEntity(target);
                 Assert.Null(scenes.Scene.Value!.GetById(target.Id));
                 await WaitForHistoryStateAsync(() => entities.GetEntityData(target.Id) == null);
 

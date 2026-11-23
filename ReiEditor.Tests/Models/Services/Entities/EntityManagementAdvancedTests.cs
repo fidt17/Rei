@@ -82,7 +82,7 @@ public sealed class EntityManagementAdvancedTests
         }
 
         public InstantiateEntityResponse? CreateNewEntity(string name) => throw UnexpectedCall();
-        public void DestroyEntity(int sceneEntityId) => throw UnexpectedCall();
+        public void DestroyEntity(int sceneEntityId, bool recordHistory = false) => throw UnexpectedCall();
         public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();
         public void AddBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();
         public void DeleteBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();

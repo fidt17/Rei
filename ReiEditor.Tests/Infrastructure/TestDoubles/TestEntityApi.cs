@@ -18,7 +18,7 @@ public sealed class TestEntityApi : IEntityApi
     public GetSceneEntitiesResponse? GetSceneEntities() => (OnGetSceneEntities ?? throw UnexpectedCall())();
     public GetEntityDataResponse? GetEntityData(int sceneEntityId) => (OnGetEntityData ?? throw UnexpectedCall())(sceneEntityId);
     public InstantiateEntityResponse? CreateNewEntity(string name) => throw UnexpectedCall();
-    public void DestroyEntity(int sceneEntityId) => throw UnexpectedCall();
+    public void DestroyEntity(int sceneEntityId, bool recordHistory = false) => throw UnexpectedCall();
     public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();
     public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null) => throw UnexpectedCall();
     public void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false) => throw new NotSupportedException();

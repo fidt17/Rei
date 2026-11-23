@@ -35,7 +35,7 @@ internal sealed class TestEntityManagementService : IEntityManagementService
         (OnAddBehaviour ?? throw new NotSupportedException())(e, behaviourId);
     }
 
-    public void DestroyEntity(GameEntity e)
+    public void DestroyEntity(GameEntity e, bool recordHistory = false)
     {
         DestroyCalls.Add(e);
         (OnDestroy ?? throw new NotSupportedException())(e);

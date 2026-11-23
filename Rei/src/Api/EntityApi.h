@@ -36,7 +36,7 @@ REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer,
     strncpy_s(outputBuffer, bufferSize, response.c_str(), _TRUNCATE);
 }
 
-REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId)
+REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId, const i32 recordHistory = 0)
 {
     rei::GetEngine().ExecuteOnMainThread([=]
     {
@@ -44,6 +44,15 @@ REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId)
 
         const auto e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
         if (IS_DEAD(e)) return;
+
+        if (recordHistory != 0 && rei::GetEngine().IsEditorMode())
+        {
+            using Action = rei::editor::EntitySubtreeAction;
+            auto action = std::make_unique<Action>(Action::Kind::Delete, e);
+            if (action->Redo() == rei::editor::EditorActionReplayResult::Applied)
+                rei::GetEngine().GetEditorActions().RecordApplied(std::move(action));
+            return;
+        }
 
         rei::GetEntityManager().Destroy(e);
     });
@@ -287,7 +296,8 @@ REI_EXTERN_API inline void InstantiateEntity(const char* json, char* outputBuffe
         response["EntityId"] = GET(clone, EntityInfo).Id;
         if (data.value("RecordHistory", false) && rei::GetEngine().IsEditorMode())
         {
-            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntitySubtreeAction>(clone));
+            using Action = rei::editor::EntitySubtreeAction;
+            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<Action>(Action::Kind::Duplicate, clone));
         }
         strncpy_s(outputBuffer, bufferSize, response.dump().c_str(), _TRUNCATE);
     });

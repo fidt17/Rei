@@ -76,14 +76,14 @@ public class EntityApi : IEntityApi
         return response;
     }
 
-    private delegate void DestroyEntityDelegate(int sceneEntityId);
-    public void DestroyEntity(int sceneEntityId)
+    private delegate void DestroyEntityDelegate(int sceneEntityId, int recordHistory);
+    public void DestroyEntity(int sceneEntityId, bool recordHistory = false)
     {
         if (!_engineApi.IsEngineRunning) return;
 
         try
         {
-            _engineApi.Invoke(typeof(DestroyEntityDelegate), "DestroyEntity", sceneEntityId);
+            _engineApi.Invoke(typeof(DestroyEntityDelegate), "DestroyEntity", sceneEntityId, recordHistory ? 1 : 0);
         }
         catch (Exception)
         {

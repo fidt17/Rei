@@ -74,7 +74,7 @@ public sealed class BehaviourComponentDrawerViewModelTests
         public void AddBehaviour(GameEntity e, int behaviourId) => throw new NotSupportedException();
         public void DeleteBehaviour(GameEntity e, int behaviourId) => Deleted.Add((e, behaviourId));
         public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false) => throw new NotSupportedException();
-        public void DestroyEntity(GameEntity e) => throw new NotSupportedException();
+        public void DestroyEntity(GameEntity e, bool recordHistory = false) => throw new NotSupportedException();
     }
 
     /// <summary>

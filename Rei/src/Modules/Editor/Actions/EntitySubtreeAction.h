@@ -8,11 +8,14 @@ namespace rei::editor
     class EntitySubtreeAction final : public IEditorAction
     {
     public:
-        REI_API explicit EntitySubtreeAction(ecs::Entity root);
+        enum class Kind { Duplicate, Delete };
+
+        REI_API EntitySubtreeAction(Kind kind, ecs::Entity root);
         REI_API EditorActionReplayResult Undo() override;
         REI_API EditorActionReplayResult Redo() override;
 
     private:
+        Kind _kind;
         std::vector<SceneEntity> _entities;
         i32 _parentId = 0;
         i32 _rootOrder = 0;

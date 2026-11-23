@@ -11,7 +11,7 @@ public interface IEntityApi
     GetEntityDataResponse? GetEntityData(int sceneEntityId);
 
     InstantiateEntityResponse? CreateNewEntity(string name);
-    void DestroyEntity(int sceneEntityId);
+    void DestroyEntity(int sceneEntityId, bool recordHistory = false);
     
     void Rename(int sceneEntityId, string newName);
     void ReorderEntities(IReadOnlyList<int> entityIds, int insertionIndex, bool recordHierarchyChange = false);
