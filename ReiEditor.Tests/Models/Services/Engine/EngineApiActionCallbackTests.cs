@@ -2082,7 +2082,7 @@ public sealed class EngineApiActionCallbackTests
             scene.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
             var registry = new TestBehaviourRegistry();
             var managementLogger = new TestLogger<EntityManagementService>();
-            var entitySync = new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entityApi.GetEntityData(entity.Id)!) };
+            var entitySync = new TestEntitySyncService { OnUpdate = entity => editors.Find(editor => editor.Entity == entity)?.Apply(entityApi.GetEntityData(entity.Id)!) };
             var management = new EntityManagementService(managementLogger, scenes, null!, entityApi, registry, target.Runner, entitySync,
                 new RectTransformLayoutService(registry, scenes, null!));
             var syncLogger = new TestLogger<SceneSyncService>();
@@ -3290,10 +3290,14 @@ public sealed class EngineApiActionCallbackTests
             window.Size.Value = (640, 480);
             var layout = new RectTransformLayoutService(registry, scenes, window);
             var managementLogger = new TestLogger<EntityManagementService>();
-            var entitySync = new TestEntitySyncService { OnUpdate = entity => editors.Single(e => e.Entity == entity).Apply(entities.GetEntityData(entity.Id)!) };
+            var entitySync = new TestEntitySyncService
+            {
+                OnUpdate = entity => editors.Find(editor => editor.Entity == entity)?.Apply(entities.GetEntityData(entity.Id)!)
+            };
             var management = new EntityManagementService(managementLogger, scenes, null!, entities, registry, target.Runner, entitySync, layout);
+            var syncLogger = new TestLogger<SceneSyncService>();
             using var sync = new SceneSyncService(source, scenes, new EngineSelectionSyncService(new SelectionService(new TestEntityApi())),
-                new TestLogger<SceneSyncService>(), entitySync);
+                syncLogger, entitySync);
             using var drag = new HierarchyDragFixture(scene.Hierarchy, management);
             source.Connect();
             var component = target.Entity.GetBehaviour(InspectorTransformFixture.RECT_TRANSFORM_ID)!;
@@ -3384,6 +3388,7 @@ public sealed class EngineApiActionCallbackTests
             Assert.Equal(initialCount + 3, received.Count);
             Assert.Empty(logger.Entries);
             Assert.Empty(managementLogger.Entries);
+            Assert.Empty(syncLogger.Entries);
 
             async Task<(float[][] Rects, int[] Parents, int[] Orders)> ReadAsync()
             {
