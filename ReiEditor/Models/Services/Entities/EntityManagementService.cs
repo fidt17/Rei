@@ -250,7 +250,7 @@ public class EntityManagementService : IEntityManagementService
         }
     }
 
-    public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true)
+    public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false)
     {
         try
         {
@@ -270,7 +270,8 @@ public class EntityManagementService : IEntityManagementService
             {
                 SourceEntityId = sourceEntity.Id,
                 RequestedName = uniqueName,
-                IncludeChildren = includeChildren
+                IncludeChildren = includeChildren,
+                RecordHistory = recordHistory && _engineRunner.IsEditorActive.Value
             });
 
             if (scene != null)

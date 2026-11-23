@@ -183,7 +183,8 @@ namespace rei
         REI_API ecs::Entity GetBySceneId(i32 id) const;
 
         REI_API ecs::Entity CreateNewEntity(const std::string& name);
-        REI_API void Create(const SceneEntity& sceneEntity) const;
+        REI_API ecs::Entity Create(const SceneEntity& sceneEntity) const;
+        REI_API SceneEntity CaptureSceneEntity(ecs::Entity entity) const;
 
         REI_API Behaviour& GetBehaviour(ecs::Entity e, i32 behaviourId) const;
         REI_API Behaviour& AddBehaviour(ecs::Entity e, i32 behaviourId, const nlohmann::json& data, bool init = true) const;
@@ -215,6 +216,9 @@ namespace rei
 
         std::shared_ptr<ecs::EcsRegistry> _ecs;
         std::shared_ptr<ecs::Filter> _entityInfoFilter;
+
+        // An editor action can restore an ID; new entities never take an old ID in the same scene.
+        mutable i32 _lastAllocatedSceneEntityId = 0;
 
         i32 GenerateNewSceneEntityId() const;
         bool HasBehaviour(ecs::Entity e, i32 behaviourId) const;

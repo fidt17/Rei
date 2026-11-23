@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "EntityReparentAction.h"
+#include "EditorActionTarget.h"
 #include <utility>
 
 namespace rei::editor
@@ -8,9 +9,16 @@ namespace rei::editor
         Parent(transform.GetParent()), Position(transform.GetLocalPosition()), Scale(transform.GetLocalScale()), Rotation(transform.GetLocalRotation())
     {
         ECS_WORLD(GetInternalWorld())
+        if (!IS_DEAD(Parent) && HAS(Parent, EntityInfo)) ParentId = GET(Parent, EntityInfo).Id;
         if (!HAS(transform.GetEntity(), ui::RectTransform)) return;
         const auto& rect = GET(transform.GetEntity(), ui::RectTransform);
         Rect = RectTransformChangeAction::State::Capture(rect);
+    }
+
+    ecs::Entity EntityReparentAction::State::ResolveParent() const
+    {
+        ECS_WORLD(GetInternalWorld())
+        return !IS_DEAD(Parent) || ParentId == 0 ? Parent : GetEntityManager().GetBySceneId(ParentId);
     }
 
     EntityReparentAction::EntityReparentAction(ecs::ComponentRef<Transform> target, State before, State after, std::vector<EntityOrderAction::Change> orders) :
@@ -30,23 +38,24 @@ namespace rei::editor
     {
         if (_changes.empty()) return EditorActionReplayResult::Failed;
         ECS_WORLD(GetInternalWorld())
-        for (const auto& change : _changes)
+        for (auto& change : _changes)
         {
-            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
+            if (!ResolveEditorActionTarget(change.Target)) return EditorActionReplayResult::TargetMissing;
             const auto& state = undo ? change.Before : change.After;
             if (state.Rect && !HAS(change.Target.Get().GetEntity(), ui::RectTransform)) return EditorActionReplayResult::Failed;
-            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return EditorActionReplayResult::TargetMissing;
+            const auto parent = state.ResolveParent();
+            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(parent) || !HAS(parent, Transform))) return EditorActionReplayResult::TargetMissing;
         }
-        for (const auto& change : _orders)
+        for (auto& change : _orders)
         {
-            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
+            if (!ResolveEditorActionTarget(change.Target)) return EditorActionReplayResult::TargetMissing;
         }
 
         for (const auto& change : _changes)
         {
             const auto& state = undo ? change.Before : change.After;
             auto& transform = change.Target.Get();
-            transform.SetParent(state.Parent);
+            transform.SetParent(state.ResolveParent());
             transform.GetLocalPosition() = state.Position;
             transform.GetLocalScale() = state.Scale;
             transform.SetRotation(state.Rotation);

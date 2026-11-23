@@ -16,7 +16,7 @@ public interface IEntityManagementService
     void AddBehaviour(GameEntity e, int behaviourId);
     void DeleteBehaviour(GameEntity e, int behaviourId);
 
-    int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true);
+    int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false);
 	
     void DestroyEntity(GameEntity e);
 }

@@ -16,34 +16,14 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
     {
         await using var engine = new EngineIntegrationHarness();
         output.WriteLine($"Artifacts: {engine.RunDirectory}");
-        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
-        var scenePath = Path.Combine(engine.ProjectDirectory, "Project", "Scenes", "New Scene.scene");
-        var scene = JsonNode.Parse(await File.ReadAllTextAsync(scenePath))!;
-        var target = scene["Entities"]!.AsArray().Single(entity => entity!["Id"]!.GetValue<int>() == 2)!;
-        var data = target["Behaviours"]![0]!["SerializedData"]!;
-        foreach (var field in new[] { "_position", "_rotation" })
-            foreach (var axis in new[] { "x", "y", "z" }) data[field]!["Value"]![axis]!["Value"] = 0;
-        await File.WriteAllTextAsync(scenePath, scene.ToJsonString());
-        var source = PROBE_SOURCE.Replace("__STATE__", Path.Combine(engine.ProjectDirectory, "input-state.json"))
-            .Replace("__COMMAND__", Path.Combine(engine.ProjectDirectory, "input-step.txt"));
-        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "Project", "Scripts", "ReiApp.cpp"), source);
+        var scenePath = await PrepareAsync(engine);
         await engine.StartAsync();
         var disk = await File.ReadAllBytesAsync(scenePath);
         var entity = await engine.CallAsync("rei_editor_get_entity", new() { ["entityId"] = 2 });
         var originalName = entity.GetProperty("name").GetString();
         await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
         await engine.CallAsync("rei_editor_rename_entity", new() { ["entityId"] = 2, ["newName"] = "Input rename" });
-        JsonElement frame = default;
-        JsonElement before = default;
-        await engine.WaitUntilAsync(async () =>
-        {
-            var previous = await Read(engine);
-            frame = await engine.CallAsync("rei_editor_capture_frame");
-            before = await Read(engine);
-            return before.GetProperty("Hit").ValueKind == JsonValueKind.Array &&
-                previous.GetProperty("Width").GetInt32() == before.GetProperty("Width").GetInt32() &&
-                previous.GetProperty("Height").GetInt32() == before.GetProperty("Height").GetInt32();
-        });
+        var (before, frame) = await ReadPointerAsync(engine, 2);
         var original = Position(before);
         var scaleX = frame.GetProperty("width").GetDouble() / before.GetProperty("Width").GetDouble();
         var scaleY = frame.GetProperty("height").GetDouble() / before.GetProperty("Height").GetDouble();
@@ -84,6 +64,106 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
         Assert.Equal(disk, await File.ReadAllBytesAsync(scenePath));
     }
 
+    [EngineFact]
+    public async Task DuplicateAndGizmoMoveReplayOnTheSameSubtree()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        var scenePath = await PrepareAsync(engine, includeChild: true);
+        await engine.StartAsync();
+        var disk = await File.ReadAllBytesAsync(scenePath);
+        var original = await ListEntitiesAsync();
+        await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
+        await Chord(engine, 68);
+
+        JsonElement[] copies = [];
+        await engine.WaitUntilAsync(async () =>
+        {
+            copies = (await ListEntitiesAsync()).Where(entity => !original.Any(existing => Id(existing) == Id(entity))).ToArray();
+            return copies.Length == 2;
+        });
+        var copy = Id(copies[0]);
+        var child = Id(copies[1]);
+        Assert.Equal(copy, copies[1].GetProperty("parentId").GetInt32());
+        Assert.Equal(copy, (await Read(engine, child)).GetProperty("Parent").GetInt32());
+        Assert.True(await CanUndoAsync());
+
+        await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { copy } });
+        var (before, frame) = await ReadPointerAsync(engine, copy);
+        var initialPosition = Position(before);
+        var hit = before.GetProperty("Hit");
+        await Drag(engine, hit[0].GetDouble() * frame.GetProperty("width").GetDouble() / before.GetProperty("Width").GetDouble(),
+            hit[1].GetDouble() * frame.GetProperty("height").GetDouble() / before.GetProperty("Height").GetDouble(), 40);
+        var movedPosition = Position(await Read(engine, copy));
+        Assert.False(initialPosition.SequenceEqual(movedPosition));
+        await AssertEditorPosition(engine, movedPosition, copy);
+
+        await Chord(engine, 90);
+        await WaitPosition(engine, initialPosition, copy);
+        await Chord(engine, 90);
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync()).Select(Id).SequenceEqual(original.Select(Id)));
+        Assert.Equal(JsonValueKind.Null, (await Read(engine, copy)).GetProperty("Position").ValueKind);
+        Assert.Equal(JsonValueKind.Null, (await Read(engine, child)).GetProperty("Position").ValueKind);
+        Assert.False(await CanUndoAsync());
+
+        await Chord(engine, 89);
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync()).Any(entity => Id(entity) == child && entity.GetProperty("parentId").GetInt32() == copy));
+        Assert.Equal(copy, (await Read(engine, child)).GetProperty("Parent").GetInt32());
+        await WaitPosition(engine, initialPosition, copy);
+        await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { copy } });
+        await Chord(engine, 89);
+        await WaitPosition(engine, movedPosition, copy);
+        Assert.False((await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canRedo").GetBoolean());
+        Assert.Equal(disk, await File.ReadAllBytesAsync(scenePath));
+
+        async Task<JsonElement[]> ListEntitiesAsync() =>
+            (await engine.CallAsync("rei_editor_list_entities")).GetProperty("entities").EnumerateArray().ToArray();
+        async Task<bool> CanUndoAsync() => (await engine.CallAsync("rei_editor_get_command_state")).GetProperty("canUndo").GetBoolean();
+        static int Id(JsonElement entity) => entity.GetProperty("id").GetInt32();
+    }
+
+    private async Task<(JsonElement State, JsonElement Frame)> ReadPointerAsync(EngineIntegrationHarness engine, int entityId)
+    {
+        JsonElement frame = default;
+        JsonElement before = default;
+        await engine.WaitUntilAsync(async () =>
+        {
+            var previous = await Read(engine, entityId);
+            frame = await engine.CallAsync("rei_editor_capture_frame");
+            before = await Read(engine, entityId);
+            return before.GetProperty("Hit").ValueKind == JsonValueKind.Array &&
+                previous.GetProperty("Width").GetInt32() == before.GetProperty("Width").GetInt32() &&
+                previous.GetProperty("Height").GetInt32() == before.GetProperty("Height").GetInt32();
+        });
+        return (before, frame);
+    }
+
+    private static async Task<string> PrepareAsync(EngineIntegrationHarness engine, bool includeChild = false)
+    {
+        await engine.PrepareProjectAsync(Environment.GetEnvironmentVariable("REI_TEST_ENGINE_FILE")!, Environment.GetEnvironmentVariable("REI_TEST_MSBUILD")!);
+        var scenePath = Path.Combine(engine.ProjectDirectory, "Project", "Scenes", "New Scene.scene");
+        var scene = JsonNode.Parse(await File.ReadAllTextAsync(scenePath))!;
+        var target = scene["Entities"]!.AsArray().Single(entity => entity!["Id"]!.GetValue<int>() == 2)!;
+        var data = target["Behaviours"]![0]!["SerializedData"]!;
+        foreach (var field in new[] { "_position", "_rotation" })
+            foreach (var axis in new[] { "x", "y", "z" }) data[field]!["Value"]![axis]!["Value"] = 0;
+        if (includeChild)
+        {
+            var entities = scene["Entities"]!.AsArray();
+            var child = target.DeepClone();
+            child["Id"] = entities.Max(entity => entity!["Id"]!.GetValue<int>()) + 1;
+            child["Name"] = "Source Child";
+            child["Behaviours"]![0]!["SerializedData"]!["_parent"]!["Value"] = 2;
+            child["Behaviours"]![0]!["SerializedData"]!["_order"]!["Value"] = 0;
+            entities.Add(child);
+        }
+        await File.WriteAllTextAsync(scenePath, scene.ToJsonString());
+        var source = PROBE_SOURCE.Replace("__STATE__", Path.Combine(engine.ProjectDirectory, "input-state.json"))
+            .Replace("__COMMAND__", Path.Combine(engine.ProjectDirectory, "input-step.txt"));
+        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "Project", "Scripts", "ReiApp.cpp"), source);
+        return scenePath;
+    }
+
     private static double[] Position(JsonElement state) => state.GetProperty("Position").EnumerateArray().Select(value => value.GetDouble()).ToArray();
     private static Task<JsonElement> Drag(EngineIntegrationHarness engine, double x, double y, double dx) => engine.CallAsync("rei_editor_drag_pointer", new() { ["fromX"] = x, ["fromY"] = y, ["toX"] = x + dx, ["toY"] = y });
     private static Task<JsonElement> Chord(EngineIntegrationHarness engine, int key) => engine.CallAsync("rei_editor_send_input", new()
@@ -91,27 +171,27 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
         ["events"] = new[] { new { type = "key_down", code = 341 }, new { type = "key_down", code = key }, new { type = "key_up", code = key }, new { type = "key_up", code = 341 } }
     });
 
-    private async Task WaitPosition(EngineIntegrationHarness engine, double[] expected)
+    private async Task WaitPosition(EngineIntegrationHarness engine, double[] expected, int entityId = 2)
     {
-        await engine.WaitUntilAsync(async () => Position(await Read(engine)).Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1e-4));
-        await AssertEditorPosition(engine, expected);
+        await engine.WaitUntilAsync(async () => Position(await Read(engine, entityId)).Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1e-4));
+        await AssertEditorPosition(engine, expected, entityId);
     }
 
-    private static async Task AssertEditorPosition(EngineIntegrationHarness engine, double[] expected)
+    private static async Task AssertEditorPosition(EngineIntegrationHarness engine, double[] expected, int entityId = 2)
     {
         await engine.WaitUntilAsync(async () =>
         {
-            var entity = await engine.CallAsync("rei_editor_get_entity", new() { ["entityId"] = 2 });
+            var entity = await engine.CallAsync("rei_editor_get_entity", new() { ["entityId"] = entityId });
             var transform = entity.GetProperty("behaviours").EnumerateArray().Single(behaviour => behaviour.GetProperty("name").GetString() == "Transform");
             var position = transform.GetProperty("properties").EnumerateArray().Single(property => property.GetProperty("name").GetString() == "_position").GetProperty("value");
             return new[] { "x", "y", "z" }.Select(axis => position.GetProperty(axis).GetDouble()).Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1e-4);
         });
     }
 
-    private async Task<JsonElement> Read(EngineIntegrationHarness engine)
+    private async Task<JsonElement> Read(EngineIntegrationHarness engine, int entityId = 2)
     {
         var step = ++_step;
-        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "input-step.txt"), step.ToString());
+        await File.WriteAllTextAsync(Path.Combine(engine.ProjectDirectory, "input-step.txt"), $"{step} {entityId}");
         JsonElement state = default;
         await engine.WaitUntilAsync(async () =>
         {
@@ -145,11 +225,21 @@ public:
             _scrollTotal += rei::Input::GetScrollY();
             i32 step = 0;
             std::ifstream command(R"(__COMMAND__)");
-            if (!(command >> step) || step <= _step) return;
+            i32 entityId = 0;
+            if (!(command >> step >> entityId) || step <= _step) return;
             _step = step;
             ECS_WORLD(rei::GetInternalWorld());
-            const auto target = rei::GetEntityManager().GetBySceneId(2);
-            const auto position = GET(target, rei::Transform).GetLocalPosition();
+            const auto target = rei::GetEntityManager().GetBySceneId(entityId);
+            nlohmann::json position = nullptr;
+            i32 parentId = 0;
+            if (!IS_DEAD(target))
+            {
+                const auto& transform = GET(target, rei::Transform);
+                const auto p = transform.GetLocalPosition();
+                position = {p.x, p.y, p.z};
+                const auto parent = transform.GetParent();
+                if (!IS_DEAD(parent)) parentId = GET(parent, EntityInfo).Id;
+            }
             nlohmann::json hit = nullptr;
             const auto camera = rei::render::Camera::GetMainCamera();
             const auto controlEntity = FILTER(rei::editor::TransformationControl)->First();
@@ -174,7 +264,7 @@ public:
                 }
             }
             const nlohmann::json state = {{"Mouse", {rei::Input::GetMouseX(), rei::Input::GetMouseY()}}, {"ScrollTotal", _scrollTotal},
-                {"Width", rei::Input::GetMouseState().Width}, {"Height", rei::Input::GetMouseState().Height}, {"Step", step}, {"Position", {position.x, position.y, position.z}}, {"Hit", hit},
+                {"Width", rei::Input::GetMouseState().Width}, {"Height", rei::Input::GetMouseState().Height}, {"Step", step}, {"Position", position}, {"Parent", parentId}, {"Hit", hit},
                 {"KeyDown", rei::Input::IsKeyDown(GLFW_KEY_W)}, {"ButtonDown", rei::Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)}};
             std::ofstream output(R"(__STATE__)");
             output << state.dump();

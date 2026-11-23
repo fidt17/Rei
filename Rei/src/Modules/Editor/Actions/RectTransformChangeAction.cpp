@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "RectTransformChangeAction.h"
+#include "EditorActionTarget.h"
 #include <algorithm>
 #include <utility>
 
@@ -51,9 +52,9 @@ namespace rei::editor
     EditorActionReplayResult RectTransformChangeAction::Apply(const bool undo)
     {
         if (!HasChanges()) return EditorActionReplayResult::Failed;
-        for (const auto& change : _changes)
+        for (auto& change : _changes)
         {
-            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
+            if (!ResolveEditorActionTarget(change.Target)) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _changes)
         {

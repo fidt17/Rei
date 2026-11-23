@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "EntityOrderAction.h"
+#include "EditorActionTarget.h"
 #include <utility>
 #include <algorithm>
 #include <unordered_set>
@@ -39,9 +40,9 @@ namespace rei::editor
     EditorActionReplayResult EntityOrderAction::Apply(const bool undo)
     {
         if (_changes.empty()) return EditorActionReplayResult::Failed;
-        for (const auto& change : _changes)
+        for (auto& change : _changes)
         {
-            if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
+            if (!ResolveEditorActionTarget(change.Target)) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _changes)
         {

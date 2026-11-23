@@ -47,7 +47,7 @@ public sealed class SceneSyncServiceTests
     }
 
     private readonly Source _source = new();
-    private readonly TestEntitySyncService _entities = new();
+    private readonly TestEntitySyncService _entities = new() { OnUpdate = _ => { } };
     private readonly TestSceneManagementService _scenes = new();
     private readonly TestEntityApi _api = new();
     private readonly TestLogger<SceneSyncService> _logger = new();
@@ -77,7 +77,7 @@ public sealed class SceneSyncServiceTests
     }
 
     [AvaloniaFact]
-    public void SnapshotCreatesWholeHierarchyBeforeApplyingSelectionWithoutQueriesOrEcho()
+    public void SnapshotCreatesWholeHierarchyBeforeApplyingSelectionWithoutEcho()
     {
         _scene.AddEntity(new GameEntity(9, "obsolete"));
         using var service = Create();

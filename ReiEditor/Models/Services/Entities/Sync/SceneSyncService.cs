@@ -87,9 +87,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
                     scene = _scenes.SynchronizeRuntimeScene(packet.SceneAssetId, packet.SceneName ?? packet.SceneAssetId);
                 }
                 if (scene == null) continue;
-                Apply(scene, packet);
-                if (!ReferenceEquals(scene, previousScene))
-                    foreach (var entity in scene.Entities) _entities.UpdateEntityState(entity);
+                Apply(scene, packet, refreshComponents: !ReferenceEquals(scene, previousScene));
             }
             catch (Exception error) { _logger.LogException(error); }
         }
@@ -102,7 +100,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
         Dispatcher.UIThread.Post(DrainQueue);
     }
 
-    private void Apply(Scene scene, SceneSyncPacket packet)
+    private void Apply(Scene scene, SceneSyncPacket packet, bool refreshComponents)
     {
         var removedIds = packet.IsSnapshot
             ? scene.Entities.Select(entity => entity.Id).Except(packet.Entities.Select(entity => entity.Id)).ToHashSet()
@@ -111,6 +109,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
         foreach (var state in packet.Entities)
         {
             var entity = scene.GetById(state.Id);
+            var syncComponents = refreshComponents || entity == null;
             if (entity == null)
             {
                 entity = new GameEntity(state.Id, state.Name);
@@ -121,6 +120,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             hierarchyChanged |= entity.Transform.Parent != state.ParentId || entity.Transform.Order != state.Order;
             entity.Transform.SetParent(state.ParentId);
             entity.Transform.SetOrder(state.Order);
+            if (syncComponents) _entities.UpdateEntityState(entity);
         }
 
         // Scene.DeleteEntity removes a subtree. Detach children that survived in the engine first.

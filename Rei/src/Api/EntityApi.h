@@ -11,6 +11,7 @@
 #include "Modules/Editor/Actions/EntityRotateAction.h"
 #include "Modules/Editor/Actions/EntityOrderAction.h"
 #include "Modules/Editor/Actions/EntityReparentAction.h"
+#include "Modules/Editor/Actions/EntitySubtreeAction.h"
 #include "Common/Transform/TransformHierarchyUtility.h"
 #include "Common/Transform/RectTransformUtility.h"
 #include "rei_behaviours/ui/RectTransform.h"
@@ -284,6 +285,10 @@ REI_EXTERN_API inline void InstantiateEntity(const char* json, char* outputBuffe
 
         nlohmann::json response;
         response["EntityId"] = GET(clone, EntityInfo).Id;
+        if (data.value("RecordHistory", false) && rei::GetEngine().IsEditorMode())
+        {
+            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<rei::editor::EntitySubtreeAction>(clone));
+        }
         strncpy_s(outputBuffer, bufferSize, response.dump().c_str(), _TRUNCATE);
     });
 

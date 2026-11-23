@@ -47,7 +47,7 @@ internal sealed class TestEntityManagementService : IEntityManagementService
         (OnRename ?? throw new NotSupportedException())(e, name);
     }
 
-    public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true)
+    public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false)
     {
         InstantiateCalls.Add((sourceEntity, requestedName, includeChildren));
         return (OnInstantiate ?? throw new NotSupportedException())(sourceEntity, requestedName, includeChildren);

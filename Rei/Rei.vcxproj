@@ -646,11 +646,13 @@
     <ClInclude Include="src\Modules\Components\EntityInfo.h" />
     <ClInclude Include="src\Modules\Editor\Actions\IEditorAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EditorActionStore.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EditorActionTarget.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityMoveAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\RectTransformChangeAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityScaleAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityOrderAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityReparentAction.h" />
+    <ClInclude Include="src\Modules\Editor\Actions\EntitySubtreeAction.h" />
     <ClInclude Include="src\Modules\Editor\Actions\EntityRotateAction.h" />
     <ClInclude Include="src\Modules\Editor\EditorPointerInteractionState.h" />
     <ClInclude Include="src\Modules\Editor\Components\EditorSelectionCollider.h" />
@@ -863,6 +865,7 @@
     <ClCompile Include="src\Modules\Editor\Actions\EntityScaleAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityOrderAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityReparentAction.cpp" />
+    <ClCompile Include="src\Modules\Editor\Actions\EntitySubtreeAction.cpp" />
     <ClCompile Include="src\Modules\Editor\Actions\EntityRotateAction.cpp" />
     <ClCompile Include="src\Modules\Editor\EditorPointerInteractionState.cpp" />
     <ClCompile Include="src\Modules\Editor\Systems\FlyCameraSystem.cpp" />

@@ -24,7 +24,7 @@ public class SelectedEntityDuplicateCommand : ISelectedEntityDuplicateCommand
         foreach (var entity in target.Entities)
         {
             _logger.Log($"Duplicating entity {entity.Id}:{entity.Name}");
-            var duplicatedEntityId = _entityManagementService.InstantiateEntity(entity);
+            var duplicatedEntityId = _entityManagementService.InstantiateEntity(entity, recordHistory: target.Entities.Count == 1);
             if (duplicatedEntityId.HasValue)
             {
                 duplicatedEntityIds.Add(duplicatedEntityId.Value);

@@ -16,6 +16,32 @@
 
 namespace rei
 {
+    namespace
+    {
+        // Setters wrap object fields; collection elements keep their own shape.
+        nlohmann::json WrapBehaviourProperties(const nlohmann::json& value)
+        {
+            if (value.is_array())
+            {
+                auto items = nlohmann::json::array();
+                for (const auto& item : value)
+                {
+                    items.push_back(WrapBehaviourProperties(item));
+                }
+                return items;
+            }
+            if (!value.is_object()) return value;
+
+            auto object = nlohmann::json::object();
+            for (const auto& item : value.items())
+            {
+                object[item.key()] = item.key() == "REI_TYPE" ? item.value() :
+                    nlohmann::json{{"Value", WrapBehaviourProperties(item.value())}};
+            }
+            return object;
+        }
+    }
+
     EntityManager::EntityManager(const std::shared_ptr<ecs::World>& world)
         : _ecs(world->GetRegistry()),
           _entityInfoFilter(world->GetFiltersRegistry()->Get<EntityInfo>())
@@ -51,12 +77,13 @@ namespace rei
         return e;
     }
 
-    void EntityManager::Create(const SceneEntity& sceneEntity) const
+    ecs::Entity EntityManager::Create(const SceneEntity& sceneEntity) const
     {
         ECS_WORLD(GetInternalWorld())
 
         const auto entity = NEW_ENTITY();
         GET(entity, EntityInfo) = {.Id = sceneEntity.GetId(), .Name = sceneEntity.GetName()};
+        _lastAllocatedSceneEntityId = max(_lastAllocatedSceneEntityId, sceneEntity.GetId());
         for (const auto& behaviourData : sceneEntity.GetBehaviours())
         {
             const i32 behaviourId = behaviourData.at("Id");
@@ -71,12 +98,24 @@ namespace rei
             }
         }
 
-        if (!HAS(entity, BehaviourCollection)) return;
+        if (!HAS(entity, BehaviourCollection)) return entity;
         const auto behavioursToInit = GET(entity, BehaviourCollection).Behaviours;
         for (const auto behaviourId : behavioursToInit)
         {
             InitBehaviour(entity, GetBehaviour(entity, behaviourId));
         }
+        return entity;
+    }
+
+    SceneEntity EntityManager::CaptureSceneEntity(const ecs::Entity entity) const
+    {
+        const auto& info = GET(entity, EntityInfo);
+        auto behaviours = nlohmann::json::array();
+        for (const auto id : GET(entity, BehaviourCollection).Behaviours)
+        {
+            behaviours.push_back({{"Id", id}, {"SerializedData", WrapBehaviourProperties(_behaviourRegistry.GetBehaviourData(entity, id))}});
+        }
+        return SceneEntity({{"Id", info.Id}, {"Name", info.Name}, {"Behaviours", std::move(behaviours)}});
     }
 
     Behaviour& EntityManager::GetBehaviour(const ecs::Entity e, const i32 behaviourId) const
@@ -202,6 +241,7 @@ namespace rei
             Destroy(entity);
         }
         world->Refresh();
+        _lastAllocatedSceneEntityId = 0;
     }
 
     void EntityManager::ResolveTransformParents() const
@@ -244,29 +284,6 @@ namespace rei
             REI_THROW("Cannot instantiate from NULL entity, source={}, requestedName={}", std::string(source), requestedName)
         }
 
-        // Setters wrap object fields; collection elements keep their own shape.
-        auto wrapObjectFieldsForSet = [](const nlohmann::json& value, auto&& self) -> nlohmann::json
-        {
-            if (value.is_array())
-            {
-                auto items = nlohmann::json::array();
-                for (const auto& item : value)
-                {
-                    items.push_back(self(item, self));
-                }
-                return items;
-            }
-            if (!value.is_object()) return value;
-
-            auto object = nlohmann::json::object();
-            for (const auto& item : value.items())
-            {
-                object[item.key()] = item.key() == "REI_TYPE" ? item.value() :
-                    nlohmann::json{{"Value", self(item.value(), self)}};
-            }
-            return object;
-        };
-
         // recursively creates entities and required children
         auto instantiateRecursive = [&](auto&& self, const ecs::Entity src, const std::string& nameOverride,
                                         const ecs::Entity parent, const i32 order) -> ecs::Entity
@@ -299,7 +316,7 @@ namespace rei
                 if (behaviourId == transformBehaviourId) continue;
 
                 const auto behaviourData = _behaviourRegistry.GetBehaviourData(src, behaviourId);
-                const auto behaviourSetData = wrapObjectFieldsForSet(behaviourData, wrapObjectFieldsForSet);
+                const auto behaviourSetData = WrapBehaviourProperties(behaviourData);
                 AddBehaviour(clone, behaviourId, behaviourSetData, true);
             }
 
@@ -344,14 +361,14 @@ namespace rei
     {
         GetInternalWorld()->RefreshAll(); // force refresh filters in case we are creating multiple entities in one frame
         
-        i32 maxId = 0; // Serialized references reserve zero for null.
+        i32 maxId = _lastAllocatedSceneEntityId; // Serialized references reserve zero for null.
         FOR(e, _entityInfoFilter)
         {
             const i32 id = GET(e, EntityInfo).Id;
             maxId = max(id, maxId);
         }
 
-        return maxId + 1;
+        return _lastAllocatedSceneEntityId = maxId + 1;
     }
 
     bool EntityManager::HasBehaviour(const ecs::Entity e, const i32 behaviourId) const

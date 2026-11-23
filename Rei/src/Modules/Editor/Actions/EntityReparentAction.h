@@ -11,12 +11,14 @@ namespace rei::editor
         struct State
         {
             ecs::Entity Parent;
+            i32 ParentId = 0;
             math::Vector3 Position;
             math::Vector3 Scale;
             glm::quat Rotation;
             std::optional<RectTransformChangeAction::State> Rect;
 
             REI_API explicit State(const Transform& transform);
+            ecs::Entity ResolveParent() const;
         };
 
         struct Change
