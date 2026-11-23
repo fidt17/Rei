@@ -164,6 +164,47 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
             (EntityId(entity), entity.GetProperty("parentId").GetInt32(), entity.GetProperty("order").GetInt32(), entity.GetProperty("name").GetString());
     }
 
+    [EngineFact]
+    public async Task RenameThenDeleteCanUndoBothOnTheRestoredEntity()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        await PrepareAsync(engine, includeChild: true);
+        await engine.StartAsync();
+        var original = (await Read(engine)).GetProperty("Name").GetString();
+        const string renamed = "Renamed before Delete";
+        await engine.CallAsync("rei_editor_rename_entity", new() { ["entityId"] = 2, ["newName"] = renamed });
+        await AssertNameAsync(renamed);
+
+        await engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = new[] { 2 } });
+        await engine.CallAsync("rei_editor_send_input", new()
+        {
+            ["events"] = new[] { new { type = "key_down", code = 261 }, new { type = "key_up", code = 261 } }
+        });
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Select(EntityId).SequenceEqual(new[] { 1 }));
+        Assert.Equal(JsonValueKind.Null, (await Read(engine)).GetProperty("Name").ValueKind);
+
+        await Chord(engine, 90);
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Any(entity => entity.GetProperty("parentId").GetInt32() == 2));
+        await AssertNameAsync(renamed);
+        await engine.WaitUntilAsync(() => CanUndoAsync(engine));
+        await Chord(engine, 90);
+        await AssertNameAsync(original);
+
+        await Chord(engine, 89);
+        await AssertNameAsync(renamed);
+        await Chord(engine, 89);
+        await engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Select(EntityId).SequenceEqual(new[] { 1 }));
+        Assert.Equal(JsonValueKind.Null, (await Read(engine)).GetProperty("Name").ValueKind);
+
+        async Task AssertNameAsync(string? expected)
+        {
+            await engine.WaitUntilAsync(async () =>
+                (await engine.CallAsync("rei_editor_get_entity", new() { ["entityId"] = 2 })).GetProperty("name").GetString() == expected);
+            Assert.Equal(expected, (await Read(engine)).GetProperty("Name").GetString());
+        }
+    }
+
     private static async Task<JsonElement[]> ListEntitiesAsync(EngineIntegrationHarness engine) =>
         (await engine.CallAsync("rei_editor_list_entities")).GetProperty("entities").EnumerateArray().ToArray();
 
@@ -282,6 +323,7 @@ public:
             ECS_WORLD(rei::GetInternalWorld());
             const auto target = rei::GetEntityManager().GetBySceneId(entityId);
             nlohmann::json position = nullptr;
+            nlohmann::json name = nullptr;
             i32 parentId = 0;
             i32 order = 0;
             if (!IS_DEAD(target))
@@ -290,6 +332,7 @@ public:
                 const auto p = transform.GetLocalPosition();
                 position = {p.x, p.y, p.z};
                 order = transform.GetChildOrder();
+                name = GET(target, EntityInfo).Name;
                 const auto parent = transform.GetParent();
                 if (!IS_DEAD(parent)) parentId = GET(parent, EntityInfo).Id;
             }
@@ -317,7 +360,7 @@ public:
                 }
             }
             const nlohmann::json state = {{"Mouse", {rei::Input::GetMouseX(), rei::Input::GetMouseY()}}, {"ScrollTotal", _scrollTotal},
-                {"Width", rei::Input::GetMouseState().Width}, {"Height", rei::Input::GetMouseState().Height}, {"Step", step}, {"Position", position}, {"Parent", parentId}, {"Order", order}, {"Hit", hit},
+                {"Width", rei::Input::GetMouseState().Width}, {"Height", rei::Input::GetMouseState().Height}, {"Step", step}, {"Position", position}, {"Name", name}, {"Parent", parentId}, {"Order", order}, {"Hit", hit},
                 {"KeyDown", rei::Input::IsKeyDown(GLFW_KEY_W)}, {"ButtonDown", rei::Input::IsMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)}};
             std::ofstream output(R"(__STATE__)");
             output << state.dump();

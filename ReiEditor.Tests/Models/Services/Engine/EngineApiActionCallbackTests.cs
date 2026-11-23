@@ -173,11 +173,14 @@ public sealed class EngineApiActionCallbackTests
     [NativeCallbackFact]
     public Task InspectorNumberEditSupportsUndoAndRedoAfterPlayStop() => VerifyInspectorComponentHistoryAsync(ComponentHistory.PlayStop);
 
+    [NativeCallbackFact]
+    public Task InspectorComponentAndPropertyHistoryFollowRestoredEntity() => VerifyInspectorComponentHistoryAsync(ComponentHistory.DeleteEntityAfterEdit);
+
     private enum ComponentHistory
     {
         AddThenEdit, Delete, AddEditDelete, AddWithDependency, AddWithMissingDependency,
         BlockSharedDependencyDeletion, DeleteAfterDependents, SaveAndReopen, SaveAfterUndo, UndoAfterSceneSwitch, RedoAfterSceneSwitch,
-        EditAfterSceneSwitch, PlayStop
+        EditAfterSceneSwitch, PlayStop, DeleteEntityAfterEdit
     }
 
     private static Task VerifyInspectorComponentHistoryAsync(ComponentHistory scenario)
@@ -325,6 +328,12 @@ public sealed class EngineApiActionCallbackTests
                     AssertComponentNumber(97);
                     Assert.True(commands.CanUndo);
 
+                    if (scenario == ComponentHistory.DeleteEntityAfterEdit)
+                    {
+                        await VerifyRestoredEntityHistoryAsync();
+                        return;
+                    }
+
                     if (scenario is ComponentHistory.UndoAfterSceneSwitch or ComponentHistory.EditAfterSceneSwitch)
                     {
                         if (scenario == ComponentHistory.UndoAfterSceneSwitch)
@@ -390,6 +399,46 @@ public sealed class EngineApiActionCallbackTests
                         await AssertReopenedComponentNumberAsync(null);
                     }
                     else await AssertOldHistoryDoesNotTouchNextSceneAsync(redo: true);
+                }
+
+                async Task VerifyRestoredEntityHistoryAsync()
+                {
+                    var scene = scenes.Scene.Value!;
+                    scene.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
+                    using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands,
+                        new TestLogger<NativeEditorHistoryRecorder>());
+                    var source = new EngineSceneSyncEventSource(api, new TestLogger<EngineSceneSyncEventSource>());
+                    var sceneLogger = new TestLogger<SceneSyncService>();
+                    using var sceneSync = new SceneSyncService(source, scenes,
+                        new EngineSelectionSyncService(new SelectionService(new TestEntityApi())), sceneLogger, sync);
+
+                    EditNumber(42);
+                    AssertComponentNumber(42);
+                    source.Connect();
+                    try
+                    {
+                        management.DestroyEntity(entity, recordHistory: true);
+                        await WaitForHistoryStateAsync(() => scene.GetById(id) == null && entityApi.GetEntityData(id) == null && commands.CanUndo);
+
+                        await commands.UndoAsync();
+                        await WaitForHistoryStateAsync(() => ReferenceEquals(scene.GetById(id), entity));
+                        AssertComponentNumber(42);
+                        await commands.UndoAsync();
+                        AssertComponentNumber(97);
+                        await commands.UndoAsync();
+                        AssertComponentNumber(null);
+                        Assert.False(commands.CanUndo);
+
+                        await commands.RedoAsync();
+                        AssertComponentNumber(97);
+                        await commands.RedoAsync();
+                        AssertComponentNumber(42);
+                        await commands.RedoAsync();
+                        await WaitForHistoryStateAsync(() => scene.GetById(id) == null && entityApi.GetEntityData(id) == null);
+                        Assert.False(commands.CanRedo);
+                        Assert.Empty(sceneLogger.Entries);
+                    }
+                    finally { source.Disconnect(); }
                 }
 
                 async Task VerifyIntroducedDependencyAsync()

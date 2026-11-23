@@ -75,7 +75,7 @@ REI_EXTERN_API inline i32 LoadEditorScene(const char* requestJson)
             rei::GetSceneManager().UnloadCurrentScene();
             LOG_ERROR("Failed to open Editor scene. Unknown exception")
         }
-        rei::GetSceneSyncRelay().RequestSnapshot();
+        rei::GetSceneSyncRelay().SceneChanged();
         completion->set_value(loaded);
     });
     while (result.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)

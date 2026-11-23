@@ -8,6 +8,11 @@
 
 namespace rei::api
 {
+    void SceneSyncRelay::RecordHistoryRemoval(const i32 sceneId)
+    {
+        if (_callback != nullptr) _historyRemoved.push_back(sceneId);
+    }
+
     void SceneSyncRelay::Capture(const std::shared_ptr<ecs::World>& world)
     {
         if (_callback == nullptr) return;
@@ -33,7 +38,11 @@ namespace rei::api
             if (HAS(entity, editor::SelectedTag)) selected.push_back(info.Id);
         }
         std::sort(selected.begin(), selected.end());
-        if (!_sendSnapshot && entities == _entities && selected == _selected) return;
+        std::vector<i32> historyRemoved;
+        for (const auto id : _historyRemoved)
+            if (!entities.contains(id)) historyRemoved.push_back(id);
+        _historyRemoved.clear();
+        if (!_sendSnapshot && historyRemoved.empty() && entities == _entities && selected == _selected) return;
 
         nlohmann::json changed = nlohmann::json::array();
         for (const auto& [id, state] : entities)
@@ -53,7 +62,7 @@ namespace rei::api
         const nlohmann::json packet = {
             {"SceneAssetId", sceneAssetId}, {"SceneName", GetSceneManager().GetActiveSceneName()},
             {"IsSnapshot", _sendSnapshot}, {"Entities", changed},
-            {"RemovedEntityIds", removed}, {"SelectedEntityIds", selected}
+            {"RemovedEntityIds", removed}, {"HistoryRemovedEntityIds", historyRemoved}, {"SelectedEntityIds", selected}
         };
         _sceneAssetId = sceneAssetId;
         _entities = std::move(entities);

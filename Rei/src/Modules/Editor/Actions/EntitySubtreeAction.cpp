@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "EntitySubtreeAction.h"
+#include "Api/SceneSyncRelay.h"
 #include "Common/Transform/TransformHierarchyUtility.h"
 #include "Modules/EntityManagement/EntityManager.h"
 #include "rei_behaviours/transformation/Transform.h"
@@ -45,6 +46,7 @@ namespace rei::editor
         entities.Destroy(root);
         GetInternalWorld()->Refresh();
         transform_utility::NormalizeSiblingOrders(parent);
+        for (const auto& state : _entities) GetSceneSyncRelay().RecordHistoryRemoval(state.GetId());
         return EditorActionReplayResult::Applied;
     }
 

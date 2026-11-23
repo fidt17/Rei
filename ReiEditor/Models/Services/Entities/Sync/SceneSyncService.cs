@@ -15,6 +15,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     private readonly object _gate = new();
     private readonly Queue<SceneSyncPacket> _packets = new();
+    private readonly Dictionary<int, GameEntity> _removedForHistory = new();
     private readonly IEngineSceneSyncEventSource _source;
     private readonly ISceneManagementService _scenes;
     private readonly IEngineSelectionSyncService _selection;
@@ -39,7 +40,8 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     public void Dispose()
     {
-        lock (_gate) { _disposed = true; _packets.Clear(); }
+        lock (_gate) _disposed = true;
+        ClearQueue();
         _source.Received -= Receive;
         _source.ConnectionReset -= ClearQueue;
         _scenes.CurrentScene.Unsubscribe(HandleSceneChanged);
@@ -59,7 +61,11 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
 
     private void ClearQueue()
     {
-        lock (_gate) _packets.Clear();
+        lock (_gate)
+        {
+            _packets.Clear();
+            _removedForHistory.Clear();
+        }
     }
 
     private void HandleSceneChanged(Scene? scene)
@@ -105,6 +111,7 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
         var removedIds = packet.IsSnapshot
             ? scene.Entities.Select(entity => entity.Id).Except(packet.Entities.Select(entity => entity.Id)).ToHashSet()
             : packet.RemovedEntityIds.ToHashSet();
+        removedIds.UnionWith(packet.HistoryRemovedEntityIds);
         var hierarchyChanged = false;
         foreach (var state in packet.Entities)
         {
@@ -112,7 +119,8 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             var syncComponents = refreshComponents || entity == null;
             if (entity == null)
             {
-                entity = new GameEntity(state.Id, state.Name);
+                lock (_gate) _removedForHistory.Remove(state.Id, out entity);
+                entity ??= new GameEntity(state.Id, state.Name);
                 scene.AddEntity(entity);
                 hierarchyChanged = true;
             }
@@ -121,6 +129,13 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
             entity.Transform.SetParent(state.ParentId);
             entity.Transform.SetOrder(state.Order);
             if (syncComponents) _entities.UpdateEntityState(entity);
+        }
+
+        // Keep the models referenced by earlier history entries until their native entities return.
+        foreach (var id in packet.HistoryRemovedEntityIds)
+        {
+            if (scene.GetById(id) is { } entity)
+                lock (_gate) _removedForHistory[id] = entity;
         }
 
         // Scene.DeleteEntity removes a subtree. Detach children that survived in the engine first.
