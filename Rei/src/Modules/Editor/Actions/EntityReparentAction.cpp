@@ -35,7 +35,7 @@ namespace rei::editor
             if (change.Target.IsNull()) return EditorActionReplayResult::TargetMissing;
             const auto& state = undo ? change.Before : change.After;
             if (state.Rect && !HAS(change.Target.Get().GetEntity(), ui::RectTransform)) return EditorActionReplayResult::Failed;
-            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return EditorActionReplayResult::Failed;
+            if (state.Parent != ecs::NULL_ENTITY && (IS_DEAD(state.Parent) || !HAS(state.Parent, Transform))) return EditorActionReplayResult::TargetMissing;
         }
         for (const auto& change : _orders)
         {

@@ -2226,6 +2226,96 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
+    public Task UndoSkipsReparentAfterDeletingFormerParent()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            Assert.Equal("1", Environment.GetEnvironmentVariable("REI_NATIVE_TEST_CHILD"));
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            using var commands = new EditorCommandService();
+            using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), commands, new TestLogger<NativeEditorHistoryRecorder>());
+            var recorded = new List<ulong>();
+            api.ActionRecorded += recorded.Add;
+            var source = new EngineSceneSyncEventSource(api, new TestLogger<EngineSceneSyncEventSource>());
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                var formerParent = CreateEntity("Former parent");
+                var destination = CreateEntity("Destination");
+                var child = CreateEntity("Before");
+                var scenes = new TestSceneManagementService(formerParent, destination, child);
+                var scene = scenes.Scene.Value!;
+                scene.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
+                var runner = new TestEngineRunner { ActiveMode = EngineRunMode.EditorMode };
+                runner.Active.Value = runner.EditorActive.Value = true;
+                var registry = new TestBehaviourRegistry();
+                var entitySync = new TestEntitySyncService { OnUpdate = entity => entity.SetName(entities.GetEntityData(entity.Id)!.Name) };
+                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, null!, entities,
+                    registry, runner, entitySync, new RectTransformLayoutService(registry, scenes, null!));
+                using var sync = new SceneSyncService(source, scenes, new EngineSelectionSyncService(new SelectionService(new TestEntityApi())),
+                    new TestLogger<SceneSyncService>(), entitySync);
+                using var drag = new HierarchyDragFixture(scene.Hierarchy, management);
+                source.Connect();
+
+                management.SetParent(child, formerParent, 0);
+                await WaitForHistoryStateAsync(() => child.Transform.Parent == formerParent.Id);
+                IEntityRenameCommand rename = new EntityRenameCommand(management, new TestLogger<EntityRenameCommand>(), scenes, runner);
+                await commands.ExecuteAsync(rename, new(child, "After"));
+
+                drag.ViewModel.MoveEntities([child.Id], destination.Id, 0);
+                await WaitForHistoryStateAsync(() => child.Transform.Parent == destination.Id && recorded.Count > 0);
+                Assert.Single(recorded);
+                Assert.Equal(destination.Id, NativeParent());
+
+                new SelectedEntityDeleteCommand(management, new TestLogger<SelectedEntityDeleteCommand>()).Execute(new(formerParent, [formerParent]));
+                await WaitForHistoryStateAsync(() => entities.GetEntityData(formerParent.Id) == null);
+                Assert.Null(scene.GetById(formerParent.Id));
+
+                await commands.UndoAsync();
+                Assert.Equal("Before", child.Name);
+                Assert.Equal("Before", entities.GetEntityData(child.Id)!.Name);
+                Assert.Equal(destination.Id, child.Transform.Parent);
+                Assert.Equal(destination.Id, NativeParent());
+                Assert.False(commands.CanUndo);
+                Assert.True(commands.CanRedo);
+
+                GameEntity CreateEntity(string name) => new(entities.CreateNewEntity(name)!.EntityId!.Value, name);
+                int NativeParent() => JObject.FromObject(entities.GetEntityData(child.Id)!.Behaviours
+                    .Single(component => Equals(component["REI_TYPE"], "Transform")))["_parent"]!.Value<int>();
+            }
+            finally
+            {
+                source.Disconnect();
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
+    }
+
+    private static async Task WaitForHistoryStateAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        do
+        {
+            Dispatcher.UIThread.RunJobs();
+            if (condition()) return;
+            await Task.Delay(10);
+        }
+        while (DateTime.UtcNow < deadline);
+        Assert.True(condition(), "Hierarchy or native entity state did not update.");
+    }
+
+    [NativeCallbackFact]
     public Task UndoSkipsDeletedGizmoTargetAndReplaysRename()
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
@@ -2274,9 +2364,7 @@ public sealed class EngineApiActionCallbackTests
 
                 new SelectedEntityDeleteCommand(management, new TestLogger<SelectedEntityDeleteCommand>()).Execute(new(target, [target]));
                 Assert.Null(scenes.Scene.Value!.GetById(target.Id));
-                var deadline = DateTime.UtcNow.AddSeconds(5);
-                while (entities.GetEntityData(target.Id) != null && DateTime.UtcNow < deadline) await Task.Delay(10);
-                Assert.Null(entities.GetEntityData(target.Id));
+                await WaitForHistoryStateAsync(() => entities.GetEntityData(target.Id) == null);
 
                 await commands.UndoAsync();
                 AssertName("Before");

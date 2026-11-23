@@ -746,7 +746,7 @@ TEST_CASE("Editor action store rejects missing reparent targets before making ch
         EntityReparentAction missingParent(target, before, after, {});
         fixture.Registry->DestroyEntity(parent);
         fixture.World->Refresh();
-        CHECK(missingParent.Undo() != EditorActionReplayResult::Applied);
+        CHECK(missingParent.Undo() == EditorActionReplayResult::TargetMissing);
         CHECK(target.Get().GetParent() == ecs::NULL_ENTITY);
         CheckVector(target.Get().GetLocalPosition(), after.Position);
         EntityReparentAction missingTarget({}, before, after, {});
