@@ -24,4 +24,9 @@ namespace rei::editor
         const auto entry = _actions.find(actionId);
         return entry == _actions.end() ? EditorActionReplayResult::Failed : entry->second->Redo();
     }
+
+    void EditorActionStore::Clear()
+    {
+        _actions.clear();
+    }
 }

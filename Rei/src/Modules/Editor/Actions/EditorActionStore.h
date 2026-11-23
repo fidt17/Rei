@@ -15,6 +15,7 @@ namespace rei::editor
         REI_API u64 RecordApplied(std::unique_ptr<IEditorAction> action);
         REI_API EditorActionReplayResult Undo(u64 actionId);
         REI_API EditorActionReplayResult Redo(u64 actionId);
+        REI_API void Clear();
 
     private:
         u64 _nextId = 1;

@@ -1673,6 +1673,40 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
+    public void SceneUnloadReleasesNativeActionsWithoutReusingIds()
+    {
+        var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+        Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+        var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+        using var session = factory.CreateIsolatedSession(path!);
+        var api = session.EngineApi;
+        CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+        try
+        {
+            api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+            api.MarkEngineStarted();
+            var before = RecordMove();
+            Assert.NotEqual(0UL, before);
+
+            api.LoadEditorScene("""{"Scene":null}""");
+
+            Assert.Equal(EditorActionReplayResult.Failed, api.UndoEditorAction(before));
+            Assert.Equal(EditorActionReplayResult.Failed, api.RedoEditorAction(before));
+            var after = RecordMove();
+            Assert.True(after > before);
+            Assert.Equal(EditorActionReplayResult.Applied, api.UndoEditorAction(after));
+        }
+        finally
+        {
+            api.MarkEngineStopped();
+            api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+            GC.KeepAlive(createEngine);
+        }
+
+        ulong RecordMove() => api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", 0, 1);
+    }
+
+    [NativeCallbackFact]
     public Task InspectorTransformConfirmationsShareHistoryWithNativeActionAndRename()
     {
         var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);

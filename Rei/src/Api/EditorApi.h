@@ -57,6 +57,7 @@ REI_EXTERN_API inline i32 LoadEditorScene(const char* requestJson)
     auto result = completion->get_future();
     rei::GetEngine().ExecuteOnMainThread([request = std::string(requestJson), completion]
     {
+        rei::GetEngine().GetEditorActions().Clear();
         i32 loaded = 0;
         try
         {
