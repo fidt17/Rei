@@ -163,7 +163,10 @@ public class HierarchyWindowViewModel : BaseViewModel
             : null;
         if (targetParentEntityId.HasValue && targetParentNode == null) return false;
 
-        return draggedNodes.All(node => CanMoveNode(node.Node, targetParentNode));
+        if (draggedNodes.Any(node => !CanMoveNode(node.Node, targetParentNode))) return false;
+        if (draggedNodes.Count == 1 || draggedNodes.All(node => node.Node.Parent == targetParentNode)) return true;
+
+        return _entityManagementService.CanReparentEntities(draggedNodes.Select(node => node.Node.Content).ToArray(), targetParentNode?.Content);
     }
 
     public void MoveEntities(IReadOnlyList<int> draggedEntityIds, int? targetParentEntityId, int insertionIndex)

@@ -2117,9 +2117,12 @@ public sealed class EngineApiActionCallbackTests
             Assert.False(commands.CanRedo);
             Assert.Equal(2, received.Count);
 
-            // RectTransform parent changes remain outside history.
-            api.Invoke(typeof(EntityIdDelegate), "NativeProjectAddRectTransform", target.Entity.Id);
-            drag.ViewModel.MoveEntities(movedIds, oldParent == 0 ? null : oldParent, 0);
+            if (grouped) registry.Ids[EngineBehavioursConstants.RECT_TRANSFORM] = InspectorTransformFixture.RECT_TRANSFORM_ID;
+            entityApi.AddBehaviour(target.Entity.Id, InspectorTransformFixture.RECT_TRANSFORM_ID);
+            await ReadStateAsync();
+            var previousParent = oldParent == 0 ? (int?)null : oldParent;
+            Assert.Equal(!grouped, drag.ViewModel.CanDropEntities(movedIds, previousParent));
+            drag.ViewModel.MoveEntities(movedIds, previousParent, 0);
             var rectState = await ReadStateAsync();
             Assert.Equal(grouped ? newParent : oldParent, rectState[target.Entity.Id]["_parent"]!.Value<int>());
             if (grouped) CheckState(moved, rectState);
@@ -3281,6 +3284,7 @@ public sealed class EngineApiActionCallbackTests
             if (screenBefore != null) CheckFloats(expectedPixels, screenBefore);
             var secondScreenBefore = crossCanvas && grouped ? ReadScreenBounds(5) : null;
             int[] movedIds = grouped ? [ids[5], ids[0]] : [ids[0]];
+            Assert.True(drag.ViewModel.CanDropEntities(movedIds, destination.Id));
             if (selection == RectReparentSelection.Siblings && !crossCanvas)
             {
                 Assert.True(layout.TryPreserveRectForParent(target.Entity, destination, out var preserved));
@@ -3290,6 +3294,9 @@ public sealed class EngineApiActionCallbackTests
                 entities.ReparentEntities(movedIds, ids[0], 1, true, [preserved, preserved]);
                 entities.ReparentEntities([ids[0], canvasId], destination.Id, 1, true, [preserved, preserved]);
                 entities.ReparentEntities(movedIds, destination.Id, 1, true);
+                Assert.False(drag.ViewModel.CanDropEntities(movedIds, null));
+                drag.ViewModel.MoveEntities(movedIds, null, 1);
+                entities.ReparentEntities(movedIds, 0, 1, true, [preserved, preserved]);
                 Check(before, await ReadAsync());
                 Assert.Equal(initialCount, received.Count);
             }
@@ -3391,16 +3398,13 @@ public sealed class EngineApiActionCallbackTests
                 var result = new GameEntity(id, name);
                 result.AddBehaviour(SceneComponentBuilder.RectTransform(InspectorTransformFixture.RECT_TRANSFORM_ID,
                     new(new(0, 0), new(0, 0), new(0, 0), new(0, 0), new(640 / scale, 480 / scale))));
-                if (crossCanvas)
-                {
-                    var data = JObject.FromObject(entities.GetEntityData(id)!.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Canvas"));
-                    var settings = new BehaviourComponent(7302);
-                    settings.AddProperty(SceneComponentBuilder.Vector(EngineBehavioursConstants.CANVAS_REFERENCE_RESOLUTION,
-                        ("x", data["_referenceResolution"]!["x"]!.Value<float>()), ("y", data["_referenceResolution"]!["y"]!.Value<float>())));
-                    settings.AddProperty(SerializedPropertyBuilder.Integer(EngineBehavioursConstants.CANVAS_SCALE_MODE, data["_scaleMode"]!.Value<int>()));
-                    settings.AddProperty(new(EngineBehavioursConstants.CANVAS_MATCH_WIDTH_OR_HEIGHT, SerializedTypeEnum.Float, data["_matchWidthOrHeight"]!.Value<float>(), "float", null));
-                    result.AddBehaviour(settings);
-                }
+                var data = JObject.FromObject(entities.GetEntityData(id)!.Behaviours.Single(item => item["REI_TYPE"].ToString() == "Canvas"));
+                var settings = new BehaviourComponent(7302);
+                settings.AddProperty(SceneComponentBuilder.Vector(EngineBehavioursConstants.CANVAS_REFERENCE_RESOLUTION,
+                    ("x", data["_referenceResolution"]!["x"]!.Value<float>()), ("y", data["_referenceResolution"]!["y"]!.Value<float>())));
+                settings.AddProperty(SerializedPropertyBuilder.Integer(EngineBehavioursConstants.CANVAS_SCALE_MODE, data["_scaleMode"]!.Value<int>()));
+                settings.AddProperty(new(EngineBehavioursConstants.CANVAS_MATCH_WIDTH_OR_HEIGHT, SerializedTypeEnum.Float, data["_matchWidthOrHeight"]!.Value<float>(), "float", null));
+                result.AddBehaviour(settings);
                 return result;
             }
 

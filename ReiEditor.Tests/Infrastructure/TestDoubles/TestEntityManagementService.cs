@@ -58,6 +58,8 @@ internal sealed class TestEntityManagementService : IEntityManagementService
         ReorderCalls.Add((entities.ToArray(), insertionIndex));
         (OnReorderEntities ?? throw new NotSupportedException())(entities, insertionIndex);
     }
+    public bool CanReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent) => true;
+
     public void ReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex)
     {
         ReparentCalls.Add((entities.ToArray(), parent, insertionIndex));

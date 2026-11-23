@@ -7,6 +7,7 @@ namespace ReiEditor.Models.Services.RectTransform;
 public interface IRectTransformLayoutService
 {
     RectTransformVector2 GetParentSize(GameEntity entity);
+    bool HasCanvas(GameEntity entity);
     bool TryGetRectTransform(GameEntity entity, out BehaviourComponent rectTransform);
     bool TryReadLayout(BehaviourComponent rectTransform, out RectTransformLayoutData data);
     bool TryPreserveRectForPivot(GameEntity entity, BehaviourComponent rectTransform, float pivotX, float pivotY, out RectTransformLayoutData preservedLayout);

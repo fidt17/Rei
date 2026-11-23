@@ -120,6 +120,8 @@ public sealed class EntityManagementAdvancedTests
         public GameEntity? PreserveParent { get; private set; }
         public RectTransformLayoutData? AppliedLayout { get; private set; }
 
+        public bool HasCanvas(GameEntity entity) => PreserveResult;
+
         public bool TryPreserveRectForParent(GameEntity entity, GameEntity? newParent, out RectTransformLayoutData preservedLayout)
         {
             Calls.Add("preserve");
@@ -599,8 +601,7 @@ public sealed class EntityManagementAdvancedTests
         if (rectTransform)
         {
             Assert.Empty(batches);
-            Assert.Equal(new[] { (1, 10, 2), (3, 10, 3) }, singles);
-            Assert.All(api.RecordHierarchyChangeCalls, record => Assert.False(record));
+            Assert.Empty(singles);
             return;
         }
         var batch = Assert.Single(batches);
@@ -641,24 +642,6 @@ public sealed class EntityManagementAdvancedTests
         Assert.Equal(new[] { layout, layout }, api.ReparentLayouts);
         Assert.Equal(new[] { "reparent" }, api.Calls);
         Assert.Equal(2, rect.Calls.Count(call => call == "apply-editor"));
-    }
-
-    [Fact]
-    public void RectFallbackKeepsRemovalOffsetForEntityAlreadyAtDestination()
-    {
-        var calls = new List<(int Id, int Parent, int Index)>();
-        var api = new TestEntityApi { OnSetParent = (id, parent, index) => calls.Add((id, parent, index)) };
-        var rect = new TestRectTransformLayoutService { HasRectTransform = true };
-        var service = CreateService(new Scene("Scene"), true, api, rect: rect, editorActive: true);
-        var first = new GameEntity(1, "First");
-        first.Transform.SetParent(10);
-        var second = new GameEntity(3, "Second");
-        second.Transform.SetOrder(1);
-
-        service.ReparentEntities([first, second], null, 2);
-
-        Assert.Equal(new[] { (1, 0, 2), (3, 0, 2) }, calls);
-        Assert.All(api.RecordHierarchyChangeCalls, record => Assert.False(record));
     }
 
     private static EntityManagementService CreateService(

@@ -58,6 +58,8 @@ public sealed partial class RectTransformPropertyViewModelTests
             return PreservedPivot.HasValue;
         }
 
+        public bool HasCanvas(GameEntity entity) => throw new NotSupportedException();
+
         public bool TryPreserveRectForParent(GameEntity entity, GameEntity? newParent, out RectTransformLayoutData preservedLayout) => throw new NotSupportedException();
         public void ApplyLayoutToEditor(BehaviourComponent rectTransform, RectTransformLayoutData layout) => throw new NotSupportedException();
 

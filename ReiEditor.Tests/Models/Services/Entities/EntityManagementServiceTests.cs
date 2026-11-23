@@ -145,6 +145,8 @@ public sealed class EntityManagementServiceTests
         public bool TryGetRectTransform(GameEntity entity, out BehaviourComponent rectTransform) { rectTransform = null!; return false; }
         public bool TryReadLayout(BehaviourComponent rectTransform, out RectTransformLayoutData data) { data = default; return false; }
         public bool TryPreserveRectForPivot(GameEntity entity, BehaviourComponent rectTransform, float pivotX, float pivotY, out RectTransformLayoutData preservedLayout) { preservedLayout = default; return false; }
+        public bool HasCanvas(GameEntity entity) => false;
+
         public bool TryPreserveRectForParent(GameEntity entity, GameEntity? newParent, out RectTransformLayoutData preservedLayout) { preservedLayout = default; return false; }
         public void ApplyLayoutToEditor(BehaviourComponent rectTransform, RectTransformLayoutData layout) => throw new NotSupportedException();
         public Dictionary<string, object?> SerializeVector2(RectTransformVector2 value) => throw new NotSupportedException();

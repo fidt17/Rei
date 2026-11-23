@@ -67,6 +67,8 @@ public sealed class BehaviourComponentDrawerViewModelTests
         public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null) => throw new NotSupportedException();
         public void RenameEntity(GameEntity e, string name) => throw new NotSupportedException();
         public void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex) => throw new NotSupportedException();
+        public bool CanReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent) => throw new NotSupportedException();
+
         public void ReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex) => throw new NotSupportedException();
         public void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false) => throw new NotSupportedException();
         public void AddBehaviour(GameEntity e, int behaviourId) => throw new NotSupportedException();

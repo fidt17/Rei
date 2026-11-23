@@ -9,6 +9,7 @@ public interface IEntityManagementService
 
     void RenameEntity(GameEntity e, string name);
     void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex);
+    bool CanReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent);
     void ReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent, int insertionIndex);
     void SetParent(GameEntity e, GameEntity? parent, int idx, bool recordHierarchyChange = false);
     

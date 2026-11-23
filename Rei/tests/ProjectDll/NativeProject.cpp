@@ -329,15 +329,6 @@ REI_EXTERN_API void NativeProjectReadEntityWorldTransform(const i32 sceneId, f32
     });
 }
 
-REI_EXTERN_API void NativeProjectAddRectTransform(const i32 sceneId)
-{
-    ActionEngine->OnEngineThread([sceneId]
-    {
-        const auto entity = rei::GetEntityManager().GetBySceneId(sceneId);
-        rei::GetInternalWorld()->GetRegistry()->Get<rei::ui::RectTransform>(entity);
-    });
-}
-
 REI_EXTERN_API void NativeProjectPrepareRectMove(const i32 kind, const i32 targetCount, i32* ids)
 {
     ActionEngine->OnEngineThread([&]

@@ -83,6 +83,8 @@ public sealed class RectTransformLayoutService : IRectTransformLayoutService
         return true;
     }
 
+    public bool HasCanvas(GameEntity entity) => TryFindCanvasSize(entity, out _);
+
     public bool TryPreserveRectForParent(GameEntity entity, GameEntity? newParent, out RectTransformLayoutData preservedLayout)
     {
         preservedLayout = default;
