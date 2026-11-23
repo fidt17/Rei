@@ -23,6 +23,7 @@ namespace rei::api
         std::map<i32, EntityState> _entities;
         std::vector<i32> _selected;
         std::vector<i32> _historyRemoved;
+        std::vector<i32> _historyDiscarded;
         std::string _sceneAssetId;
         void (*_callback)(const char*, i32) = nullptr;
         bool _sendSnapshot = true;
@@ -30,8 +31,14 @@ namespace rei::api
     public:
         void SetCallback(void (*callback)(const char*, i32)) { _callback = callback; SceneChanged(); }
         void RequestSnapshot() { _sendSnapshot = true; }
-        void SceneChanged() { _historyRemoved.clear(); RequestSnapshot(); }
+        void SceneChanged()
+        {
+            _historyRemoved.clear();
+            _historyDiscarded.clear();
+            RequestSnapshot();
+        }
         REI_API void RecordHistoryRemoval(i32 sceneId);
+        REI_API void DiscardHistoryEntity(i32 sceneId);
         void Capture(const std::shared_ptr<ecs::World>& world);
     };
 }

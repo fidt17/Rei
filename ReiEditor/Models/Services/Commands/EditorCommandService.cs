@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.EditorApp.Commands;
 
@@ -23,12 +24,14 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
         try
         {
             var result = await command.ExecuteAsync(args);
+            NativeEditorHistoryEntry[] discarded = [];
             lock (_gate)
             {
                 if (_disposed) return result;
                 var entry = (command as IUndoableEditorCommand<TArgs, TResult>)?.CreateHistoryEntry(args, result);
-                if (entry != null) AddHistoryEntry(entry);
+                if (entry != null) discarded = AddHistoryEntry(entry);
             }
+            DiscardNativeEntries(discarded);
             return result;
         }
         finally { EndOperation(); }
@@ -37,12 +40,14 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
     public void RecordApplied(IEditorHistoryEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        NativeEditorHistoryEntry[] discarded;
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_isBusy) throw new InvalidOperationException("An Editor command operation is already running.");
-            AddHistoryEntry(entry);
+            discarded = AddHistoryEntry(entry);
         }
+        DiscardNativeEntries(discarded);
     }
 
     public Task UndoAsync() => TraverseAsync(_undo, _redo, undo: true);
@@ -96,10 +101,17 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
         return null;
     }
 
-    private void AddHistoryEntry(IEditorHistoryEntry entry)
+    private NativeEditorHistoryEntry[] AddHistoryEntry(IEditorHistoryEntry entry)
     {
         _undo.Push(entry);
+        var discarded = _redo.OfType<NativeEditorHistoryEntry>().ToArray();
         _redo.Clear();
+        return discarded;
+    }
+
+    private static void DiscardNativeEntries(NativeEditorHistoryEntry[] discarded)
+    {
+        foreach (var entry in discarded) entry.Discard();
     }
 
     private void BeginOperation()

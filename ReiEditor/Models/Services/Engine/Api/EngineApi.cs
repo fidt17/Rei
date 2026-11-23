@@ -123,6 +123,13 @@ public class EngineApi : IEngineApi
         ? (EditorActionReplayResult)Invoke<int>(typeof(ReplayEditorActionDelegate), export, actionId)
         : EditorActionReplayResult.Failed;
 
+    private delegate void DiscardEditorActionDelegate(ulong actionId);
+    public void DiscardEditorAction(ulong actionId)
+    {
+        if (IsEngineRunning && HasExport("DiscardEditorAction"))
+            Invoke(typeof(DiscardEditorActionDelegate), "DiscardEditorAction", actionId);
+    }
+
     private delegate long BuildAssetDelegate(string path, string dest, long offset);
     public long BuildAsset(string assetPath, string destinationFile, long offset) => Invoke<long>(typeof(BuildAssetDelegate), "BuildAsset", assetPath, destinationFile, offset);
 

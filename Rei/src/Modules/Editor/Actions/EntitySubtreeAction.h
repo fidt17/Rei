@@ -13,6 +13,7 @@ namespace rei::editor
         REI_API EntitySubtreeAction(Kind kind, const std::vector<ecs::Entity>& roots);
         REI_API EditorActionReplayResult Undo() override;
         REI_API EditorActionReplayResult Redo() override;
+        REI_API void OnDiscarded() override;
 
     private:
         struct Subtree

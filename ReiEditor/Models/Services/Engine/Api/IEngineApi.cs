@@ -37,6 +37,7 @@ public interface IEngineApi
     bool LoadEditorScene(string requestJson);
     EditorActionReplayResult UndoEditorAction(ulong actionId);
     EditorActionReplayResult RedoEditorAction(ulong actionId);
+    void DiscardEditorAction(ulong actionId);
 	
     long BuildAsset(string assetPath, string destinationFile, long offset);
 

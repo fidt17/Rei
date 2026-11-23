@@ -116,6 +116,13 @@ namespace rei::api
 REI_EXTERN_API inline i32 UndoEditorAction(const u64 actionId) { return rei::api::ReplayEditorAction(actionId, true); }
 REI_EXTERN_API inline i32 RedoEditorAction(const u64 actionId) { return rei::api::ReplayEditorAction(actionId, false); }
 
+REI_EXTERN_API inline void DiscardEditorAction(const u64 actionId)
+{
+    auto& engine = rei::GetEngine();
+    if (!engine.IsRunning() || !engine.IsEditorMode()) return;
+    engine.ExecuteOnMainThread([actionId] { rei::GetEngine().GetEditorActions().Discard(actionId); });
+}
+
 typedef void (*EditorActionRecordedCallbackDelegate)(u64 actionId);
 REI_EXTERN_API inline void AddEditorActionRecordedCallback(const EditorActionRecordedCallbackDelegate callback)
 {

@@ -17,6 +17,15 @@ public sealed class NativeEditorHistoryEntry(ulong actionId, IEngineNativeAccess
     public Task UndoAsync() => TryReplayAsync(undo: true);
     public Task RedoAsync() => TryReplayAsync(undo: false);
 
+    internal void Discard()
+    {
+        if (IsStale) return;
+        engine.TryInvoke(api =>
+        {
+            if (!IsStale) api.DiscardEditorAction(actionId);
+        });
+    }
+
     internal Task<bool> TryReplayAsync(bool undo) => Task.Run(() =>
     {
         var result = EditorActionReplayResult.Failed;

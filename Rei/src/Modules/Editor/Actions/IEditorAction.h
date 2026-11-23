@@ -17,5 +17,6 @@ namespace rei::editor
         virtual ~IEditorAction() = default;
         virtual EditorActionReplayResult Undo() = 0;
         virtual EditorActionReplayResult Redo() = 0;
+        virtual void OnDiscarded() {}
     };
 }

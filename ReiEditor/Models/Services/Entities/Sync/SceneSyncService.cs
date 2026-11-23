@@ -132,10 +132,11 @@ public sealed class SceneSyncService : ISceneSyncService, IDisposable
         }
 
         // Keep the models referenced by earlier history entries until their native entities return.
-        foreach (var id in packet.HistoryRemovedEntityIds)
+        lock (_gate)
         {
-            if (scene.GetById(id) is { } entity)
-                lock (_gate) _removedForHistory[id] = entity;
+            foreach (var id in packet.HistoryRemovedEntityIds)
+                if (scene.GetById(id) is { } entity) _removedForHistory[id] = entity;
+            foreach (var id in packet.DiscardedHistoryEntityIds) _removedForHistory.Remove(id);
         }
 
         // Scene.DeleteEntity removes a subtree. Detach children that survived in the engine first.

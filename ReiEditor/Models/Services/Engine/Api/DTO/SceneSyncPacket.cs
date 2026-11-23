@@ -10,6 +10,7 @@ public sealed class SceneSyncPacket
     public SceneEntityState[] Entities { get; set; } = Array.Empty<SceneEntityState>();
     public int[] RemovedEntityIds { get; set; } = Array.Empty<int>();
     public int[] HistoryRemovedEntityIds { get; set; } = Array.Empty<int>();
+    public int[] DiscardedHistoryEntityIds { get; set; } = Array.Empty<int>();
     public int[] SelectedEntityIds { get; set; } = Array.Empty<int>();
 }
 

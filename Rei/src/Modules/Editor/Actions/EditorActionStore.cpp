@@ -25,6 +25,12 @@ namespace rei::editor
         return entry == _actions.end() ? EditorActionReplayResult::Failed : entry->second->Redo();
     }
 
+    void EditorActionStore::Discard(const u64 actionId)
+    {
+        auto entry = _actions.extract(actionId);
+        if (!entry.empty()) entry.mapped()->OnDiscarded();
+    }
+
     void EditorActionStore::Clear()
     {
         _actions.clear();

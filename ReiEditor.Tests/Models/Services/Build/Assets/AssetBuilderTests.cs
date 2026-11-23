@@ -61,6 +61,7 @@ public sealed class AssetBuilderTests
         public bool LoadEditorScene(string requestJson) => throw new NotSupportedException();
         public EditorActionReplayResult UndoEditorAction(ulong actionId) => throw new NotSupportedException();
         public EditorActionReplayResult RedoEditorAction(ulong actionId) => throw new NotSupportedException();
+        public void DiscardEditorAction(ulong actionId) => throw new NotSupportedException();
         public Task<IntPtr> CreateEngineWindow() => throw new NotSupportedException();
         public IntPtr GetWindowHandle(IntPtr windowPtr) => throw new NotSupportedException();
         public void ResizeWindow(IntPtr windowPtr, int width, int height) => throw new NotSupportedException();

@@ -1723,6 +1723,72 @@ public sealed class EngineApiActionCallbackTests
     }
 
     [NativeCallbackFact]
+    public Task NewEditReleasesDiscardedNativeRedoAndKeepsOlderUndo()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            using var history = new EditorCommandService();
+            var logger = new TestLogger<NativeEditorHistoryRecorder>();
+            using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), history, logger);
+            var recorded = new List<ulong>();
+            api.ActionRecorded += recorded.Add;
+            var source = new EngineSceneSyncEventSource(api, new TestLogger<EngineSceneSyncEventSource>());
+            var released = new System.Collections.Concurrent.ConcurrentQueue<int>();
+            source.Received += packet =>
+            {
+                foreach (var id in packet.DiscardedHistoryEntityIds) released.Enqueue(id);
+            };
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                source.Connect();
+                var olderMove = RecordMove();
+                var undoneEntity = entities.CreateNewEntity("Discarded copy", recordHistory: true)!.EntityId!.Value;
+                await WaitForHistoryStateAsync(() => recorded.Count == 2 && history.CanUndo);
+                Assert.Equal(olderMove, recorded[0]);
+                var discarded = recorded[1];
+
+                await history.UndoAsync();
+                Assert.Null(entities.GetEntityData(undoneEntity));
+                Assert.True(history.CanRedo);
+
+                var newerMove = RecordMove();
+                await WaitForHistoryStateAsync(() => released.Contains(undoneEntity));
+                Assert.Equal(newerMove, recorded[2]);
+                Assert.False(history.CanRedo);
+                Assert.Equal(EditorActionReplayResult.Failed, api.RedoEditorAction(discarded));
+                Assert.Null(entities.GetEntityData(undoneEntity));
+
+                await history.UndoAsync();
+                Assert.True(history.CanUndo);
+                await history.UndoAsync();
+                Assert.False(history.CanUndo);
+                Assert.True(history.CanRedo);
+                Assert.Empty(logger.Entries);
+            }
+            finally
+            {
+                source.Disconnect();
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+
+            ulong RecordMove() => api.Invoke<ulong>(typeof(RecordTransformActionDelegate), "NativeProjectRecordTransformAction", 0, 1);
+        }, CancellationToken.None);
+    }
+
+    [NativeCallbackFact]
     public void SceneUnloadReleasesNativeActionsWithoutReusingIds()
     {
         var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");

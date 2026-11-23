@@ -42,6 +42,12 @@ namespace rei::editor
         return _kind == Kind::Added ? Restore() : Remove();
     }
 
+    void EntitySubtreeAction::OnDiscarded()
+    {
+        for (const auto& subtree : _subtrees)
+            for (const auto& state : subtree.Entities) GetSceneSyncRelay().DiscardHistoryEntity(state.GetId());
+    }
+
     EditorActionReplayResult EntitySubtreeAction::Remove()
     {
         ECS_WORLD(GetInternalWorld())
