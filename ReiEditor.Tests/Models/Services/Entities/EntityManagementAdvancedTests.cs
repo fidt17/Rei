@@ -81,7 +81,9 @@ public sealed class EntityManagementAdvancedTests
             (OnSetData ?? throw UnexpectedCall())(request);
         }
 
-        public InstantiateEntityResponse? CreateNewEntity(string name) => throw UnexpectedCall();
+        public InstantiateEntityResponse? CreateNewEntity(string name, int parentId = 0, bool recordHistory = false) => throw UnexpectedCall();
+        public void DestroyEntities(IReadOnlyList<int> sceneEntityIds, bool recordHistory) => throw new NotSupportedException();
+        public IReadOnlyList<int> InstantiateEntities(IReadOnlyList<InstantiateEntityRequest> requests, bool recordHistory) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId, bool recordHistory = false) => throw UnexpectedCall();
         public void Rename(int sceneEntityId, string newName) => throw UnexpectedCall();
         public void AddBehaviour(int sceneEntityId, int behaviourId) => throw UnexpectedCall();

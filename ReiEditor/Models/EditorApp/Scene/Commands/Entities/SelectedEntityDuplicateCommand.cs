@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Logging.Loggers;
 
@@ -19,18 +18,11 @@ public class SelectedEntityDuplicateCommand : ISelectedEntityDuplicateCommand
 
     public SelectedEntityCommandResult Execute(SelectedEntityCommandTarget target)
     {
-        var duplicatedEntityIds = new List<int>();
-
         foreach (var entity in target.Entities)
-        {
             _logger.Log($"Duplicating entity {entity.Id}:{entity.Name}");
-            var duplicatedEntityId = _entityManagementService.InstantiateEntity(entity, recordHistory: target.Entities.Count == 1);
-            if (duplicatedEntityId.HasValue)
-            {
-                duplicatedEntityIds.Add(duplicatedEntityId.Value);
-            }
-        }
+        if (target.Entities.Count != 1) return new SelectedEntityCommandResult(_entityManagementService.InstantiateEntities(target.Entities));
 
-        return new SelectedEntityCommandResult(duplicatedEntityIds);
+        var id = _entityManagementService.InstantiateEntity(target.Entities[0], recordHistory: true);
+        return new SelectedEntityCommandResult(id.HasValue ? [id.Value] : []);
     }
 }

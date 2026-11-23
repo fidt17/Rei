@@ -48,7 +48,7 @@ public class EntityManagementService : IEntityManagementService
 
     }
 
-    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null)
+    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, bool recordHistory = false)
     {
         try
         {
@@ -58,11 +58,12 @@ public class EntityManagementService : IEntityManagementService
                 if (scene == null) throw new Exception("Current scene is missing");
 
                 var existingIds = scene.Entities.Select(x => x.Id).ToHashSet();
-                var response = _entityApi.CreateNewEntity(name);
+                var record = recordHistory && _engineRunner.IsEditorActive.Value;
+                var response = _entityApi.CreateNewEntity(name, record ? parent?.Id ?? 0 : 0, record);
                 var entity = response?.EntityId == null
                     ? WaitForCreatedEntity(name, existingIds)
                     : CreateSyncedEntity(scene, response.EntityId.Value);
-                if (entity != null && parent != null)
+                if (!record && entity != null && parent != null)
                 {
                     SetParent(entity, parent, GetChildInsertionIndex(parent));
                 }
@@ -289,6 +290,32 @@ public class EntityManagementService : IEntityManagementService
         return null;
     }
 
+    public IReadOnlyList<int> InstantiateEntities(IReadOnlyList<GameEntity> sources)
+    {
+        if (!_engineRunner.IsActive.Value || _sceneManagement.CurrentScene.Value is not { } scene) return Array.Empty<int>();
+        try
+        {
+            var existingIds = scene.Entities.Select(entity => entity.Id).ToHashSet();
+            var names = scene.Entities.Select(entity => entity.Name).ToHashSet();
+            var requests = new List<InstantiateEntityRequest>();
+            foreach (var source in sources)
+            {
+                var name = NamingUtils.GetUniqueName(source.Name, names);
+                names.Add(name);
+                requests.Add(new InstantiateEntityRequest { SourceEntityId = source.Id, RequestedName = name });
+            }
+
+            var ids = _entityApi.InstantiateEntities(requests, _engineRunner.IsEditorActive.Value);
+            if (ids.Count > 0) SyncInstantiatedEntities(scene, existingIds);
+            return ids;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogException(exception);
+            return Array.Empty<int>();
+        }
+    }
+
     private void SyncInstantiatedEntities(Scene scene, System.Collections.Generic.HashSet<int> existingIds)
     {
         var entities = _entityApi.GetSceneEntities();
@@ -356,6 +383,18 @@ public class EntityManagementService : IEntityManagementService
         {
             _logger.LogException(exception);
         }
+    }
+
+    public void DestroyEntities(IReadOnlyList<GameEntity> entities)
+    {
+        if (!_engineRunner.IsEditorActive.Value)
+        {
+            foreach (var entity in entities) DestroyEntity(entity);
+            return;
+        }
+
+        try { _entityApi.DestroyEntities(entities.Select(entity => entity.Id).ToArray(), recordHistory: true); }
+        catch (Exception exception) { _logger.LogException(exception); }
     }
 
     private GameEntity? CreateSyncedEntity(Scene scene, int entityId)

@@ -111,7 +111,7 @@ public sealed class EntityManagementServiceTests
         public List<(int EntityId, int BehaviourId)> DeletedBehaviours { get; } = new();
         public List<int> DestroyedIds { get; } = new();
 
-        public InstantiateEntityResponse? CreateNewEntity(string name)
+        public InstantiateEntityResponse? CreateNewEntity(string name, int parentId = 0, bool recordHistory = false)
         {
             if (CreateException != null) throw CreateException;
             return CreateResponse;
@@ -121,6 +121,8 @@ public sealed class EntityManagementServiceTests
         public void Rename(int sceneEntityId, string newName) => Renames.Add((sceneEntityId, newName));
         public void AddBehaviour(int sceneEntityId, int behaviourId) => AddedBehaviours.Add((sceneEntityId, behaviourId));
         public void DeleteBehaviour(int sceneEntityId, int behaviourId) => DeletedBehaviours.Add((sceneEntityId, behaviourId));
+        public void DestroyEntities(IReadOnlyList<int> sceneEntityIds, bool recordHistory) => throw new NotSupportedException();
+        public IReadOnlyList<int> InstantiateEntities(IReadOnlyList<InstantiateEntityRequest> requests, bool recordHistory) => throw new NotSupportedException();
         public void DestroyEntity(int sceneEntityId, bool recordHistory = false) => DestroyedIds.Add(sceneEntityId);
         public GetSceneEntitiesResponse? GetSceneEntities() => throw new InvalidOperationException("polling is forbidden in immediate-response test");
         public void SetEntityParent(int sceneEntityId, int parentSceneEntityId, int order, bool recordHierarchyChange = false, RectTransformLayoutData? rectLayout = null) => throw new NotSupportedException();

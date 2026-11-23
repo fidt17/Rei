@@ -7,6 +7,7 @@ using ReiEditor.Models.Services.Assets.Migrations;
 using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.ViewModels.Windows.Editor.Commands;
+using ReiEditor.ViewModels.Windows.Editor.Commands.Entities;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
@@ -2309,6 +2310,95 @@ public sealed class EngineApiActionCallbackTests
                         Assert.InRange(MathF.Abs(state[name]![axis]!.Value<float>() - actual[id][name]![axis]!.Value<float>()), 0f, 0.0001f);
             }
         }
+    }
+
+    [NativeCallbackFact]
+    public Task HierarchyCreateAndMoveReplayOnTheSameEntity()
+    {
+        var ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(TestAppBuilder).Assembly);
+        return ui.Dispatch(async () =>
+        {
+            var path = Environment.GetEnvironmentVariable("REI_TEST_NATIVE_PROJECT_DLL");
+            Assert.True(File.Exists(path), "Build the shared native project fixture and set REI_TEST_NATIVE_PROJECT_DLL.");
+            var factory = new AssetBuildEngineSessionFactory(null!, null!, null!, new TestLogger<EngineApi>());
+            using var session = factory.CreateIsolatedSession(path!);
+            var api = session.EngineApi;
+            var entities = new EntityApi(api);
+            using var history = new EditorCommandService();
+            using var recorder = new NativeEditorHistoryRecorder(api, new TestEngineNativeAccess(api), history, new TestLogger<NativeEditorHistoryRecorder>());
+            var recorded = new List<ulong>();
+            api.ActionRecorded += recorded.Add;
+            var source = new EngineSceneSyncEventSource(api, new TestLogger<EngineSceneSyncEventSource>());
+            CreateActionEngineDelegate createEngine = resources => api.CreateEngine(Marshal.PtrToStringUTF8(resources)!, EngineRunMode.EditorMode);
+            try
+            {
+                api.Invoke(typeof(StartActionEngineDelegate), "NativeProjectStartActionEngine", Marshal.GetFunctionPointerForDelegate(createEngine));
+                api.MarkEngineStarted();
+                using var parent = new InspectorTransformFixture(entities, entities.CreateNewEntity("Parent")!.EntityId!.Value);
+                var scenes = new TestSceneManagementService(parent.Entity);
+                var scene = scenes.Scene.Value!;
+                scene.SetAssetInfo(new AssetInfo(new AssetMeta("empty-scene"), ""));
+                var entitySync = new TestEntitySyncService { OnUpdate = entity => parent.StateApplier.Apply(entity, entities.GetEntityData(entity.Id)!) };
+                var management = new EntityManagementService(new TestLogger<EntityManagementService>(), scenes, null!, entities,
+                    new TestBehaviourRegistry(), parent.Runner, entitySync, null!);
+                using var sync = new SceneSyncService(source, scenes, new EngineSelectionSyncService(new SelectionService(new TestEntityApi())),
+                    new TestLogger<SceneSyncService>(), entitySync);
+                using var create = new CreateSceneEntityCommand(scenes, management);
+                source.Connect();
+
+                var child = Assert.IsType<GameEntity>(await create.CreateEntity("Child", parent.Entity));
+                await WaitForHistoryStateAsync(() => recorded.Count == 1 && history.CanUndo);
+                CheckPosition(0);
+                entities.SetData(new SetEntityDataRequest
+                {
+                    SceneId = child.Id,
+                    RecordTransformChange = true,
+                    Behaviours = [new()
+                    {
+                        [SetEntityDataRequest.REI_BEHAVIOUR_ID] = InspectorTransformFixture.TRANSFORM_ID,
+                        ["_position"] = new { Value = new { x = new { Value = 4f }, y = new { Value = 0f }, z = new { Value = 0f } } }
+                    }]
+                });
+                await WaitForHistoryStateAsync(() => recorded.Count == 2);
+                CheckPosition(4);
+
+                await history.UndoAsync();
+                CheckPosition(0);
+                await history.UndoAsync();
+                await WaitForHistoryStateAsync(() => scene.GetById(child.Id) == null);
+                Assert.Null(entities.GetEntityData(child.Id));
+                Assert.False(history.CanUndo);
+
+                await history.RedoAsync();
+                await WaitForHistoryStateAsync(() => ReferenceEquals(scene.GetById(child.Id), child));
+                CheckPosition(0);
+                await history.RedoAsync();
+                CheckPosition(4);
+                Assert.False(history.CanRedo);
+                Assert.Equal(2, recorded.Count);
+
+                void CheckPosition(float expected)
+                {
+                    Assert.Same(parent.Entity, scene.Hierarchy.GetNode(child)!.Parent!.Content);
+                    var state = entities.GetEntityData(child.Id)!;
+                    var transform = JObject.FromObject(state.Behaviours.Single(item => Equals(item["REI_TYPE"], "Transform")));
+                    Assert.Equal(parent.Entity.Id, transform["_parent"]!.Value<int>());
+                    Assert.Equal(expected, transform["_position"]!["x"]!.Value<float>());
+                    entitySync.UpdateEntityState(child);
+                    var position = Assert.IsType<Dictionary<string, SerializedProperty>>(child.GetBehaviour(InspectorTransformFixture.TRANSFORM_ID)!
+                        .GetProperty("_position").Value);
+                    Assert.Equal(expected, Convert.ToSingle(position["x"].Value));
+                }
+            }
+            finally
+            {
+                source.Disconnect();
+                api.MarkEngineStopped();
+                api.Invoke(typeof(IEngineApi.VoidCallbackDelegate), "NativeProjectStopActionEngine");
+                GC.KeepAlive(createEngine);
+            }
+            return true;
+        }, CancellationToken.None);
     }
 
     [NativeCallbackFact]

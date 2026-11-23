@@ -159,9 +159,6 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
             Assert.Equal(JsonValueKind.Null, (await Read(engine, 2)).GetProperty("Position").ValueKind);
             Assert.Equal(JsonValueKind.Null, (await Read(engine, child)).GetProperty("Position").ValueKind);
         }
-
-        static (int Id, int Parent, int Order, string? Name) HierarchyRow(JsonElement entity) =>
-            (EntityId(entity), entity.GetProperty("parentId").GetInt32(), entity.GetProperty("order").GetInt32(), entity.GetProperty("name").GetString());
     }
 
     [EngineFact]
@@ -204,6 +201,98 @@ public sealed class ViewportInputTests(ITestOutputHelper output)
             Assert.Equal(expected, (await Read(engine)).GetProperty("Name").GetString());
         }
     }
+
+    [EngineFact]
+    public async Task GroupDuplicateAndDeleteEachRecordOneSubtreeAction()
+    {
+        await using var engine = new EngineIntegrationHarness();
+        output.WriteLine($"Artifacts: {engine.RunDirectory}");
+        var scenePath = await PrepareAsync(engine, includeChild: true);
+        var scene = JsonNode.Parse(await File.ReadAllTextAsync(scenePath))!["Entities"]!.AsArray();
+        AddSubtree(4, 2, "Between", includeChild: false);
+        AddSubtree(5, 3, "Other root", includeChild: true);
+        await File.WriteAllTextAsync(scenePath, scene.Parent!.ToJsonString());
+        await engine.StartAsync();
+
+        var original = (await ListEntitiesAsync(engine)).Select(HierarchyRow).ToArray();
+        var originalIds = original.Select(row => row.Id).ToHashSet();
+        await SelectAsync([5, 2]);
+        await Chord(engine, 68);
+
+        (int Id, int Parent, int Order, string? Name)[] duplicated = [];
+        await engine.WaitUntilAsync(async () =>
+        {
+            duplicated = (await ListEntitiesAsync(engine)).Select(HierarchyRow).ToArray();
+            return duplicated.Length == original.Length + 4 && duplicated.GroupBy(row => row.Parent)
+                .All(siblings => siblings.Select(row => row.Order).SequenceEqual(Enumerable.Range(0, siblings.Count())));
+        });
+        var copies = duplicated.Where(row => !originalIds.Contains(row.Id)).ToArray();
+        var copyRoots = copies.Where(row => row.Parent == 0).ToArray();
+        Assert.Equal(2, copyRoots.Length);
+        foreach (var root in copyRoots) Assert.Single(copies, row => row.Parent == root.Id);
+        await AssertNativeCopiesAsync();
+
+        await Chord(engine, 90);
+        await AssertHierarchyAsync(original);
+        await AssertCopiesRemovedAsync();
+        Assert.False(await CanUndoAsync(engine));
+
+        await Chord(engine, 89);
+        await AssertHierarchyAsync(duplicated);
+        await AssertNativeCopiesAsync();
+
+        await SelectAsync(copyRoots.Select(row => row.Id).ToArray());
+        await engine.CallAsync("rei_editor_send_input", new()
+        {
+            ["events"] = new[] { new { type = "key_down", code = 261 }, new { type = "key_up", code = 261 } }
+        });
+        await AssertHierarchyAsync(original);
+        await AssertCopiesRemovedAsync();
+        await Chord(engine, 90);
+        await AssertHierarchyAsync(duplicated);
+        await AssertNativeCopiesAsync();
+        await Chord(engine, 89);
+        await AssertHierarchyAsync(original);
+        await AssertCopiesRemovedAsync();
+
+        Task<JsonElement> SelectAsync(int[] ids) => engine.CallAsync("rei_editor_set_entity_selection", new() { ["entityIds"] = ids });
+
+        Task AssertHierarchyAsync((int Id, int Parent, int Order, string? Name)[] expected) =>
+            engine.WaitUntilAsync(async () => (await ListEntitiesAsync(engine)).Select(HierarchyRow).SequenceEqual(expected));
+
+        async Task AssertNativeCopiesAsync()
+        {
+            foreach (var (id, parent, order, name) in copies)
+            {
+                var native = await Read(engine, id);
+                Assert.Equal((parent, order, name), (native.GetProperty("Parent").GetInt32(),
+                    native.GetProperty("Order").GetInt32(), native.GetProperty("Name").GetString()));
+            }
+        }
+
+        async Task AssertCopiesRemovedAsync()
+        {
+            foreach (var copy in copies)
+                Assert.Equal(JsonValueKind.Null, (await Read(engine, copy.Id)).GetProperty("Name").ValueKind);
+        }
+
+        void AddSubtree(int id, int order, string name, bool includeChild)
+        {
+            var root = scene[1]!.DeepClone();
+            root["Id"] = id;
+            root["Name"] = name;
+            root["Behaviours"]![0]!["SerializedData"]!["_order"]!["Value"] = order;
+            scene.Add(root);
+            if (!includeChild) return;
+            var child = scene[2]!.DeepClone();
+            child["Id"] = id + 1;
+            child["Behaviours"]![0]!["SerializedData"]!["_parent"]!["Value"] = id;
+            scene.Add(child);
+        }
+    }
+
+    private static (int Id, int Parent, int Order, string? Name) HierarchyRow(JsonElement entity) =>
+        (EntityId(entity), entity.GetProperty("parentId").GetInt32(), entity.GetProperty("order").GetInt32(), entity.GetProperty("name").GetString());
 
     private static async Task<JsonElement[]> ListEntitiesAsync(EngineIntegrationHarness engine) =>
         (await engine.CallAsync("rei_editor_list_entities")).GetProperty("entities").EnumerateArray().ToArray();

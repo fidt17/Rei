@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <limits>
 #include <string>
 
 #include "Modules/Behaviour/Components/BehaviourCollection.h"
@@ -17,15 +18,24 @@
 #include "rei_behaviours/ui/RectTransform.h"
 #include "rei_behaviours/transformation/Transform.h"
 
-REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer, const i32 bufferSize)
+REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer, const i32 bufferSize, const i32 parentId = 0, const i32 recordHistory = 0)
 {
     std::string nameStr = name;
     std::string response;
-    auto task = rei::GetEngine().ExecuteOnMainThread([&response, nameStr]
+    auto task = rei::GetEngine().ExecuteOnMainThread([&response, nameStr, parentId, recordHistory]
     {
         ECS_WORLD(rei::GetInternalWorld());
 
+        const auto parent = parentId == 0 ? rei::ecs::NULL_ENTITY : rei::GetEntityManager().GetBySceneId(parentId);
+        if (parentId != 0 && (IS_DEAD(parent) || !HAS(parent, rei::Transform))) return;
+
         const auto e = rei::GetEntityManager().CreateNewEntity(nameStr);
+        if (parent != rei::ecs::NULL_ENTITY) GET(e, rei::Transform).SetParent(parent, (std::numeric_limits<i32>::max)());
+        if (recordHistory != 0 && rei::GetEngine().IsEditorMode())
+        {
+            using Action = rei::editor::EntitySubtreeAction;
+            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<Action>(Action::Kind::Added, std::vector{e}));
+        }
 
         nlohmann::json data;
         data["EntityId"] = GET(e, EntityInfo).Id;
@@ -36,26 +46,37 @@ REI_EXTERN_API inline void CreateNewEntity(const char* name, char* outputBuffer,
     strncpy_s(outputBuffer, bufferSize, response.c_str(), _TRUNCATE);
 }
 
-REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId, const i32 recordHistory = 0)
+REI_EXTERN_API inline void DestroyEntities(const i32* sceneEntityIds, const i32 count, const i32 recordHistory)
 {
-    rei::GetEngine().ExecuteOnMainThread([=]
+    if (sceneEntityIds == nullptr || count <= 0) return;
+    std::vector<i32> ids(sceneEntityIds, sceneEntityIds + count);
+    rei::GetEngine().ExecuteOnMainThread([ids = std::move(ids), recordHistory]
     {
         ECS_WORLD(rei::GetInternalWorld());
-
-        const auto e = rei::GetEntityManager().GetBySceneId(sceneEntityId);
-        if (IS_DEAD(e)) return;
+        std::vector<rei::ecs::Entity> roots;
+        for (const auto id : ids)
+        {
+            const auto entity = rei::GetEntityManager().GetBySceneId(id);
+            if (IS_DEAD(entity) || (recordHistory != 0 && !HAS(entity, rei::Transform))) return;
+            roots.push_back(entity);
+        }
 
         if (recordHistory != 0 && rei::GetEngine().IsEditorMode())
         {
             using Action = rei::editor::EntitySubtreeAction;
-            auto action = std::make_unique<Action>(Action::Kind::Delete, e);
+            auto action = std::make_unique<Action>(Action::Kind::Deleted, roots);
             if (action->Redo() == rei::editor::EditorActionReplayResult::Applied)
                 rei::GetEngine().GetEditorActions().RecordApplied(std::move(action));
             return;
         }
 
-        rei::GetEntityManager().Destroy(e);
+        for (const auto entity : roots) rei::GetEntityManager().Destroy(entity);
     });
+}
+
+REI_EXTERN_API inline void DestroyEntity(const i32 sceneEntityId, const i32 recordHistory = 0)
+{
+    DestroyEntities(&sceneEntityId, 1, recordHistory);
 }
 
 REI_EXTERN_API inline void GetSceneEntitiesList(char* outputBuffer, const i32 bufferSize)
@@ -282,23 +303,34 @@ REI_EXTERN_API inline void InstantiateEntity(const char* json, char* outputBuffe
     {
         ECS_WORLD(rei::GetInternalWorld());
 
-        nlohmann::json data = nlohmann::json::parse(jsonStr);
-        const i32 sourceEntityId = data.at("SourceEntityId");
-        const std::string requestedName = data.value("RequestedName", "");
-        const bool includeChildren = data.value("IncludeChildren", true);
+        const auto data = nlohmann::json::parse(jsonStr);
+        const auto& requests = data.at("Entities");
+        auto& entities = rei::GetEntityManager();
+        std::vector<rei::ecs::Entity> sources;
+        for (const auto& request : requests)
+        {
+            const auto source = entities.GetBySceneId(request.at("SourceEntityId").get<i32>());
+            if (IS_DEAD(source) || !HAS(source, rei::Transform)) return;
+            sources.push_back(source);
+        }
+        if (sources.empty()) return;
 
-        const auto& sourceEntity = rei::GetEntityManager().GetBySceneId(sourceEntityId);
-        if (IS_DEAD(sourceEntity)) return;
+        std::vector<rei::ecs::Entity> roots;
+        std::vector<i32> ids;
+        for (size_t i = 0; i < sources.size(); i++)
+        {
+            const auto& request = requests[i];
+            const auto clone = entities.Instantiate(sources[i], request.value("RequestedName", ""), request.value("IncludeChildren", true));
+            roots.push_back(clone);
+            ids.push_back(GET(clone, EntityInfo).Id);
+        }
 
-        const auto clone = rei::GetEntityManager().Instantiate(sourceEntity, requestedName, includeChildren);
-
-        nlohmann::json response;
-        response["EntityId"] = GET(clone, EntityInfo).Id;
         if (data.value("RecordHistory", false) && rei::GetEngine().IsEditorMode())
         {
             using Action = rei::editor::EntitySubtreeAction;
-            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<Action>(Action::Kind::Duplicate, clone));
+            rei::GetEngine().GetEditorActions().RecordApplied(std::make_unique<Action>(Action::Kind::Added, roots));
         }
+        const nlohmann::json response = {{"EntityIds", ids}};
         strncpy_s(outputBuffer, bufferSize, response.dump().c_str(), _TRUNCATE);
     });
 

@@ -12,6 +12,8 @@ namespace ReiEditor.Models.Services.Engine.Api;
 
 public class EntityApi : IEntityApi
 {
+    private sealed record InstantiateEntitiesResponse(int[] EntityIds);
+
     private readonly Pool<StringBuilder> _responseBufferPool = new(() => new StringBuilder(16384), x => x.Clear());
     private readonly IEngineApi _engineApi;
 
@@ -64,31 +66,26 @@ public class EntityApi : IEntityApi
         }
     }
 
-    private delegate void CreateNewEntityDelegate(string name, StringBuilder outputBuffer, int bufferSize);
-    public InstantiateEntityResponse? CreateNewEntity(string name)
+    private delegate void CreateNewEntityDelegate(string name, StringBuilder outputBuffer, int bufferSize, int parentId, int recordHistory);
+    public InstantiateEntityResponse? CreateNewEntity(string name, int parentId = 0, bool recordHistory = false)
     {
         if (!_engineApi.IsEngineRunning) return null;
 
         var buffer = _responseBufferPool.Get();
-        _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name, buffer, buffer.Capacity);
+        _engineApi.Invoke(typeof(CreateNewEntityDelegate), "CreateNewEntity", name, buffer, buffer.Capacity, parentId, recordHistory ? 1 : 0);
         var response = JsonConvert.DeserializeObject<InstantiateEntityResponse>(buffer.ToString());
         _responseBufferPool.Put(buffer);
         return response;
     }
 
-    private delegate void DestroyEntityDelegate(int sceneEntityId, int recordHistory);
-    public void DestroyEntity(int sceneEntityId, bool recordHistory = false)
-    {
-        if (!_engineApi.IsEngineRunning) return;
+    public void DestroyEntity(int sceneEntityId, bool recordHistory = false) => DestroyEntities([sceneEntityId], recordHistory);
 
-        try
-        {
-            _engineApi.Invoke(typeof(DestroyEntityDelegate), "DestroyEntity", sceneEntityId, recordHistory ? 1 : 0);
-        }
-        catch (Exception)
-        {
-            // ignore
-        }
+    private delegate void DestroyEntitiesDelegate([In] int[] sceneEntityIds, int count, int recordHistory);
+    public void DestroyEntities(IReadOnlyList<int> sceneEntityIds, bool recordHistory)
+    {
+        if (!_engineApi.IsEngineRunning || sceneEntityIds.Count == 0) return;
+        var ids = sceneEntityIds.ToArray();
+        _engineApi.Invoke(typeof(DestroyEntitiesDelegate), "DestroyEntities", ids, ids.Length, recordHistory ? 1 : 0);
     }
 
     private delegate void RenameEntityDelegate(int sceneEntityId, string newName);
@@ -161,20 +158,26 @@ public class EntityApi : IEntityApi
     private delegate void InstantiateEntityDelegate(string json, StringBuilder outputBuffer, int bufferSize);
     public InstantiateEntityResponse? InstantiateEntity(InstantiateEntityRequest request)
     {
-        if (!_engineApi.IsEngineRunning) return null;
+        var ids = InstantiateEntities([request], request.RecordHistory);
+        return ids.Count == 1 ? new InstantiateEntityResponse { EntityId = ids[0] } : null;
+    }
 
+    public IReadOnlyList<int> InstantiateEntities(IReadOnlyList<InstantiateEntityRequest> requests, bool recordHistory)
+    {
+        if (!_engineApi.IsEngineRunning || requests.Count == 0) return Array.Empty<int>();
+
+        var buffer = _responseBufferPool.Get();
         try
         {
-            var buffer = _responseBufferPool.Get();
-            _engineApi.Invoke(typeof(InstantiateEntityDelegate), "InstantiateEntity", JsonConvert.SerializeObject(request), buffer, buffer.Capacity);
-            var response = JsonConvert.DeserializeObject<InstantiateEntityResponse>(buffer.ToString());
-            _responseBufferPool.Put(buffer);
-            return response;
+            var request = JsonConvert.SerializeObject(new { Entities = requests, RecordHistory = recordHistory });
+            _engineApi.Invoke(typeof(InstantiateEntityDelegate), "InstantiateEntity", request, buffer, buffer.Capacity);
+            return JsonConvert.DeserializeObject<InstantiateEntitiesResponse>(buffer.ToString())?.EntityIds ?? Array.Empty<int>();
         }
         catch (Exception)
         {
-            return null;
+            return Array.Empty<int>();
         }
+        finally { _responseBufferPool.Put(buffer); }
     }
 
     private delegate void AddBehaviourDelegate(int sceneEntityId, int behaviourId);

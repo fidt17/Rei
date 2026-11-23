@@ -5,7 +5,7 @@ namespace ReiEditor.Models.Services.Entities;
 
 public interface IEntityManagementService
 {
-    Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null);
+    Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, bool recordHistory = false);
 
     void RenameEntity(GameEntity e, string name);
     void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex);
@@ -18,5 +18,7 @@ public interface IEntityManagementService
 
     int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false);
 	
+    IReadOnlyList<int> InstantiateEntities(IReadOnlyList<GameEntity> sources);
     void DestroyEntity(GameEntity e, bool recordHistory = false);
+    void DestroyEntities(IReadOnlyList<GameEntity> entities);
 }

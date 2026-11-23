@@ -23,7 +23,7 @@ internal sealed class TestEntityManagementService : IEntityManagementService
     public Action<GameEntity, string>? OnRename { get; set; }
     public Func<GameEntity, string?, bool, int?>? OnInstantiate { get; set; }
 
-    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null)
+    public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, bool recordHistory = false)
     {
         CreateCalls.Add((name, parent));
         return (OnCreate ?? throw new NotSupportedException())(name, parent);
@@ -34,6 +34,14 @@ internal sealed class TestEntityManagementService : IEntityManagementService
         AddBehaviourCalls.Add((e, behaviourId));
         (OnAddBehaviour ?? throw new NotSupportedException())(e, behaviourId);
     }
+
+    public void DestroyEntities(IReadOnlyList<GameEntity> entities)
+    {
+        foreach (var entity in entities) DestroyEntity(entity);
+    }
+
+    public IReadOnlyList<int> InstantiateEntities(IReadOnlyList<GameEntity> sources) =>
+        sources.Select(entity => InstantiateEntity(entity)).OfType<int>().ToArray();
 
     public void DestroyEntity(GameEntity e, bool recordHistory = false)
     {

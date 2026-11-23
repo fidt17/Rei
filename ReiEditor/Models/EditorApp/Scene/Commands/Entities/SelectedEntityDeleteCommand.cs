@@ -19,10 +19,9 @@ public class SelectedEntityDeleteCommand : ISelectedEntityDeleteCommand
     public SelectedEntityCommandResult Execute(SelectedEntityCommandTarget target)
     {
         foreach (var entity in target.Entities)
-        {
             _logger.Log($"Deleting entity {entity.Id}:{entity.Name}");
-            _entityManagementService.DestroyEntity(entity, recordHistory: target.Entities.Count == 1);
-        }
+        if (target.Entities.Count == 1) _entityManagementService.DestroyEntity(target.Entities[0], recordHistory: true);
+        else _entityManagementService.DestroyEntities(target.Entities);
 
         return new SelectedEntityCommandResult();
     }

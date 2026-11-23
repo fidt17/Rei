@@ -34,6 +34,6 @@ public class CreateSceneEntityCommand : ICommand, IDisposable
 
 	public Task<GameEntity?> CreateEntity(string? entityName = null, GameEntity? parent = null)
 	{
-		return _entityManagementService.CreateEntity(entityName ?? "New Entity", parent);
+		return _entityManagementService.CreateEntity(entityName ?? "New Entity", parent, recordHistory: true);
 	}
 }

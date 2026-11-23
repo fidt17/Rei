@@ -64,7 +64,7 @@ public sealed class BehaviourComponentDrawerViewModelTests
     private sealed class TestEntityManagementService : IEntityManagementService
     {
         public List<(GameEntity Entity, int Id)> Deleted { get; } = [];
-        public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null) => throw new NotSupportedException();
+        public Task<GameEntity?> CreateEntity(string name, GameEntity? parent = null, bool recordHistory = false) => throw new NotSupportedException();
         public void RenameEntity(GameEntity e, string name) => throw new NotSupportedException();
         public void ReorderEntities(IReadOnlyList<GameEntity> entities, int insertionIndex) => throw new NotSupportedException();
         public bool CanReparentEntities(IReadOnlyList<GameEntity> entities, GameEntity? parent) => throw new NotSupportedException();
@@ -74,6 +74,8 @@ public sealed class BehaviourComponentDrawerViewModelTests
         public void AddBehaviour(GameEntity e, int behaviourId) => throw new NotSupportedException();
         public void DeleteBehaviour(GameEntity e, int behaviourId) => Deleted.Add((e, behaviourId));
         public int? InstantiateEntity(GameEntity sourceEntity, string? requestedName = null, bool includeChildren = true, bool recordHistory = false) => throw new NotSupportedException();
+        public void DestroyEntities(IReadOnlyList<GameEntity> entities) => throw new NotSupportedException();
+        public IReadOnlyList<int> InstantiateEntities(IReadOnlyList<GameEntity> sources) => throw new NotSupportedException();
         public void DestroyEntity(GameEntity e, bool recordHistory = false) => throw new NotSupportedException();
     }
 
