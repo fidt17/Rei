@@ -68,45 +68,35 @@ rei::render::Color rei::render::Color::FromHex(const std::string& hex)
         throw std::invalid_argument("Invalid hex color format");
     }
 
-    Color c = {0.0f, 0.0f, 0.0f, 1.0f};
-
-    auto parseHexByte = [&](const char* str, u32& value)
+    const auto parseHexByte = [](const char* first)
     {
-        auto result = std::from_chars(str, str + 2, value, 16);
-        if (result.ec != std::errc())
+        u32 value = 0;
+        const auto last = first + 2;
+        const auto result = std::from_chars(first, last, value, 16);
+        if (result.ec != std::errc() || result.ptr != last)
         {
-            LOG_ERROR("Invalid color hex value: {}", hex)
-            return Color(0,0,0,1);
+            throw std::invalid_argument("Invalid hex color value");
         }
+        return value / 255.0f;
     };
 
     if (cleanHex.length() == 3)
     {
-        u32 r, g, b;
-        parseHexByte((std::string(2, cleanHex[0])).c_str(), r);
-        parseHexByte((std::string(2, cleanHex[1])).c_str(), g);
-        parseHexByte((std::string(2, cleanHex[2])).c_str(), b);
-        c = {r / 255.0f, g / 255.0f, b / 255.0f, 1.0f};
-    }
-    else if (cleanHex.length() == 6)
-    {
-        u32 r, g, b;
-        parseHexByte(cleanHex.substr(0, 2).c_str(), r);
-        parseHexByte(cleanHex.substr(2, 2).c_str(), g);
-        parseHexByte(cleanHex.substr(4, 2).c_str(), b);
-        c = {r / 255.0f, g / 255.0f, b / 255.0f, 1.0f};
-    }
-    else if (cleanHex.length() == 8)
-    {
-        u32 r, g, b, a;
-        parseHexByte(cleanHex.substr(0, 2).c_str(), r);
-        parseHexByte(cleanHex.substr(2, 2).c_str(), g);
-        parseHexByte(cleanHex.substr(4, 2).c_str(), b);
-        parseHexByte(cleanHex.substr(6, 2).c_str(), a);
-        c = {r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f};
+        return {
+            parseHexByte(std::string(2, cleanHex[0]).data()),
+            parseHexByte(std::string(2, cleanHex[1]).data()),
+            parseHexByte(std::string(2, cleanHex[2]).data()),
+            1.0f
+        };
     }
 
-    return c;
+    const auto digits = cleanHex.data();
+    return {
+        parseHexByte(digits),
+        parseHexByte(digits + 2),
+        parseHexByte(digits + 4),
+        cleanHex.length() == 8 ? parseHexByte(digits + 6) : 1.0f
+    };
 }
 
 rei::render::Color::Color(const f32 r, const f32 g, const f32 b, const f32 a)

@@ -202,6 +202,7 @@ TEST_CASE("Atlas text retains selectable bounds outside its UI rectangle", "[ui-
     rei::assets::AssetRef<Font> font("test-font");
     font.Record = std::make_shared<rei::assets::AssetRecord>();
     font.Record->Id = font.Id;
+    font.Record->Type = typeid(Font);
     font.Record->State = rei::assets::AssetState::Loaded;
     auto loaded = std::make_shared<Font>(LoadTestFont());
     loaded->PostLoad();
@@ -242,6 +243,7 @@ TEST_CASE("Text metrics follow font replacement, whitespace and resizing", "[ui-
     rei::assets::AssetRef<Font> font("test-font");
     font.Record = std::make_shared<rei::assets::AssetRecord>();
     font.Record->Id = font.Id;
+    font.Record->Type = typeid(Font);
     font.Record->State = rei::assets::AssetState::Loaded;
     font.Record->Value = std::make_shared<Font>(Font::LoadAscii(TestFontPath(), 48));
     rei::ui::Text text;
