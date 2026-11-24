@@ -30,5 +30,6 @@ public sealed class EditorCommandsModule : Module
         builder.RegisterSingleton<ProjectAssetMoveCommand>().As<IProjectAssetMoveCommand>();
         builder.RegisterSingleton<ProjectAssetRenameCommand>().As<IProjectAssetRenameCommand>();
         builder.RegisterSingleton<SetDataAssetPropertyCommand>();
+        builder.RegisterSingleton<SetMaterialPropertyCommand>();
     }
 }

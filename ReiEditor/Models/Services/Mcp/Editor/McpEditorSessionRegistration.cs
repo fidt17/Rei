@@ -52,9 +52,9 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IAssetsService _assetsService;
     private readonly IAssetRegistry _assetRegistry;
     private readonly IShaderRegistry _shaderRegistry;
-    private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
     private readonly IDataAssetService _dataAssetService;
     private readonly SetDataAssetPropertyCommand _setDataAssetProperty;
+    private readonly SetMaterialPropertyCommand _setMaterialProperty;
     private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
     private readonly IResourceService _resourceService;
     private readonly IProjectAssetFocusService _assetFocusService;
@@ -77,7 +77,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IAssetsService assetsService,
         IAssetRegistry assetRegistry,
         IShaderRegistry shaderRegistry,
-        IAssetRuntimeSyncService assetRuntimeSyncService,
+        SetMaterialPropertyCommand setMaterialProperty,
         IDataAssetService dataAssetService,
         SetDataAssetPropertyCommand setDataAssetProperty,
         IDataAssetTypeRegistry dataAssetTypeRegistry,
@@ -104,9 +104,9 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _assetsService = assetsService;
         _assetRegistry = assetRegistry;
         _shaderRegistry = shaderRegistry;
-        _assetRuntimeSyncService = assetRuntimeSyncService;
         _dataAssetService = dataAssetService;
         _setDataAssetProperty = setDataAssetProperty;
+        _setMaterialProperty = setMaterialProperty;
         _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _resourceService = resourceService;
         _assetFocusService = assetFocusService;
@@ -341,15 +341,11 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         var normalizedValue = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
         ValidateMaterialTextureReference(uniform.Type, property, normalizedValue);
 
-        var before = McpValueConverter.ToContractValue(currentValue);
-        var after = McpValueConverter.ToContractValue(normalizedValue);
-        var changed = !ContractValuesEqual(before, after);
-        var runtimeSynced = true;
-        if (changed)
-        {
-            material.Properties[propertyName] = normalizedValue;
-            runtimeSynced = _assetRuntimeSyncService.TrySetAssetData(materialAssetId, JsonConvert.SerializeObject(material));
-        }
+        var result = await _setMaterialProperty.SetUniformAsync(material, propertyName, normalizedValue!) ??
+                     throw new ReiMcpOperationException("material_set_failed", $"Editor could not set material uniform {propertyName}.");
+        var after = McpValueConverter.ToContractValue(result.After);
+        var changed = result.Changed;
+        var runtimeSynced = result.RuntimeSynced;
 
         var message = changed
             ? runtimeSynced

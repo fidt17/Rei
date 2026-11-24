@@ -117,7 +117,7 @@ public sealed class SceneSyncHierarchyTests
                 return new((GameEntity)args[0],
                     new Factory<EntityInfoComponentDrawerViewModel>(values => new((GameEntity)values[0], new Rename(), new TestLogger<EntityInfoComponentDrawerViewModel>())),
                     new Factory<BehaviourComponentDrawerViewModel>(_ => throw new NotSupportedException()), new Registry(), null!);
-            }), null!, null!, null!, null!, null!, null!, null!, null!, new EntitySync());
+            }), null!, null!, null!, new EntitySync());
         }
 
         public void Send(SceneEntityState[] entities, bool snapshot = false, int[]? removed = null, int[]? selected = null)

@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.Search;
@@ -81,7 +83,12 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         get => _useDepth;
         set
         {
-            if (_disposed) return;
+            if (_disposed || _useDepth == value) return;
+            if (_setProperty != null && _material is { } material)
+            {
+                CommitProperty(() => _setProperty.SetUseDepthAsync(material, value));
+                return;
+            }
             if (!SetField(ref _useDepth, value)) return;
             _material?.SetUseDepth(value);
             SyncRuntimeMaterial();
@@ -98,7 +105,12 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         get => _sortingOrder;
         set
         {
-            if (_disposed) return;
+            if (_disposed || _sortingOrder == value) return;
+            if (_setProperty != null && _material is { } material)
+            {
+                CommitProperty(() => _setProperty.SetSortingOrderAsync(material, value));
+                return;
+            }
             if (!SetField(ref _sortingOrder, value)) return;
             _material?.SetSortingOrder(value);
             SyncRuntimeMaterial();
@@ -115,8 +127,10 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly IAssetTypeMapper _assetTypeMapper;
     private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
     private readonly IProjectAssetFocusService _projectAssetFocusService;
+    private readonly SetMaterialPropertyCommand? _setProperty;
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
     private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
+    private (string Name, JToken? Before)? _colorPreview;
     private CancellationTokenSource? _runtimeSyncDebounceCTS;
     private DispatcherTimer? _runtimePullTimer;
     private bool _suppressRuntimeSync;
@@ -137,7 +151,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         IAssetRegistry assetRegistry,
         IAssetTypeMapper assetTypeMapper,
         IAssetRuntimeSyncService assetRuntimeSyncService,
-        IProjectAssetFocusService projectAssetFocusService)
+        IProjectAssetFocusService projectAssetFocusService,
+        SetMaterialPropertyCommand? setProperty = null)
     {
         AssetName = assetSelection.AssetName;
         AssetId = assetSelection.AssetId;
@@ -149,6 +164,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         _assetTypeMapper = assetTypeMapper;
         _assetRuntimeSyncService = assetRuntimeSyncService;
         _projectAssetFocusService = projectAssetFocusService;
+        _setProperty = setProperty;
+        if (_setProperty != null) _setProperty.PropertyChanged += RefreshProperty;
 
         ShaderPicker = new AssetPickerViewModel(
             assetRegistry,
@@ -165,11 +182,13 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         if (_disposed) return;
         _disposed = true;
         base.Dispose();
-        // ValueChanged already persists edits. Reapplying stale controls here would
-        // overwrite material values restored from disk after Play stops.
-        CancelRuntimeSyncDebounce();
+        if (_setProperty != null) _setProperty.PropertyChanged -= RefreshProperty;
         CancelRuntimePullLoop();
-        SyncRuntimeMaterialImmediate();
+        if (_runtimeSyncDebounceCTS != null)
+        {
+            CancelRuntimeSyncDebounce();
+            SyncRuntimeMaterialImmediate();
+        }
         UnsubscribeFromUniformPropertyChanges();
         ShaderProperties.ClearAndDispose();
         ShaderPicker.Dispose();
@@ -193,7 +212,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             var material = await _assetsService.Load<Material>(AssetId);
             if (_disposed) return;
             _material = material;
-            if (_material == null)
+            if (material == null)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
@@ -207,14 +226,9 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (_disposed) return;
-                _suppressRuntimeSync = true;
-                ShaderPicker.SyncSelectedAsset(_material.ShaderAssetId);
-                UseDepth = _material.UseDepth;
-                SortingOrder = _material.SortingOrder;
-                RebuildShaderProperties(_material.ShaderAssetId, new Dictionary<string, object?>(_material.Properties));
+                RefreshMaterial(material, refreshShader: true);
                 StatusText = "";
                 IsMaterialLoaded = true;
-                _suppressRuntimeSync = false;
             });
         }
         catch (Exception e)
@@ -230,80 +244,76 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private void HandleShaderChanged(string? shaderAssetId, string? _fullPath)
     {
-        if (_disposed) return;
-        if (_material == null) return;
+        if (_disposed || _material is not { } material) return;
 
         var targetShaderAssetId = shaderAssetId ?? "";
-        if (string.Equals(_material.ShaderAssetId, targetShaderAssetId, StringComparison.Ordinal)) return;
+        if (string.Equals(material.ShaderAssetId, targetShaderAssetId, StringComparison.Ordinal)) return;
 
-        PersistUniformValuesFromEditors();
-        var existingValues = new Dictionary<string, object?>(_material.Properties);
-        _material.SetShaderAssetId(targetShaderAssetId);
-        RebuildShaderProperties(targetShaderAssetId, existingValues);
-        SyncRuntimeMaterial();
-    }
-
-    private void RebuildShaderProperties(string shaderAssetId, IReadOnlyDictionary<string, object?> existingValues)
-    {
-        UnsubscribeFromUniformPropertyChanges();
-        ShaderProperties.ClearAndDispose();
-        _uniformProperties.Clear();
-
-        if (_material == null)
+        if (_setProperty != null)
         {
-            HasShaderProperties = false;
-            ShaderPropertiesStatusText = "";
+            CommitProperty(() => _setProperty.SetShaderAsync(material, targetShaderAssetId, PrepareShaderProperties(material, targetShaderAssetId)));
+            ShaderPicker.SyncSelectedAsset(material.ShaderAssetId);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(shaderAssetId))
+        material.SetShader(targetShaderAssetId, PrepareShaderProperties(material, targetShaderAssetId));
+        RefreshShader(material);
+        SyncRuntimeMaterial();
+    }
+
+    private Dictionary<string, object?> PrepareShaderProperties(Material material, string shaderId)
+    {
+        var values = new Dictionary<string, object?>();
+        if (!_shaderRegistry.TryGetById(shaderId, out var shader)) return values;
+
+        foreach (var uniform in shader.Uniforms.Where(uniform => uniform.IsSupported))
         {
-            _material.Properties.Clear();
+            var previousValue = material.Properties.GetValueOrDefault(uniform.Name);
+            var property = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, previousValue);
+            values[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
+        }
+
+        return values;
+    }
+
+    private void RefreshShader(Material material)
+    {
+        ShaderPicker.SyncSelectedAsset(material.ShaderAssetId);
+        UnsubscribeFromUniformPropertyChanges();
+        ShaderProperties.ClearAndDispose();
+        _uniformProperties.Clear();
+        _colorPreview = null;
+
+        if (string.IsNullOrWhiteSpace(material.ShaderAssetId))
+        {
             HasShaderProperties = false;
             ShaderPropertiesStatusText = "Material shader is not set.";
             return;
         }
 
-        if (!_shaderRegistry.TryGetById(shaderAssetId, out var shader))
+        if (!_shaderRegistry.TryGetById(material.ShaderAssetId, out var shader))
         {
-            _material.Properties.Clear();
             HasShaderProperties = false;
             ShaderPropertiesStatusText = "Selected shader asset was not found.";
             return;
         }
 
-        var nextValues = new Dictionary<string, object?>();
-
         foreach (var uniform in shader.Uniforms.Where(x => x.IsSupported))
         {
-            existingValues.TryGetValue(uniform.Name, out var rawValue);
             try
             {
-                var rootProperty = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, rawValue);
+                var rootProperty = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, material.Properties.GetValueOrDefault(uniform.Name));
                 var viewModel = CreatePropertyViewModel(uniform, rootProperty);
-                if (viewModel == null)
-                {
-                    continue;
-                }
+                if (viewModel == null) continue;
 
                 ShaderProperties.Add(viewModel);
                 _uniformProperties.Add((uniform, rootProperty));
                 SubscribeToUniformPropertyChanges(uniform, rootProperty);
-                nextValues[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, rootProperty);
             }
             catch
             {
-                if (rawValue != null)
-                {
-                    nextValues[uniform.Name] = rawValue;
-                }
+                // Preserve serialized values when a uniform editor cannot be constructed.
             }
-        }
-
-        _material.Properties.Clear();
-        foreach (var (name, value) in nextValues)
-        {
-            _material.Properties[name] = value;
         }
 
         HasShaderProperties = ShaderProperties.Count > 0;
@@ -314,21 +324,118 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
     private BaseViewModel? CreatePropertyViewModel(ShaderUniformInfo uniform, SerializedProperty property)
     {
+        Action<object>? commit = _setProperty == null ? null : value => CommitUniform(uniform, value);
+        Action<SerializedColorValue>? recordColorDrag = _setProperty == null ? null : _ => RecordColorDrag(uniform.Name);
         return uniform.Type switch
         {
-            ShaderUniformType.Float => new FloatPropertyViewModel(property),
-            ShaderUniformType.Integer => new IntegerPropertyViewModel(property),
-            ShaderUniformType.Color => new ColorPropertyViewModel(property),
-            ShaderUniformType.Texture => new AssetPropertyViewModel(property, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService),
+            ShaderUniformType.Float => new FloatPropertyViewModel(property, commit),
+            ShaderUniformType.Integer => new IntegerPropertyViewModel(property, commit),
+            ShaderUniformType.Color => new ColorPropertyViewModel(property, commit, recordColorDrag),
+            ShaderUniformType.Texture => new AssetPropertyViewModel(property, _assetSearchService, _assetRegistry, _assetTypeMapper, _projectAssetFocusService, commitProperty: commit),
             _ => null
         };
     }
 
+    private void CommitUniform(ShaderUniformInfo uniform, object value)
+    {
+        if (_disposed || _material is not { } material || _setProperty == null) return;
+        CommitProperty(() => _setProperty.SetUniformAsync(material, uniform.Name, ToMaterialValue(uniform.Type, value)));
+    }
+
+    private async void CommitProperty(Func<Task<SetMaterialPropertyCommand.Result?>> edit)
+    {
+        try
+        {
+            await edit();
+        }
+        catch (Exception exception)
+        {
+            if (!_disposed) StatusText = $"Failed to edit material. {exception.Message}";
+        }
+    }
+
+    private void RecordColorDrag(string name)
+    {
+        if (_disposed || _material == null || _setProperty == null) return;
+        if (_colorPreview is not { } preview || preview.Name != name) return;
+        _colorPreview = null;
+        _setProperty.RecordApplied(_material, name, preview.Before);
+        if (_runtimeSyncDebounceCTS == null) return;
+        CancelRuntimeSyncDebounce();
+        SyncRuntimeMaterialImmediate();
+    }
+
+    private static object ToMaterialValue(ShaderUniformType type, object value) => value switch
+    {
+        SerializedColorValue color => new Dictionary<string, object?> { ["r"] = color.R, ["g"] = color.G, ["b"] = color.B, ["a"] = color.A },
+        string id when type == ShaderUniformType.Texture => new Dictionary<string, object?> { ["Id"] = id },
+        _ => value
+    };
+
+    private void RefreshProperty(Material material, SetMaterialPropertyCommand.Property kind, string? uniformName, string? runtimeJson)
+    {
+        if (_disposed || !ReferenceEquals(_material, material)) return;
+        if (runtimeJson != null)
+        {
+            CancelRuntimeSyncDebounce();
+            _lastRuntimeJson = runtimeJson;
+        }
+
+        if (kind == SetMaterialPropertyCommand.Property.Shader)
+        {
+            RefreshShader(material);
+            return;
+        }
+
+        if (kind != SetMaterialPropertyCommand.Property.Uniform)
+        {
+            RefreshRenderSettings(material);
+            return;
+        }
+
+        var (uniform, root) = _uniformProperties.Find(row => row.Uniform.Name == uniformName);
+        if (uniform == null) return;
+        var value = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, material.Properties.GetValueOrDefault(uniform.Name)).Value;
+        _suppressRuntimeSync = true;
+        try
+        {
+            if (root.Value is Dictionary<string, SerializedProperty> children && value is Dictionary<string, SerializedProperty> updated)
+            {
+                foreach (var (field, child) in updated) children[field].SetValueWithoutTriggeringChangedEvent(child.Value!);
+            }
+            else root.SetValueWithoutTriggeringChangedEvent(value!);
+
+            root.TriggerChangedEvent();
+        }
+        finally { _suppressRuntimeSync = false; }
+    }
+
+    private void RefreshRenderSettings(Material material)
+    {
+        SetField(ref _useDepth, material.UseDepth, nameof(UseDepth));
+        SetField(ref _sortingOrder, material.SortingOrder, nameof(SortingOrder));
+    }
+
+    private void RefreshMaterial(Material material, bool refreshShader)
+    {
+        _suppressRuntimeSync = true;
+        try
+        {
+            RefreshRenderSettings(material);
+            if (refreshShader) RefreshShader(material);
+        }
+        finally { _suppressRuntimeSync = false; }
+    }
+
     private void SubscribeToUniformPropertyChanges(ShaderUniformInfo uniform, SerializedProperty rootProperty)
     {
-        foreach (var observedProperty in MaterialShaderPropertyUtils.GetObservedProperties(uniform.Type, rootProperty))
+        var previewColor = _setProperty != null && uniform.Type == ShaderUniformType.Color;
+        var observedProperties = previewColor
+            ? new[] { rootProperty }
+            : MaterialShaderPropertyUtils.GetObservedProperties(uniform.Type, rootProperty);
+        foreach (var observedProperty in observedProperties)
         {
-            Action<object?> handler = _ => ApplyUniformPropertyValue(uniform, rootProperty);
+            Action<object?> handler = _ => ApplyUniformPropertyValue(uniform, rootProperty, previewColor);
             observedProperty.ValueChangedEvent += handler;
             _propertySubscriptions.Add((observedProperty, handler));
         }
@@ -343,30 +450,21 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         _propertySubscriptions.Clear();
     }
 
-    private void ApplyUniformPropertyValue(ShaderUniformInfo uniform, SerializedProperty property)
+    private void ApplyUniformPropertyValue(ShaderUniformInfo uniform, SerializedProperty property, bool previewColor = false)
     {
-        if (_disposed) return;
-        if (_material == null) return;
+        if (_disposed || _suppressRuntimeSync || _material == null) return;
+        if (previewColor) _colorPreview ??= (uniform.Name, SetMaterialPropertyCommand.ReadUniform(_material, uniform.Name));
         _material.Properties[uniform.Name] = MaterialShaderPropertyUtils.ConvertSerializedPropertyToMaterialValue(uniform.Type, property);
-        SyncRuntimeMaterial();
+        SyncRuntimeMaterial(keepPending: previewColor);
     }
 
-    private void PersistUniformValuesFromEditors()
-    {
-        if (_material == null) return;
-
-        foreach (var (uniform, rootProperty) in _uniformProperties)
-        {
-            ApplyUniformPropertyValue(uniform, rootProperty);
-        }
-    }
-
-    private void SyncRuntimeMaterial()
+    private void SyncRuntimeMaterial(bool keepPending = false)
     {
         if (_disposed) return;
         if (_suppressRuntimeSync) return;
         if (_material == null) return;
         if (string.IsNullOrWhiteSpace(AssetId)) return;
+        if (keepPending && _runtimeSyncDebounceCTS != null) return;
 
         CancelRuntimeSyncDebounce();
         var source = new CancellationTokenSource();
@@ -431,7 +529,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
         _runtimePullTimer.Tick += (_, _) =>
         {
-            if (_disposed) return;
+            if (_disposed || !IsMaterialLoaded || _material is not { } material) return;
             if (string.IsNullOrWhiteSpace(AssetId)) return;
             if (_runtimeSyncDebounceCTS != null) return;
 
@@ -444,21 +542,13 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
                 var runtimeMaterial = JsonConvert.DeserializeObject<Material>(jsonData);
                 if (runtimeMaterial == null) return;
 
-                _suppressRuntimeSync = true;
-                ApplyRuntimeMaterial(runtimeMaterial);
-                var currentMaterial = _material;
-                if (currentMaterial == null)
-                {
-                    _suppressRuntimeSync = false;
-                    return;
-                }
-
                 _lastRuntimeJson = jsonData;
-                ShaderPicker.SyncSelectedAsset(currentMaterial.ShaderAssetId);
-                UseDepth = currentMaterial.UseDepth;
-                SortingOrder = currentMaterial.SortingOrder;
-                RebuildShaderProperties(currentMaterial.ShaderAssetId, new Dictionary<string, object?>(currentMaterial.Properties));
-                _suppressRuntimeSync = false;
+                var shaderChanged = material.ShaderAssetId != runtimeMaterial.ShaderAssetId
+                    || !JToken.DeepEquals(JObject.FromObject(material.Properties), JObject.FromObject(runtimeMaterial.Properties));
+                if (shaderChanged) material.SetShader(runtimeMaterial.ShaderAssetId, runtimeMaterial.Properties);
+                material.SetUseDepth(runtimeMaterial.UseDepth);
+                material.SetSortingOrder(runtimeMaterial.SortingOrder);
+                RefreshMaterial(material, shaderChanged);
             }
             catch
             {
@@ -473,24 +563,5 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         if (_runtimePullTimer == null) return;
         _runtimePullTimer.Stop();
         _runtimePullTimer = null;
-    }
-
-    private void ApplyRuntimeMaterial(Material runtimeMaterial)
-    {
-        if (_material == null)
-        {
-            _material = runtimeMaterial;
-            return;
-        }
-
-        _material.SetShaderAssetId(runtimeMaterial.ShaderAssetId);
-        _material.SetUseDepth(runtimeMaterial.UseDepth);
-        _material.SetSortingOrder(runtimeMaterial.SortingOrder);
-
-        _material.Properties.Clear();
-        foreach (var (name, value) in runtimeMaterial.Properties)
-        {
-            _material.Properties[name] = value;
-        }
     }
 }

@@ -74,7 +74,7 @@ History is scoped to the open Editor project, not to a scene. Each entry decides
 | --- | --- | --- |
 | `rei_editor_select_asset` | `assetId` | Selects asset in Project/Monitor; returns `assetId`, `assetName`, `monitorSupported`. Monitor loading may finish asynchronously. |
 | `rei_editor_get_asset_state` | `assetId`, `source` | Independent Editor or native runtime snapshot; see inspection rules below. |
-| `rei_editor_set_material_property` | `materialAssetId`, `propertyName`, `value` | Changes one supported shader uniform; validates texture references. |
+| `rei_editor_set_material_property` | `materialAssetId`, `propertyName`, `value` | Changes one supported shader uniform and validates texture references. Confirmed edits use Editor Undo/Redo in Edit mode. |
 | `rei_editor_list_data_asset_types` | — | Available types, stable numeric type ids and serialized property schemas. |
 | `rei_editor_list_data_assets` | — | Instances with asset ids, native type ids, type names and project-relative paths. |
 | `rei_editor_create_data_asset` | `typeName`, `projectPath` | Creates registered type at path relative to Project directory, ending in `.asset`. Existing file: `asset_already_exists`. |

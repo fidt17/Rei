@@ -30,6 +30,13 @@ public class Material : Asset
         ShaderAssetId = shaderAssetId?.Trim() ?? "";
     }
 
+    internal void SetShader(string shaderAssetId, IReadOnlyDictionary<string, object?> properties)
+    {
+        SetShaderAssetId(shaderAssetId);
+        Properties.Clear();
+        foreach (var (name, value) in properties) Properties[name] = value;
+    }
+
     public void SetUseDepth(bool value)
     {
         UseDepth = value;

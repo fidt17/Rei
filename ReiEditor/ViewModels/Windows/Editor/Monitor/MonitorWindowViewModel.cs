@@ -4,9 +4,6 @@ using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Assets.Search;
-using ReiEditor.Models.Services.Assets.Shaders;
-using ReiEditor.Models.Services.Assets.Sync;
 using ReiEditor.Models.Services.Entities;
 using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Utils.Factory;
@@ -32,13 +29,8 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IEditorRefreshService _editorRefreshService;
     private readonly IFactory<EntityMonitorDrawerViewModel> _entityMonitorFactory;
     private readonly IFactory<DataAssetMonitorDrawerViewModel> _dataAssetMonitorFactory;
-    private readonly IAssetsService _assetsService;
-    private readonly IAssetSearchService _assetSearchService;
-    private readonly IShaderRegistry _shaderRegistry;
+    private readonly IFactory<MaterialMonitorDrawerViewModel> _materialMonitorFactory;
     private readonly IAssetRegistry _assetRegistry;
-    private readonly IAssetTypeMapper _assetTypeMapper;
-    private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
-    private readonly IProjectAssetFocusService _projectAssetFocusService;
 
     private readonly IEntitySyncService _entitySyncService;
 
@@ -53,26 +45,16 @@ public class MonitorWindowViewModel : BaseViewModel
         IEditorRefreshService editorRefreshService,
         IFactory<EntityMonitorDrawerViewModel> entityMonitorFactory,
         IFactory<DataAssetMonitorDrawerViewModel> dataAssetMonitorFactory,
-        IAssetsService assetsService,
-        IAssetSearchService assetSearchService,
-        IShaderRegistry shaderRegistry,
+        IFactory<MaterialMonitorDrawerViewModel> materialMonitorFactory,
         IAssetRegistry assetRegistry,
-        IAssetTypeMapper assetTypeMapper,
-        IAssetRuntimeSyncService assetRuntimeSyncService,
-        IProjectAssetFocusService projectAssetFocusService,
         IEntitySyncService entitySyncService)
     {
         _selectionService = selectionService;
         _editorRefreshService = editorRefreshService;
         _entityMonitorFactory = entityMonitorFactory;
         _dataAssetMonitorFactory = dataAssetMonitorFactory;
-        _assetsService = assetsService;
-        _assetSearchService = assetSearchService;
-        _shaderRegistry = shaderRegistry;
+        _materialMonitorFactory = materialMonitorFactory;
         _assetRegistry = assetRegistry;
-        _assetTypeMapper = assetTypeMapper;
-        _assetRuntimeSyncService = assetRuntimeSyncService;
-        _projectAssetFocusService = projectAssetFocusService;
         _entitySyncService = entitySyncService;
 
         _selectionService.ActiveSelection.Subscribe(HandleActiveSelectionChangedEvent);
@@ -113,13 +95,8 @@ public class MonitorWindowViewModel : BaseViewModel
             obj,
             _entityMonitorFactory,
             _dataAssetMonitorFactory,
-            _assetsService,
-            _assetSearchService,
-            _shaderRegistry,
+            _materialMonitorFactory,
             _assetRegistry,
-            _assetTypeMapper,
-            _assetRuntimeSyncService,
-            _projectAssetFocusService,
             out var entityToSync);
 
         if (entityToSync != null)
