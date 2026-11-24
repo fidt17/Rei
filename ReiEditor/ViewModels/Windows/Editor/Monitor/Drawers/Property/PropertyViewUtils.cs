@@ -30,10 +30,11 @@ public static class PropertyViewUtils
         ISelectionService selectionService,
         IDataAssetTypeRegistry? dataAssetTypeRegistry = null,
         SerializableObjectInfo.SerializedPropertyData? metadata = null, Action<SerializedProperty, object>? commitProperty = null,
-        Action<SerializedColorValue>? recordColorDrag = null)
+        Action<SerializedColorValue>? recordColorDrag = null, Action<SerializedProperty, object>? recordRangeDrag = null)
     {
         Action<object>? commit = commitProperty == null ? null : value => commitProperty(property, value);
-        if (metadata?.Range is { } range) return new RangePropertyViewModel(property, range, commit);
+        if (metadata?.Range is { } range)
+            return new RangePropertyViewModel(property, range, commit, recordRangeDrag == null ? null : before => recordRangeDrag(property, before));
 
         return property.Type switch
         {

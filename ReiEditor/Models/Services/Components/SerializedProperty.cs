@@ -15,7 +15,7 @@ public class SerializedProperty
     public SerializedTypeEnum Type { get; }
     public string SourceType { get; }
     [JsonIgnore] public string? TemplateTypeName { get; private set; }
-    [JsonIgnore] public SerializedTypeEnum ItemType { get; }
+    [JsonIgnore] public SerializedTypeEnum ItemType { get; private set; }
     [JsonIgnore] public string? ItemSourceType { get; }
     [JsonIgnore] public string? ItemTemplateTypeName { get; }
     [JsonIgnore] public SerializedProperty? ParentProperty { get; }
@@ -59,6 +59,8 @@ public class SerializedProperty
     {
         TemplateTypeName = templateTypeName;
     }
+
+    internal void SetCollectionItemType(SerializedTypeEnum itemType) => ItemType = itemType;
 
     public void SetName(string name)
     {

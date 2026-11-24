@@ -66,7 +66,9 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         set
         {
             var clamped = ColorConversionUtility.Clamp01(value);
-            if (_isSyncing || !SetAlpha(clamped)) return;
+            if (_isSyncing || clamped == _a) return;
+            if (_colorBeforeDrag == null && TryCommitChannel(color => color with { A = clamped })) return;
+            SetAlpha(clamped);
             ApplyFromRgba();
         }
     }
@@ -74,12 +76,7 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
     public float AlphaInput
     {
         get => A;
-        set
-        {
-            var clamped = ColorConversionUtility.Clamp01(value);
-            if (_isSyncing || clamped == _a) return;
-            if (!TryCommitChannel(color => color with { A = clamped })) A = clamped;
-        }
+        set => A = value;
     }
 
     private float _h;
@@ -228,11 +225,9 @@ public class ColorPropertyViewModel : BaseCustomPropertyViewModel
         return true;
     }
 
-    private bool SetAlpha(float value)
+    private void SetAlpha(float value)
     {
-        if (!SetField(ref _a, value, nameof(A))) return false;
-        this.RaisePropertyChanged(nameof(AlphaInput));
-        return true;
+        if (SetField(ref _a, value, nameof(A))) this.RaisePropertyChanged(nameof(AlphaInput));
     }
 
     private void ApplyFromRgba()

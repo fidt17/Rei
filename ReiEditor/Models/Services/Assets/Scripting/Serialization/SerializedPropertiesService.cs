@@ -371,6 +371,7 @@ public sealed class SerializedPropertiesService : ISerializedPropertiesService
             ? GetCollectionItemType(property.Type, itemSourceType)
             : property.ItemType;
 
+        property.SetCollectionItemType(itemType);
         var parsedItems = new List<SerializedProperty>();
         for (var index = 0; index < valueArray.Count; index++)
         {

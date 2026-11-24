@@ -79,7 +79,7 @@ History is scoped to the open Editor project, not to a scene. Each entry decides
 | `rei_editor_list_data_assets` | — | Instances with asset ids, native type ids, type names and project-relative paths. |
 | `rei_editor_create_data_asset` | `typeName`, `projectPath` | Creates registered type at path relative to Project directory, ending in `.asset`. Existing file: `asset_already_exists`. |
 | `rei_editor_get_data_asset` | `assetId` | Type, path, property names/types and JSON-compatible values. |
-| `rei_editor_set_data_asset_property` | `assetId`, `propertyName`, `value` | Changes one serialized property; updates loaded native instance. |
+| `rei_editor_set_data_asset_property` | `assetId`, `propertyName`, `value` | Changes one serialized property and updates the loaded native instance. Top-level booleans, enums, strings, numeric fields, `Vector2`, `Vector3`, `Color`, `AssetRef`, and lists of scalars or references use Editor Undo/Redo in Edit mode. Supply the updated array for a list edit. A one-field patch for a nested number or string also uses Undo/Redo. Clear an asset reference with `{"Id":""}`. |
 
 ### Lifecycle and operations
 

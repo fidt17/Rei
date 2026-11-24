@@ -24,6 +24,7 @@
    <ClInclude Include="Scripts\DataAssets\DataAssetTestConfig.h" />
    <ClInclude Include="Scripts\DataAssets\DataAssetTestDependency.h" />
    <ClInclude Include="Scripts\DataAssets\DataAssetTestMode.h" />
+   <ClInclude Include="Scripts\DataAssets\DataAssetTestSettings.h" />
 </ItemGroup>
 
   <ItemGroup Label="ClCompile">

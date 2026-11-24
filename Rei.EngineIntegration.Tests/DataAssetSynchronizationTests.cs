@@ -89,7 +89,8 @@ public sealed class DataAssetSynchronizationTests(SharedEngineFixture fixture, I
         var nativeBefore = (await engine.ReadAssetAsync(CONFIG_ID, "runtime")).GetProperty("values");
         foreach (var (property, value) in new (string, object)[] {
             ("_dependency", new { Id = CONFIG_ID }), ("_dependency", new { Id = "missing" }),
-            ("_material", new { Id = ALTERNATE_ID }), ("_floatValue", "not a number") })
+            ("_material", new { Id = ALTERNATE_ID }), ("_floatValue", "not a number"),
+            ("_weights", new object[] { 3.25, "not a number", 4.5 }) })
         {
             await engine.AssertToolErrorAsync("rei_editor_set_data_asset_property",
                 new() { ["assetId"] = CONFIG_ID, ["propertyName"] = property, ["value"] = JsonSerializer.SerializeToElement(value) }, "invalid_property_value");

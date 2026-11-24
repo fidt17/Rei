@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ReiEditor.Mcp.Contracts;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
 using ReiEditor.Models.ProjectManagement.Active;
 using ReiEditor.Models.Resources.Client;
@@ -53,6 +54,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
     private readonly IShaderRegistry _shaderRegistry;
     private readonly IAssetRuntimeSyncService _assetRuntimeSyncService;
     private readonly IDataAssetService _dataAssetService;
+    private readonly SetDataAssetPropertyCommand _setDataAssetProperty;
     private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
     private readonly IResourceService _resourceService;
     private readonly IProjectAssetFocusService _assetFocusService;
@@ -77,6 +79,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         IShaderRegistry shaderRegistry,
         IAssetRuntimeSyncService assetRuntimeSyncService,
         IDataAssetService dataAssetService,
+        SetDataAssetPropertyCommand setDataAssetProperty,
         IDataAssetTypeRegistry dataAssetTypeRegistry,
         IResourceService resourceService,
         IMcpEditorAutomationService automationService,
@@ -103,6 +106,7 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         _shaderRegistry = shaderRegistry;
         _assetRuntimeSyncService = assetRuntimeSyncService;
         _dataAssetService = dataAssetService;
+        _setDataAssetProperty = setDataAssetProperty;
         _dataAssetTypeRegistry = dataAssetTypeRegistry;
         _resourceService = resourceService;
         _assetFocusService = assetFocusService;
@@ -503,16 +507,46 @@ internal sealed class McpEditorSessionRegistration : IMcpEditorSession, IDisposa
         var editorValue = McpValueConverter.ToEditorValue(value);
         ValidatePropertyValue(property, editorValue);
         ValidateAssetReferenceValue(property, editorValue);
+        if (editorValue is JArray list && SetDataAssetPropertyCommand.Supports(property)
+            && !SetDataAssetPropertyCommand.IsValidCollectionUpdate(property, list))
+        {
+            throw CreateInvalidPropertyValueException(property, "List items must match the serialized item type.");
+        }
 
         var before = McpValueConverter.ToContractValue(property.Value);
-        if (!_dataAssetService.TrySetProperty(asset, propertyName, editorValue, out var runtimeSynced))
+        var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(asset.DataAssetTypeId)!;
+        var target = property;
+        var targetValue = editorValue;
+        if (SetDataAssetPropertyCommand.SupportsNestedFields(property) && editorValue is JObject { Count: 1 } patch
+            && property.Value is IReadOnlyDictionary<string, SerializedProperty> fields)
+        {
+            var field = patch.Properties().Single();
+            if (fields.TryGetValue(field.Name, out var child) && SetDataAssetPropertyCommand.Supports(child))
+            {
+                target = child;
+                targetValue = McpValueConverter.ToEditorValue(field.Value);
+            }
+        }
+
+        bool applied;
+        bool runtimeSynced;
+        if (SetDataAssetPropertyCommand.Supports(target))
+        {
+            var result = await _setDataAssetProperty.SetAsync(asset, target, targetValue);
+            applied = result != null;
+            runtimeSynced = result?.RuntimeSynced == true;
+        }
+        else
+        {
+            applied = _dataAssetService.TrySetProperty(asset, propertyName, editorValue, out runtimeSynced);
+        }
+        if (!applied)
         {
             throw new ReiMcpOperationException("data_asset_set_failed", $"Editor could not set property {propertyName}.");
         }
 
         var after = McpValueConverter.ToContractValue(property.Value);
         var changed = !ContractValuesEqual(before, after);
-        var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(asset.DataAssetTypeId)!;
         var details = CreateDataAssetDetails(asset, typeInfo);
         var isPlayMode = string.Equals(_automationService.GetEngineInfo().Mode, "PlayMode", StringComparison.Ordinal);
         var message = changed

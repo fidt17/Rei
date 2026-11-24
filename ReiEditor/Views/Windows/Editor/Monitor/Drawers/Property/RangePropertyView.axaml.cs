@@ -41,6 +41,7 @@ public partial class RangePropertyView : UserControl
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _viewModel?.EndSliderDrag();
         if (_viewModel != null) _viewModel.PropertyChanged -= ViewModelPropertyChanged;
         _viewModel = null;
         _draggingSlider = false;
@@ -49,6 +50,7 @@ public partial class RangePropertyView : UserControl
 
     private void BindViewModel()
     {
+        _viewModel?.EndSliderDrag();
         if (_viewModel != null) _viewModel.PropertyChanged -= ViewModelPropertyChanged;
         _draggingSlider = false;
         _viewModel = DataContext as RangePropertyViewModel;
@@ -59,7 +61,7 @@ public partial class RangePropertyView : UserControl
 
     private void ViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(RangePropertyViewModel.SliderValue)) UpdateSlider();
+        if (!_draggingSlider && e.PropertyName == nameof(RangePropertyViewModel.SliderValue)) UpdateSlider();
     }
 
     private void UpdateSlider()
@@ -85,18 +87,24 @@ public partial class RangePropertyView : UserControl
 
     private void SliderPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (_updatingSlider || _draggingSlider || e.Property != Slider.ValueProperty || _viewModel == null) return;
+        if (_updatingSlider || e.Property != Slider.ValueProperty || _viewModel == null) return;
+        if (_draggingSlider && !_viewModel.PreviewsSliderDrag) return;
         _viewModel.SetSliderValue(_slider.Value);
-        UpdateSlider();
+        if (!_draggingSlider) UpdateSlider();
     }
 
-    private void SliderDragStarted(object? sender, VectorEventArgs e) => _draggingSlider = _viewModel?.RecordsConfirmedEdits == true;
+    private void SliderDragStarted(object? sender, VectorEventArgs e)
+    {
+        _draggingSlider = _viewModel?.RecordsConfirmedEdits == true;
+        if (_draggingSlider) _viewModel?.BeginSliderDrag();
+    }
 
     private void SliderDragCompleted(object? sender, VectorEventArgs e)
     {
         if (!_draggingSlider) return;
-        _draggingSlider = false;
         _viewModel?.SetSliderValue(_slider.Value);
+        _draggingSlider = false;
+        _viewModel?.EndSliderDrag();
         UpdateSlider();
     }
 

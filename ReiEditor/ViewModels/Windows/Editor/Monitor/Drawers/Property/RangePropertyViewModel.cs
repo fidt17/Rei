@@ -39,16 +39,20 @@ public sealed class RangePropertyViewModel : BaseViewModel
     public bool HasStatus => StatusText.Length != 0;
 
     internal bool RecordsConfirmedEdits => _commit != null;
+    internal bool PreviewsSliderDrag => _recordSliderDrag != null;
 
     private readonly SerializedProperty _property;
     private readonly Action<object>? _commit;
+    private readonly Action<object>? _recordSliderDrag;
+    private object? _beforeSliderDrag;
     private string _displayText = "";
     private bool _disposed;
 
-    public RangePropertyViewModel(SerializedProperty property, SerializedNumericRange range, Action<object>? commit = null)
+    public RangePropertyViewModel(SerializedProperty property, SerializedNumericRange range, Action<object>? commit = null, Action<object>? recordSliderDrag = null)
     {
         _property = property;
         _commit = commit;
+        _recordSliderDrag = recordSliderDrag;
         Range = range;
         PropertyName = new(property);
         _property.ValueChangedEvent += HandleValueChanged;
@@ -58,7 +62,19 @@ public sealed class RangePropertyViewModel : BaseViewModel
     public void SetSliderValue(double value)
     {
         if (_disposed || !double.IsFinite(value)) return;
-        Commit(Range.NormalizeSlider(value));
+        Commit(Range.NormalizeSlider(value), preview: _beforeSliderDrag != null);
+    }
+
+    internal void BeginSliderDrag()
+    {
+        if (!_disposed && PreviewsSliderDrag) _beforeSliderDrag ??= _property.Value;
+    }
+
+    internal void EndSliderDrag()
+    {
+        if (_beforeSliderDrag is not { } before) return;
+        _beforeSliderDrag = null;
+        _recordSliderDrag?.Invoke(before);
     }
 
     public void ApplyInput(bool force = false)
@@ -81,18 +97,19 @@ public sealed class RangePropertyViewModel : BaseViewModel
 
     public override void Dispose()
     {
+        EndSliderDrag();
         _disposed = true;
         _property.ValueChangedEvent -= HandleValueChanged;
         base.Dispose();
     }
 
-    private void Commit(double value)
+    private void Commit(double value, bool preview = false)
     {
         // Compare numeric values, not their boxed JSON representation (long/double).
         var fieldValue = Range.ToFieldValue(value);
         if (Convert.ToDouble(_property.Value, CultureInfo.InvariantCulture) != Convert.ToDouble(fieldValue, CultureInfo.InvariantCulture))
         {
-            if (_commit != null) _commit(fieldValue);
+            if (!preview && _commit != null) _commit(fieldValue);
             else _property.Value = fieldValue;
         }
         RefreshDisplay();

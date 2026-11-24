@@ -31,11 +31,11 @@ public sealed class RangePropertyViewTests
         public Slider Slider { get; }
         public TextBox Input { get; }
 
-        public Ui(SerializedProperty property, SerializedNumericRange range, Action<object>? commit = null)
+        public Ui(SerializedProperty property, SerializedNumericRange range, Action<object>? commit = null, Action<object>? recordSliderDrag = null)
         {
             Application.Current!.Styles.Add(_theme);
             Application.Current.Styles.Add(_styles);
-            Model = new(property, range, commit);
+            Model = new(property, range, commit, recordSliderDrag);
             var view = new RangePropertyView { DataContext = Model };
             Slider = view.FindControl<Slider>("RangeSlider")!;
             Input = view.FindControl<TextBox>("RangeInput")!;
@@ -60,16 +60,19 @@ public sealed class RangePropertyViewTests
         }
     }
 
-    [AvaloniaFact]
-    public void HistorySliderCommitsOneValueAfterDrag()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void HistorySliderCommitsOneValueAfterDrag(bool preview)
     {
         var property = Integer(2);
         var commits = new List<object>();
+        var dragStarts = new List<object>();
         using var ui = new Ui(property, new(0, 8, null, true), value =>
         {
             commits.Add(value);
             property.Value = value;
-        });
+        }, preview ? dragStarts.Add : null);
         var thumb = ui.Slider.GetVisualDescendants().OfType<Thumb>().Single();
         var start = thumb.TranslatePoint(new Point(thumb.Bounds.Width / 2, thumb.Bounds.Height / 2), ui.Window)!.Value;
         var end = start + new Vector(60, 0);
@@ -78,12 +81,19 @@ public sealed class RangePropertyViewTests
         ui.Window.MouseMove(end);
         Dispatcher.UIThread.RunJobs();
         Assert.Empty(commits);
-        Assert.Equal(2, property.Value);
+        Assert.Empty(dragStarts);
+        if (preview) Assert.InRange(Assert.IsType<int>(property.Value), 3, 8);
+        else Assert.Equal(2, property.Value);
         Assert.True(ui.Slider.Value > 2);
 
         ui.Window.MouseUp(end, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(property.Value, Assert.Single(commits));
+        if (preview)
+        {
+            Assert.Empty(commits);
+            Assert.Equal(2, Assert.Single(dragStarts));
+        }
+        else Assert.Equal(property.Value, Assert.Single(commits));
         Assert.InRange(Assert.IsType<int>(property.Value), 3, 8);
     }
 

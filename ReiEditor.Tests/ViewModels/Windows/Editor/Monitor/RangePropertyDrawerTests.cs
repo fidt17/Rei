@@ -1,12 +1,15 @@
 using Avalonia.Headless.XUnit;
 using Newtonsoft.Json.Linq;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.DataAssets;
+using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Components;
+using ReiEditor.Models.Services.Commands;
 using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
@@ -43,7 +46,12 @@ public sealed class RangePropertyDrawerTests
         }
         public Task<DataAsset?> Create(int id, string path) => throw new NotSupportedException();
         public bool TryGetDataAssetTypeId(string id, out int typeId) => throw new NotSupportedException();
-        public bool TrySetProperty(DataAsset value, string name, object? data, out bool synced) => throw new NotSupportedException();
+        public bool TrySetProperty(DataAsset value, string name, object? data, out bool synced)
+        {
+            value.GetProperty(name).Value = data;
+            synced = TrySyncRuntime(value);
+            return true;
+        }
     }
 
     private sealed class Types(DataAssetTypeInfo type) : IDataAssetTypeRegistry
@@ -131,6 +139,55 @@ public sealed class RangePropertyDrawerTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task RangeDragPreviewsAndRecordsOnceThenManualInputRecordsSeparately()
+    {
+        var schema = Schema("Config", "REI_RANGE(0, 8) SERIALIZE i32 Count = 4;");
+        var registry = new SerializableObjectsRegistry(new TestLogger<SerializableObjectsRegistry>());
+        registry.Replace([schema], []);
+        var types = new Types(new(1, schema));
+        var asset = new DataAsset(1);
+        var properties = new SerializedPropertiesService(registry, new TestLogger<SerializedPropertiesService>());
+        Assert.True(new DataAssetSchemaService(types, properties, new TestLogger<DataAssetSchemaService>()).TryRefresh(asset));
+        var assets = new Assets(asset);
+        var assetRegistry = new AssetRegistry(new TestLogger<AssetRegistry>());
+        assetRegistry.AddToLoadedAssets(new AssetInfo(new AssetMeta("config"), "Config.asset"), asset);
+        using var history = new EditorCommandService();
+        var command = new SetDataAssetPropertyCommand(history, assets, assetRegistry, new TestEngineRunner());
+        using var drawer = Drawer(assets, registry, types, command);
+        await drawer.LoadingTask;
+        var range = Assert.IsType<RangePropertyViewModel>(Assert.Single(drawer.Properties));
+
+        range.BeginSliderDrag();
+        range.SetSliderValue(5.8);
+        Assert.Equal(6, asset.GetProperty("Count").Value);
+        var wait = System.Diagnostics.Stopwatch.StartNew();
+        while (assets.SyncCount == 0 && wait.Elapsed < TimeSpan.FromSeconds(2)) await Task.Delay(10);
+        Assert.Equal(6, assets.LastSynced?["Count"]?["Value"]?.Value<int>());
+        Assert.False(history.CanUndo);
+        range.SetSliderValue(8);
+        range.EndSliderDrag();
+        Assert.Equal(8, range.SliderValue);
+        Assert.Equal(8, assets.LastSynced?["Count"]?["Value"]?.Value<int>());
+        Assert.True(history.CanUndo);
+
+        range.InputText = "3";
+        Assert.Equal(8, asset.GetProperty("Count").Value);
+        range.ApplyInput();
+        Assert.Equal(3, range.SliderValue);
+        await history.UndoAsync();
+        Assert.Equal(8, range.SliderValue);
+        await history.UndoAsync();
+        Assert.Equal(4, range.SliderValue);
+        Assert.False(history.CanUndo);
+        await history.RedoAsync();
+        Assert.Equal(8, range.SliderValue);
+        await history.RedoAsync();
+        Assert.Equal(3, range.SliderValue);
+        Assert.False(history.CanRedo);
+    }
+
     private static SerializableObjectInfo Schema(string name, string source) => new("game", name, false, new ObjectFile<string>(source, name + ".h"), new SourceFilesUtility(null!, null!, null!).GetSerializedProperties(source), name + ".h");
-    private static DataAssetMonitorDrawerViewModel Drawer(Assets assets, ISerializableObjectsRegistry registry, IDataAssetTypeRegistry types) => new(new Selection(), assets, registry, types, null!, null!, null!, null!, null!, null!, null!);
+    private static DataAssetMonitorDrawerViewModel Drawer(Assets assets, ISerializableObjectsRegistry registry, IDataAssetTypeRegistry types, SetDataAssetPropertyCommand? command = null) =>
+        new(new Selection(), assets, registry, types, null!, null!, null!, null!, null!, null!, null!, command);
 }

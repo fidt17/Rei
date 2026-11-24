@@ -12,6 +12,7 @@
 
 #include "DataAssetTestDependency.h"
 #include "DataAssetTestMode.h"
+#include "DataAssetTestSettings.h"
 
 namespace symbols::testing
 {
@@ -20,6 +21,7 @@ namespace symbols::testing
         DATA_ASSET_BODY(DataAssetTestConfig)
 
         SERIALIZE bool _enabled;
+        REI_RANGE(-1000, 1000, 5)
         SERIALIZE i32 _signedValue;
         SERIALIZE u32 _unsignedValue;
         SERIALIZE f32 _floatValue;
@@ -28,6 +30,7 @@ namespace symbols::testing
         SERIALIZE rei::math::Vector2 _position2D;
         SERIALIZE rei::math::Vector3 _position3D;
         SERIALIZE rei::render::Color _tint;
+        SERIALIZE DataAssetTestSettings _settings;
         SERIALIZE std::vector<f32> _weights;
         SERIALIZE rei::assets::AssetRef<rei::render::Material> _material;
         SERIALIZE rei::assets::AssetRef<DataAssetTestDependency> _dependency;

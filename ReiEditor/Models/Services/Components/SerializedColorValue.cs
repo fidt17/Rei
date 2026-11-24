@@ -17,10 +17,15 @@ public readonly record struct SerializedColorValue(float R, float G, float B, fl
     public void Apply(SerializedProperty property)
     {
         var channels = (Dictionary<string, SerializedProperty>)property.Value!;
-        channels["r"].SetValueWithoutTriggeringChangedEvent(R);
-        channels["g"].SetValueWithoutTriggeringChangedEvent(G);
-        channels["b"].SetValueWithoutTriggeringChangedEvent(B);
-        channels["a"].SetValueWithoutTriggeringChangedEvent(A);
+        SetChannel(channels["r"], R);
+        SetChannel(channels["g"], G);
+        SetChannel(channels["b"], B);
+        SetChannel(channels["a"], A);
         property.TriggerChangedEvent();
+    }
+
+    private static void SetChannel(SerializedProperty channel, float value)
+    {
+        if (Convert.ToSingle(channel.Value) != value) channel.SetValueWithoutTriggeringChangedEvent(value);
     }
 }

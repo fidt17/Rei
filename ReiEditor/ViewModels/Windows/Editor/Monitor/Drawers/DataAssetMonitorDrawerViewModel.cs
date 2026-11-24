@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.DataAssets;
@@ -62,6 +62,7 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly IProjectAssetFocusService _projectAssetFocusService;
     private readonly ISceneManagementService _sceneManagementService;
     private readonly ISelectionService _selectionService;
+    private readonly SetDataAssetPropertyCommand? _setProperty;
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _subscriptions = new();
     private CancellationTokenSource? _runtimeSyncDebounceCts;
 
@@ -69,7 +70,7 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
     public DataAssetMonitorDrawerViewModel() { }
 #pragma warning restore CS8618
 
-    public DataAssetMonitorDrawerViewModel(IAssetSelectable assetSelection, IDataAssetService dataAssetService, ISerializableObjectsRegistry serializableObjectsRegistry, IDataAssetTypeRegistry dataAssetTypeRegistry, IAssetSearchService assetSearchService, IAssetRegistry assetRegistry, IAssetTypeMapper assetTypeMapper, IBehaviourRegistry behaviourRegistry, IProjectAssetFocusService projectAssetFocusService, ISceneManagementService sceneManagementService, ISelectionService selectionService)
+    public DataAssetMonitorDrawerViewModel(IAssetSelectable assetSelection, IDataAssetService dataAssetService, ISerializableObjectsRegistry serializableObjectsRegistry, IDataAssetTypeRegistry dataAssetTypeRegistry, IAssetSearchService assetSearchService, IAssetRegistry assetRegistry, IAssetTypeMapper assetTypeMapper, IBehaviourRegistry behaviourRegistry, IProjectAssetFocusService projectAssetFocusService, ISceneManagementService sceneManagementService, ISelectionService selectionService, SetDataAssetPropertyCommand? setProperty = null)
     {
         AssetName = assetSelection.AssetName;
         AssetId = assetSelection.AssetId;
@@ -84,6 +85,7 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
         _projectAssetFocusService = projectAssetFocusService;
         _sceneManagementService = sceneManagementService;
         _selectionService = selectionService;
+        _setProperty = setProperty;
 
         LoadingTask = LoadState();
     }
@@ -91,9 +93,7 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
     public override void Dispose()
     {
         if (_isDisposed) return;
-        var hasPendingSync = _runtimeSyncDebounceCts != null;
-        CancelRuntimeSync();
-        if (hasPendingSync) SyncRuntimeImmediate();
+        FlushPendingRuntimeSync();
         _isDisposed = true;
         base.Dispose();
         foreach (var (property, handler) in _subscriptions)
@@ -111,36 +111,29 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
             var asset = await _dataAssetService.Load(AssetId);
             if (_isDisposed) return;
             _asset = asset;
-            if (_asset == null)
+            if (asset == null)
             {
                 await Dispatcher.UIThread.InvokeAsync(() => StatusText = "Failed to load DataAsset.");
                 return;
             }
 
-            var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(_asset.DataAssetTypeId);
+            var typeInfo = _dataAssetTypeRegistry.GetDataAssetType(asset.DataAssetTypeId);
             if (typeInfo == null)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => StatusText = $"Unknown DataAsset type id {_asset.DataAssetTypeId}.");
+                await Dispatcher.UIThread.InvokeAsync(() => StatusText = $"Unknown DataAsset type id {asset.DataAssetTypeId}.");
                 return;
             }
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (_isDisposed) return;
-                TypeLabel = $"Type: {typeInfo.ObjectName} ({_asset.DataAssetTypeId})";
-                var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(_asset.Properties.Values, typeInfo.SerializedProperties).ToList();
+                TypeLabel = $"Type: {typeInfo.ObjectName} ({asset.DataAssetTypeId})";
+                var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(asset.Properties.Values, typeInfo.SerializedProperties);
                 foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, typeInfo.SerializedProperties, (property, metadata) =>
-                             PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry, _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry, metadata)))
+                             CreatePropertyRow(asset, property, metadata)))
                 {
                     Properties.Add(row);
                 }
-                foreach (var property in visibleProperties)
-                {
-                    Action<object?> handler = _ => ScheduleRuntimeSync();
-                    property.ValueChangedEvent += handler;
-                    _subscriptions.Add((property, handler));
-                }
-
                 StatusText = Properties.Count == 0 ? "DataAsset has no editable properties." : "";
                 IsLoaded = true;
             });
@@ -154,9 +147,49 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
         }
     }
 
-    private void ScheduleRuntimeSync()
+    private BaseViewModel CreatePropertyRow(DataAsset asset, SerializedProperty property, SerializableObjectInfo.SerializedPropertyData? metadata)
     {
-        if (_isDisposed) return;
+        var recordEdit = _setProperty != null && SetDataAssetPropertyCommand.Supports(property);
+        var recordNestedEdit = _setProperty != null && SetDataAssetPropertyCommand.SupportsNestedFields(property);
+        var previewRange = recordEdit && metadata?.Range != null;
+        var previewColor = recordEdit && property.SourceType == "Color";
+        var view = PropertyViewUtils.CreatePropertyViewModel(property, _serializableObjectsRegistry, _assetSearchService, _assetRegistry,
+            _assetTypeMapper, _behaviourRegistry, _projectAssetFocusService, _sceneManagementService, _selectionService, _dataAssetTypeRegistry,
+            metadata, recordEdit || recordNestedEdit ? CommitProperty : null,
+            recordColorDrag: previewColor ? before => RecordDrag(asset, property, before) : null,
+            recordRangeDrag: previewRange ? (field, before) => RecordDrag(asset, field, before) : null);
+        Action<object?> handler = _ =>
+        {
+            if (_setProperty?.IsApplying(property) != true) ScheduleRuntimeSync(keepPending: previewRange || previewColor);
+        };
+        property.ValueChangedEvent += handler;
+        _subscriptions.Add((property, handler));
+        return view;
+    }
+
+    private async void CommitProperty(SerializedProperty property, object value)
+    {
+        if (_isDisposed || _asset == null || _setProperty == null) return;
+        try
+        {
+            var result = await _setProperty.SetAsync(_asset, property, value);
+            if (!_isDisposed && result != null) ShowRuntimeSyncStatus(result.RuntimeSynced);
+        }
+        catch (Exception exception)
+        {
+            if (!_isDisposed) StatusText = $"Failed to edit DataAsset. {exception.Message}";
+        }
+    }
+
+    private void RecordDrag(DataAsset asset, SerializedProperty property, object before)
+    {
+        _setProperty?.RecordApplied(asset, property, before);
+        FlushPendingRuntimeSync();
+    }
+
+    private void ScheduleRuntimeSync(bool keepPending)
+    {
+        if (_isDisposed || (keepPending && _runtimeSyncDebounceCts != null)) return;
         CancelRuntimeSync();
         _runtimeSyncDebounceCts = new CancellationTokenSource();
         var token = _runtimeSyncDebounceCts.Token;
@@ -182,7 +215,19 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
     private void SyncRuntimeImmediate()
     {
         if (_isDisposed || _asset == null || string.IsNullOrWhiteSpace(AssetId)) return;
-        StatusText = _dataAssetService.TrySyncRuntime(_asset) ? "" :
+        ShowRuntimeSyncStatus(_dataAssetService.TrySyncRuntime(_asset));
+    }
+
+    private void FlushPendingRuntimeSync()
+    {
+        if (_runtimeSyncDebounceCts == null) return;
+        CancelRuntimeSync();
+        SyncRuntimeImmediate();
+    }
+
+    private void ShowRuntimeSyncStatus(bool synced)
+    {
+        StatusText = synced ? "" :
             "Runtime not synchronized. Live changes require a loaded asset; RendererSettings affects cameras referencing this profile.";
     }
 
