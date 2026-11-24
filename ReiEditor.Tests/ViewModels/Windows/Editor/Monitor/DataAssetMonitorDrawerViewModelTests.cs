@@ -4,6 +4,7 @@ using Avalonia.Data;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Project.Commands.Assets;
+using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets;
@@ -15,6 +16,8 @@ using ReiEditor.Models.Services.Components;
 using ReiEditor.Models.Services.Commands;
 using ReiEditor.Tests.Infrastructure.Headless;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
+using ReiEditor.Utils.Factory;
+using ReiEditor.ViewModels.Windows.Editor.Monitor;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Property.Custom;
@@ -54,6 +57,18 @@ public sealed class DataAssetMonitorDrawerViewModelTests
             runtimeSynced = TrySyncRuntime(asset);
             return true;
         }
+    }
+
+    private sealed class Refresh : IEditorRefreshService
+    {
+        public event Action? RefreshedEvent;
+        public void NotifyRefreshed() => RefreshedEvent?.Invoke();
+    }
+
+    private sealed class DrawerFactory(Func<DataAssetMonitorDrawerViewModel> create) : IFactory<DataAssetMonitorDrawerViewModel>
+    {
+        public DataAssetMonitorDrawerViewModel CreateInstance() => create();
+        public DataAssetMonitorDrawerViewModel CreateInstance(params object[] parameters) => create();
     }
 
     private sealed class TestTypes : IDataAssetTypeRegistry
@@ -281,15 +296,25 @@ public sealed class DataAssetMonitorDrawerViewModelTests
         asset.AddProperty(property);
         var assets = new TestDataAssets(Task.FromResult<DataAsset?>(asset));
         var registry = new AssetRegistry(new TestLogger<AssetRegistry>());
-        registry.AddToLoadedAssets(new AssetInfo(new AssetMeta("config"), "Config.asset"), asset);
+        registry.AddToLoadedAssets(new DataAssetInfo(new AssetMeta("config"), "Config.asset", 1), asset);
         using var history = new EditorCommandService();
-        using var drawer = CreateDrawer(assets, new SetDataAssetPropertyCommand(history, assets, registry, new TestEngineRunner()));
+        var command = new SetDataAssetPropertyCommand(history, assets, registry, new TestEngineRunner());
+        var refresh = new Refresh();
+        var selection = new SelectionService(new TestEntityApi());
+        using var monitor = new MonitorWindowViewModel(selection, refresh, null!,
+            new DrawerFactory(() => CreateDrawer(assets, command)), null!, registry, null!);
+        selection.Select(new TestSelection());
+        using var drawer = Assert.IsType<DataAssetMonitorDrawerViewModel>(monitor.Drawer);
         await drawer.LoadingTask;
         var color = Assert.Single(drawer.Properties.OfType<ColorPropertyViewModel>());
 
         color.BeginColorDrag();
         color.A = 0.5f;
         color.A = 0.25f;
+        refresh.NotifyRefreshed();
+        selection.Select(new TestSelection());
+        Assert.Same(drawer, monitor.Drawer);
+        Assert.Same(color, Assert.Single(drawer.Properties));
         var afterAlpha = original with { A = 0.25f };
         AssertColor(afterAlpha);
         var wait = System.Diagnostics.Stopwatch.StartNew();
@@ -337,6 +362,14 @@ public sealed class DataAssetMonitorDrawerViewModelTests
         AssertColor(afterInput);
         await history.RedoAsync();
         AssertColor(afterAlphaStep);
+
+        asset.RemoveProperty("tint");
+        asset.AddProperty(new SerializedProperty("value", SerializedTypeEnum.Float, 3f, "f32", null));
+        refresh.NotifyRefreshed();
+        using var refreshedDrawer = Assert.IsType<DataAssetMonitorDrawerViewModel>(monitor.Drawer);
+        await refreshedDrawer.LoadingTask;
+        Assert.NotSame(drawer, refreshedDrawer);
+        Assert.Equal(3f, Assert.IsType<FloatPropertyViewModel>(Assert.Single(refreshedDrawer.Properties)).Value);
 
         void AssertColor(SerializedColorValue expected)
         {

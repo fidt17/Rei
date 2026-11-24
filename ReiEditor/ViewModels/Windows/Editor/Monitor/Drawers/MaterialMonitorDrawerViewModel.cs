@@ -131,6 +131,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
     private readonly List<(SerializedProperty Property, Action<object?> Handler)> _propertySubscriptions = new();
     private readonly List<(ShaderUniformInfo Uniform, SerializedProperty RootProperty)> _uniformProperties = new();
     private (string Name, JToken? Before)? _colorPreview;
+    private ShaderUniformInfo[]? _shaderUniforms;
     private CancellationTokenSource? _runtimeSyncDebounceCTS;
     private DispatcherTimer? _runtimePullTimer;
     private bool _suppressRuntimeSync;
@@ -175,6 +176,25 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
 
         _ = LoadMaterialState();
         StartRuntimePullLoop();
+    }
+
+    internal bool TryRefreshAsset(Asset asset)
+    {
+        if (!IsMaterialLoaded || _material is not { } material || !ReferenceEquals(material, asset)) return false;
+
+        var currentUniforms = _shaderRegistry.TryGetById(material.ShaderAssetId, out var shader) ? shader.Uniforms : null;
+        var shaderChanged = ShaderPicker.SelectedAssetId != material.ShaderAssetId
+            || !SameUniforms(_shaderUniforms, currentUniforms);
+        RefreshMaterial(material, shaderChanged);
+        if (!shaderChanged) RefreshUniformValues(material);
+        return true;
+    }
+
+    private static bool SameUniforms(IReadOnlyList<ShaderUniformInfo>? previous, IReadOnlyList<ShaderUniformInfo>? current)
+    {
+        if (previous == null || current == null) return previous == current;
+        return previous.Select(uniform => (uniform.Name, uniform.Type, uniform.SourceType))
+            .SequenceEqual(current.Select(uniform => (uniform.Name, uniform.Type, uniform.SourceType)));
     }
 
     public override void Dispose()
@@ -283,6 +303,7 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         ShaderProperties.ClearAndDispose();
         _uniformProperties.Clear();
         _colorPreview = null;
+        _shaderUniforms = null;
 
         if (string.IsNullOrWhiteSpace(material.ShaderAssetId))
         {
@@ -298,7 +319,8 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
             return;
         }
 
-        foreach (var uniform in shader.Uniforms.Where(x => x.IsSupported))
+        _shaderUniforms = shader.Uniforms.ToArray();
+        foreach (var uniform in _shaderUniforms.Where(x => x.IsSupported))
         {
             try
             {
@@ -394,20 +416,34 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
         }
 
         var (uniform, root) = _uniformProperties.Find(row => row.Uniform.Name == uniformName);
-        if (uniform == null) return;
+        if (uniform != null) RefreshUniform(material, uniform, root);
+    }
+
+    private void RefreshUniform(Material material, ShaderUniformInfo uniform, SerializedProperty root)
+    {
         var value = MaterialShaderPropertyUtils.CreateSerializedProperty(uniform, material.Properties.GetValueOrDefault(uniform.Name)).Value;
         _suppressRuntimeSync = true;
         try
         {
             if (root.Value is Dictionary<string, SerializedProperty> children && value is Dictionary<string, SerializedProperty> updated)
             {
+                if (updated.All(field => Equals(children[field.Key].Value, field.Value.Value))) return;
                 foreach (var (field, child) in updated) children[field].SetValueWithoutTriggeringChangedEvent(child.Value!);
             }
-            else root.SetValueWithoutTriggeringChangedEvent(value!);
+            else
+            {
+                if (Equals(root.Value, value)) return;
+                root.SetValueWithoutTriggeringChangedEvent(value!);
+            }
 
             root.TriggerChangedEvent();
         }
         finally { _suppressRuntimeSync = false; }
+    }
+
+    private void RefreshUniformValues(Material material)
+    {
+        foreach (var (uniform, property) in _uniformProperties) RefreshUniform(material, uniform, property);
     }
 
     private void RefreshRenderSettings(Material material)
@@ -543,12 +579,14 @@ public class MaterialMonitorDrawerViewModel : BaseMonitorDrawer
                 if (runtimeMaterial == null) return;
 
                 _lastRuntimeJson = jsonData;
-                var shaderChanged = material.ShaderAssetId != runtimeMaterial.ShaderAssetId
+                var shaderChanged = material.ShaderAssetId != runtimeMaterial.ShaderAssetId;
+                var uniformsChanged = shaderChanged
                     || !JToken.DeepEquals(JObject.FromObject(material.Properties), JObject.FromObject(runtimeMaterial.Properties));
-                if (shaderChanged) material.SetShader(runtimeMaterial.ShaderAssetId, runtimeMaterial.Properties);
+                if (uniformsChanged) material.SetShader(runtimeMaterial.ShaderAssetId, runtimeMaterial.Properties);
                 material.SetUseDepth(runtimeMaterial.UseDepth);
                 material.SetSortingOrder(runtimeMaterial.SortingOrder);
                 RefreshMaterial(material, shaderChanged);
+                if (!shaderChanged && uniformsChanged) RefreshUniformValues(material);
             }
             catch
             {

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using ReiEditor.Models.EditorApp.Refresh;
@@ -35,6 +36,7 @@ public class MonitorWindowViewModel : BaseViewModel
     private readonly IEntitySyncService _entitySyncService;
 
     private CancellationTokenSource? _entityUpdateStateCTS;
+    private string? _drawerAssetPath;
 
 #pragma warning disable CS8618
     public MonitorWindowViewModel() { }
@@ -83,6 +85,8 @@ public class MonitorWindowViewModel : BaseViewModel
 
     private void UpdateDrawer(ISelectable? obj)
     {
+        if (TryRefreshCurrentAssetDrawer(obj)) return;
+        _drawerAssetPath = (obj as IAssetSelectable)?.AssetPath;
         _entityUpdateStateCTS?.Cancel();
 
         if (Drawer != null)
@@ -103,6 +107,20 @@ public class MonitorWindowViewModel : BaseViewModel
         {
             RunEntityUpdateStateTask(entityToSync);
         }
+    }
+
+    private bool TryRefreshCurrentAssetDrawer(ISelectable? selection)
+    {
+        if (selection is not IAssetSelectable asset
+            || !string.Equals(_drawerAssetPath, asset.AssetPath, StringComparison.OrdinalIgnoreCase)
+            || !_assetRegistry.TryGetLoadedAsset(asset.AssetId, out var loaded)) return false;
+
+        return Drawer switch
+        {
+            MaterialMonitorDrawerViewModel material => material.TryRefreshAsset(loaded),
+            DataAssetMonitorDrawerViewModel dataAsset => dataAsset.HasCurrentBindings(loaded),
+            _ => false,
+        };
     }
 
     private void RunEntityUpdateStateTask(GameEntity e)

@@ -106,7 +106,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Internal\BehaviourRegistry.cpp" />
+    <ClCompile Include="Internal\BehaviourRegistry.cpp">
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="ReiApp.cpp" />
   </ItemGroup>
   <ItemGroup>

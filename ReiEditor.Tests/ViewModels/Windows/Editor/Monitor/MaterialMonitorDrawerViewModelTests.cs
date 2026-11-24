@@ -195,17 +195,20 @@ public sealed class MaterialMonitorDrawerViewModelTests
     [AvaloniaFact]
     public async Task DebounceCompletionResumesRuntimePull()
     {
-        var material = new Material("");
+        var material = new Material("shader-id");
         var runtime = new TestAssetRuntimeSyncService();
         var drawer = CreateDrawer(material, runtime);
         try
         {
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            var strength = Assert.IsType<FloatPropertyViewModel>(Assert.Single(drawer.ShaderProperties));
             drawer.SortingOrder = 42;
             await WaitFor(() => runtime.Writes.Count > 0);
-            runtime.RuntimeJson = "{\"ShaderAssetId\":\"\",\"UseDepth\":true,\"SortingOrder\":88,\"Properties\":{}}";
+            runtime.RuntimeJson = "{\"ShaderAssetId\":\"shader-id\",\"UseDepth\":true,\"SortingOrder\":88,\"Properties\":{\"strength\":2.5}}";
             await WaitFor(() => drawer.SortingOrder == 88);
             Assert.Equal(88, material.SortingOrder);
+            Assert.Same(strength, Assert.Single(drawer.ShaderProperties));
+            Assert.Equal(2.5f, strength.Value);
         }
         finally
         {

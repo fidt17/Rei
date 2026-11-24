@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -52,6 +53,8 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
 
     private bool _isDisposed;
     private DataAsset? _asset;
+    private DataAssetTypeInfo? _boundType;
+    private int _boundPropertyCount;
     private readonly IDataAssetService _dataAssetService;
     private readonly ISerializableObjectsRegistry _serializableObjectsRegistry;
     private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
@@ -88,6 +91,18 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
         _setProperty = setProperty;
 
         LoadingTask = LoadState();
+    }
+
+    internal bool HasCurrentBindings(Asset asset)
+    {
+        if (!IsLoaded || asset is not DataAsset dataAsset || !ReferenceEquals(_asset, dataAsset)
+            || dataAsset.Properties.Count != _boundPropertyCount || _boundType is not { } bound
+            || _dataAssetTypeRegistry.GetDataAssetType(dataAsset.DataAssetTypeId) is not { } currentType) return false;
+
+        return bound.TypeId == currentType.TypeId
+            && bound.SerializableObject.Source.Object == currentType.SerializableObject.Source.Object
+            && _subscriptions.All(binding => dataAsset.Properties.TryGetValue(binding.Property.Name, out var current)
+                && ReferenceEquals(current, binding.Property));
     }
 
     public override void Dispose()
@@ -127,6 +142,8 @@ public sealed class DataAssetMonitorDrawerViewModel : BaseMonitorDrawer
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (_isDisposed) return;
+                _boundType = typeInfo;
+                _boundPropertyCount = asset.Properties.Count;
                 TypeLabel = $"Type: {typeInfo.ObjectName} ({asset.DataAssetTypeId})";
                 var visibleProperties = PropertyDisplayUtils.GetVisibleProperties(asset.Properties.Values, typeInfo.SerializedProperties);
                 foreach (var row in PropertyDisplayUtils.CreateRows(visibleProperties, typeInfo.SerializedProperties, (property, metadata) =>
