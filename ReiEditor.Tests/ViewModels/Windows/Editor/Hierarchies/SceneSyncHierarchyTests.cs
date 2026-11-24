@@ -110,7 +110,7 @@ public sealed class SceneSyncHierarchyTests
             Selection.SelectionChanged.Subscribe(_highlights.HandleSelectionChanged);
             var scenes = new TestSceneManagementService();
             scenes.Scene.Value = Scene;
-            _sync = new(_source, scenes, new EngineSelectionSyncService(Selection), new TestLogger<SceneSyncService>(), new TestEntitySyncService());
+            _sync = new(_source, scenes, new EngineSelectionSyncService(Selection), new TestLogger<SceneSyncService>(), new EntitySync());
             Monitor = new(Selection, new Refresh(), new Factory<EntityMonitorDrawerViewModel>(args =>
             {
                 CreatedDrawers++;

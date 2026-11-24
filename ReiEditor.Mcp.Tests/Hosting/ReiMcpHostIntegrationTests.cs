@@ -346,7 +346,7 @@ public sealed class ReiMcpHostIntegrationTests
         await using var client = await CreateClient(host.Endpoint!);
         var tools = await client.ListToolsAsync();
 
-        Assert.Equal(32, tools.Count);
+        Assert.Equal(34, tools.Count);
         var opened = await client.CallToolAsync("rei_editor_open_scene", new Dictionary<string, object?> { ["scene"] = "Scenes/Other.scene" });
         Assert.False(opened.IsError ?? false);
         Assert.Equal("Scenes/Other.scene", gateway.OpenedScene);

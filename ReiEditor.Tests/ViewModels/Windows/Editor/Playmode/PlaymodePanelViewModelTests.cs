@@ -205,6 +205,10 @@ public sealed class PlaymodePanelViewModelTests
 
         window.Pointer.Publish(new IntPtr(23));
         await Dispatcher.UIThread.InvokeAsync(() => { });
+        Assert.Null(panel.WindowProvider);
+
+        runner.Active.Publish(true);
+        await Dispatcher.UIThread.InvokeAsync(() => { });
         Assert.NotNull(panel.WindowProvider);
         Assert.Equal(new IntPtr(123), panel.WindowProvider.WindowHandlePointer);
 

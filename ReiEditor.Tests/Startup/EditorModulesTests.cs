@@ -4,30 +4,25 @@ using ReiEditor.Models.EditorApp.Console;
 using ReiEditor.Models.EditorApp.EditorProcedures;
 using ReiEditor.Models.EditorApp.MainWindow;
 using ReiEditor.Models.EditorApp.Scene.Commands.Entities;
+using ReiEditor.Models.EditorApp.Selection;
 using ReiEditor.Models.EditorApp.SettingsWindow;
 using ReiEditor.Models.EditorApp.ViewportGrid;
 using ReiEditor.Models.ProjectManagement;
-using ReiEditor.Models.ProjectManagement.Active;
-using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets;
-using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Build;
 using ReiEditor.Models.Services.Engine.Api;
-using ReiEditor.Models.Services.Engine.Dll;
 using ReiEditor.Models.Services.Engine.Playmode;
-using ReiEditor.Models.Services.Engine.Settings;
 using ReiEditor.Models.Services.Entities;
+using ReiEditor.Models.Services.Entities.Sync;
 using ReiEditor.Models.Services.Logging;
-using ReiEditor.Models.Services.Logging.Engine;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Models.Services.Preferences;
+using ReiEditor.Models.Services.Scenes;
 using ReiEditor.Models.Services.Scenes.Templates;
-using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Startup.Scopes.Editor.Modules;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
-using ReiEditor.Utils.Common;
 using ReiEditor.Utils.Common.Procedures;
 using ReiEditor.Utils.Factory;
 using ReiEditor.ViewModels.Windows.Editor.Monitor.Drawers.Components;
@@ -90,12 +85,19 @@ public sealed class EditorModulesTests
     }
 
     /// <summary>
-    /// SceneModule creates real transient templates and injects typed operation dependencies without resolving unsafe scene services.
+    /// SceneModule resolves transient templates and runs setup without starting the native engine.
     /// </summary>
     [Fact]
     public async Task TestSceneModuleResolvesTransientTemplateAndRunsMinimalSetup()
     {
-        using var container = BuildContainer(new SceneModule());
+        var builder = new ContainerBuilder();
+        builder.RegisterGeneric(typeof(TestLogger<>)).As(typeof(ILogger<>));
+        builder.RegisterModule<EngineModule>();
+        builder.RegisterModule<SceneModule>();
+        builder.RegisterInstance(new TestSceneManagementService()).As<ISceneManagementService>();
+        builder.RegisterInstance(new TestEntitySyncService()).As<IEntitySyncService>();
+        builder.RegisterInstance(CreateDependency<ISelectionService>()).As<ISelectionService>();
+        using var container = builder.Build();
         var entities = new TestEntityManagementService { OnCreate = (_, _) => Task.FromResult<GameEntity?>(null) };
         var registry = new TestBehaviourRegistry();
         var parameters = new Autofac.Core.Parameter[]
@@ -110,39 +112,6 @@ public sealed class EditorModulesTests
 
         Assert.NotSame(first, second);
         Assert.Equal(new[] { "Main Camera", "Point Light" }, entities.CreateCalls.Select(call => call.Name));
-    }
-
-    /// <summary>
-    /// BuildModule creates its real nonlazy tracker, which follows build state and loses ownership on root disposal.
-    /// </summary>
-    [Fact]
-    public async Task TestBuildModuleOwnsNonLazyProcedureTrackerUntilContainerDisposal()
-    {
-        var procedures = new EditorProceduresService();
-        var builder = new ContainerBuilder();
-        RegisterBuildExternalDependencies(builder, procedures);
-        builder.RegisterModule<BuildModule>();
-        Observable<bool> buildState;
-
-        await using (var container = builder.Build())
-        {
-            var buildService = Assert.IsType<BuildService>(container.Resolve<IBuildService>());
-            buildState = GetBuildState(buildService);
-            try
-            {
-                buildState.Value = true;
-                Assert.Equal(ProcedureTags.BUILD_PROJECT, Assert.Single(procedures.ActiveProcedures).Name);
-                buildState.Value = false;
-                Assert.Empty(procedures.ActiveProcedures);
-            }
-            finally
-            {
-                buildState.Value = false;
-            }
-        }
-
-        buildState.Value = true;
-        Assert.Empty(procedures.ActiveProcedures);
     }
 
     /// <summary>
@@ -299,29 +268,4 @@ public sealed class EditorModulesTests
     }
 
     private static T CreateDependency<T>() where T : class => DispatchProxy.Create<T, TestRejectingProxy>();
-
-    private static Observable<bool> GetBuildState(BuildService service)
-    {
-        var field = typeof(BuildService).GetField("_buildInProgress", BindingFlags.Instance | BindingFlags.NonPublic);
-        return Assert.IsType<Observable<bool>>(field?.GetValue(service));
-    }
-
-    private static void RegisterBuildExternalDependencies(ContainerBuilder builder, IEditorProceduresService procedures)
-    {
-        builder.RegisterGeneric(typeof(TestLogger<>)).As(typeof(ILogger<>));
-        builder.RegisterInstance(CreateDependency<IResourceService>()).As<IResourceService>();
-        builder.RegisterInstance(CreateDependency<IBinarySerializer>()).As<IBinarySerializer>();
-        builder.RegisterInstance(CreateDependency<IClientDllManager>()).As<IClientDllManager>();
-        builder.RegisterInstance(CreateDependency<IEngineApi>()).As<IEngineApi>();
-        builder.RegisterInstance(CreateDependency<IEngineLogger>()).As<IEngineLogger>();
-        builder.RegisterInstance(CreateDependency<IAssetRegistry>()).As<IAssetRegistry>();
-        builder.RegisterInstance(CreateDependency<IEngineSettingsProvider>()).As<IEngineSettingsProvider>();
-        builder.RegisterInstance(CreateDependency<IAssetsService>()).As<IAssetsService>();
-        builder.RegisterInstance(CreateDependency<IEditorPreferencesService>()).As<IEditorPreferencesService>();
-        builder.RegisterInstance(CreateDependency<IActiveProjectService>()).As<IActiveProjectService>();
-        builder.RegisterInstance(CreateDependency<IEditorConsoleService>()).As<IEditorConsoleService>();
-        builder.RegisterInstance(new TestAssetImporter()).As<IAssetImporter>();
-        builder.RegisterInstance(procedures).As<IEditorProceduresService>();
-        builder.RegisterType<SourceFilesUtility>();
-    }
 }

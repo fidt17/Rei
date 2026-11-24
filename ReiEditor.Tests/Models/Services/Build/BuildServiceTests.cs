@@ -435,7 +435,7 @@ public sealed class BuildServiceTests
         {
             Assert.False(build.IsCompleted);
             Assert.True(context.Service.BuildInProgress.Value);
-            Assert.Single(context.Procedures.ActiveProcedures);
+            Assert.Equal(ProcedureTags.BUILD_PROJECT, Assert.Single(context.Procedures.ActiveProcedures).Name);
             var calls = context.Pipeline.Calls.ToArray();
             Assert.False(await context.Service.BuildProject(BuildConfigurationEnum.EditorDebug));
             Assert.Equal(calls, context.Pipeline.Calls);
