@@ -48,7 +48,9 @@ public class BehaviourRegistrySourceGenerator
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Behaviour/Behaviour.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Assets/Core/AssetRefUtils.h>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<Modules/Resources/Serialization/BinaryReader.h>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<stdexcept>"));
         str.AppendLine(string.Format(INCLUDE_FORMAT, "<type_traits>"));
+        str.AppendLine(string.Format(INCLUDE_FORMAT, "<utility>"));
         str.AppendLine();
         str.AppendLine(GenerateIncludes(serializableObjectsAndBehaviours));
         
@@ -174,6 +176,25 @@ public class BehaviourRegistrySourceGenerator
         var str = new StringBuilder();
         
         str.AppendLine("// --- REI_SET METHODS ---\n");
+        str.AppendLine("""
+            namespace
+            {
+                template <typename T>
+                T ReadSerializedInteger(const nlohmann::json& value)
+                {
+                    const auto checkedCast = [](auto number)
+                    {
+                        if (!std::in_range<T>(number)) throw std::out_of_range("Serialized integer is out of range");
+                        return static_cast<T>(number);
+                    };
+
+                    if (value.is_number_unsigned()) return checkedCast(value.get<u64>());
+                    if (value.is_number_integer()) return checkedCast(value.get<i64>());
+                    throw std::invalid_argument("Expected a serialized integer");
+                }
+            }
+            """);
+        str.AppendLine();
         
         foreach (var obj in list)
         {
@@ -376,6 +397,12 @@ public class BehaviourRegistrySourceGenerator
             }
 
             str.AppendLine("    }");
+            return;
+        }
+
+        if (propertyData.Type == SerializedTypeEnum.Integer)
+        {
+            str.AppendLine($"    if (data.contains(\"{propertyName}\")) {propertyName} = ::ReadSerializedInteger<decltype({propertyName})>(data.at(\"{propertyName}\").at(\"Value\"));");
             return;
         }
 

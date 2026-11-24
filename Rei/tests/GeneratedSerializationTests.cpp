@@ -458,9 +458,18 @@ TEST_CASE("SER-02 Integer overflow rejects without silent narrowing", "[native][
         const auto entity = fixture.Entity();
         fixture.Add(entity, PROBE_A, false);
         auto& probe = fixture.Registry->Get<ProbeA>(entity);
-        const i64 overflow = static_cast<i64>(std::numeric_limits<i32>::max()) + 1;
-        CHECK_THROWS(probe.REI_SET(Field("Number", overflow)));
-        CHECK(probe.Number == 7);
+        const auto min = std::numeric_limits<i32>::min();
+        const auto max = std::numeric_limits<i32>::max();
+        for (const auto& invalid : {json(static_cast<i64>(min) - 1), json(static_cast<i64>(max) + 1), json(std::numeric_limits<u64>::max())})
+        {
+            CHECK_THROWS(probe.REI_SET(Field("Number", invalid)));
+            CHECK(probe.Number == 7);
+        }
+
+        probe.REI_SET(Field("Number", min));
+        CHECK(probe.Number == min);
+        probe.REI_SET(Field("Number", static_cast<u64>(max)));
+        CHECK(probe.Number == max);
     });
 }
 
