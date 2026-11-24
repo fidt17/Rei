@@ -115,30 +115,67 @@ public sealed class AssetOperationsEdgeCaseTests
         public Task DeleteInvalidMetaFiles() => throw new NotSupportedException();
     }
 
-    /// <summary>
-    /// Renaming a directory moves its tree and updates every nested registry path.
-    /// </summary>
     [Fact]
-    public async Task RenameDirectoryMovesTreeAndNestedRegistryPaths()
+    public async Task RenameAssetThenParentFolderUndoAndRedoWithTheSameAssetId()
     {
         using var project = new TemporaryProjectFixture();
-        var source = project.Directory.GetPath("OldFolder");
-        var nested = Path.Combine(source, "Nested");
-        Directory.CreateDirectory(nested);
-        var sourceAsset = Path.Combine(nested, "Asset.scene");
+        var folder = project.Directory.GetPath("OldFolder");
+        var nestedFolder = Path.Combine(folder, "Nested");
+        Directory.CreateDirectory(nestedFolder);
+        var sourceAsset = Path.Combine(nestedFolder, "Asset.scene");
+        var occupied = Path.Combine(nestedFolder, "Taken.scene");
         await File.WriteAllTextAsync(sourceAsset, "scene");
+        await File.WriteAllTextAsync(occupied, "other scene");
+        var metaService = CreateMetaService(project);
+        var meta = new AssetMeta("nested-id");
+        await metaService.CreateMetaFile(meta, sourceAsset);
         var registry = new AssetRegistry(new TestLogger<AssetRegistry>());
-        registry.RegisterNewAssets([new AssetInfo(new AssetMeta("nested-id"), sourceAsset)]);
-        var service = CreateService(project, registry, CreateMetaService(project), out _);
-        var expectedDirectory = project.Directory.GetPath("NewFolder");
-        var expectedAsset = Path.Combine(expectedDirectory, "Nested", "Asset.scene");
+        registry.RegisterNewAssets([new AssetInfo(meta, sourceAsset)]);
+        var service = CreateService(project, registry, metaService, out var importer);
+        using var history = new EditorCommandService();
+        using var refresh = new EditorRefreshService(importer);
+        var command = new ProjectAssetRenameCommand(service, registry, history, refresh, new TestLogger<ProjectAssetRenameCommand>());
+        var renamedAsset = Path.Combine(nestedFolder, "Renamed.scene");
+        var renamedFolder = project.Directory.GetPath("NewFolder");
+        var movedAsset = Path.Combine(renamedFolder, "Nested", "Renamed.scene");
 
-        await service.RenameAsync(source, " NewFolder ");
+        var blocked = await command.ExecuteAsync(new(sourceAsset, false), "Taken.scene");
+        Assert.Null(blocked.SelectedAssetPath);
+        Assert.False(history.CanUndo);
+        Assert.Equal("other scene", await File.ReadAllTextAsync(occupied));
+        await AssertAssetPath(sourceAsset);
 
-        Assert.False(Directory.Exists(source));
-        Assert.Equal("scene", await File.ReadAllTextAsync(expectedAsset));
-        Assert.True(registry.TryGetById("nested-id", out var registered));
-        Assert.Equal(expectedAsset, registered.FullPath);
+        var fileResult = await command.ExecuteAsync(new(sourceAsset, false), " Renamed.scene ");
+        Assert.Equal(renamedAsset, fileResult.SelectedAssetPath);
+        Assert.False(fileResult.AffectsTree);
+        Assert.False(File.Exists(sourceAsset + ".meta"));
+        await AssertAssetPath(renamedAsset);
+
+        var folderResult = await command.ExecuteAsync(new(folder, true), "NewFolder");
+        Assert.Equal(renamedFolder, folderResult.SelectedAssetPath);
+        Assert.True(folderResult.AffectsTree);
+        Assert.False(Directory.Exists(folder));
+        await AssertAssetPath(movedAsset);
+
+        await history.UndoAsync();
+        await AssertAssetPath(renamedAsset);
+        await history.UndoAsync();
+        await AssertAssetPath(sourceAsset);
+        Assert.False(history.CanUndo);
+
+        await history.RedoAsync();
+        await AssertAssetPath(renamedAsset);
+        await history.RedoAsync();
+        await AssertAssetPath(movedAsset);
+        Assert.False(history.CanRedo);
+
+        async Task AssertAssetPath(string expected)
+        {
+            Assert.Equal("scene", await File.ReadAllTextAsync(expected));
+            Assert.Equal(meta.AssetId, (await project.Resources.Load<AssetMeta>(expected + ".meta")).AssetId);
+            Assert.True(registry.TryGetById(meta.AssetId, out var registered));
+            Assert.Equal(expected, registered.FullPath);
+        }
     }
 
     /// <summary>
@@ -157,7 +194,7 @@ public sealed class AssetOperationsEdgeCaseTests
         registry.RegisterNewAssets([new AssetInfo(new AssetMeta("asset-id"), source)]);
         var service = CreateService(project, registry, CreateMetaService(project), out _);
 
-        await service.RenameAsync(source, newName);
+        Assert.Null(await service.RenameAsync(source, newName));
 
         Assert.Equal("scene", await File.ReadAllTextAsync(source));
         Assert.True(registry.TryGetById("asset-id", out var registered));

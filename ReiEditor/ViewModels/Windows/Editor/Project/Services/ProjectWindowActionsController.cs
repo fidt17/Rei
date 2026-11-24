@@ -91,18 +91,15 @@ public class ProjectWindowActionsController
         });
     }
 
-    private void RenameAsset(ProjectAssetItemViewModel item, string newName)
+    private async void RenameAsset(ProjectAssetItemViewModel item, string newName)
     {
-        var task = _assetOperationsHandler.RenameAsync(item, newName);
-        if (task == null) return;
-
-        _ = task.ContinueWith(t =>
+        try
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _commandResultHandler(t.Result);
-            });
-        });
+            var task = _assetOperationsHandler.RenameAsync(item, newName);
+            if (task != null && await task is { SelectedAssetPath: not null } result)
+                _commandResultHandler(result);
+        }
+        catch (Exception error) { _logger?.LogException(error); }
     }
 
     private void DeleteAsset(ProjectAssetItemViewModel item)

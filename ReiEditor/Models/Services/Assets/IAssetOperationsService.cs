@@ -5,7 +5,7 @@ namespace ReiEditor.Models.Services.Assets;
 
 public interface IAssetOperationsService
 {
-    Task RenameAsync(string assetPath, string newName);
+    Task<string?> RenameAsync(string assetPath, string newName);
     Task DeleteAsync(string assetPath, bool isDirectory);
     Task DuplicateAsync(string assetPath, bool isDirectory);
     Task<string?> MoveAsync(string assetPath, string destinationFolder);

@@ -41,67 +41,17 @@ public class AssetOperationsService : IAssetOperationsService
         _dataAssetTypeRegistry = dataAssetTypeRegistry;
     }
 
-    public Task RenameAsync(string assetPath, string newName)
+    public Task<string?> RenameAsync(string assetPath, string newName)
     {
-        return RunWithErrorHandling(() =>
+        return RunPathChangeAsync(() =>
         {
-            _logger.Log($"Rename requested. Path: {assetPath}. New name: {newName}");
-            var sourceIsFile = File.Exists(assetPath);
-            var sourceIsDirectory = Directory.Exists(assetPath);
-            if (!sourceIsFile && !sourceIsDirectory)
-            {
-                _logger.LogWarning($"Rename skipped: source path does not exist: {assetPath}");
-                return Task.CompletedTask;
-            }
-            
-            var trimmed = newName.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed))
-            {
-                _logger.LogWarning("Rename skipped: new name is empty.");
-                return Task.CompletedTask;
-            }
+            var name = newName.Trim();
+            if (name.Length == 0 || name is "." or ".." || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return null;
+            var parent = Path.GetDirectoryName(assetPath);
+            if (string.IsNullOrEmpty(parent)) return null;
 
-            var directoryName = Path.GetDirectoryName(assetPath);
-            if (string.IsNullOrWhiteSpace(directoryName))
-            {
-                _logger.LogWarning($"Rename skipped: could not resolve directory for {assetPath}");
-                return Task.CompletedTask;
-            }
-
-            var targetPath = Path.Combine(directoryName, trimmed);
-            if (assetPath.PathEquals(targetPath))
-            {
-                _logger.Log("Rename skipped: target path is the same as source.");
-                return Task.CompletedTask;
-            }
-
-            if (sourceIsDirectory)
-            {
-                if (Directory.Exists(targetPath))
-                {
-                    _logger.LogWarning($"Rename skipped: target directory already exists at {targetPath}");
-                    return Task.CompletedTask;
-                }
-                
-                Directory.Move(assetPath, targetPath);
-                _logger.Log($"Renamed directory: {assetPath} -> {targetPath}");
-            }
-            else
-            {
-                if (File.Exists(targetPath))
-                {
-                    _logger.LogWarning($"Rename skipped: target file already exists at {targetPath}");
-                    return Task.CompletedTask;
-                }
-                
-                File.Move(assetPath, targetPath);
-                _metaFilesService.MoveMetaFile(assetPath, targetPath);
-                _logger.Log($"Renamed file: {assetPath} -> {targetPath}");
-            }
-            
-            _assetRegistry.UpdateRegistryPath(assetPath, targetPath);
-            
-            return Task.CompletedTask;
+            var targetPath = Path.Combine(parent, name);
+            return !assetPath.PathEquals(targetPath) && MoveToPath(assetPath, targetPath) ? targetPath : null;
         });
     }
 
@@ -160,7 +110,7 @@ public class AssetOperationsService : IAssetOperationsService
 
     public Task<string?> MoveAsync(string assetPath, string destinationFolder)
     {
-        return RunMoveAsync(() =>
+        return RunPathChangeAsync(() =>
         {
             if (!Directory.Exists(destinationFolder) || destinationFolder.PathEquals(Path.GetDirectoryName(assetPath) ?? assetPath)) return null;
             var name = Path.GetFileName(assetPath);
@@ -180,7 +130,7 @@ public class AssetOperationsService : IAssetOperationsService
 
     public async Task<bool> MoveToPathAsync(string assetPath, string targetPath)
     {
-        return await RunMoveAsync(() => MoveToPath(assetPath, targetPath) ? targetPath : null) != null;
+        return await RunPathChangeAsync(() => MoveToPath(assetPath, targetPath) ? targetPath : null) != null;
     }
 
     private bool MoveToPath(string assetPath, string targetPath)
@@ -205,9 +155,9 @@ public class AssetOperationsService : IAssetOperationsService
         return true;
     }
 
-    private async Task<string?> RunMoveAsync(Func<string?> move)
+    private async Task<string?> RunPathChangeAsync(Func<string?> changePath)
     {
-        try { return await Task.Run(move); }
+        try { return await Task.Run(changePath); }
         catch (Exception error) { _logger.LogException(error); return null; }
     }
 
