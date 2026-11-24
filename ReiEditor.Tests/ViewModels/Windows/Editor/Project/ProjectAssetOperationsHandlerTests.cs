@@ -15,10 +15,10 @@ public sealed class ProjectAssetOperationsHandlerTests : IDisposable
     {
         public List<ProjectAssetCommandTarget> Targets { get; } = new();
 
-        public Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset)
+        public Task<ProjectAssetCommandResult?> ExecuteAsync(IReadOnlyList<ProjectAssetCommandTarget> assets)
         {
-            Targets.Add(asset);
-            return Task.FromResult(new ProjectAssetCommandResult(asset.IsDirectory));
+            Targets.AddRange(assets);
+            return Task.FromResult<ProjectAssetCommandResult?>(new ProjectAssetCommandResult(assets.Any(asset => asset.IsDirectory)));
         }
     }
 

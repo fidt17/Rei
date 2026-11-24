@@ -135,8 +135,8 @@ public sealed class AssetOperationsServiceTests
     public async Task DeleteDirectoryRemovesOnlySubtreeRegistryEntries()
     {
         using var project = new TemporaryProjectFixture();
-        var deletedDirectory = project.Directory.GetPath("Assets");
-        var adjacentDirectory = project.Directory.GetPath("AssetsExtra");
+        var deletedDirectory = project.Resources.GetProjectPath("Assets");
+        var adjacentDirectory = project.Resources.GetProjectPath("AssetsExtra");
         Directory.CreateDirectory(deletedDirectory);
         Directory.CreateDirectory(adjacentDirectory);
         var deletedAsset = Path.Combine(deletedDirectory, "A.scene");
@@ -150,7 +150,7 @@ public sealed class AssetOperationsServiceTests
         ]);
         var service = CreateService(project, registry, CreateMetaService(project), out _);
 
-        await service.DeleteAsync(deletedDirectory, true);
+        await service.DeleteAsync([project.Resources.GetProjectPath(), deletedDirectory]);
 
         Assert.False(Directory.Exists(deletedDirectory));
         Assert.False(registry.TryGetById("delete-id", out _));
@@ -201,7 +201,8 @@ public sealed class AssetOperationsServiceTests
         importer = new TestAssetImporter();
         return new AssetOperationsService(
             new TestLogger<AssetOperationsService>(), project.Resources, importer, registry, metaService,
-            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>(), null!));
+            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>(), null!),
+            new TestFileTrash(project.Directory.GetPath("Trash")));
     }
 
 }

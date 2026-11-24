@@ -8,6 +8,7 @@ using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Commands;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Tests.Infrastructure.Fixtures;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
@@ -201,27 +202,50 @@ public sealed class AssetOperationsEdgeCaseTests
         Assert.Equal(source, registered.FullPath);
     }
 
-    /// <summary>
-    /// Deleting a file removes its sidecar metadata and registry entry.
-    /// </summary>
     [Fact]
-    public async Task DeleteFileRemovesMetadataAndRegistryEntry()
+    public async Task DeleteAssetAndFolderMovesTheirMetadataToTrashWithoutRecordingHistory()
     {
         using var project = new TemporaryProjectFixture();
-        var asset = project.Directory.GetPath("Asset.scene");
-        await File.WriteAllTextAsync(asset, "scene");
+        var asset = project.Resources.GetProjectPath("Surface.mat");
+        var folder = project.Resources.GetProjectPath("Folder");
+        var nestedAsset = Path.Combine(folder, "Nested.scene");
+        Directory.CreateDirectory(folder);
+        await File.WriteAllTextAsync(asset, "material file");
+        await File.WriteAllTextAsync(nestedAsset, "nested scene");
         var metaService = CreateMetaService(project);
-        var meta = new AssetMeta("asset-id");
-        await metaService.CreateMetaFile(meta, asset);
+        var assetInfo = new AssetInfo(new AssetMeta("asset-id"), asset);
+        var nestedInfo = new AssetInfo(new AssetMeta("nested-id"), nestedAsset);
+        await metaService.CreateMetaFile(assetInfo.Meta, asset);
+        await metaService.CreateMetaFile(nestedInfo.Meta, nestedAsset);
         var registry = new AssetRegistry(new TestLogger<AssetRegistry>());
-        registry.RegisterNewAssets([new AssetInfo(meta, asset)]);
-        var service = CreateService(project, registry, metaService, out _);
+        registry.RegisterNewAssets([assetInfo, nestedInfo]);
+        registry.AddToLoadedAssets(assetInfo, new ReiEditor.Models.Services.Render.Material());
+        var trashPath = project.Directory.GetPath("Trash");
+        var trash = new TestFileTrash(trashPath);
+        var service = CreateService(project, registry, metaService, out _, fileTrash: trash);
+        using var history = new EditorCommandService();
+        var command = new ProjectAssetDeleteCommand(service, history, new TestLogger<ProjectAssetDeleteCommand>());
+        var handler = new ProjectAssetOperationsHandler(null, service, command, null, null, null);
 
-        await service.DeleteAsync(asset, false);
-
+        var result = await handler.DeleteAsync([new(asset, false), new(folder, true)]);
+        Assert.NotNull(result);
+        Assert.True(result.AffectsTree);
+        Assert.Empty(result.SelectedAssetPaths);
+        Assert.Equal([asset, asset + ".meta", folder], Assert.Single(trash.Batches));
         Assert.False(File.Exists(asset));
         Assert.False(File.Exists(asset + ".meta"));
-        Assert.False(registry.TryGetById("asset-id", out _));
+        Assert.False(Directory.Exists(folder));
+        Assert.Empty(registry.GetAllAssets());
+        Assert.False(registry.TryGetLoadedAsset(assetInfo.Meta.AssetId, out _));
+        Assert.False(history.CanUndo);
+        Assert.False(history.CanRedo);
+
+        var trashedAsset = Path.Combine(trashPath, "Surface.mat");
+        var trashedNestedAsset = Path.Combine(trashPath, "Folder", "Nested.scene");
+        Assert.Equal("material file", await File.ReadAllTextAsync(trashedAsset));
+        Assert.Equal("nested scene", await File.ReadAllTextAsync(trashedNestedAsset));
+        Assert.Equal(assetInfo.Meta.AssetId, (await project.Resources.Load<AssetMeta>(trashedAsset + ".meta")).AssetId);
+        Assert.Equal(nestedInfo.Meta.AssetId, (await project.Resources.Load<AssetMeta>(trashedNestedAsset + ".meta")).AssetId);
     }
 
     [Fact]
@@ -498,11 +522,13 @@ public sealed class AssetOperationsEdgeCaseTests
     /// <summary>
     /// Creates operation service with isolated collaborators and exposes captured import requests.
     /// </summary>
-    private static AssetOperationsService CreateService(TemporaryProjectFixture project, IAssetRegistry registry, IMetaFilesService metaService, out TestAssetImporter importer, TestLogger<AssetOperationsService>? logger = null)
+    private static AssetOperationsService CreateService(TemporaryProjectFixture project, IAssetRegistry registry, IMetaFilesService metaService,
+        out TestAssetImporter importer, TestLogger<AssetOperationsService>? logger = null, IFileTrash? fileTrash = null)
     {
         importer = new TestAssetImporter();
         return new AssetOperationsService(
             logger ?? new TestLogger<AssetOperationsService>(), project.Resources, importer, registry, metaService,
-            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>(), null!));
+            new TestBehaviourRegistry(), new DataAssetTypeRegistry(project.Resources, metaService, null!, new TestLogger<DataAssetTypeRegistry>(), null!),
+            fileTrash ?? new TestFileTrash(project.Directory.GetPath("Trash")));
     }
 }

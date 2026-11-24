@@ -1,28 +1,29 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using ReiEditor.Models.EditorApp.Commands;
 using ReiEditor.Models.Services.Assets;
+using ReiEditor.Models.Services.Commands;
 using ReiEditor.Models.Services.Logging.Loggers;
 
 namespace ReiEditor.Models.EditorApp.Project.Commands.Assets;
 
-public class ProjectAssetDeleteCommand : IProjectAssetDeleteCommand
+public sealed class ProjectAssetDeleteCommand(
+    IAssetOperationsService operations,
+    IEditorCommandService commands,
+    ILogger<ProjectAssetDeleteCommand> logger)
+    : IProjectAssetDeleteCommand, IEditorCommand<IReadOnlyList<ProjectAssetCommandTarget>, ProjectAssetCommandResult?>
 {
-    private readonly IAssetOperationsService _assetOperationsService;
-    private readonly ILogger<ProjectAssetDeleteCommand> _logger;
-
-    public ProjectAssetDeleteCommand(
-        IAssetOperationsService assetOperationsService,
-        ILogger<ProjectAssetDeleteCommand> logger)
+    public Task<ProjectAssetCommandResult?> ExecuteAsync(IReadOnlyList<ProjectAssetCommandTarget> assets)
     {
-        _assetOperationsService = assetOperationsService;
-        _logger = logger;
+        if (assets.Count == 0 || commands.IsBusy) return Task.FromResult<ProjectAssetCommandResult?>(null);
+        return commands.ExecuteAsync(this, assets);
     }
 
-    public async Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset)
+    async Task<ProjectAssetCommandResult?> IEditorCommand<IReadOnlyList<ProjectAssetCommandTarget>, ProjectAssetCommandResult?>.ExecuteAsync(IReadOnlyList<ProjectAssetCommandTarget> assets)
     {
-        _logger.Log($"Deleting {asset.FullPath}");
-        
-        await _assetOperationsService.DeleteAsync(asset.FullPath, asset.IsDirectory);
-        
-        return new ProjectAssetCommandResult(asset.IsDirectory);
+        logger.Log($"Moving {assets.Count} project item(s) to the Recycle Bin.");
+        var deleted = await operations.DeleteAsync(assets.Select(asset => asset.FullPath).ToArray());
+        return deleted.Count == 0 ? null : new ProjectAssetCommandResult(deleted.Any(asset => asset.IsDirectory));
     }
 }

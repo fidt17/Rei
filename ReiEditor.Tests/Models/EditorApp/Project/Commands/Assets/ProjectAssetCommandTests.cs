@@ -18,13 +18,11 @@ public sealed class ProjectAssetCommandTests
     private sealed class TestAssetOperationsService : IAssetOperationsService
     {
         public Exception? Exception { get; init; }
-        public (string Path, bool IsDirectory)? DeleteRequest { get; private set; }
         public (string Path, bool IsDirectory)? DuplicateRequest { get; private set; }
 
         public Task<string?> RenameAsync(string assetPath, string newName) => throw new NotSupportedException();
 
-        /// <summary>Captures delete request.</summary>
-        public Task DeleteAsync(string assetPath, bool isDirectory) { ThrowIfConfigured(); DeleteRequest = (assetPath, isDirectory); return Task.CompletedTask; }
+        public Task<IReadOnlyList<(string Path, bool IsDirectory)>> DeleteAsync(IReadOnlyList<string> assetPaths) => throw new NotSupportedException();
 
         /// <summary>Captures duplicate request.</summary>
         public Task DuplicateAsync(string assetPath, bool isDirectory) { ThrowIfConfigured(); DuplicateRequest = (assetPath, isDirectory); return Task.CompletedTask; }
@@ -68,26 +66,6 @@ public sealed class ProjectAssetCommandTests
     }
 
     /// <summary>
-    /// Delete forwards path and directory flag and reports tree impact only for directories.
-    /// </summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task DeleteReportsDirectoryTreeImpact(bool isDirectory)
-    {
-        using var directory = new TemporaryDirectory();
-        var source = directory.GetPath("Target");
-        var operations = new TestAssetOperationsService();
-        var command = new ProjectAssetDeleteCommand(operations, new TestLogger<ProjectAssetDeleteCommand>());
-
-        var result = await command.ExecuteAsync(new ProjectAssetCommandTarget(source, isDirectory));
-
-        Assert.Equal((source, isDirectory), operations.DeleteRequest);
-        Assert.Equal(isDirectory, result.AffectsTree);
-        Assert.Null(result.SelectedAssetPath);
-    }
-
-    /// <summary>
     /// Command does not swallow failures raised by operations service.
     /// </summary>
     [Fact]
@@ -96,7 +74,7 @@ public sealed class ProjectAssetCommandTests
         using var directory = new TemporaryDirectory();
         var expected = new InvalidOperationException("failed");
         var operations = new TestAssetOperationsService { Exception = expected };
-        var command = new ProjectAssetDeleteCommand(operations, new TestLogger<ProjectAssetDeleteCommand>());
+        var command = new ProjectAssetDuplicateCommand(operations, new TestLogger<ProjectAssetDuplicateCommand>());
 
         var actual = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             command.ExecuteAsync(new ProjectAssetCommandTarget(directory.GetPath("Target"), false)));

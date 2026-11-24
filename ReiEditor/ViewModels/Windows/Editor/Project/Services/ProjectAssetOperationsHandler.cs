@@ -50,12 +50,8 @@ public class ProjectAssetOperationsHandler
     {
         if (_projectAssetDeleteCommand == null) return null;
 
-        foreach (var target in targets)
-        {
-            await _projectAssetDeleteCommand.ExecuteAsync(target);
-        }
-
-        return new ProjectAssetBatchCommandResult(targets.Any(target => target.IsDirectory), System.Array.Empty<string>());
+        var result = await _projectAssetDeleteCommand.ExecuteAsync(targets);
+        return result == null ? null : new ProjectAssetBatchCommandResult(result.AffectsTree, System.Array.Empty<string>());
     }
 
     public async Task<ProjectAssetBatchCommandResult?> MoveAsync(IReadOnlyList<ProjectAssetCommandTarget> targets, string projectRootPath)

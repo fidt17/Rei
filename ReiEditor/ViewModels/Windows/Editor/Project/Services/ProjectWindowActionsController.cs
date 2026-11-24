@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using IOPath = System.IO.Path;
 using Avalonia.Threading;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
@@ -102,20 +103,22 @@ public class ProjectWindowActionsController
         catch (Exception error) { _logger?.LogException(error); }
     }
 
-    private void DeleteAsset(ProjectAssetItemViewModel item)
+    private async void DeleteAsset(ProjectAssetItemViewModel item)
     {
-        var activeItems = _activeItemsProvider();
-        var targets = _assetSelectionHandler.ResolveCommandTargets(item, activeItems);
-        _ = _assetOperationsHandler.DeleteAsync(targets).ContinueWith(t =>
+        try
         {
-            var result = t.Result;
-            if (result == null) return;
+            var targets = _assetSelectionHandler.ResolveCommandTargets(item, _activeItemsProvider());
+            if (targets.Count == 0) return;
 
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                _batchCommandResultHandler(result);
-            });
-        });
+            var description = targets.Count == 1 ? $"\"{IOPath.GetFileName(targets[0].FullPath)}\"" : $"{targets.Count} selected items";
+            var prompt = MessageBoxManager.GetMessageBoxStandard(
+                "Delete project items", $"Move {description} to the Windows Recycle Bin?", ButtonEnum.YesNo);
+            if (await prompt.ShowAsync() != ButtonResult.Yes) return;
+
+            var result = await _assetOperationsHandler.DeleteAsync(targets);
+            if (result != null) _batchCommandResultHandler(result);
+        }
+        catch (Exception error) { _logger?.LogException(error); }
     }
 
     private void MoveAsset(ProjectAssetItemViewModel item)

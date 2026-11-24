@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using ReiEditor.Models.Resources.Client;
 using ReiEditor.Models.Services.Assets.Import;
@@ -23,6 +24,8 @@ public class AssetOperationsService : IAssetOperationsService
     private readonly IBehaviourRegistry _behaviourRegistry;
     private readonly IDataAssetTypeRegistry _dataAssetTypeRegistry;
 
+    private readonly IFileTrash _fileTrash;
+
     public AssetOperationsService(
         ILogger<AssetOperationsService> logger,
         IResourceService resourceService,
@@ -30,7 +33,8 @@ public class AssetOperationsService : IAssetOperationsService
         IAssetRegistry assetRegistry,
         IMetaFilesService metaFilesService,
         IBehaviourRegistry behaviourRegistry,
-        IDataAssetTypeRegistry dataAssetTypeRegistry)
+        IDataAssetTypeRegistry dataAssetTypeRegistry,
+        IFileTrash fileTrash)
     {
         _logger = logger;
         _resourceService = resourceService;
@@ -39,6 +43,7 @@ public class AssetOperationsService : IAssetOperationsService
         _metaFilesService = metaFilesService;
         _behaviourRegistry = behaviourRegistry;
         _dataAssetTypeRegistry = dataAssetTypeRegistry;
+        _fileTrash = fileTrash;
     }
 
     public Task<string?> RenameAsync(string assetPath, string newName)
@@ -55,27 +60,42 @@ public class AssetOperationsService : IAssetOperationsService
         });
     }
 
-    public Task DeleteAsync(string assetPath, bool isDirectory)
+    public Task<IReadOnlyList<(string Path, bool IsDirectory)>> DeleteAsync(IReadOnlyList<string> assetPaths)
     {
-        return RunWithErrorHandling(() =>
+        return Task.Run<IReadOnlyList<(string Path, bool IsDirectory)>>(() =>
         {
-            if (isDirectory)
+            var projectRoot = _resourceService.GetProjectPath();
+            var targets = assetPaths
+                .Select(path => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)))
+                .Where(path => path.IsUnderDirectory(projectRoot) && !path.PathEquals(projectRoot))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(path => (Path: path, IsDirectory: Directory.Exists(path)))
+                .Where(target => target.IsDirectory || File.Exists(target.Path))
+                .ToArray();
+            if (targets.Length == 0) return [];
+
+            var paths = new List<string>();
+            foreach (var target in targets)
             {
-                if (!Directory.Exists(assetPath)) return Task.CompletedTask;
-                
-                Directory.Delete(assetPath, recursive: true);
-                _assetRegistry.UnregisterUnderDirectory(assetPath);
-            }
-            else
-            {
-                if (!File.Exists(assetPath)) return Task.CompletedTask;
-                
-                File.Delete(assetPath);
-                _metaFilesService.DeleteMetaFile(assetPath);
-                _assetRegistry.UnregisterByPath(assetPath);
+                paths.Add(target.Path);
+                var metaPath = target.Path + FileExtensions.META;
+                if (File.Exists(metaPath)) paths.Add(metaPath);
             }
 
-            return Task.CompletedTask;
+            try { _fileTrash.MoveToTrash(paths); }
+            catch (OperationCanceledException) { }
+            catch (Exception error) { _logger.LogException(error); }
+
+            // The OS may complete part of a batch before it is interrupted.
+            var deleted = new List<(string Path, bool IsDirectory)>();
+            foreach (var target in targets)
+            {
+                if (File.Exists(target.Path) || Directory.Exists(target.Path)) continue;
+                if (target.IsDirectory) _assetRegistry.UnregisterUnderDirectory(target.Path);
+                else _assetRegistry.UnregisterByPath(target.Path);
+                deleted.Add(target);
+            }
+            return deleted;
         });
     }
 

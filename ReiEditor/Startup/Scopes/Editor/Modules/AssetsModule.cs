@@ -18,6 +18,7 @@ using ReiEditor.Models.Services.Assets.Shaders;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.Scripting.Serialization;
 using ReiEditor.Models.Services.Assets.Sync;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Utils.Extensions;
 
 namespace ReiEditor.Startup.Scopes.Editor.Modules;
@@ -32,6 +33,7 @@ public class AssetsModule : Module
         b.RegisterSingleton<MetaFilesService>().As<IMetaFilesService>();
         b.RegisterSingleton<AssetImporter>().As<IAssetImporter>();
         b.RegisterSingleton<AssetOperationsService>().As<IAssetOperationsService>();
+        b.RegisterSingleton<WindowsFileTrash>().As<IFileTrash>();
         b.RegisterSingleton<AssetSearchService>().As<IAssetSearchService>();
         b.RegisterSingleton<AssetRuntimeSyncService>().As<IAssetRuntimeSyncService>();
         b.RegisterSingleton<DataAssetService>().As<IDataAssetService>();
