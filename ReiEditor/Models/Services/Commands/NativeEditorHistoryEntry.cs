@@ -10,7 +10,7 @@ public sealed class NativeEditorHistoryEntry(ulong actionId, IEngineNativeAccess
 {
     private readonly object? _context = engine.EditorActionContext;
 
-    internal bool IsStale => _context == null || !ReferenceEquals(_context, engine.EditorActionContext);
+    public bool IsStale => _context == null || !ReferenceEquals(_context, engine.EditorActionContext);
     public bool CanUndo => !IsStale;
     public bool CanRedo => CanUndo;
 

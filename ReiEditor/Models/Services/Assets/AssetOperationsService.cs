@@ -7,6 +7,7 @@ using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
 using ReiEditor.Models.Services.Assets.DataAssets;
+using ReiEditor.Models.Services.FileSystem;
 using ReiEditor.Models.Services.Logging.Loggers;
 using ReiEditor.Utils.Path;
 
@@ -157,35 +158,57 @@ public class AssetOperationsService : IAssetOperationsService
         });
     }
 
-    public Task MoveAsync(string assetPath, string destinationFolder)
+    public Task<string?> MoveAsync(string assetPath, string destinationFolder)
     {
-        var isDirectory = Directory.Exists(assetPath);
-        
-        return RunWithErrorHandling(() =>
+        return RunMoveAsync(() =>
         {
-            if (string.IsNullOrWhiteSpace(destinationFolder) || !Directory.Exists(destinationFolder)) return Task.CompletedTask;
-
-            string targetPath;
-            if (isDirectory)
-            {
-                targetPath = PathNamingUtils.GetUniqueDirectoryPath(destinationFolder, Path.GetFileName(assetPath));
-                if (Directory.Exists(targetPath)) return Task.CompletedTask;
-                
-                Directory.Move(assetPath, targetPath);
-            }
-            else
-            {
-                targetPath = PathNamingUtils.GetUniqueFilePath(destinationFolder, Path.GetFileName(assetPath));
-                if (File.Exists(targetPath)) return Task.CompletedTask;
-                
-                File.Move(assetPath, targetPath);
-                _metaFilesService.MoveMetaFile(assetPath, targetPath);
-            }
-
-            _assetRegistry.UpdateRegistryPath(assetPath, targetPath);
-
-            return Task.CompletedTask;
+            if (!Directory.Exists(destinationFolder) || destinationFolder.PathEquals(Path.GetDirectoryName(assetPath) ?? assetPath)) return null;
+            var name = Path.GetFileName(assetPath);
+            var targetPath = Directory.Exists(assetPath)
+                ? PathNamingUtils.GetUniqueDirectoryPath(destinationFolder, name)
+                : PathNamingUtils.GetUniqueFilePath(destinationFolder, name);
+            return MoveToPath(assetPath, targetPath) ? targetPath : null;
         });
+    }
+
+    public bool CanMoveToPath(string assetPath, string targetPath)
+    {
+        if (!Directory.Exists(Path.GetDirectoryName(targetPath)) || File.Exists(targetPath) || Directory.Exists(targetPath)) return false;
+        if (Directory.Exists(assetPath)) return !targetPath.IsUnderDirectory(assetPath);
+        return File.Exists(assetPath) && !File.Exists(targetPath + FileExtensions.META);
+    }
+
+    public async Task<bool> MoveToPathAsync(string assetPath, string targetPath)
+    {
+        return await RunMoveAsync(() => MoveToPath(assetPath, targetPath) ? targetPath : null) != null;
+    }
+
+    private bool MoveToPath(string assetPath, string targetPath)
+    {
+        if (!CanMoveToPath(assetPath, targetPath)) return false;
+        if (Directory.Exists(assetPath))
+        {
+            Directory.Move(assetPath, targetPath);
+        }
+        else
+        {
+            File.Move(assetPath, targetPath);
+            try { _metaFilesService.MoveMetaFile(assetPath, targetPath); }
+            catch
+            {
+                File.Move(targetPath, assetPath);
+                throw;
+            }
+        }
+
+        _assetRegistry.UpdateRegistryPath(assetPath, targetPath);
+        return true;
+    }
+
+    private async Task<string?> RunMoveAsync(Func<string?> move)
+    {
+        try { return await Task.Run(move); }
+        catch (Exception error) { _logger.LogException(error); return null; }
     }
 
     public Task ImportExternalAssets(IEnumerable<string> sourcePaths, string targetFolder)

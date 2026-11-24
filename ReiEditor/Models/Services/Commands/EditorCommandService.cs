@@ -95,7 +95,7 @@ public sealed class EditorCommandService : IEditorCommandService, IDisposable
     {
         while (history.TryPeek(out var entry))
         {
-            if (entry is not NativeEditorHistoryEntry { IsStale: true }) return entry;
+            if (!entry.IsStale) return entry;
             history.Pop();
         }
         return null;

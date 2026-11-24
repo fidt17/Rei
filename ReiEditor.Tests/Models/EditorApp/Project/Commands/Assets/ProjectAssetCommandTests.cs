@@ -21,7 +21,6 @@ public sealed class ProjectAssetCommandTests
         public (string Path, string Name)? RenameRequest { get; private set; }
         public (string Path, bool IsDirectory)? DeleteRequest { get; private set; }
         public (string Path, bool IsDirectory)? DuplicateRequest { get; private set; }
-        public (string Path, string Destination)? MoveRequest { get; private set; }
 
         /// <summary>Captures rename request.</summary>
         public Task RenameAsync(string assetPath, string newName) { ThrowIfConfigured(); RenameRequest = (assetPath, newName); return Task.CompletedTask; }
@@ -32,8 +31,9 @@ public sealed class ProjectAssetCommandTests
         /// <summary>Captures duplicate request.</summary>
         public Task DuplicateAsync(string assetPath, bool isDirectory) { ThrowIfConfigured(); DuplicateRequest = (assetPath, isDirectory); return Task.CompletedTask; }
 
-        /// <summary>Captures move request.</summary>
-        public Task MoveAsync(string assetPath, string destinationFolder) { ThrowIfConfigured(); MoveRequest = (assetPath, destinationFolder); return Task.CompletedTask; }
+        public Task<string?> MoveAsync(string assetPath, string destinationFolder) => throw new NotSupportedException();
+        public bool CanMoveToPath(string assetPath, string targetPath) => throw new NotSupportedException();
+        public Task<bool> MoveToPathAsync(string assetPath, string targetPath) => throw new NotSupportedException();
 
         /// <summary>Rejects unused external import.</summary>
         public Task ImportExternalAssets(IEnumerable<string> sourcePaths, string targetFolder) => throw new NotSupportedException();
@@ -85,25 +85,6 @@ public sealed class ProjectAssetCommandTests
         Assert.Equal((source, true), operations.DuplicateRequest);
         Assert.True(result.AffectsTree);
         Assert.Equal(directory.GetPath("Folder Copy 1"), result.SelectedAssetPath);
-    }
-
-    /// <summary>
-    /// Move forwards destination and reports source filename inside it.
-    /// </summary>
-    [Fact]
-    public async Task MoveForwardsDestinationAndReturnsMovedPath()
-    {
-        using var directory = new TemporaryDirectory();
-        var source = directory.GetPath("Source.scene");
-        var destination = directory.GetPath("Target");
-        var operations = new TestAssetOperationsService();
-        var command = new ProjectAssetMoveCommand(operations, new TestLogger<ProjectAssetMoveCommand>());
-
-        var result = await command.ExecuteAsync(new ProjectAssetCommandTarget(source, false), destination);
-
-        Assert.Equal((source, destination), operations.MoveRequest);
-        Assert.False(result.AffectsTree);
-        Assert.Equal(Path.Combine(destination, "Source.scene"), result.SelectedAssetPath);
     }
 
     /// <summary>

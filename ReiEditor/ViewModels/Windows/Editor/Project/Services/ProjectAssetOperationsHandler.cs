@@ -93,18 +93,12 @@ public class ProjectAssetOperationsHandler
             .ToList();
         if (moveTargets.Count == 0) return null;
 
-        var movedAssetPaths = new List<string>();
-        foreach (var target in moveTargets)
-        {
-            var result = await _projectAssetMoveCommand.ExecuteAsync(target, fullDestFolderPath);
-            if (!string.IsNullOrWhiteSpace(result.SelectedAssetPath))
-            {
-                movedAssetPaths.Add(result.SelectedAssetPath);
-            }
-        }
+        var results = await _projectAssetMoveCommand.ExecuteAsync(moveTargets, fullDestFolderPath);
+        var movedAssetPaths = results.Select(result => result.SelectedAssetPath).OfType<string>().ToArray();
+        if (movedAssetPaths.Length == 0) return null;
 
         var primarySelectedPath = movedAssetPaths.LastOrDefault();
-        return new ProjectAssetBatchCommandResult(moveTargets.Any(target => target.IsDirectory), movedAssetPaths, primarySelectedPath, primarySelectedPath);
+        return new ProjectAssetBatchCommandResult(results.Any(result => result.AffectsTree), movedAssetPaths, primarySelectedPath, primarySelectedPath);
     }
 
     public async Task<ProjectAssetBatchCommandResult?> DuplicateAsync(IReadOnlyList<ProjectAssetCommandTarget> targets)

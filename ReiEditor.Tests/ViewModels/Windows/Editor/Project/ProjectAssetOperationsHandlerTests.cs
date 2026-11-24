@@ -37,10 +37,11 @@ public sealed class ProjectAssetOperationsHandlerTests : IDisposable
     {
         public List<(ProjectAssetCommandTarget Target, string Destination)> Calls { get; } = new();
 
-        public Task<ProjectAssetCommandResult> ExecuteAsync(ProjectAssetCommandTarget asset, string destinationFolder)
+        public Task<IReadOnlyList<ProjectAssetCommandResult>> ExecuteAsync(IReadOnlyList<ProjectAssetCommandTarget> assets, string destinationFolder)
         {
-            Calls.Add((asset, destinationFolder));
-            return Task.FromResult(new ProjectAssetCommandResult(asset.IsDirectory, Path.Combine(destinationFolder, Path.GetFileName(asset.FullPath))));
+            Calls.AddRange(assets.Select(asset => (asset, destinationFolder)));
+            return Task.FromResult<IReadOnlyList<ProjectAssetCommandResult>>(assets.Select(asset =>
+                new ProjectAssetCommandResult(asset.IsDirectory, Path.Combine(destinationFolder, Path.GetFileName(asset.FullPath)))).ToArray());
         }
     }
 

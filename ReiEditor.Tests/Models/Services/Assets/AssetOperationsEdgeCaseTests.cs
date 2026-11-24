@@ -1,14 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
+using ReiEditor.Models.EditorApp.Project.Commands.Assets;
+using ReiEditor.Models.EditorApp.Refresh;
 using ReiEditor.Models.Resources;
 using ReiEditor.Models.Services.Assets;
 using ReiEditor.Models.Services.Assets.DataAssets;
 using ReiEditor.Models.Services.Assets.Import;
 using ReiEditor.Models.Services.Assets.Meta;
 using ReiEditor.Models.Services.Assets.Scripting;
+using ReiEditor.Models.Services.Commands;
 using ReiEditor.Models.Services.Serialization;
 using ReiEditor.Tests.Infrastructure.Fixtures;
 using ReiEditor.Tests.Infrastructure.TestDoubles;
 using ReiEditor.Utils.Common;
+using ReiEditor.ViewModels.Windows.Editor.Project.Services;
 
 namespace ReiEditor.Tests.Models.Services.Assets;
 
@@ -183,61 +187,85 @@ public sealed class AssetOperationsEdgeCaseTests
         Assert.False(registry.TryGetById("asset-id", out _));
     }
 
-    /// <summary>
-    /// Moving a file selects a unique destination and carries metadata and registry identity with it.
-    /// </summary>
     [Fact]
-    public async Task MoveFileUsesUniquePathAndPreservesMetadataIdentity()
+    public async Task MoveAssetAndFolderUndoAndRedoTogetherWithTheirOriginalIds()
     {
         using var project = new TemporaryProjectFixture();
-        var source = project.Directory.GetPath("Asset.scene");
+        var source = project.Directory.GetPath("Asset.rshader");
+        var folder = project.Directory.GetPath("Folder");
+        var nested = Path.Combine(folder, "Nested.mat");
         var destination = project.Directory.GetPath("Destination");
-        Directory.CreateDirectory(destination);
+        Directory.CreateDirectory(folder);
+        Directory.CreateDirectory(Path.Combine(destination, "Folder"));
+        var occupied = Path.Combine(destination, "Asset.rshader");
+        await File.WriteAllTextAsync(occupied, "collision");
         await File.WriteAllTextAsync(source, "source");
-        await File.WriteAllTextAsync(Path.Combine(destination, "Asset.scene"), "collision");
+        await File.WriteAllTextAsync(nested, "nested");
         var metaService = CreateMetaService(project);
         var meta = new AssetMeta("asset-id");
+        var nestedMeta = new AssetMeta("nested-id");
         await metaService.CreateMetaFile(meta, source);
+        await metaService.CreateMetaFile(nestedMeta, nested);
         var registry = new AssetRegistry(new TestLogger<AssetRegistry>());
-        registry.RegisterNewAssets([new AssetInfo(meta, source)]);
-        var service = CreateService(project, registry, metaService, out _);
-        var expected = Path.Combine(destination, "Asset 2.scene");
+        registry.RegisterNewAssets([new AssetInfo(meta, source), new AssetInfo(nestedMeta, nested)]);
+        var material = new ReiEditor.Models.Services.Render.Material(meta.AssetId);
+        registry.AddToLoadedAssets(new AssetInfo(nestedMeta, nested), material);
+        var service = CreateService(project, registry, metaService, out var importer);
+        using var history = new EditorCommandService();
+        using var refresh = new EditorRefreshService(importer);
+        var refreshCount = 0;
+        refresh.RefreshedEvent += () => refreshCount++;
+        var command = new ProjectAssetMoveCommand(service, registry, history, refresh, new TestLogger<ProjectAssetMoveCommand>());
+        var handler = new ProjectAssetOperationsHandler(null, service, null, null, command, null);
+        var movedAsset = Path.Combine(destination, "Asset 2.rshader");
+        var movedFolder = Path.Combine(destination, "Folder 2");
+        var movedNested = Path.Combine(movedFolder, "Nested.mat");
 
-        await service.MoveAsync(source, destination);
+        var result = await handler.MoveAsync([new(source, false), new(folder, true)], destination, project.Directory.RootPath);
 
+        Assert.NotNull(result);
+        Assert.True(result.AffectsTree);
+        Assert.Equal(new[] { movedAsset, movedFolder }, result.SelectedAssetPaths);
         Assert.False(File.Exists(source));
         Assert.False(File.Exists(source + ".meta"));
-        Assert.Equal("source", await File.ReadAllTextAsync(expected));
-        Assert.Equal("asset-id", (await project.Resources.Load<AssetMeta>(expected + ".meta")).AssetId);
-        Assert.True(registry.TryGetById("asset-id", out var registered));
-        Assert.Equal(expected, registered.FullPath);
-    }
+        Assert.False(Directory.Exists(folder));
+        await AssertPaths(movedAsset, movedNested);
 
-    /// <summary>
-    /// Moving a directory selects a unique destination and updates nested registry paths.
-    /// </summary>
-    [Fact]
-    public async Task MoveDirectoryUsesUniquePathAndUpdatesNestedRegistryPaths()
-    {
-        using var project = new TemporaryProjectFixture();
-        var source = project.Directory.GetPath("Folder");
-        var destination = project.Directory.GetPath("Destination");
-        Directory.CreateDirectory(source);
-        Directory.CreateDirectory(destination);
-        Directory.CreateDirectory(Path.Combine(destination, "Folder"));
-        var sourceAsset = Path.Combine(source, "Asset.scene");
-        await File.WriteAllTextAsync(sourceAsset, "scene");
-        var registry = new AssetRegistry(new TestLogger<AssetRegistry>());
-        registry.RegisterNewAssets([new AssetInfo(new AssetMeta("asset-id"), sourceAsset)]);
-        var service = CreateService(project, registry, CreateMetaService(project), out _);
-        var expected = Path.Combine(destination, "Folder 2", "Asset.scene");
+        await File.WriteAllTextAsync(source, "new file at original path");
+        Assert.False(history.CanUndo);
+        Assert.True(Directory.Exists(movedFolder));
+        File.Delete(source);
 
-        await service.MoveAsync(source, destination);
+        await history.UndoAsync();
 
-        Assert.False(Directory.Exists(source));
-        Assert.Equal("scene", await File.ReadAllTextAsync(expected));
-        Assert.True(registry.TryGetById("asset-id", out var registered));
-        Assert.Equal(expected, registered.FullPath);
+        Assert.False(history.CanUndo);
+        Assert.True(history.CanRedo);
+        Assert.False(File.Exists(movedAsset));
+        Assert.False(Directory.Exists(movedFolder));
+        await AssertPaths(source, nested);
+
+        await history.RedoAsync();
+
+        Assert.False(history.CanRedo);
+        Assert.False(File.Exists(source));
+        Assert.False(Directory.Exists(folder));
+        Assert.Equal("collision", await File.ReadAllTextAsync(occupied));
+        Assert.Equal(2, refreshCount);
+        await AssertPaths(movedAsset, movedNested);
+
+        await service.RenameAsync(movedAsset, "Renamed.rshader");
+        Assert.False(history.CanUndo);
+
+        async Task AssertPaths(string assetPath, string nestedPath)
+        {
+            Assert.Equal("source", await File.ReadAllTextAsync(assetPath));
+            Assert.Equal("nested", await File.ReadAllTextAsync(nestedPath));
+            Assert.Equal(meta.AssetId, (await project.Resources.Load<AssetMeta>(assetPath + ".meta")).AssetId);
+            Assert.Equal(nestedMeta.AssetId, (await project.Resources.Load<AssetMeta>(nestedPath + ".meta")).AssetId);
+            Assert.True(registry.TryGetById(material.ShaderAssetId, out var referenced));
+            Assert.Equal(assetPath, referenced.FullPath);
+            Assert.Equal(nestedPath, material.FullPath);
+        }
     }
 
     /// <summary>
@@ -256,7 +284,7 @@ public sealed class AssetOperationsEdgeCaseTests
         var service = CreateService(project, new AssetRegistry(new TestLogger<AssetRegistry>()), metaService, out _);
         var destination = useBlankDestination ? " " : project.Directory.GetPath("Missing");
 
-        await service.MoveAsync(source, destination);
+        Assert.Null(await service.MoveAsync(source, destination));
 
         Assert.Equal("scene", await File.ReadAllTextAsync(source));
         Assert.True(File.Exists(source + ".meta"));

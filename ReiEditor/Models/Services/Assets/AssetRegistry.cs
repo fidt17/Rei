@@ -150,7 +150,7 @@ public class AssetRegistry : IAssetRegistry
                 _idToAssetInfoMap[asset.Meta.AssetId] = asset;
             }
 
-            PruneLoadedAssetsWithoutRegistryEntries();
+            UpdateLoadedAssetInfo();
         }
     }
     
@@ -260,16 +260,17 @@ public class AssetRegistry : IAssetRegistry
         UpdateRegistry(updated);
     }
 
-    private void PruneLoadedAssetsWithoutRegistryEntries()
+    private void UpdateLoadedAssetInfo()
     {
         if (_loadedAssets.Count == 0) return;
 
         var loadedAssetIds = _loadedAssets.Keys.ToList();
         foreach (var assetId in loadedAssetIds)
         {
-            if (_idToAssetInfoMap.ContainsKey(assetId)) continue;
-
-            _loadedAssets.Remove(assetId);
+            if (_idToAssetInfoMap.TryGetValue(assetId, out var info))
+                _loadedAssets[assetId].SetAssetInfo(info);
+            else
+                _loadedAssets.Remove(assetId);
         }
     }
 }
